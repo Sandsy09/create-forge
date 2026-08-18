@@ -1,0 +1,124 @@
+# create-forge
+
+Scaffold modern Python projects from maintained templates — and pull template
+improvements back into projects you generated months ago.
+
+```bash
+uvx create-forge new
+```
+
+No install step. Requires [uv](https://docs.astral.sh/uv/) and git.
+
+## Why
+
+Most project generators are fire-and-forget: you scaffold once, and from that
+moment your project drifts away from the template. Six months later the template
+has better lint rules, a security fix in CI, and a newer toolchain — and no path
+to get any of it into projects already in the wild.
+
+create-forge is built on [Copier](https://copier.readthedocs.io/), which does a
+three-way merge between the template version your project was generated from and
+the latest one. Local edits survive; template changes arrive.
+
+```bash
+uvx create-forge update
+```
+
+## What you get
+
+Every generated project ships with:
+
+- **[uv](https://docs.astral.sh/uv/)** for packaging and dependency management
+- **[Ruff](https://docs.astral.sh/ruff/)** for linting and formatting
+- **mypy** or **pyright** (or both) for type checking
+- **pytest** with coverage
+- **pre-commit** hooks, including Conventional Commits enforcement
+- **GitHub Actions** CI, with a test matrix across your supported Python versions
+- **Renovate** or **Dependabot** for dependency updates
+- `README`, `CONTRIBUTING`, `SECURITY`, `CHANGELOG`, issue and PR templates
+- Optionally: a MkDocs documentation site and ADR scaffolding
+
+Choices you make at scaffold time — build backend, versioning strategy, task
+runner, type checker — are remembered, so updates respect them.
+
+## Usage
+
+```bash
+# Interactive
+uvx create-forge new
+
+# Named up front
+uvx create-forge new "Credit Risk Utils"
+
+# Non-interactive, for scripts and CI
+uvx create-forge new "My Lib" --yes \
+  --data build_backend=hatchling \
+  --data versioning=vcs \
+  --data type_checking=both
+```
+
+| Command | What it does |
+| --- | --- |
+| `new` | Create a project |
+| `list` | Show available templates |
+| `update` | Pull template changes into an existing project |
+| `doctor` | Check your environment can scaffold and update |
+
+Useful flags on `new`: `--template/-t`, `--path/-p`, `--data/-d`, `--yes/-y`,
+`--ref`, `--dry-run`.
+
+## Configuration
+
+Optional. Saves retyping the same answers:
+
+```toml
+# ~/.config/create-forge/config.toml
+author_name = "Your Name"
+author_email = "you@example.com"
+github_org = "your-org"
+```
+
+Every key can be overridden with an environment variable —
+`FORGE_GITHUB_ORG` and so on — or a command line flag.
+
+## Templates
+
+Run `create-forge list` for what your installed version offers. The registry is
+bundled with each release, so new templates arrive when you update the tool.
+
+To use your own template:
+
+```bash
+uvx create-forge new --template-url https://github.com/you/your-template
+```
+
+## Security
+
+**create-forge executes code from the template it clones.** Copier templates can
+declare post-generation tasks, and this tool runs them — that is how a generated
+project arrives already git-initialised with hooks installed.
+
+The template addresses are compiled into each release rather than fetched at
+runtime or read from user configuration, so the only code trusted by default is
+code published alongside the tool. `--template-url` bypasses that, and prompts
+for confirmation before doing so. Point it only at repositories you trust.
+
+Report vulnerabilities per [SECURITY.md](SECURITY.md) rather than in a public
+issue.
+
+## Using this at work
+
+Organisations generally need templates this tool cannot anticipate — internal
+registries, mandated scanners, approval workflows, house conventions. The
+intended path is to fork this repository, point the bundled registry at your own
+templates, and maintain it internally. The core modules are deliberately
+template-agnostic, so a fork that only changes `templates.toml` stays easy to
+merge upstream from.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

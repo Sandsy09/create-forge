@@ -1,0 +1,107 @@
+# Bundled template registry.
+#
+# Adding a template here requires a new CLI release. Validated at import time by
+# the Pydantic models in models.py, and in CI by tests/test_registry.py.
+
+default_template = "library"
+
+[[templates]]
+id = "library"
+name = "Library"
+description = "An installable Python package. src layout, no service scaffolding."
+url = "https://github.com/Sandsy09/forge-template"
+status = "stable"
+
+  # ---- identity -------------------------------------------------------------
+
+  [[templates.prompts]]
+  key = "project_name"
+  kind = "text"
+  message = "Project name"
+  help = "Human readable, e.g. 'Credit Risk Utils'"
+
+  [[templates.prompts]]
+  key = "project_description"
+  kind = "text"
+  message = "Short description"
+
+  [[templates.prompts]]
+  key = "github_org"
+  kind = "text"
+  message = "GitHub organisation"
+  help = "Pre-filled from your forge config if set"
+
+  # ---- the one question that constrains another -----------------------------
+
+  [[templates.prompts]]
+  key = "build_backend"
+  kind = "select"
+  message = "Build backend"
+
+    [[templates.prompts.choices]]
+    value = "uv_build"
+    label = "uv_build"
+    hint = "simplest; static version only"
+
+    [[templates.prompts.choices]]
+    value = "hatchling"
+    label = "Hatchling"
+    hint = "required for git-tag versioning"
+
+  [[templates.prompts]]
+  key = "versioning"
+  kind = "select"
+  message = "Version source"
+  depends_on = { build_backend = "hatchling" }
+
+    [[templates.prompts.choices]]
+    value = "static"
+    label = "Static in pyproject.toml"
+    hint = "explicit; uv version works"
+
+    [[templates.prompts.choices]]
+    value = "vcs"
+    label = "Git tags (hatch-vcs)"
+    hint = "tag and version cannot disagree"
+
+  # ---- tooling --------------------------------------------------------------
+
+  [[templates.prompts]]
+  key = "type_checking"
+  kind = "select"
+  message = "Type checker"
+
+    [[templates.prompts.choices]]
+    value = "mypy"
+    label = "mypy"
+    hint = "recommended default"
+
+    [[templates.prompts.choices]]
+    value = "pyright"
+    label = "pyright"
+
+    [[templates.prompts.choices]]
+    value = "both"
+    label = "Both"
+    hint = "strictest; two ignore dialects to manage"
+
+  [[templates.prompts]]
+  key = "task_runner"
+  kind = "select"
+  message = "Task runner"
+
+    [[templates.prompts.choices]]
+    value = "poe"
+    label = "Poe the Poet"
+    hint = "pure Python; works everywhere"
+
+    [[templates.prompts.choices]]
+    value = "make"
+    label = "Makefile"
+    hint = "proxies poe; make is absent on Windows"
+
+  [[templates.prompts]]
+  key = "use_docs"
+  kind = "confirm"
+  message = "Include a MkDocs documentation site?"
+  default = false
