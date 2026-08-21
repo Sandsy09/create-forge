@@ -31,7 +31,7 @@ _STYLE = questionary.Style(
 )
 
 
-class PromptAborted(Exception):
+class PromptAborted(Exception):  # noqa: N818 - rename to PromptAbortedError tracked in #4
     """The user pressed Ctrl-C or Ctrl-D."""
 
 
@@ -53,9 +53,12 @@ def choose_template(templates: list[Template], default_id: str) -> Template:
         )
         for t in templates
     ]
-    default = next((c for c in choices if c.value.id == default_id), None)
+    default = next(
+        (c for c in choices if c.value is not None and c.value.id == default_id),
+        None,
+    )
 
-    answer = questionary.select(
+    answer: Template | None = questionary.select(
         "What are you building?",
         choices=choices,
         default=default,
@@ -99,11 +102,12 @@ def _ask_one(spec: PromptSpec, answers: dict[str, object]) -> object | None:
 
     match spec.kind:
         case "confirm":
-            return questionary.confirm(
+            confirmed: bool | None = questionary.confirm(
                 spec.message,
                 default=bool(spec.default),
                 style=_STYLE,
             ).ask()
+            return confirmed
 
         case "select":
             choices = [
@@ -116,22 +120,24 @@ def _ask_one(spec: PromptSpec, answers: dict[str, object]) -> object | None:
             chosen_default = next(
                 (c for c in choices if c.value == spec.default), choices[0]
             )
-            return questionary.select(
+            selected: str | None = questionary.select(
                 spec.message,
                 choices=choices,
                 default=chosen_default,
                 instruction=spec.help,
                 style=_STYLE,
             ).ask()
+            return selected
 
         case _:
-            return questionary.text(
+            text: str | None = questionary.text(
                 spec.message,
                 default=str(default or ""),
                 instruction=spec.help,
                 validate=_required_if(spec),
                 style=_STYLE,
             ).ask()
+            return text
 
 
 def _resolve_default(spec: PromptSpec, answers: dict[str, object]) -> object | None:

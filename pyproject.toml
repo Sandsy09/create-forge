@@ -52,8 +52,10 @@ test = [
     "pytest-cov>=6.0",
     # Drives questionary without a TTY.
     "prompt-toolkit>=3.0",
+    # Parses forge-template's copier.yml in tests/test_drift.py.
+    "pyyaml>=6.0",
 ]
-typecheck = ["mypy>=1.14"]
+typecheck = ["mypy>=1.14", "types-PyYAML>=6.0"]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
