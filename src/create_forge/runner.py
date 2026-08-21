@@ -110,7 +110,7 @@ def _explain(exc: CopierError) -> str:
             "tree to merge template updates.\n"
             "  Commit or stash first: git stash"
         )
-    if "no valid version" in lowered or "ref" in lowered and "not found" in lowered:
+    if "no valid version" in lowered or ("ref" in lowered and "not found" in lowered):
         return (
             "The template has no released version to use.\n"
             "  The template repository needs a PEP440 git tag, e.g. v0.1.0"
