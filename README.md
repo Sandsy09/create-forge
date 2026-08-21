@@ -38,8 +38,8 @@ Every generated project ships with:
 - `README`, `CONTRIBUTING`, `SECURITY`, `CHANGELOG`, issue and PR templates
 - Optionally: a MkDocs documentation site and ADR scaffolding
 
-Choices you make at scaffold time — build backend, versioning strategy, task
-runner, type checker — are remembered, so updates respect them.
+Choices you make at scaffold time — build backend, versioning strategy, license,
+type checker — are remembered, so updates respect them.
 
 ## Usage
 

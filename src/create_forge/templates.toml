@@ -2,6 +2,17 @@
 #
 # Adding a template here requires a new CLI release. Validated at import time by
 # the Pydantic models in models.py, and in CI by tests/test_registry.py.
+#
+# Every `key` below must match a question in forge-template's copier.yml
+# (invariant 1 in CLAUDE.md — Copier silently drops unknown `data` keys, so a
+# typo here produces a scaffold that looks fine and is subtly wrong). Audited
+# against forge-template@v0.1.1. Questions deliberately left unasked and
+# falling through to their copier.yml default via runner.py's `defaults=True`:
+# package_name, repo_name, repo_url, author_name, author_email,
+# codeowners_team, python_all, python_version, python_min_version,
+# python_matrix, versioning_resolved, initial_version, coverage_fail_under,
+# dependency_updates, changelog_tool. All of them have a default, so this is
+# safe — a test guarding it is tracked as a follow-up issue.
 
 default_template = "library"
 
@@ -30,6 +41,24 @@ status = "stable"
   kind = "text"
   message = "GitHub organisation"
   help = "Pre-filled from your forge config if set"
+
+  [[templates.prompts]]
+  key = "license"
+  kind = "select"
+  message = "License"
+
+    [[templates.prompts.choices]]
+    value = "proprietary"
+    label = "Proprietary"
+    hint = "internal use only"
+
+    [[templates.prompts.choices]]
+    value = "mit"
+    label = "MIT"
+
+    [[templates.prompts.choices]]
+    value = "apache-2.0"
+    label = "Apache-2.0"
 
   # ---- the one question that constrains another -----------------------------
 
@@ -84,21 +113,6 @@ status = "stable"
     value = "both"
     label = "Both"
     hint = "strictest; two ignore dialects to manage"
-
-  [[templates.prompts]]
-  key = "task_runner"
-  kind = "select"
-  message = "Task runner"
-
-    [[templates.prompts.choices]]
-    value = "poe"
-    label = "Poe the Poet"
-    hint = "pure Python; works everywhere"
-
-    [[templates.prompts.choices]]
-    value = "make"
-    label = "Makefile"
-    hint = "proxies poe; make is absent on Windows"
 
   [[templates.prompts]]
   key = "use_docs"
