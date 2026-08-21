@@ -182,12 +182,11 @@ def new(  # noqa: PLR0913 - a CLI entry point legitimately has many options
         console.print("[dim]Dry run — nothing written.[/dim]")
         return
 
-    runner = "make" if answers.get("task_runner") == "make" else "uv run poe"
     console.print(
         Panel(
             f"[bold]{answers['project_name']}[/bold] created at [dim]{dst}[/dim]\n\n"
             f"  cd {dst.name}\n"
-            f"  {runner} check\n\n"
+            "  uv run poe check\n\n"
             "[dim]Pull later template changes with: uvx create-forge update[/dim]",
             border_style="green",
         )
