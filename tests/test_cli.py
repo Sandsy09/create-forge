@@ -12,13 +12,18 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 
 import pytest
+import typer
+from pydantic import HttpUrl
 from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
 from create_forge.cli import _markers, app
 from create_forge.config import UserConfig, config_path
-from create_forge.runner import ScaffoldRequest
+from create_forge.models import Registry, Template
+from create_forge.prompts import PromptAbortedError
+from create_forge.registry import load_registry
+from create_forge.runner import ScaffoldError, ScaffoldRequest
 
 runner = CliRunner()
 
@@ -181,6 +186,210 @@ def test_new_unknown_template_exits_with_an_explanation(
     assert result.exit_code == 1
     assert recorder == []
     assert "unknown template" in result.output
+
+
+# --- characterization tests for #16 (extract helpers from cli.new()) --------
+#
+# These pin the current behaviour of the interactive/third-party/reporting
+# branches -- everything test_new_dry_run_records_the_request_and_writes_nothing
+# and its neighbours above never touch, since they all run --yes --dry-run.
+# They must pass against cli.py both before and after the #16 refactor: a
+# failure here before the refactor is a bug in the test, not a discovered
+# defect.
+
+
+def _deprecated_registry() -> Registry:
+    """A synthetic two-template registry: the bundled one has no deprecated
+    entry, and _deprecation_has_successor requires a successor to exist."""
+    return Registry(
+        default_template="library",
+        templates=[
+            Template(
+                id="library",
+                name="Library",
+                description="stable",
+                url=HttpUrl("https://example.com/library"),
+                status="stable",
+            ),
+            Template(
+                id="legacy",
+                name="Legacy",
+                description="old",
+                url=HttpUrl("https://example.com/legacy"),
+                status="deprecated",
+                deprecated_in_favour_of="library",
+            ),
+        ],
+    )
+
+
+def test_new_interactive_resolves_template_and_answers(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    registry = load_registry()
+    template = registry.get(registry.default_template)
+    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
+    monkeypatch.setattr(
+        cli_module,
+        "ask_all",
+        lambda *_a, **_kw: {
+            "project_name": "Interactive Project",
+            "project_description": "d",
+        },
+    )
+
+    result = runner.invoke(app, ["new", "--path", str(tmp_path / "proj")])
+
+    assert result.exit_code == 0, result.output
+    assert len(recorder) == 1
+    request = recorder[0]
+    assert request.src == str(template.url)
+    assert request.data["project_name"] == "Interactive Project"
+
+
+def test_new_aborting_the_template_choice_exits_130(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _abort(*_args: object, **_kwargs: object) -> None:
+        raise PromptAbortedError
+
+    monkeypatch.setattr(cli_module, "choose_template", _abort)
+
+    result = runner.invoke(app, ["new"])
+
+    assert result.exit_code == 130
+    assert recorder == []
+
+
+def test_new_aborting_the_answers_exits_130(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def _abort(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise PromptAbortedError
+
+    monkeypatch.setattr(cli_module, "ask_all", _abort)
+
+    result = runner.invoke(app, ["new"])
+
+    assert result.exit_code == 130
+    assert recorder == []
+    assert "Cancelled" in result.output
+
+
+def test_new_warns_about_a_deprecated_template(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(cli_module, "load_registry", _deprecated_registry)
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Legacy Project",
+            "--yes",
+            "--dry-run",
+            "--template",
+            "legacy",
+            "--path",
+            str(tmp_path / "proj"),
+            "--data",
+            "project_description=x",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "deprecated" in result.output
+    assert recorder[0].src == "https://example.com/legacy"
+
+
+def test_new_template_url_declined_scaffolds_nothing(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        cli_module,
+        "ask_all",
+        lambda *_a, **_kw: {"project_name": "Foo", "project_description": "d"},
+    )
+    monkeypatch.setattr(typer, "confirm", lambda *_a, **_kw: False)
+
+    result = runner.invoke(
+        app, ["new", "Foo", "--template-url", "https://example.com/other-template"]
+    )
+
+    assert result.exit_code == 130
+    assert recorder == []
+
+
+def test_new_template_url_accepted_uses_that_url(
+    recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        cli_module,
+        "ask_all",
+        lambda *_a, **_kw: {"project_name": "Foo", "project_description": "d"},
+    )
+    monkeypatch.setattr(typer, "confirm", lambda *_a, **_kw: True)
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Foo",
+            "--dry-run",
+            "--path",
+            str(tmp_path / "proj"),
+            "--template-url",
+            "https://example.com/other-template",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert recorder[0].src == "https://example.com/other-template"
+
+
+def test_new_reports_a_scaffold_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def _fail(_request: ScaffoldRequest) -> None:
+        raise ScaffoldError("boom")
+
+    monkeypatch.setattr(cli_module, "scaffold", _fail)
+
+    result = runner.invoke(
+        app, ["new", "Foo", "--yes", "--path", str(tmp_path / "proj")]
+    )
+
+    assert result.exit_code == 1
+    assert "boom" in result.output
+
+
+def test_new_reports_where_the_project_was_created(
+    recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Foo",
+            "--yes",
+            "--path",
+            str(dest),
+            "--data",
+            "project_description=x",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(recorder) == 1
+    # Not the full absolute path: pytest's tmp_path is long enough that Rich's
+    # panel hard-wraps it across lines, re-bordering each line with "|" --
+    # unlike test_new_unknown_default_template_names_the_config_path's target,
+    # collapsing newlines alone does not reconstruct it. The directory name is
+    # short and stable, and still proves the destination reached the report.
+    assert "created at" in result.output
+    assert dest.name in result.output
 
 
 # --- config wiring (issue #3) ------------------------------------------------
