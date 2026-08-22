@@ -107,12 +107,14 @@ Run this before any release.
 Working: all six modules written and wired, registry validates, CLI structure
 complete, `config.py` imported by `cli.py`, a test suite with a `copier.yml`
 drift guard, a `pre-commit` gate mirrored in CI, the repo-hygiene files below
-all present, and `docs/adr/` records the decisions this file used to state
-without their reasoning.
+all present, `docs/adr/` records the decisions this file used to state without
+their reasoning, and `v0.1.0` is tagged and released — `uvx --from
+git+https://github.com/Sandsy09/create-forge@v0.1.0 create-forge` verified end
+to end from a clean environment.
 
 Not yet done:
 - MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))
-- No tags or releases
+- PyPI publishing ([#9](https://github.com/Sandsy09/create-forge/issues/9))
 
 ## Backlog, in order
 
@@ -162,8 +164,12 @@ for organisations. `scripts/adr.py` (`poe check:adr`, and `tests/test_adr.py`
 in the fast suite) keeps the set internally consistent. MkDocs site remains
 deferred — [#8](https://github.com/Sandsy09/create-forge/issues/8).
 
-**6. First release.** Tag `v0.1.0`, verify `uvx --from git+... create-forge`
-works from a clean machine, then consider PyPI.
+**6. First release.** ✅ Done — [`release.yml`](.github/workflows/release.yml)
+reads `pyproject.toml`'s `version` as the single source (ADR 0009, since
+`forge-template`'s bump-choice model would let the tag and the package's own
+`--version` drift apart). `v0.1.0` is tagged and released; `uvx --from
+git+...@v0.1.0 create-forge new` verified end to end from a clean environment.
+PyPI is a separate, deferred decision — [#9](https://github.com/Sandsy09/create-forge/issues/9).
 
 ## Deferred, with reasons
 
