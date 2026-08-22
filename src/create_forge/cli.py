@@ -66,12 +66,12 @@ def main(
     """create-forge."""
 
 
-def raise_exit() -> None:
+def raise_exit() -> None:  # noqa: D103 - trivial; folded into the #4 cleanup
     raise typer.Exit
 
 
 @app.command("new")
-def new(  # noqa: PLR0913 - a CLI entry point legitimately has many options
+def new(  # noqa: PLR0913, PLR0912, PLR0917 - a CLI entry point legitimately has many options and branches
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
@@ -205,17 +205,19 @@ def list_templates() -> None:
 
     for template in registry.templates:
         marker = "" if template.status == "stable" else f"[yellow]{template.status}[/]"
-        default = " [dim](default)[/dim]" if template.id == registry.default_template else ""
-        table.add_row(template.id + default, template.name, template.description, marker)
+        default = (
+            " [dim](default)[/dim]" if template.id == registry.default_template else ""
+        )
+        table.add_row(
+            template.id + default, template.name, template.description, marker
+        )
 
     console.print(table)
 
 
 @app.command("update")
 def update_project(
-    project: Annotated[
-        Path, typer.Argument(help="Project directory.")
-    ] = Path(),
+    project: Annotated[Path, typer.Argument(help="Project directory.")] = Path(),
     ref: Annotated[
         str | None, typer.Option("--ref", help="Target version. Defaults to latest.")
     ] = None,
@@ -252,7 +254,10 @@ def doctor() -> None:
     py = sys.version_info
     row(py >= (3, 11), "Python 3.11+", f"{py.major}.{py.minor}.{py.micro}")
 
-    for tool, why in (("git", "required to clone templates"), ("uv", "required by generated projects")):
+    for tool, why in (
+        ("git", "required to clone templates"),
+        ("uv", "required by generated projects"),
+    ):
         found = shutil.which(tool)
         row(bool(found), tool, found or f"not on PATH — {why}")
 
@@ -262,7 +267,9 @@ def doctor() -> None:
         row(
             bool(name and email),
             "git identity",
-            f"{name} <{email}>" if name and email else "unset — scaffolding cannot commit",
+            f"{name} <{email}>"
+            if name and email
+            else "unset — scaffolding cannot commit",
         )
 
     try:
