@@ -1,0 +1,80 @@
+# Shared GitHub label taxonomy for create-forge and forge-template.
+#
+# This is the source of truth -- applied with `uv run poe labels:sync`
+# (scripts/labels.py), which also accepts `--repo OWNER/NAME` so the same
+# manifest drives forge-template. See CONTRIBUTING.md's Labels section.
+#
+# Group labels are namespaced "<group>:<label>" (e.g. "area:cli"). Entries
+# under [unprefixed] keep GitHub's stock names -- "good first issue" and
+# "help wanted" are special-cased by GitHub's own issue-discovery UI, so
+# renaming them would cost real functionality for no benefit.
+#
+# `type:` values mirror the Conventional Commits prefixes both repos already
+# enforce via their commit-msg hook, and git-cliff's commit_parsers in
+# pyproject.toml -- so a label and the commit that eventually closes it agree
+# by construction.
+
+[groups.area]
+description = "Which part of the system an issue touches."
+family = "blue"
+
+[groups.area.labels]
+cli = { color = "0a3069", description = "The Typer commands and their prompts" }
+registry = { color = "0550ae", description = "templates.toml and the models that validate it" }
+copier = { color = "0969da", description = "The Copier integration and copier.yml surface" }
+template = { color = "218bff", description = "forge-template's scaffolded files and tasks" }
+ci = { color = "54aeff", description = "GitHub Actions workflows and the checks they run" }
+tests = { color = "80ccff", description = "The test suites and fixtures themselves" }
+docs = { color = "b6e3ff", description = "README, CONTRIBUTING, ADRs, and other documentation" }
+packaging = { color = "cae8ff", description = "pyproject.toml, dependencies, and the built wheel" }
+release = { color = "ddf4ff", description = "Tagging, changelog generation, and the release workflow" }
+
+[groups.type]
+description = "What kind of work an issue or PR represents."
+family = "purple"
+
+[groups.type.labels]
+bug = { color = "3e1f79", description = "Something isn't working" }
+feature = { color = "6639ba", description = "New capability or request" }
+refactor = { color = "8250df", description = "Structural change with no behaviour change" }
+perf = { color = "a475f9", description = "Performance improvement" }
+docs = { color = "c297ff", description = "Documentation-only change" }
+test = { color = "d8b9ff", description = "Test-only change" }
+chore = { color = "ecd8ff", description = "Maintenance with no user-facing effect" }
+
+[groups.priority]
+description = "How urgently an issue should be picked up."
+family = "red"
+
+[groups.priority.labels]
+critical = { color = "82071e", description = "Drop everything" }
+high = { color = "cf222e", description = "Should be next" }
+medium = { color = "ff8182", description = "Normal priority" }
+low = { color = "ffcecb", description = "Nice to have" }
+
+[groups.size]
+description = "Rough estimate of how much work an issue is."
+family = "green"
+
+[groups.size.labels]
+xs = { color = "dafbe1", description = "Trivial -- minutes" }
+s = { color = "aceebb", description = "Small -- a sitting" }
+m = { color = "6fdd8b", description = "Medium -- a day or two" }
+l = { color = "2da44e", description = "Large -- the better part of a week" }
+xl = { color = "116329", description = "Extra large -- consider breaking it up" }
+
+[groups.status]
+description = "Where an issue stands, independent of priority or size."
+family = "slate"
+
+[groups.status.labels]
+blocked = { color = "24292f", description = "Waiting on something outside this issue" }
+needs-decision = { color = "57606a", description = "Blocked on a choice only a maintainer can make" }
+needs-info = { color = "6e7781", description = "Waiting on more information before work can start" }
+in-progress = { color = "8c959f", description = "Actively being worked on" }
+deferred = { color = "afb8c1", description = "Confirmed out of scope for now, not forgotten" }
+
+# Kept unprefixed -- GitHub special-cases these two in its issue-discovery UI.
+[unprefixed]
+"good first issue" = { color = "7057ff", description = "Good for newcomers" }
+"help wanted" = { color = "008672", description = "Extra attention is needed" }
