@@ -7,17 +7,26 @@ import subprocess
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from create_forge.config import config_path, env_overrides, load_config, write_example
+from create_forge.config import (
+    UserConfig,
+    config_path,
+    env_overrides,
+    load_config,
+    write_example,
+)
 from create_forge.prompts import PromptAbortedError, ask_all, choose_template, slugify
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+
+if TYPE_CHECKING:
+    from create_forge.models import Registry, Template
 
 app = typer.Typer(
     name="create-forge",
@@ -81,8 +90,120 @@ def main(
     """create-forge."""
 
 
+def _load_config_or_exit() -> UserConfig:
+    """Load user config, exiting with a plain-language error if it is malformed."""
+    try:
+        return load_config()
+    except ValueError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+
+def _select_template(
+    registry: Registry, config: UserConfig, template_id: str | None, *, yes: bool
+) -> Template:
+    """Resolve which template to scaffold from --template, config, or a prompt.
+
+    Also emits the deprecation warning, since it depends on the same
+    resolution the caller needs the return value for.
+    """
+    try:
+        preferred_id = (
+            registry.get(config.default_template).id
+            if config.default_template
+            else registry.default_template
+        )
+    except KeyError as exc:
+        err.print(f"[red]{config_path()} sets default_template: {exc.args[0]}[/red]")
+        raise typer.Exit(1) from exc
+
+    try:
+        if template_id:
+            template = registry.get(template_id)
+        elif yes:
+            template = registry.get(preferred_id)
+        else:
+            template = choose_template(registry.selectable, preferred_id)
+    except KeyError as exc:
+        err.print(f"[red]{exc.args[0]}[/red]")
+        raise typer.Exit(1) from exc
+    except PromptAbortedError:
+        raise typer.Exit(130) from None
+
+    if template.status == "deprecated":
+        err.print(
+            f"[yellow]{template.id} is deprecated. "
+            f"Use {template.deprecated_in_favour_of} instead.[/yellow]"
+        )
+
+    return template
+
+
+def _collect_answers(
+    template: Template,
+    preset: dict[str, object],
+    cfg_answers: dict[str, object],
+    *,
+    yes: bool,
+) -> dict[str, object]:
+    """Gather answers from --yes/--data, or by prompting for anything missing."""
+    if yes:
+        if "project_name" not in preset:
+            err.print("[red]--yes requires a project name.[/red]")
+            raise typer.Exit(1)
+        return {**cfg_answers, **preset}
+
+    try:
+        return {
+            **cfg_answers,
+            **ask_all(template, preset=preset, defaults=cfg_answers),
+        }
+    except PromptAbortedError:
+        err.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(130) from None
+
+
+def _confirm_third_party(template_url: str | None, *, yes: bool) -> None:
+    """Warn and, unless --yes, ask for confirmation before running foreign code."""
+    if not template_url:
+        return
+    err.print(
+        Panel(
+            f"Scaffolding from [bold]{template_url}[/bold]\n"
+            "Template code will be executed. Only continue if you trust it.",
+            title="[yellow]Third-party template[/yellow]",
+            border_style="yellow",
+        )
+    )
+    if not yes and not typer.confirm("Continue?", default=False):
+        raise typer.Exit(130)
+
+
+def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
+    """Scaffold, translating a ScaffoldError into a clean exit."""
+    try:
+        with console.status(f"Scaffolding {slug}…"):
+            scaffold(request)
+    except ScaffoldError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+
+def _report_created(project_name: object, dst: Path) -> None:
+    """Print the success panel once a project has actually been written."""
+    console.print(
+        Panel(
+            f"[bold]{project_name}[/bold] created at [dim]{dst}[/dim]\n\n"
+            f"  cd {dst.name}\n"
+            "  uv run poe check\n\n"
+            "[dim]Pull later template changes with: uvx create-forge update[/dim]",
+            border_style="green",
+        )
+    )
+
+
 @app.command("new")
-def new(  # noqa: PLR0913, PLR0912, PLR0915, PLR0917 - a CLI entry point legitimately has many options and branches
+def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public surface; one parameter per --flag is unavoidable
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
@@ -123,106 +244,30 @@ def new(  # noqa: PLR0913, PLR0912, PLR0915, PLR0917 - a CLI entry point legitim
     """Create a new project."""
     registry = load_registry()
     preset = _parse_data(data or [])
-
     if name:
         preset.setdefault("project_name", name)
 
-    try:
-        config = load_config()
-    except ValueError as exc:
-        err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
+    config = _load_config_or_exit()
     cfg_answers = config.as_answers()
 
-    # --- resolve config's preferred template, if it names one ----------------
-    try:
-        preferred_id = (
-            registry.get(config.default_template).id
-            if config.default_template
-            else registry.default_template
-        )
-    except KeyError as exc:
-        err.print(f"[red]{config_path()} sets default_template: {exc.args[0]}[/red]")
-        raise typer.Exit(1) from exc
+    template = _select_template(registry, config, template_id, yes=yes)
+    answers = _collect_answers(template, preset, cfg_answers, yes=yes)
 
-    # --- pick the template ---------------------------------------------------
-    try:
-        if template_id:
-            template = registry.get(template_id)
-        elif yes:
-            template = registry.get(preferred_id)
-        else:
-            template = choose_template(registry.selectable, preferred_id)
-    except KeyError as exc:
-        err.print(f"[red]{exc.args[0]}[/red]")
-        raise typer.Exit(1) from exc
-    except PromptAbortedError:
-        raise typer.Exit(130) from None
-
-    if template.status == "deprecated":
-        err.print(
-            f"[yellow]{template.id} is deprecated. "
-            f"Use {template.deprecated_in_favour_of} instead.[/yellow]"
-        )
-
-    # --- collect answers -----------------------------------------------------
-    if yes:
-        if "project_name" not in preset:
-            err.print("[red]--yes requires a project name.[/red]")
-            raise typer.Exit(1)
-        answers = {**cfg_answers, **preset}
-    else:
-        try:
-            answers = {
-                **cfg_answers,
-                **ask_all(template, preset=preset, defaults=cfg_answers),
-            }
-        except PromptAbortedError:
-            err.print("\n[dim]Cancelled.[/dim]")
-            raise typer.Exit(130) from None
-
-    # --- resolve destination -------------------------------------------------
     slug = slugify(str(answers["project_name"]))
     dst = (path or Path.cwd() / slug).resolve()
-
     src = template_url or str(template.url)
-    if template_url:
-        err.print(
-            Panel(
-                f"Scaffolding from [bold]{template_url}[/bold]\n"
-                "Template code will be executed. Only continue if you trust it.",
-                title="[yellow]Third-party template[/yellow]",
-                border_style="yellow",
-            )
-        )
-        if not yes and not typer.confirm("Continue?", default=False):
-            raise typer.Exit(130)
 
-    # --- scaffold ------------------------------------------------------------
-    try:
-        with console.status(f"Scaffolding {slug}…"):
-            scaffold(
-                ScaffoldRequest(
-                    src=src, dst=dst, data=answers, vcs_ref=ref, dry_run=dry_run
-                )
-            )
-    except ScaffoldError as exc:
-        err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
+    _confirm_third_party(template_url, yes=yes)
+    _run_scaffold(
+        ScaffoldRequest(src=src, dst=dst, data=answers, vcs_ref=ref, dry_run=dry_run),
+        slug,
+    )
 
     if dry_run:
         console.print("[dim]Dry run — nothing written.[/dim]")
         return
 
-    console.print(
-        Panel(
-            f"[bold]{answers['project_name']}[/bold] created at [dim]{dst}[/dim]\n\n"
-            f"  cd {dst.name}\n"
-            "  uv run poe check\n\n"
-            "[dim]Pull later template changes with: uvx create-forge update[/dim]",
-            border_style="green",
-        )
-    )
+    _report_created(answers["project_name"], dst)
 
 
 @app.command("list")

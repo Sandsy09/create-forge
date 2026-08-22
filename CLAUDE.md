@@ -179,8 +179,3 @@ works from a clean machine, then consider PyPI.
 - `gh` pushes fail on `.github/workflows/**` without the `workflow` OAuth scope
   (`gh auth refresh -h github.com -s workflow`). Relevant if repo creation is
   ever added.
-- `match spec.kind` in `prompts.py` compares against string literals while
-  `PromptKind` is a `StrEnum`. Works at runtime; mypy strict may object. Prefer
-  the enum members.
-- The `--version` callback in `cli.py` uses a lambda with a tuple side-effect.
-  Works, but should be a named function.
