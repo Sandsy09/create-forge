@@ -61,7 +61,12 @@ def test_list_shows_the_bundled_templates() -> None:
     assert "library" in result.output
 
 
-def test_doctor_reports_on_the_registry() -> None:
+def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """doctor exits 1 when any check is unhealthy, and a fresh CI runner has
+    no global git identity configured -- unlike the author's own machine,
+    where this always happened to pass. Monkeypatch it so the test verifies
+    doctor's registry reporting, not the host's git config."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
     result = runner.invoke(app, ["doctor"])
     assert result.exception is None
     assert "registry" in result.output
