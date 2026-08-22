@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Catches forge-template drift and upstream breakage (new ruff rules, uv
+  # releases) even on weeks with no push here -- see tests/test_drift.py.
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.12.0"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Same gate as `uv run pre-commit run --all-files` locally: ruff, and the
+  # whitespace/EOF/toml/yaml hooks. Everything else waits on this so a
+  # formatting slip doesn't burn the matrix below.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Pre-commit
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Typecheck
+        run: uv run poe typecheck
+
+  # ---------------------------------------------------------------------------
+  # Fast tests (-m 'not network') across supported interpreters.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Test
+        run: uv run poe test
+
+  # ---------------------------------------------------------------------------
+  # Windows smoke test -- path separators, line endings, console encoding.
+  # Catches the platform this tool is actually developed on.
+  # ---------------------------------------------------------------------------
+  windows:
+    name: Windows smoke
+    runs-on: windows-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Test
+        run: uv run poe test
+
+  # ---------------------------------------------------------------------------
+  # Invariant 5: templates.toml must ship in the wheel. Passes locally and
+  # breaks on a user's first `uvx` run if this ever regresses.
+  # ---------------------------------------------------------------------------
+  wheel:
+    name: Wheel contents
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Check wheel
+        run: uv run poe check:wheel
+
+  # ---------------------------------------------------------------------------
+  # Invariant 1: every registry prompt key must exist in forge-template's
+  # copier.yml. Clones forge-template at its latest tag -- skips (not fails)
+  # if GitHub is unreachable, so connectivity issues never masquerade as
+  # drift. Also runs on the Monday cron, since forge-template moves
+  # independently of this repo and a push-only trigger would miss drift on
+  # weeks with no commits here.
+  # ---------------------------------------------------------------------------
+  drift:
+    name: copier.yml drift guard
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Drift guard
+        run: uv run pytest -m network
+
+  # ---------------------------------------------------------------------------
+  # Single required status check for branch protection.
+  # ---------------------------------------------------------------------------
+  all-green:
+    name: All checks passed
+    runs-on: ubuntu-latest
+    needs: [lint, test, windows, wheel, drift]
+    if: always()
+    steps:
+      - name: Verify
+        run: |
+          if echo "${{ join(needs.*.result, ',') }}" | grep -qE 'failure|cancelled'; then
+            echo "::error::One or more jobs failed"; exit 1
+          fi
+          echo "All jobs passed."

@@ -1,0 +1,26 @@
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore"
+    open-pull-requests-limit: 5
+
+  # Covers pyproject.toml + uv.lock. Does NOT cover
+  # .pre-commit-config.yaml's pinned hook revisions -- those stay manual.
+  # That gap is exactly what produced the stale ruff pin in #4 (pre-commit's
+  # v0.14.0 disagreeing with the venv's resolved 0.16.3); Renovate covers
+  # pre-commit revs too, but needs its GitHub App installed through the web
+  # UI, so Dependabot was chosen for now. See issue #17.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore"
+    open-pull-requests-limit: 5
