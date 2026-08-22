@@ -8,13 +8,15 @@ docs/plan-v0.1.0.md's manual verification steps, not in this fast suite.
 
 from __future__ import annotations
 
+from io import BytesIO, TextIOWrapper
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
-from create_forge.cli import app
+from create_forge.cli import _markers, app
 from create_forge.config import UserConfig, config_path
 from create_forge.runner import ScaffoldRequest
 
@@ -70,6 +72,40 @@ def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None
     result = runner.invoke(app, ["doctor"])
     assert result.exception is None
     assert "registry" in result.output
+
+
+def test_doctor_survives_a_console_that_cannot_encode_check_marks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression test for #12: a Windows console on the cp1252 codepage --
+    the default outside Windows Terminal -- cannot encode the check-mark
+    glyphs doctor's table used unconditionally, and Rich let the resulting
+    UnicodeEncodeError propagate instead of degrading. CliRunner's own output
+    capture goes through UTF-8, so this has to install a real cp1252 console
+    to reproduce the crash; test_doctor_reports_on_the_registry above never
+    could have caught this."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    cp1252_console = Console(file=TextIOWrapper(BytesIO(), encoding="cp1252"), width=80)
+    monkeypatch.setattr(cli_module, "console", cp1252_console)
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exception is None, result.output
+
+
+def test_markers_are_ascii_when_the_encoding_cannot_take_glyphs() -> None:
+    cp1252_console = Console(file=TextIOWrapper(BytesIO(), encoding="cp1252"), width=80)
+
+    assert _markers(cp1252_console) == ("OK", "FAIL")
+
+
+def test_markers_use_glyphs_when_the_encoding_allows() -> None:
+    """The cp1252 fallback must not flatten output for consoles that can
+    render the real glyphs -- fixing this for some users should not cost
+    everyone else the nicer marks."""
+    utf8_console = Console(file=TextIOWrapper(BytesIO(), encoding="utf-8"), width=80)
+
+    assert _markers(utf8_console) == ("✓", "✗")
 
 
 def test_new_dry_run_records_the_request_and_writes_nothing(
