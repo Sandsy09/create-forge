@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from create_forge.config import UserConfig, load_config, write_example
+from create_forge.config import UserConfig, env_overrides, load_config, write_example
 
 
 @pytest.fixture(autouse=True)
@@ -86,3 +86,12 @@ def test_write_example_never_overwrites(tmp_path: Path) -> None:
     result = write_example(path)
     assert result == path
     assert path.read_text(encoding="utf-8") == "custom content"
+
+
+def test_env_overrides_reports_nothing_set() -> None:
+    assert env_overrides() == {}
+
+
+def test_env_overrides_reports_set_variables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FORGE_GITHUB_ORG", "env-org")
+    assert env_overrides() == {"github_org": "env-org"}

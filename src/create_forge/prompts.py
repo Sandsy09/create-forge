@@ -74,11 +74,15 @@ def ask_all(
     template: Template,
     *,
     preset: dict[str, object] | None = None,
+    defaults: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Run every applicable prompt, returning the collected answers.
 
     `preset` holds values supplied on the command line. Preset keys are not
     re-asked, which is what makes `--data` usable alongside interactive mode.
+
+    `defaults` (e.g. from user config) pre-fills a prompt's answer without
+    suppressing it -- unlike `preset`, the question is still asked.
     """
     answers: dict[str, object] = dict(preset or {})
 
@@ -88,7 +92,7 @@ def ask_all(
         if not spec.should_ask(answers):
             continue
 
-        value = _ask_one(spec, answers)
+        value = _ask_one(spec, answers, defaults or {})
         if value is None:
             raise PromptAborted
         answers[spec.key] = value
@@ -96,15 +100,17 @@ def ask_all(
     return answers
 
 
-def _ask_one(spec: PromptSpec, answers: dict[str, object]) -> object | None:
+def _ask_one(
+    spec: PromptSpec, answers: dict[str, object], defaults: dict[str, object]
+) -> object | None:
     """Render a single prompt."""
-    default = _resolve_default(spec, answers)
+    default = _resolve_default(spec, answers, defaults)
 
     match spec.kind:
         case "confirm":
             confirmed: bool | None = questionary.confirm(
                 spec.message,
-                default=bool(spec.default),
+                default=bool(default),
                 style=_STYLE,
             ).ask()
             return confirmed
@@ -118,7 +124,7 @@ def _ask_one(spec: PromptSpec, answers: dict[str, object]) -> object | None:
                 for c in spec.choices
             ]
             chosen_default = next(
-                (c for c in choices if c.value == spec.default), choices[0]
+                (c for c in choices if c.value == default), choices[0]
             )
             selected: str | None = questionary.select(
                 spec.message,
@@ -140,10 +146,14 @@ def _ask_one(spec: PromptSpec, answers: dict[str, object]) -> object | None:
             return text
 
 
-def _resolve_default(spec: PromptSpec, answers: dict[str, object]) -> object | None:
-    """Derive a default from earlier answers where it saves typing."""
+def _resolve_default(
+    spec: PromptSpec, answers: dict[str, object], defaults: dict[str, object]
+) -> object | None:
+    """Derive a default from earlier answers, then config, then the template."""
     if spec.key == "repo_name" and "project_name" in answers:
         return slugify(str(answers["project_name"]))
+    if spec.key in defaults:
+        return defaults[spec.key]
     return spec.default
 
 

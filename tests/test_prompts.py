@@ -6,6 +6,9 @@ no test actually drives questionary -- there is nothing left to ask.
 
 from __future__ import annotations
 
+import pytest
+import questionary
+
 from create_forge.models import Choice, PromptKind, PromptSpec, Template
 from create_forge.prompts import ask_all, choose_template, slugify
 
@@ -58,3 +61,80 @@ def test_ask_all_skips_a_prompt_whose_depends_on_is_unmet() -> None:
 
     assert answers == {"build_backend": "uv_build"}
     assert "versioning" not in answers
+
+
+# --- defaults (from user config): pre-fill, don't suppress -----------------
+
+
+class _FakeAnswer:
+    """Stands in for questionary's `Question`, returning its default as-is."""
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def ask(self) -> object:
+        return self._value
+
+
+def _recording_text(seen: dict[str, object], key: str) -> object:
+    """A `questionary.text` replacement that records the default it was given
+    and answers with it, as if the user had accepted the pre-fill unchanged."""
+
+    def fake_text(
+        message: str,
+        default: str,
+        instruction: str | None,
+        validate: object,
+        style: object,
+    ) -> _FakeAnswer:
+        seen[key] = default
+        return _FakeAnswer(default)
+
+    return fake_text
+
+
+def test_defaults_pre_fill_a_text_prompt_without_suppressing_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(questionary, "text", _recording_text(seen, "github_org"))
+
+    spec = PromptSpec(key="github_org", kind=PromptKind.TEXT, message="Org")
+    template = _template(prompts=[spec])
+
+    answers = ask_all(template, defaults={"github_org": "config-org"})
+
+    assert seen["github_org"] == "config-org"
+    assert answers == {"github_org": "config-org"}
+
+
+def test_preset_still_wins_over_defaults() -> None:
+    spec = PromptSpec(key="github_org", kind=PromptKind.TEXT, message="Org")
+    template = _template(prompts=[spec])
+
+    answers = ask_all(
+        template,
+        preset={"github_org": "from-data"},
+        defaults={"github_org": "from-config"},
+    )
+
+    assert answers == {"github_org": "from-data"}
+
+
+def test_repo_name_derivation_still_outranks_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+    monkeypatch.setattr(questionary, "text", _recording_text(seen, "repo_name"))
+
+    spec = PromptSpec(key="repo_name", kind=PromptKind.TEXT, message="Repo name")
+    template = _template(prompts=[spec])
+
+    answers = ask_all(
+        template,
+        preset={"project_name": "My Project"},
+        defaults={"repo_name": "should-be-ignored"},
+    )
+
+    assert seen["repo_name"] == "my-project"
+    assert answers["repo_name"] == "my-project"
