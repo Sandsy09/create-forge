@@ -124,15 +124,16 @@ jobs:
         run: uv run poe check:wheel
 
   # ---------------------------------------------------------------------------
-  # Invariant 1: every registry prompt key must exist in forge-template's
-  # copier.yml. Clones forge-template at its latest tag -- skips (not fails)
-  # if GitHub is unreachable, so connectivity issues never masquerade as
-  # drift. Also runs on the Monday cron, since forge-template moves
-  # independently of this repo and a push-only trigger would miss drift on
-  # weeks with no commits here.
+  # Everything marked @pytest.mark.network: invariant 1's copier.yml drift
+  # guard (clones forge-template at its latest tag) and the real update()
+  # end-to-end (scaffolds forge-template's oldest tag, updates to its newest).
+  # Both skip (not fail) if GitHub is unreachable, so connectivity issues
+  # never masquerade as drift or a real regression. Also runs on the Monday
+  # cron, since forge-template moves independently of this repo and a
+  # push-only trigger would miss drift on weeks with no commits here.
   # ---------------------------------------------------------------------------
-  drift:
-    name: copier.yml drift guard
+  network:
+    name: Network tests
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -148,7 +149,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
 
-      - name: Drift guard
+      - name: Network tests
         run: uv run pytest -m network
 
   # ---------------------------------------------------------------------------
@@ -157,7 +158,7 @@ jobs:
   all-green:
     name: All checks passed
     runs-on: ubuntu-latest
-    needs: [lint, test, windows, wheel, drift]
+    needs: [lint, test, windows, wheel, network]
     if: always()
     steps:
       - name: Verify

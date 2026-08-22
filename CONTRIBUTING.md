@@ -27,14 +27,16 @@ The network-marked tests are separate:
 uv run pytest -m network
 ```
 
-This hits GitHub and includes `tests/test_drift.py`, which clones
+This hits GitHub and includes two things: `tests/test_drift.py`, which clones
 `forge-template` and checks every prompt key in `templates.toml` still matches
-a question in its `copier.yml`. That check exists because a mismatch fails
-*silently* — Copier drops an unknown `data` key with no error, the answer
-vanishes, and the template's own default applies instead. A typo here produces
-a scaffold that looks fine and is subtly wrong, which is exactly the failure
-mode this test is for. Run it whenever `templates.toml` changes, or whenever
-`forge-template` cuts a new tag.
+a question in its `copier.yml`; and `tests/test_update_network.py`, a real
+end-to-end `create-forge update` against `forge-template`'s actual tags.
+
+The drift check exists because a mismatch fails *silently* — Copier drops an
+unknown `data` key with no error, the answer vanishes, and the template's own
+default applies instead. A typo here produces a scaffold that looks fine and
+is subtly wrong, which is exactly the failure mode this test is for. Run it
+whenever `templates.toml` changes, or whenever `forge-template` cuts a new tag.
 
 Before any release, also run:
 
@@ -58,10 +60,10 @@ request:
 | `test` | the fast suite, matrixed across Python 3.11–3.14 |
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
-| `drift` | `pytest -m network` — the `copier.yml` drift guard |
+| `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end |
 | `all-green` | an aggregate check; this is the one branch protection requires |
 
-`drift` also runs on a Monday cron, independent of any push here —
+`network` also runs on a Monday cron, independent of any push here —
 `forge-template` moves on its own schedule, so a PR is not the only thing that
 can surface a registry mismatch.
 
