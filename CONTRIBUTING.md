@@ -84,6 +84,19 @@ enforces this once `pre-commit install --install-hooks` has run.
 
 ## Releasing
 
-There is no release workflow yet — see
-[issue #7](https://github.com/Sandsy09/create-forge/issues/7). Until it lands,
-treat `main` as the only supported state; there is nothing to release against.
+`pyproject.toml`'s `version` is the single source of truth for a release's tag
+— see [ADR 0009](docs/adr/0009-pyproject-as-the-single-version-source.md) for
+why the release workflow itself does not choose a version bump.
+
+1. Open a PR bumping `pyproject.toml`'s `version` and regenerating the
+   changelog:
+
+   ```bash
+   uv run git-cliff --tag vX.Y.Z --output CHANGELOG.md
+   ```
+
+2. Merge it. Wait for `All checks passed` on `main`.
+3. Actions → Release → Run workflow, with `dry_run` checked. Confirm the
+   computed tag and generated notes in the run summary.
+4. Run it again with `dry_run` unchecked. This tags `main`, pushes the tag, and
+   publishes the GitHub release.

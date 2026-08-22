@@ -1,0 +1,116 @@
+name: Release
+
+# pyproject.toml is the single version source (ADR 0009) -- not a bump input,
+# unlike forge-template's release workflow. This workflow only ever reads the
+# version that is already committed; bumping it happens in an ordinary PR.
+#
+# Run from the Actions tab: dry_run first to preview, then for real.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the tag and notes without creating anything
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  UV_VERSION: "0.12.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to release from anything but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases must be dispatched from main, not ${{ github.ref }}."
+          exit 1
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Compute version
+        id: version
+        run: |
+          version=$(python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+          tag="v${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "### Releasing ${tag}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refuse an existing tag
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error::${tag} already exists. Bump pyproject.toml's version first."
+            exit 1
+          fi
+
+      - name: Require a changelog entry
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if ! grep -qF "[${version}]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no [${version}] section. Run" \
+                 "'uv run git-cliff --tag v${version} --output CHANGELOG.md' first."
+            exit 1
+          fi
+
+      - name: Check wheel contents
+        # Invariant 5 in CLAUDE.md: templates.toml must ship in the wheel.
+        # Passes every local test and breaks on a user's first uvx run if it
+        # regresses -- this is the one place that is actually load-bearing to
+        # run it before a release.
+        run: uv run poe check:wheel
+
+      - name: Release notes
+        id: notes
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          uv run git-cliff --tag "$tag" --unreleased --strip all --output notes.md
+          {
+            echo "## Release notes"
+            echo '```'
+            cat notes.md
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tag="${{ steps.version.outputs.tag }}"
+          git tag -a "$tag" -m "Release ${tag}"
+          git push origin "$tag"
+
+      - name: GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file notes.md
+
+      - name: Dry run -- nothing created
+        if: ${{ inputs.dry_run }}
+        run: echo "::notice::dry_run was set -- no tag or release created."
