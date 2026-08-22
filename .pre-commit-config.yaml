@@ -1,0 +1,39 @@
+# This repo's own lint gate -- runs the same checks `poe check` does, plus
+# hygiene hooks that catch things ruff doesn't (trailing whitespace, missing
+# final newlines, accidental large files) and a commit-msg hook enforcing the
+# Conventional Commits convention CLAUDE.md mandates.
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Pinned to match the ruff version pyproject.toml's `ruff>=0.14` actually
+    # resolves to (`uv run ruff --version`) -- older pins disagree with the
+    # venv's ruff on which lints fire (seen with PLR0917 on cli.py's new()),
+    # so the two silently fight over the same noqa comment on every commit.
+    rev: v0.16.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.0
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

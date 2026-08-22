@@ -1,0 +1,34 @@
+name: Bug report
+description: Something in create-forge itself is broken.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is about a generated project's content (wrong lint rule, a
+        broken CI workflow it shipped with, etc.), file it against
+        [forge-template](https://github.com/Sandsy09/forge-template/issues)
+        instead — that repo owns what gets scaffolded, this one owns the CLI.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected, what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: create-forge doctor output
+      description: Run `uvx create-forge doctor` and paste the output.
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: create-forge version
+      description: Output of `create-forge --version`.
+    validations:
+      required: true
