@@ -82,6 +82,29 @@ consistent — filenames, numbering, the index, and the four required headings.
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook
 enforces this once `pre-commit install --install-hooks` has run.
 
+## Labels
+
+[.github/labels.toml](.github/labels.toml) is the source of truth for this
+repo's issue and PR labels, and is shared with `forge-template` — the same
+manifest drives both, so the two never drift into different vocabularies.
+Five groups, each a colour family with a shade per label: `area:`, `type:`,
+`priority:`, `size:`, `status:`. `type:` mirrors the Conventional Commits
+prefixes above, so a label and the commit that eventually closes it agree.
+`good first issue` and `help wanted` stay unprefixed — GitHub's own
+issue-discovery UI special-cases those two names.
+
+Apply the manifest to a repo with:
+
+```bash
+uv run poe labels:sync -- --dry-run              # preview, changes nothing
+uv run poe labels:sync -- --prune                # apply, deleting extras
+uv run python scripts/labels.py --repo Sandsy09/forge-template --prune
+```
+
+`gh label create --force` makes this idempotent — re-run it any time the
+manifest changes. `tests/test_labels.py` validates the manifest's shape
+(colour format, description length, no name collisions) in the fast suite.
+
 ## Releasing
 
 `pyproject.toml`'s `version` is the single source of truth for a release's tag

@@ -9,6 +9,7 @@ updates:
     commit-message:
       prefix: "chore"
     open-pull-requests-limit: 5
+    labels: ["type:chore", "area:ci"]
 
   # Covers pyproject.toml + uv.lock. Does NOT cover
   # .pre-commit-config.yaml's pinned hook revisions -- those stay manual.
@@ -24,3 +25,4 @@ updates:
     commit-message:
       prefix: "chore"
     open-pull-requests-limit: 5
+    labels: ["type:chore", "area:packaging"]
