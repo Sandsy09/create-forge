@@ -1,5 +1,7 @@
 # create-forge
 
+[![CI](https://github.com/Sandsy09/create-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandsy09/create-forge/actions/workflows/ci.yml)
+
 Scaffold modern Python projects from maintained templates — and pull template
 improvements back into projects you generated months ago.
 

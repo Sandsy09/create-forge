@@ -47,6 +47,24 @@ unless Hatchling's package-data rules are still correct. A missing registry
 passes every test above and only breaks on a user's first `uvx` run — this is
 the one check that catches it ahead of time.
 
+## What CI runs
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull
+request:
+
+| Job | What |
+| --- | --- |
+| `lint` | `pre-commit run --all-files`, then `mypy` — the exact gate that runs locally on commit |
+| `test` | the fast suite, matrixed across Python 3.11–3.14 |
+| `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
+| `wheel` | `poe check:wheel` |
+| `drift` | `pytest -m network` — the `copier.yml` drift guard |
+| `all-green` | an aggregate check; this is the one branch protection requires |
+
+`drift` also runs on a Monday cron, independent of any push here —
+`forge-template` moves on its own schedule, so a PR is not the only thing that
+can surface a registry mismatch.
+
 ## Commit messages
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook

@@ -101,15 +101,13 @@ Run this before any release.
 
 ## Current state
 
-Working: all six modules written, registry validates, CLI structure complete.
+Working: all six modules written and wired, registry validates, CLI structure
+complete, `config.py` imported by `cli.py`, a test suite with a `copier.yml`
+drift guard, a `pre-commit` gate mirrored in CI, and the repo-hygiene files
+below all present.
 
 Not yet done:
-- `config.py` is written but **not imported by `cli.py`**
-- No `tests/` directory at all
-- No CI
-- No pre-commit config
-- No `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `LICENSE`
-- No `docs/`
+- `docs/` beyond `docs/plan-v0.1.0.md` — no ADRs, no MkDocs site
 - No tags or releases
 
 ## Backlog, in order
@@ -121,11 +119,10 @@ suite, `config.py` wiring, repo hygiene, CI, ADRs, release) — written after a
 for after `forge-template` removed the question) and confirmed this CLI has
 never been run end to end.
 
-**0. Tag the template repo.** `create-forge new` cannot work until
-`forge-template` has a PEP440 tag. Push `v0.1.0` there first — nothing in this
-repo can be tested end to end before that.
+**0. Tag the template repo.** ✅ Done — `create-forge new` cannot work until
+`forge-template` has a PEP440 tag; that is pushed.
 
-**1. Test suite.** Nothing is tested. Start with:
+**1. Test suite.** ✅ Done —
 - `tests/test_registry.py` — bundled registry validates; ids unique; default
   exists and is not deprecated
 - `tests/test_models.py` — validator behaviour (select without choices,
@@ -137,17 +134,21 @@ repo can be tested end to end before that.
 Assert the *resolved Copier invocation* by monkeypatching `runner.scaffold`,
 rather than actually scaffolding. Keep the real scaffold in one network test.
 
-**2. Wire `config.py` into `cli.py`.** In `new`, load config and merge
+**2. Wire `config.py` into `cli.py`.** ✅ Done — `new` loads config and merges
 `as_answers()` into `preset` **beneath** any `--data` values, so precedence runs
-config < `--data` < prompt. Handle `ValueError` from `load_config` as a user
-error. Also surface config state in `doctor`.
+config < `--data` < prompt. `ValueError` from `load_config` is a user error.
+Config state is surfaced in `doctor`.
 
-**3. Repo hygiene.** pre-commit config, `CONTRIBUTING.md`, `SECURITY.md`,
-`LICENSE`, `CHANGELOG.md`, `.gitattributes` (`* text=auto eol=lf` — the author
-develops on Windows), issue and PR templates, CODEOWNERS.
+**3. Repo hygiene.** ✅ Done — pre-commit config, `CONTRIBUTING.md`,
+`SECURITY.md`, `LICENSE`, `CHANGELOG.md`, `.gitattributes`
+(`* text=auto eol=lf` — the author develops on Windows), issue and PR
+templates, CODEOWNERS.
 
-**4. CI.** Lint, typecheck, test matrix over 3.11–3.13, plus a `check:wheel`
-job. Mirror the workflow in the template repo.
+**4. CI.** ✅ Done — lint (`pre-commit` + `mypy`), a test matrix over
+3.11–3.14, a Windows smoke job, `scripts/check_wheel.py` (`poe check:wheel`),
+and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
+covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
+Branch protection on `main` requires the `all-green` aggregate check.
 
 **5. `docs/`.** MkDocs site. Include ADRs for the decisions already made:
 two-repo split, Copier over Cookiecutter, bundled registry over remote,
