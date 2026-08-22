@@ -132,6 +132,7 @@ merge upstream from.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
+Significant design decisions are recorded in [docs/adr/](docs/adr/).
 
 ## License
 

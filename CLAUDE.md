@@ -22,7 +22,8 @@ Two repositories, deliberately separate:
 
 They are split because Copier resolves template versions from PEP440 git tags in
 the template repo. A shared repo would make `v1.3.0` ambiguous between the two
-codebases. **Do not merge them.**
+codebases. **Do not merge them.** See
+[ADR 0003](docs/adr/0003-two-repo-split.md).
 
 ## Architecture
 
@@ -71,12 +72,14 @@ This is acceptable **only because template URLs are bundled** — they ship with
 the reviewed release and cannot be altered at runtime. Do not add remote
 registry fetching or config-based URL overrides without revisiting this. The
 `--template-url` flag is the sanctioned escape hatch and prompts for
-confirmation.
+confirmation. See [ADR 0005](docs/adr/0005-execute-template-tasks.md) and
+[ADR 0006](docs/adr/0006-bundled-registry-over-remote.md).
 
 ### 4. Copier's Python API is touched in exactly one place
 
 `runner.py`. It is public but evolves faster than the CLI, hence the
 `copier>=9.4,<10` pin. On a major bump, only that file should need attention.
+See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md).
 
 ### 5. templates.toml must ship in the wheel
 
@@ -103,11 +106,12 @@ Run this before any release.
 
 Working: all six modules written and wired, registry validates, CLI structure
 complete, `config.py` imported by `cli.py`, a test suite with a `copier.yml`
-drift guard, a `pre-commit` gate mirrored in CI, and the repo-hygiene files
-below all present.
+drift guard, a `pre-commit` gate mirrored in CI, the repo-hygiene files below
+all present, and `docs/adr/` records the decisions this file used to state
+without their reasoning.
 
 Not yet done:
-- `docs/` beyond `docs/plan-v0.1.0.md` — no ADRs, no MkDocs site
+- MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))
 - No tags or releases
 
 ## Backlog, in order
@@ -150,10 +154,13 @@ and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
 covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
 Branch protection on `main` requires the `all-green` aggregate check.
 
-**5. `docs/`.** MkDocs site. Include ADRs for the decisions already made:
-two-repo split, Copier over Cookiecutter, bundled registry over remote,
-Copier Python API over subprocess, scaffold-only scope, fork model for
-organisations.
+**5. `docs/`.** ✅ Partially done — `docs/adr/` records the eight decisions
+already made: record architecture decisions, Copier over Cookiecutter,
+two-repo split, Copier Python API over subprocess, execute template tasks
+(`unsafe=True`), bundled registry over remote, scaffold-only scope, fork model
+for organisations. `scripts/adr.py` (`poe check:adr`, and `tests/test_adr.py`
+in the fast suite) keeps the set internally consistent. MkDocs site remains
+deferred — [#8](https://github.com/Sandsy09/create-forge/issues/8).
 
 **6. First release.** Tag `v0.1.0`, verify `uvx --from git+... create-forge`
 works from a clean machine, then consider PyPI.

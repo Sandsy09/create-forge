@@ -65,6 +65,16 @@ request:
 `forge-template` moves on its own schedule, so a PR is not the only thing that
 can surface a registry mismatch.
 
+## Architecture decisions
+
+Significant decisions live in [docs/adr/](docs/adr/) as Architecture Decision
+Records — why Copier over Cookiecutter, why the two-repo split, why
+`unsafe=True` is safe here, and so on. Add one by copying the most recent
+record and incrementing the number; records are immutable, so a decision that
+changes is superseded by a new record, not an edit to an old one. `poe test`
+(and standalone, `uv run poe check:adr`) checks the set stays internally
+consistent — filenames, numbering, the index, and the four required headings.
+
 ## Commit messages
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook
