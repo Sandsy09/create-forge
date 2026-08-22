@@ -63,6 +63,7 @@ uvx create-forge new "My Lib" --yes \
 | `list` | Show available templates |
 | `update` | Pull template changes into an existing project |
 | `doctor` | Check your environment can scaffold and update |
+| `config` | Inspect or initialise your saved configuration |
 
 Useful flags on `new`: `--template/-t`, `--path/-p`, `--data/-d`, `--yes/-y`,
 `--ref`, `--dry-run`.

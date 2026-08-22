@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/Sandsy09/create-forge/security/advisories/new
+    about: Do not open a public issue for security reports.
+  - name: forge-template issue tracker
+    url: https://github.com/Sandsy09/forge-template/issues
+    about: A bug in scaffolded project content belongs there, not here.

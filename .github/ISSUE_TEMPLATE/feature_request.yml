@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest a change to the CLI itself.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is about what a generated project contains (a new tool option,
+        a different default), that belongs in
+        [forge-template](https://github.com/Sandsy09/forge-template/issues) —
+        this repo only owns the prompt experience and the registry.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing or awkward?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
