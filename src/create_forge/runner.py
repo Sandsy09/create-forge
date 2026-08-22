@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from copier import run_copy, run_update
-from copier.errors import CopierError, UserMessageError
+from copier.errors import CopierError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -62,8 +62,6 @@ def scaffold(request: ScaffoldRequest) -> None:
             quiet=True,
             pretend=request.dry_run,
         )
-    except UserMessageError as exc:
-        raise ScaffoldError(str(exc)) from exc
     except CopierError as exc:
         raise ScaffoldError(_explain(exc)) from exc
 
@@ -88,9 +86,13 @@ def update(project: Path, *, vcs_ref: str | None = None) -> None:
             # Only ask about questions that did not exist last time.
             skip_answered=True,
             conflict="inline",
+            # Copier refuses to update without this. It is not the safety
+            # relaxation it looks like: `update` already requires the
+            # destination to be a clean git repo (checked above and by
+            # Copier itself), so the user reviews a diff before committing
+            # regardless. Copier's own CLI hardcodes this for `update` too.
+            overwrite=True,
         )
-    except UserMessageError as exc:
-        raise ScaffoldError(str(exc)) from exc
     except CopierError as exc:
         raise ScaffoldError(_explain(exc)) from exc
 
@@ -109,6 +111,18 @@ def _explain(exc: CopierError) -> str:
             "The project has uncommitted changes. Copier needs a clean working "
             "tree to merge template updates.\n"
             "  Commit or stash first: git stash"
+        )
+    if "only supported in git-tracked subprojects" in lowered:
+        return (
+            "This project is not tracked by git. `update` needs it to be, so "
+            "you can review the merge before committing.\n"
+            "  Run: git init && git add -A && git commit -m 'initial'"
+        )
+    if "version from last update not detected" in lowered:
+        return (
+            "The version recorded in .copier-answers.yml isn't a released "
+            "template version, so there is nothing to update from.\n"
+            "  Check this project was created by create-forge, not hand-edited."
         )
     if "no valid version" in lowered or ("ref" in lowered and "not found" in lowered):
         return (
