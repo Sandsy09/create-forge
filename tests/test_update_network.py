@@ -33,6 +33,20 @@ def _isolated_copier_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     )
 
 
+@pytest.fixture(autouse=True)
+def _git_identity_for_template_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """forge-template's post-generation task shells out to `git commit`
+    directly, which needs an identity from *somewhere* -- unlike Copier's own
+    internal git calls (_vcs.py's get_git()), a template's own tasks get no
+    such help. A CI runner has no global git identity configured, so without
+    this the scaffold step itself fails with "Author identity unknown"
+    before update() is ever reached. Mirrors what Copier does for itself."""
+    for key in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
+        monkeypatch.setenv(key, "create-forge tests")
+    for key in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
+        monkeypatch.setenv(key, "create-forge-tests@example.com")
+
+
 def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603
         ["git", *args],  # noqa: S607
