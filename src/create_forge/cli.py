@@ -79,7 +79,7 @@ def raise_exit() -> None:  # noqa: D103 - trivial; folded into the #4 cleanup
 
 
 @app.command("new")
-def new(  # noqa: PLR0913, PLR0912, PLR0915, PLR0917 - a CLI entry point legitimately has many options and branches
+def new(  # noqa: PLR0913, PLR0912, PLR0915 - a CLI entry point legitimately has many options and branches
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
