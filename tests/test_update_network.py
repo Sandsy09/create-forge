@@ -15,10 +15,12 @@ reasoning as test_drift.py's `copier_yml` fixture.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 import yaml
+from plumbum import local as plumbum_local
 
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldRequest, scaffold, update
@@ -34,17 +36,39 @@ def _isolated_copier_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
 
 
 @pytest.fixture(autouse=True)
-def _git_identity_for_template_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+def _git_identity_for_template_tasks() -> Iterator[None]:
     """forge-template's post-generation task shells out to `git commit`
     directly, which needs an identity from *somewhere* -- unlike Copier's own
     internal git calls (_vcs.py's get_git()), a template's own tasks get no
     such help. A CI runner has no global git identity configured, so without
     this the scaffold step itself fails with "Author identity unknown"
-    before update() is ever reached. Mirrors what Copier does for itself."""
-    for key in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
-        monkeypatch.setenv(key, "create-forge tests")
-    for key in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
-        monkeypatch.setenv(key, "create-forge-tests@example.com")
+    before update() is ever reached.
+
+    `monkeypatch.setenv` alone cannot fix this: Copier's task runner executes
+    with `env=dict(local.env)`, and plumbum's `local.env` is a *snapshot* of
+    `os.environ` taken once when plumbum was first imported
+    (`LocalEnv.__init__`, `_curr=os.environ.copy()`), not a live view -- so
+    changes made to `os.environ` afterwards, monkeypatch included, never
+    reach it. This has to mutate `plumbum.local.env` itself, the same object
+    Copier's task runner reads from.
+    """
+    keys = {
+        "GIT_AUTHOR_NAME": "create-forge tests",
+        "GIT_AUTHOR_EMAIL": "create-forge-tests@example.com",
+        "GIT_COMMITTER_NAME": "create-forge tests",
+        "GIT_COMMITTER_EMAIL": "create-forge-tests@example.com",
+    }
+    previous = {key: plumbum_local.env.get(key) for key in keys}
+    for key, value in keys.items():
+        plumbum_local.env[key] = value
+    try:
+        yield
+    finally:
+        for key, restore in previous.items():
+            if restore is None:
+                del plumbum_local.env[key]
+            else:
+                plumbum_local.env[key] = restore
 
 
 def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
