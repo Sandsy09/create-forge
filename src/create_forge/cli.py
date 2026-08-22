@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from create_forge.config import config_path, env_overrides, load_config, write_example
 from create_forge.prompts import PromptAborted, ask_all, choose_template, slugify
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
@@ -26,6 +27,13 @@ app = typer.Typer(
 )
 console = Console()
 err = Console(stderr=True)
+
+config_app = typer.Typer(
+    name="config",
+    help="Inspect or initialise your create-forge configuration.",
+    no_args_is_help=True,
+)
+app.add_typer(config_app, name="config")
 
 
 def _version() -> str:
@@ -71,7 +79,7 @@ def raise_exit() -> None:  # noqa: D103 - trivial; folded into the #4 cleanup
 
 
 @app.command("new")
-def new(  # noqa: PLR0913, PLR0912, PLR0917 - a CLI entry point legitimately has many options and branches
+def new(  # noqa: PLR0913, PLR0912, PLR0915, PLR0917 - a CLI entry point legitimately has many options and branches
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
@@ -116,14 +124,32 @@ def new(  # noqa: PLR0913, PLR0912, PLR0917 - a CLI entry point legitimately has
     if name:
         preset.setdefault("project_name", name)
 
+    try:
+        config = load_config()
+    except ValueError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    cfg_answers = config.as_answers()
+
+    # --- resolve config's preferred template, if it names one ----------------
+    try:
+        preferred_id = (
+            registry.get(config.default_template).id
+            if config.default_template
+            else registry.default_template
+        )
+    except KeyError as exc:
+        err.print(f"[red]{config_path()} sets default_template: {exc.args[0]}[/red]")
+        raise typer.Exit(1) from exc
+
     # --- pick the template ---------------------------------------------------
     try:
         if template_id:
             template = registry.get(template_id)
         elif yes:
-            template = registry.get(registry.default_template)
+            template = registry.get(preferred_id)
         else:
-            template = choose_template(registry.selectable, registry.default_template)
+            template = choose_template(registry.selectable, preferred_id)
     except KeyError as exc:
         err.print(f"[red]{exc.args[0]}[/red]")
         raise typer.Exit(1) from exc
@@ -141,10 +167,13 @@ def new(  # noqa: PLR0913, PLR0912, PLR0917 - a CLI entry point legitimately has
         if "project_name" not in preset:
             err.print("[red]--yes requires a project name.[/red]")
             raise typer.Exit(1)
-        answers = preset
+        answers = {**cfg_answers, **preset}
     else:
         try:
-            answers = ask_all(template, preset=preset)
+            answers = {
+                **cfg_answers,
+                **ask_all(template, preset=preset, defaults=cfg_answers),
+            }
         except PromptAborted:
             err.print("\n[dim]Cancelled.[/dim]")
             raise typer.Exit(130) from None
@@ -278,9 +307,64 @@ def doctor() -> None:
     except RuntimeError as exc:
         row(False, "registry", str(exc).splitlines()[0])
 
+    try:
+        config = load_config()
+        keys = (
+            ", ".join(sorted(config.model_dump(exclude_none=True))) or "no values set"
+        )
+        row(True, "config", f"{config_path()} — {keys}")
+    except ValueError as exc:
+        row(False, "config", str(exc).splitlines()[0])
+
     console.print(table)
     if not ok:
         raise typer.Exit(1)
+
+
+@config_app.command("init")
+def config_init() -> None:
+    """Write a commented starter config file. Never overwrites an existing one."""
+    target = config_path()
+    existed = target.exists()
+    write_example(target)
+    if existed:
+        console.print(f"[dim]{target} already exists — left untouched.[/dim]")
+    else:
+        console.print(f"[green]Wrote {target}.[/green] Edit it, then run `new` again.")
+
+
+@config_app.command("show")
+def config_show() -> None:
+    """Print resolved configuration and where each value came from."""
+    target = config_path()
+    if not target.is_file():
+        console.print(
+            f"[dim]{target} does not exist.[/dim] Run `create-forge config init`."
+        )
+
+    try:
+        config = load_config(target)
+    except ValueError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    overridden = env_overrides()
+
+    table = Table(box=None, pad_edge=False)
+    table.add_column("Key")
+    table.add_column("Value")
+    table.add_column("Source", style="dim")
+
+    for field, value in config.model_dump().items():
+        if field in overridden:
+            source = "environment"
+        elif value is not None:
+            source = "config file"
+        else:
+            source = "unset"
+        table.add_row(field, str(value) if value is not None else "—", source)
+
+    console.print(table)
 
 
 def _git_config(key: str) -> str | None:

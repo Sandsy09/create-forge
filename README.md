@@ -76,10 +76,21 @@ Optional. Saves retyping the same answers:
 author_name = "Your Name"
 author_email = "you@example.com"
 github_org = "your-org"
+default_template = "library"
 ```
 
+`create-forge config init` writes a commented starter file at that path
+without overwriting one that already exists. `create-forge config show`
+prints the resolved values and where each came from.
+
+`github_org` pre-fills its prompt — you're still asked, just with the answer
+already typed in. `author_name` and `author_email` aren't prompted for at all,
+so a configured value is applied directly. `default_template` picks which
+template `new` offers first, interactively or under `--yes`.
+
 Every key can be overridden with an environment variable —
-`FORGE_GITHUB_ORG` and so on — or a command line flag.
+`FORGE_GITHUB_ORG` and so on — or a command line flag. Precedence is
+config < environment < `--data` < an interactive answer.
 
 ## Templates
 

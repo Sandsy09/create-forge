@@ -88,7 +88,7 @@ def load_config(path: Path | None = None) -> UserConfig:
             msg = f"Could not read {target}: {exc}"
             raise ValueError(msg) from exc
 
-    data |= _from_env()
+    data |= env_overrides()
 
     try:
         return UserConfig.model_validate(data)
@@ -97,8 +97,8 @@ def load_config(path: Path | None = None) -> UserConfig:
         raise ValueError(msg) from exc
 
 
-def _from_env() -> dict[str, object]:
-    """Environment overrides, e.g. FORGE_GITHUB_ORG."""
+def env_overrides() -> dict[str, object]:
+    """Which `FORGE_*` environment variables are set, e.g. `FORGE_GITHUB_ORG`."""
     return {
         field: os.environ[key]
         for field in UserConfig.model_fields
