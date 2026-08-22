@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 import questionary
 from questionary import Choice as QChoice
 
+from create_forge.models import PromptKind
+
 if TYPE_CHECKING:
     from create_forge.models import PromptSpec, Template
 
@@ -31,7 +33,7 @@ _STYLE = questionary.Style(
 )
 
 
-class PromptAborted(Exception):  # noqa: N818 - rename to PromptAbortedError tracked in #4
+class PromptAbortedError(Exception):
     """The user pressed Ctrl-C or Ctrl-D."""
 
 
@@ -66,7 +68,7 @@ def choose_template(templates: list[Template], default_id: str) -> Template:
     ).ask()
 
     if answer is None:
-        raise PromptAborted
+        raise PromptAbortedError
     return answer
 
 
@@ -94,7 +96,7 @@ def ask_all(
 
         value = _ask_one(spec, answers, defaults or {})
         if value is None:
-            raise PromptAborted
+            raise PromptAbortedError
         answers[spec.key] = value
 
     return answers
@@ -107,7 +109,7 @@ def _ask_one(
     default = _resolve_default(spec, answers, defaults)
 
     match spec.kind:
-        case "confirm":
+        case PromptKind.CONFIRM:
             confirmed: bool | None = questionary.confirm(
                 spec.message,
                 default=bool(default),
@@ -115,7 +117,7 @@ def _ask_one(
             ).ask()
             return confirmed
 
-        case "select":
+        case PromptKind.SELECT:
             choices = [
                 QChoice(
                     title=c.label + (f"  ({c.hint})" if c.hint else ""),

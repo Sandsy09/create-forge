@@ -17,7 +17,11 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    # Pinned to match the ruff version pyproject.toml's `ruff>=0.14` actually
+    # resolves to (`uv run ruff --version`) -- older pins disagree with the
+    # venv's ruff on which lints fire (seen with PLR0917 on cli.py's new()),
+    # so the two silently fight over the same noqa comment on every commit.
+    rev: v0.16.3
     hooks:
       - id: ruff-check
         args: [--fix]

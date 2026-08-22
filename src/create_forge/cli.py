@@ -15,7 +15,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from create_forge.config import config_path, env_overrides, load_config, write_example
-from create_forge.prompts import PromptAborted, ask_all, choose_template, slugify
+from create_forge.prompts import PromptAbortedError, ask_all, choose_template, slugify
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
 
@@ -59,13 +59,20 @@ def _parse_data(pairs: list[str]) -> dict[str, object]:
     return parsed
 
 
+def _version_callback(show: bool) -> None:
+    """Print the version and exit, if `--version` was passed."""
+    if show:
+        console.print(_version())
+        raise typer.Exit
+
+
 @app.callback()
 def main(
     _version_flag: Annotated[
         bool,
         typer.Option(
             "--version",
-            callback=lambda v: (console.print(_version()), raise_exit()) if v else None,
+            callback=_version_callback,
             is_eager=True,
             help="Show the version and exit.",
         ),
@@ -74,12 +81,8 @@ def main(
     """create-forge."""
 
 
-def raise_exit() -> None:  # noqa: D103 - trivial; folded into the #4 cleanup
-    raise typer.Exit
-
-
 @app.command("new")
-def new(  # noqa: PLR0913, PLR0912, PLR0915 - a CLI entry point legitimately has many options and branches
+def new(  # noqa: PLR0913, PLR0912, PLR0915, PLR0917 - a CLI entry point legitimately has many options and branches
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
@@ -153,7 +156,7 @@ def new(  # noqa: PLR0913, PLR0912, PLR0915 - a CLI entry point legitimately has
     except KeyError as exc:
         err.print(f"[red]{exc.args[0]}[/red]")
         raise typer.Exit(1) from exc
-    except PromptAborted:
+    except PromptAbortedError:
         raise typer.Exit(130) from None
 
     if template.status == "deprecated":
@@ -174,7 +177,7 @@ def new(  # noqa: PLR0913, PLR0912, PLR0915 - a CLI entry point legitimately has
                 **cfg_answers,
                 **ask_all(template, preset=preset, defaults=cfg_answers),
             }
-        except PromptAborted:
+        except PromptAbortedError:
             err.print("\n[dim]Cancelled.[/dim]")
             raise typer.Exit(130) from None
 
