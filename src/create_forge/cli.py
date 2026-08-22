@@ -268,10 +268,26 @@ def update_project(
     )
 
 
+def _markers(target: Console) -> tuple[str, str]:
+    """Return (pass, fail) markers the console's encoding can actually render.
+
+    A Windows console on the cp1252 codepage -- the default outside Windows
+    Terminal -- cannot encode the check-mark glyphs, and Rich lets the
+    resulting UnicodeEncodeError propagate rather than degrading. `doctor`
+    needs markers it knows will survive before it ever tries to print them.
+    """
+    try:
+        "✓✗".encode(target.encoding)
+    except (UnicodeEncodeError, LookupError):
+        return "OK", "FAIL"
+    return "✓", "✗"
+
+
 @app.command("doctor")
 def doctor() -> None:
     """Check that the environment can scaffold and update projects."""
     ok = True
+    passed_marker, failed_marker = _markers(console)
 
     table = Table(box=None, pad_edge=False)
     table.add_column("")
@@ -281,7 +297,9 @@ def doctor() -> None:
     def row(passed: bool, label: str, detail: str) -> None:
         nonlocal ok
         ok = ok and passed
-        table.add_row("[green]✓[/]" if passed else "[red]✗[/]", label, detail)
+        marker = passed_marker if passed else failed_marker
+        style = "green" if passed else "red"
+        table.add_row(f"[{style}]{marker}[/]", label, detail)
 
     py = sys.version_info
     row(py >= (3, 11), "Python 3.11+", f"{py.major}.{py.minor}.{py.micro}")
