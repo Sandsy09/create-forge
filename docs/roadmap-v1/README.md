@@ -10,8 +10,11 @@ defines the ecosystem, composition, and authority terms used by both
 repositories. The [Foundation guarantees](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-guarantees.md)
 define the mandatory generated-project outcomes, while the
 [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
-defines which concerns may belong in that baseline. This roadmap links to the
-canonical sources rather than maintaining second definitions.
+defines which concerns may belong in that baseline. The
+[Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
+defines the generated-project CPython window, defaults, and release lifecycle.
+This roadmap links to the canonical sources rather than maintaining second
+definitions.
 
 Start with `REPOSITORY-OWNERSHIP.md`, then `ROADMAP.md`, then the
 repo-specific GitHub issue indexes.
