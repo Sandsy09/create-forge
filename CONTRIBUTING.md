@@ -87,17 +87,18 @@ enforces this once `pre-commit install --install-hooks` has run.
 [.github/labels.toml](.github/labels.toml) is the source of truth for this
 repo's issue and PR labels, and is shared with `forge-template` — the same
 manifest drives both, so the two never drift into different vocabularies.
-Five groups, each a colour family with a shade per label: `area:`, `type:`,
-`priority:`, `size:`, `status:`. `type:` mirrors the Conventional Commits
-prefixes above, so a label and the commit that eventually closes it agree.
-`good first issue` and `help wanted` stay unprefixed — GitHub's own
-issue-discovery UI special-cases those two names.
+Six namespaced groups each use one colour family: `area:`, `type:`,
+`priority:`, `size:`, `status:`, and `roadmap:`. Most `type:` labels mirror the
+Conventional Commits prefixes above; `type:epic` and `type:decision` classify
+roadmap planning rather than a single eventual commit. `good first issue`,
+`help wanted`, `cross-repo`, and `breaking-change` stay unprefixed because
+their repository-wide meaning is clearer without another namespace.
 
 Apply the manifest to a repo with:
 
 ```bash
-uv run poe labels:sync -- --dry-run              # preview, changes nothing
-uv run poe labels:sync -- --prune                # apply, deleting extras
+uv run poe labels:sync --dry-run                 # preview, changes nothing
+uv run poe labels:sync --prune                   # apply, deleting extras
 uv run python scripts/labels.py --repo Sandsy09/forge-template --prune
 ```
 

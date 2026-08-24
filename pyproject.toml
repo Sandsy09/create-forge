@@ -175,7 +175,7 @@ changelog = "git-cliff --output CHANGELOG.md"
 
 # Reconciles a repo's GitHub labels against .github/labels.toml. Idempotent:
 # `gh label create --force` creates or updates. Pass extra args after `--`,
-# e.g. `uv run poe labels:sync -- --dry-run` or `-- --repo OWNER/NAME --prune`
+# e.g. `uv run poe labels:sync --dry-run` or `--repo OWNER/NAME --prune`
 # -- see scripts/labels.py.
 "labels:sync" = "python scripts/labels.py"
 

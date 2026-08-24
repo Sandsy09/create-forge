@@ -26,7 +26,7 @@ from labels import (
 )
 
 _HEX_COLOR_RE = re.compile(r"^[0-9a-f]{6}$")
-_GROUP_LABEL_RE = re.compile(r"^[a-z]+:[a-z][a-z0-9]*(-[a-z0-9]+)*$")
+_GROUP_LABEL_RE = re.compile(r"^[a-z]+:[a-z0-9][a-z0-9]*(-[a-z0-9]+)*$")
 
 _manifest = load_manifest(MANIFEST_FILE)
 _labels = desired_labels(_manifest)
@@ -123,7 +123,9 @@ def test_build_plan_only_prunes_when_asked() -> None:
     assert with_prune.prunes == ("stock-label",)
 
 
-def test_good_first_issue_and_help_wanted_stay_unprefixed() -> None:
-    """The one deliberate exception to the "<group>:<label>" scheme."""
+def test_repository_metadata_stays_unprefixed() -> None:
+    """Repository-wide and GitHub-special labels keep their public spelling."""
     assert "good first issue" in _labels
     assert "help wanted" in _labels
+    assert "cross-repo" in _labels
+    assert "breaking-change" in _labels

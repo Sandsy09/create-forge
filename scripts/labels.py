@@ -12,8 +12,8 @@ the same `.github/labels.toml` drives both create-forge and forge-template.
 Omitted, `gh` infers the repository from the current directory's git remote.
 
 Usage:
-    uv run poe labels:sync -- --dry-run          # preview, change nothing
-    uv run poe labels:sync -- --prune            # apply, deleting extras
+    uv run poe labels:sync --dry-run             # preview, change nothing
+    uv run poe labels:sync --prune               # apply, deleting extras
     uv run python scripts/labels.py --repo Sandsy09/forge-template --prune
 """
 
@@ -75,7 +75,16 @@ def current_labels(repo: str | None) -> dict[str, LabelSpec]:
     cmd = ["gh", "label", "list", "--json", "name,color,description", "--limit", "200"]
     if repo:
         cmd += ["--repo", repo]
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603
+    # gh emits UTF-8 JSON even when the Windows process locale is cp1252.
+    # Relying on text=True's locale default mojibakes non-ASCII descriptions
+    # and makes an already-synced manifest look perpetually out of date.
+    result = subprocess.run(  # noqa: S603
+        cmd,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
     rows = json.loads(result.stdout)
     return {
         row["name"]: LabelSpec(

@@ -9,10 +9,9 @@
 # "help wanted" are special-cased by GitHub's own issue-discovery UI, so
 # renaming them would cost real functionality for no benefit.
 #
-# `type:` values mirror the Conventional Commits prefixes both repos already
-# enforce via their commit-msg hook, and git-cliff's commit_parsers in
-# pyproject.toml -- so a label and the commit that eventually closes it agree
-# by construction.
+# Most `type:` values mirror the Conventional Commits prefixes both repos
+# already enforce via their commit-msg hook. `type:epic` and `type:decision`
+# classify roadmap planning work that does not map to a single commit.
 
 [groups.area]
 description = "Which part of the system an issue touches."
@@ -34,6 +33,8 @@ description = "What kind of work an issue or PR represents."
 family = "purple"
 
 [groups.type.labels]
+epic = { color = "2f0f5f", description = "A roadmap stage grouping related child issues" }
+decision = { color = "5526a5", description = "An architectural or product decision is required" }
 bug = { color = "3e1f79", description = "Something isn't working" }
 feature = { color = "6639ba", description = "New capability or request" }
 refactor = { color = "8250df", description = "Structural change with no behaviour change" }
@@ -74,7 +75,26 @@ needs-info = { color = "6e7781", description = "Waiting on more information befo
 in-progress = { color = "8c959f", description = "Actively being worked on" }
 deferred = { color = "afb8c1", description = "Confirmed out of scope for now, not forgotten" }
 
-# Kept unprefixed -- GitHub special-cases these two in its issue-discovery UI.
+[groups.roadmap]
+description = "Which Forge Foundation roadmap stage owns the work."
+family = "orange"
+
+[groups.roadmap.labels]
+"00" = { color = "fff8c5", description = "Forge roadmap Stage 00 — Governance and Principles" }
+"01" = { color = "fae17d", description = "Forge roadmap Stage 01 — Python Core" }
+"02" = { color = "f7c843", description = "Forge roadmap Stage 02 — Developer Experience" }
+"03" = { color = "f2b134", description = "Forge roadmap Stage 03 — Quality and CI" }
+"04" = { color = "ed9b2d", description = "Forge roadmap Stage 04 — Runtime and Configuration" }
+"05" = { color = "e78626", description = "Forge roadmap Stage 05 — Security and Supply Chain" }
+"06" = { color = "df7020", description = "Forge roadmap Stage 06 — Extension and Composition" }
+"07" = { color = "d45d1a", description = "Forge roadmap Stage 07 — Forge CLI Integration" }
+"08" = { color = "bd4914", description = "Forge roadmap Stage 08 — Reference Archetype Validation" }
+"09" = { color = "9f3610", description = "Forge roadmap Stage 09 — Blueprint Compatibility" }
+
+# Repository-wide metadata that is clearer without a namespace. GitHub
+# special-cases `good first issue` and `help wanted` in its discovery UI.
 [unprefixed]
 "good first issue" = { color = "7057ff", description = "Good for newcomers" }
 "help wanted" = { color = "008672", description = "Extra attention is needed" }
+"cross-repo" = { color = "1f6feb", description = "Coordinates work across create-forge and forge-template" }
+"breaking-change" = { color = "b60205", description = "May require an incompatible migration or coordinated release" }
