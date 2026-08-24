@@ -5,6 +5,11 @@ This revision models Forge as two independent repositories that work together th
 - **`forge-template`** owns generated content, component metadata and the template/composition engine.
 - **`create-forge`** owns the CLI experience, input collection and orchestration of that engine.
 
+The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
+defines the ecosystem, composition, and authority terms used by both
+repositories. This roadmap links to that source rather than maintaining a
+second glossary.
+
 Start with `REPOSITORY-OWNERSHIP.md`, then `ROADMAP.md`, then the
 repo-specific GitHub issue indexes.
 

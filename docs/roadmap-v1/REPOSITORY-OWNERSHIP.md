@@ -5,6 +5,9 @@
 > [CF-00.02 / #41](https://github.com/Sandsy09/create-forge/issues/41); until
 > that decision closes, the accepted ADRs and `CLAUDE.md` remain authoritative.
 
+The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
+defines the component kinds and selection inputs referenced here.
+
 ## `forge-template`
 
 Owns **what a generated project is** and **how it is composed**.
@@ -12,7 +15,8 @@ Owns **what a generated project is** and **how it is composed**.
 It owns:
 
 - Foundation and archetype templates;
-- capability/platform/profile components;
+- capability and platform components;
+- profile and organisation-policy selection inputs;
 - component manifests and compatibility metadata;
 - the canonical ProjectSpec input contract;
 - template variables and validation;
