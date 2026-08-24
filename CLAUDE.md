@@ -41,6 +41,20 @@ src/create_forge/
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
 `models`. Nothing lower imports anything higher.
 
+## Accepted target — not yet implemented
+
+[ADR 0010](docs/adr/0010-public-engine-integration-contract.md) accepts a
+future one-way integration in which `create-forge` constructs ProjectSpec and
+orchestrates the filesystem while a versioned `forge-template` package owns
+ProjectSpec validation, component discovery, composition, rendering and
+Copier. The living [integration contract](docs/integration-contract.md)
+records the compatibility and trust rules for that transition.
+
+That target does not describe the current v0.1.x code. Until the coordinated
+cutover lands, the architecture and invariants below remain authoritative. Do
+not partially migrate ownership or weaken the bundled-source trust boundary in
+advance of the roadmap issues that implement and test the complete contract.
+
 ## Invariants — do not break these
 
 ### 1. Registry prompt keys must exist in the template's copier.yml
@@ -156,13 +170,12 @@ and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
 covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
 Branch protection on `main` requires the `all-green` aggregate check.
 
-**5. `docs/`.** ✅ Partially done — `docs/adr/` records the eight decisions
-already made: record architecture decisions, Copier over Cookiecutter,
-two-repo split, Copier Python API over subprocess, execute template tasks
-(`unsafe=True`), bundled registry over remote, scaffold-only scope, fork model
-for organisations. `scripts/adr.py` (`poe check:adr`, and `tests/test_adr.py`
-in the fast suite) keeps the set internally consistent. MkDocs site remains
-deferred — [#8](https://github.com/Sandsy09/create-forge/issues/8).
+**5. `docs/`.** ✅ Partially done — `docs/adr/` records the accepted decisions,
+including the current Copier architecture, release version source, and the
+future public-engine integration contract. `scripts/adr.py` (`poe check:adr`,
+and `tests/test_adr.py` in the fast suite) keeps the set internally consistent.
+MkDocs remains deferred —
+[#8](https://github.com/Sandsy09/create-forge/issues/8).
 
 **6. First release.** ✅ Done — [`release.yml`](.github/workflows/release.yml)
 reads `pyproject.toml`'s `version` as the single source (ADR 0009, since

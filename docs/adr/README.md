@@ -12,6 +12,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0007 — Scaffold-only scope](0007-scaffold-only-scope.md)
 - [0008 — Fork model for organisations](0008-fork-model-for-organisations.md)
 - [0009 — `pyproject.toml` as the single version source](0009-pyproject-as-the-single-version-source.md)
+- [0010 — Adopt the forge-template public engine contract](0010-public-engine-integration-contract.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

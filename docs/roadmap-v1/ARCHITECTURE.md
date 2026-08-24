@@ -1,9 +1,9 @@
 # Forge Two-Repository Architecture
 
-> **Planning status:** This is a proposed target architecture imported by the
-> roadmap, not the current accepted implementation. The current CLI is a thin
-> Copier wrapper with a bundled registry. [CF-00.02 / #41](https://github.com/Sandsy09/create-forge/issues/41)
-> decides whether this model supersedes or is reframed around the accepted ADRs.
+> **Implementation status:** This is the accepted target architecture under
+> [ADR 0010](../adr/0010-public-engine-integration-contract.md), but it is
+> not the current implementation. The released v0.1.x CLI remains a thin
+> Copier wrapper with a bundled registry until the coordinated cutover.
 
 ```text
 ┌─────────────────────────────┐
@@ -25,7 +25,10 @@
         Generated Project
 ```
 
-The boundary lets CLI UX evolve independently from generated-project architecture and leaves room for future clients, including Blueprint, to consume the same engine directly.
+The boundary lets CLI UX evolve independently from generated-project
+architecture and leaves room for future clients, including Blueprint, to
+consume the same engine directly. Package, protocol, trust and release rules
+live in the [integration contract](../integration-contract.md).
 
 ## Critical invariant
 

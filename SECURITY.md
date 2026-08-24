@@ -25,6 +25,20 @@ runs — is in scope here. A bug in the *content* generated projects ship with
 belongs in [forge-template](https://github.com/Sandsy09/forge-template)
 instead; the two repos are deliberately separate (see `CLAUDE.md`).
 
+## Accepted engine transition
+
+The future [public-engine integration contract](docs/integration-contract.md)
+moves Copier and template execution behind a versioned `forge-template` API
+without widening the trust boundary. Normal discovery remains limited to
+metadata and executable assets shipped in the reviewed engine release. Runtime
+remote registries and arbitrary component plugins are not accepted.
+
+At the coordinated cutover, an explicit, warned, contract-compatible local or
+VCS engine override replaces arbitrary `--template-url` execution. Unsupported
+engine or ProjectSpec protocol versions fail before discovery, template tasks
+or destination writes, with no silent direct-Copier fallback. This is an
+accepted target only; the v0.1.x rules above remain the current behaviour.
+
 ## Supported versions
 
 Only the latest tagged release is supported. There is no backport policy.

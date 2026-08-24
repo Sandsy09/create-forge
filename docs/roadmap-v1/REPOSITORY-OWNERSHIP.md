@@ -1,9 +1,9 @@
 # Repository Ownership and Integration Model
 
-> **Planning status:** The ProjectSpec/public-engine ownership below is a
-> proposed target, not current repository behaviour. It is gated by
-> [CF-00.02 / #41](https://github.com/Sandsy09/create-forge/issues/41); until
-> that decision closes, the accepted ADRs and `CLAUDE.md` remain authoritative.
+> **Implementation status:** The ProjectSpec/public-engine ownership below is
+> accepted by [ADR 0010](../adr/0010-public-engine-integration-contract.md)
+> but is not current repository behaviour. The v0.1.x Copier/registry
+> ownership remains operational until the coordinated cutover.
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
 defines the component kinds and selection inputs referenced here. The
@@ -65,7 +65,10 @@ forge-template
 Generated repository
 ```
 
-The preferred dependency is one-way: `create-forge` consumes `forge-template`. `forge-template` must not import or depend on `create-forge`.
+The dependency is one-way: `create-forge` consumes `forge-template`.
+`forge-template` must not import or depend on `create-forge`. Compatibility,
+source trust and release sequencing are defined by the
+[integration contract](../integration-contract.md).
 
 ## Cross-repository issue rule
 

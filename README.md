@@ -106,6 +106,12 @@ To use your own template:
 uvx create-forge new --template-url https://github.com/you/your-template
 ```
 
+This describes the released v0.1.x architecture. Forge has accepted a future
+[public-engine integration contract](docs/integration-contract.md) in which a
+versioned `forge-template` package owns discovery and rendering. The current
+registry and `--template-url` behaviour remain unchanged until that complete,
+tested cutover is released.
+
 ## Security
 
 **create-forge executes code from the template it clones.** Copier templates can
@@ -122,12 +128,12 @@ issue.
 
 ## Using this at work
 
-Organisations generally need templates this tool cannot anticipate — internal
-registries, mandated scanners, approval workflows, house conventions. The
-intended path is to fork this repository, point the bundled registry at your own
-templates, and maintain it internally. The core modules are deliberately
-template-agnostic, so a fork that only changes `templates.toml` stays easy to
-merge upstream from.
+In v0.1.x, organisations needing custom executable templates can fork this
+repository, point the bundled registry at their own templates, and maintain it
+internally. The accepted target makes a downstream client of the
+`forge-template` public engine the preferred route for organisation defaults
+and constraints. Forks remain appropriate for genuinely custom executable
+template content; see the [integration contract](docs/integration-contract.md).
 
 ## Contributing
 

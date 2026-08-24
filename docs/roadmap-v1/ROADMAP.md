@@ -1,8 +1,9 @@
 # Forge Foundation Two-Repository Roadmap
 
-> **Planning status:** Stages 06–09 depend on the architecture decision in
-> [CF-00.02 / #41](https://github.com/Sandsy09/create-forge/issues/41). The
-> [create-forge live issue index](github-issues/create-forge/ISSUE-INDEX.md)
+> **Architecture status:** [ADR 0010](../adr/0010-public-engine-integration-contract.md)
+> accepts the public-engine/ProjectSpec target. Stages 04–09 now implement that
+> contract in dependency order; the current v0.1.x Copier architecture remains
+> operational until the atomic cutover. The [create-forge live issue index](github-issues/create-forge/ISSUE-INDEX.md)
 > records completed baseline work and the filed dependency graph.
 
 The roadmap remains one product roadmap, but implementation ownership is split between repository-local epics and issues.
