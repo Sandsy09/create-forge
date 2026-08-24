@@ -6,7 +6,11 @@
 > that decision closes, the accepted ADRs and `CLAUDE.md` remain authoritative.
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
-defines the component kinds and selection inputs referenced here.
+defines the component kinds and selection inputs referenced here. The
+[Foundation guarantees](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-guarantees.md)
+and [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
+define the mandatory outcomes and concern-level boundary that this ownership
+model must preserve.
 
 ## `forge-template`
 
