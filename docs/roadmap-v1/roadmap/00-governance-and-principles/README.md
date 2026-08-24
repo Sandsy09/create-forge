@@ -16,18 +16,19 @@
 
 The forge-template counterpart
 [FT-EPIC-00 / #11](https://github.com/Sandsy09/forge-template/issues/11) is
-complete. The stage remains open here for create-forge's repository-local
-decision below.
+complete. The create-forge decision below completes the two-repository stage.
 
 ### create-forge
 
-- Epic: [CF-EPIC-00 / #33](https://github.com/Sandsy09/create-forge/issues/33)
+- ~~Epic: [CF-EPIC-00 / #33](https://github.com/Sandsy09/create-forge/issues/33)~~ — complete.
 - ~~**CF-00.01 — Define create-forge responsibility boundary**~~ — completed before roadmap filing.
-- [**CF-00.02 — Decide cross-repository integration and compatibility policy**](https://github.com/Sandsy09/create-forge/issues/41)
+- ~~[**CF-00.02 — Decide cross-repository integration and compatibility policy**](https://github.com/Sandsy09/create-forge/issues/41)~~ — completed by
+  [ADR 0010](../../../adr/0010-public-engine-integration-contract.md) and the
+  living [integration contract](../../../integration-contract.md).
 
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [x] Repo-local issues are complete or explicitly deferred.
+- [x] Cross-repository blockers are resolved.
+- [x] Public contracts changed by this stage are documented/versioned.
+- [x] No implementation concern is duplicated across repositories.
