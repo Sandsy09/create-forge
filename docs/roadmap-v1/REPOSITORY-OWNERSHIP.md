@@ -10,7 +10,10 @@ defines the component kinds and selection inputs referenced here. The
 [Foundation guarantees](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-guarantees.md)
 and [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
 define the mandatory outcomes and concern-level boundary that this ownership
-model must preserve.
+model must preserve. The
+[Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
+defines generated-project interpreter choices, defaults, and lifecycle in the
+repository that owns those outputs.
 
 ## `forge-template`
 
@@ -24,6 +27,7 @@ It owns:
 - component manifests and compatibility metadata;
 - the canonical ProjectSpec input contract;
 - template variables and validation;
+- generated-project Python support choices, defaults, and lifecycle;
 - composition, merge/conflict and override rules;
 - rendering/generation logic;
 - structured engine errors and generated-project validation;
@@ -46,7 +50,8 @@ It owns:
 - CLI diagnostics/version reporting;
 - end-to-end scaffolding tests.
 
-It does **not** own copies of templates, a second component catalogue, compatibility rules, or rendering/composition logic.
+It does **not** own copies of templates, a second component catalogue, Python
+support defaults, compatibility rules, or rendering/composition logic.
 
 ## Dependency direction
 
