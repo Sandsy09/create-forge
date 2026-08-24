@@ -77,6 +77,13 @@ changes is superseded by a new record, not an edit to an old one. `poe test`
 (and standalone, `uv run poe check:adr`) checks the set stays internally
 consistent — filenames, numbering, the index, and the four required headings.
 
+The accepted future boundary with `forge-template` is recorded in
+[ADR 0010](docs/adr/0010-public-engine-integration-contract.md), while the
+evolving package/protocol rules live in the
+[integration contract](docs/integration-contract.md). The current v0.1.x
+Copier/registry implementation remains authoritative until that contract is
+implemented as one coordinated cutover.
+
 ## Commit messages
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook
