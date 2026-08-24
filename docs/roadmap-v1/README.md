@@ -7,8 +7,11 @@ This revision models Forge as two independent repositories that work together th
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
 defines the ecosystem, composition, and authority terms used by both
-repositories. This roadmap links to that source rather than maintaining a
-second glossary.
+repositories. The [Foundation guarantees](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-guarantees.md)
+define the mandatory generated-project outcomes, while the
+[Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
+defines which concerns may belong in that baseline. This roadmap links to the
+canonical sources rather than maintaining second definitions.
 
 Start with `REPOSITORY-OWNERSHIP.md`, then `ROADMAP.md`, then the
 repo-specific GitHub issue indexes.
