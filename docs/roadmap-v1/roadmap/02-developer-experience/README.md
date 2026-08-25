@@ -14,7 +14,11 @@
 - Epic: [CF-EPIC-02 / #34](https://github.com/Sandsy09/create-forge/issues/34)
 - ~~[**CF-02.01 — Define CLI UX and prompting conventions**](https://github.com/Sandsy09/create-forge/issues/42)~~
   — complete; see the [CLI conventions](../../../cli-conventions.md)
-- [**CF-02.02 — Document the cross-repository contributor workflow**](https://github.com/Sandsy09/create-forge/issues/43)
+- ~~[**CF-02.02 — Document the cross-repository contributor workflow**](https://github.com/Sandsy09/create-forge/issues/43)~~
+  — complete; see the [cross-repository workflow](../../../cross-repository-workflow.md)
+
+The create-forge Stage 02 epic is complete. The shared stage remains open for
+[forge-template#23 / FT-02.04](https://github.com/Sandsy09/forge-template/issues/23).
 
 ## Stage completion rule
 

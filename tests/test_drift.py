@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -84,44 +85,69 @@ def _choice_values(question: dict[str, Any]) -> set[str] | None:
 
 
 @pytest.fixture(scope="session")
-def copier_yml(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
-    """Clone the library template at its latest tag and parse copier.yml.
+def forge_template_root(pytestconfig: pytest.Config) -> Path | None:
+    """Return and validate the explicit local template checkout, if any."""
+    value = pytestconfig.getoption("forge_template_root")
+    if value is None:
+        return None
 
-    Network-dependent: skips rather than fails when the template is
-    unreachable, so a connectivity problem is never mistaken for a genuine
-    registry drift -- both would otherwise show up as the same red X.
+    root = Path(str(value)).expanduser().resolve()
+    config = root / "copier.yml"
+    if not config.is_file():
+        pytest.fail(f"--forge-template-root must contain copier.yml; missing {config}")
+    return root
+
+
+@pytest.fixture(scope="session")
+def copier_yml(
+    tmp_path_factory: pytest.TempPathFactory,
+    forge_template_root: Path | None,
+) -> dict[str, Any]:
+    """Load copier.yml from an explicit checkout or the latest release tag.
+
+    The default network path skips rather than fails when the template is
+    unreachable, so connectivity is never mistaken for genuine registry
+    drift. An explicit local path fails closed when it is invalid.
     """
-    load_registry.cache_clear()
-    registry = load_registry()
-    url = str(registry.get(registry.default_template).url)
+    if forge_template_root is not None:
+        config = forge_template_root / "copier.yml"
+    else:
+        load_registry.cache_clear()
+        registry = load_registry()
+        url = str(registry.get(registry.default_template).url)
 
-    try:
-        tag = _latest_tag(url)
-        if tag is None:
-            pytest.skip(f"{url} has no version tags yet")
+        try:
+            tag = _latest_tag(url)
+            if tag is None:
+                pytest.skip(f"{url} has no version tags yet")
 
-        dst = tmp_path_factory.mktemp("forge-template") / "repo"
-        subprocess.run(  # noqa: S603
-            [  # noqa: S607
-                "git",
-                "clone",
-                "--quiet",
-                "--depth",
-                "1",
-                "--branch",
-                tag,
-                url,
-                str(dst),
-            ],
-            check=True,
-            timeout=60,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        pytest.skip(f"could not reach {url}: {exc}")
+            dst = tmp_path_factory.mktemp("forge-template") / "repo"
+            subprocess.run(  # noqa: S603
+                [  # noqa: S607
+                    "git",
+                    "clone",
+                    "--quiet",
+                    "--depth",
+                    "1",
+                    "--branch",
+                    tag,
+                    url,
+                    str(dst),
+                ],
+                check=True,
+                timeout=60,
+                capture_output=True,
+                text=True,
+            )
+        except (
+            OSError,
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+        ) as exc:
+            pytest.skip(f"could not reach {url}: {exc}")
+        config = dst / "copier.yml"
 
-    with (dst / "copier.yml").open(encoding="utf-8") as handle:
+    with config.open(encoding="utf-8") as handle:
         data: dict[str, Any] = yaml.safe_load(handle)
     return data
 

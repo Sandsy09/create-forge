@@ -49,6 +49,13 @@ unless Hatchling's package-data rules are still correct. A missing registry
 passes every test above and only breaks on a user's first `uvx` run — this is
 the one check that catches it ahead of time.
 
+## Cross-repository changes
+
+Changes that coordinate this CLI with a local `forge-template` checkout follow
+the canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md).
+It defines the sibling-checkout commands, local registry/schema drift check,
+trust boundary, validation ladder, and safe merge/release order.
+
 ## What CI runs
 
 `.github/workflows/ci.yml` runs on every push to `main` and every pull
