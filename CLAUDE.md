@@ -111,6 +111,9 @@ Run this before any release.
 - The canonical [CLI UX and prompting conventions](docs/cli-conventions.md)
   cover input precedence, prompt skipping, parity, validation ownership, and
   exit statuses. Treat them as a compatibility contract.
+- The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
+  defines how to validate sibling `create-forge` and `forge-template` changes
+  before tagging or release.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

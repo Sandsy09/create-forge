@@ -2,7 +2,7 @@
 
 This is the live repository-local index for the Forge Foundation roadmap,
 reconciled against the v0.1.0 baseline, filed on GitHub on 2026-08-23, and
-updated through CF-02.01 on 2026-08-25. GitHub issue bodies are the source of
+updated through CF-02.02 on 2026-08-25. GitHub issue bodies are the source of
 truth for open work; completed baseline items were not backfilled as closed
 issues.
 
@@ -13,9 +13,9 @@ issues.
 | CF-00.02 | [#41](https://github.com/Sandsy09/create-forge/issues/41) and [ADR 0010](../../../adr/0010-public-engine-integration-contract.md) | Complete | [#33](https://github.com/Sandsy09/create-forge/issues/33) | [FT-00.02](https://github.com/Sandsy09/forge-template/issues/20) (complete), [FT-00.03](https://github.com/Sandsy09/forge-template/issues/21) (complete) | Foundation Contract — Stage 00 |
 | CF-01.01 | Existing package and CLI entry point | Complete before roadmap | — | — | — |
 | CF-01.02 | Existing `pyproject.toml` and uv workflow | Complete before roadmap | — | — | — |
-| CF-EPIC-02 | [#34](https://github.com/Sandsy09/create-forge/issues/34) | Open | — | — | Foundation Baseline — Stages 01–03 |
+| CF-EPIC-02 | [#34](https://github.com/Sandsy09/create-forge/issues/34) | Complete | — | — | Foundation Baseline — Stages 01–03 |
 | CF-02.01 | [#42](https://github.com/Sandsy09/create-forge/issues/42) and [CLI conventions](../../../cli-conventions.md) | Complete | [#34](https://github.com/Sandsy09/create-forge/issues/34) | — | Foundation Baseline — Stages 01–03 |
-| CF-02.02 | [#43](https://github.com/Sandsy09/create-forge/issues/43) | Open | [#34](https://github.com/Sandsy09/create-forge/issues/34) | [#42](https://github.com/Sandsy09/create-forge/issues/42) (complete) | Foundation Baseline — Stages 01–03 |
+| CF-02.02 | [#43](https://github.com/Sandsy09/create-forge/issues/43) and [cross-repository workflow](../../../cross-repository-workflow.md) | Complete | [#34](https://github.com/Sandsy09/create-forge/issues/34) | [#42](https://github.com/Sandsy09/create-forge/issues/42) (complete) | Foundation Baseline — Stages 01–03 |
 | CF-03.01 | Existing Ruff, pytest and mypy baseline | Complete before roadmap | — | — | — |
 | CF-03.02 | Existing pre-commit gate | Complete before roadmap | — | — | — |
 | CF-03.03 | Existing CI and network compatibility jobs | Complete before roadmap | — | — | — |

@@ -320,7 +320,7 @@ def test_new_template_url_declined_scaffolds_nothing(
     assert recorder == []
 
 
-def test_new_template_url_accepted_uses_that_url(
+def test_new_template_url_accepted_forwards_local_source_ref_and_warning(
     recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(
@@ -339,12 +339,17 @@ def test_new_template_url_accepted_uses_that_url(
             "--path",
             str(tmp_path / "proj"),
             "--template-url",
-            "https://example.com/other-template",
+            "../forge-template",
+            "--ref",
+            "HEAD",
         ],
     )
 
     assert result.exit_code == 0, result.output
-    assert recorder[0].src == "https://example.com/other-template"
+    assert recorder[0].src == "../forge-template"
+    assert recorder[0].vcs_ref == "HEAD"
+    assert "Template code will be executed" in result.output
+    assert "Only continue if you trust it" in result.output
 
 
 def test_new_reports_a_scaffold_error(
