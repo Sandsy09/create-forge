@@ -175,7 +175,7 @@ def test_new_yes_without_a_project_name_is_rejected(
 
 def test_new_bad_data_format_is_rejected(recorder: list[ScaffoldRequest]) -> None:
     result = runner.invoke(app, ["new", "X", "--yes", "--data", "no-equals-sign"])
-    assert result.exit_code != 0
+    assert result.exit_code == 2
     assert recorder == []
 
 
