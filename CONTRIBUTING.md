@@ -84,6 +84,12 @@ evolving package/protocol rules live in the
 Copier/registry implementation remains authoritative until that contract is
 implemented as one coordinated cutover.
 
+The living [CLI UX and prompting conventions](docs/cli-conventions.md) define
+input precedence, prompt-skipping rules, interactive/non-interactive parity,
+validation ownership, and exit statuses. Changes to `cli.py`, `prompts.py`, or
+their replacement at the public-engine cutover must update that contract and
+its executable examples together when behavior changes.
+
 ## Commit messages
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook
