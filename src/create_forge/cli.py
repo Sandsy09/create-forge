@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
@@ -45,11 +47,21 @@ config_app = typer.Typer(
 app.add_typer(config_app, name="config")
 
 
-def _version() -> str:
+def _dist_version(name: str) -> str:
+    """Installed version of a distribution, or "unknown" if it can't be found.
+
+    Editable installs of `create-forge` itself hit the fallback in normal
+    development; a distribution genuinely not being installed (e.g. `copier`
+    in some hypothetical stripped environment) hits it too.
+    """
     try:
-        return version("create-forge")
+        return version(name)
     except PackageNotFoundError:  # pragma: no cover - editable installs
         return "unknown"
+
+
+def _version() -> str:
+    return _dist_version("create-forge")
 
 
 def _parse_data(pairs: list[str]) -> dict[str, object]:
@@ -328,38 +340,96 @@ def _markers(target: Console) -> tuple[str, str]:
     return "✓", "✗"
 
 
-@app.command("doctor")
-def doctor() -> None:
-    """Check that the environment can scaffold and update projects."""
-    ok = True
-    passed_marker, failed_marker = _markers(console)
+@dataclass(frozen=True, slots=True)
+class Check:
+    """One row of `doctor` output.
 
-    table = Table(box=None, pad_edge=False)
-    table.add_column("")
-    table.add_column("Check")
-    table.add_column("Detail", style="dim")
+    `informational` rows report a fact rather than a pass/fail condition (the
+    installed Copier version, say) and never affect `doctor`'s exit status —
+    only `passed=False` on a non-informational row does.
+    """
 
-    def row(passed: bool, label: str, detail: str) -> None:
-        nonlocal ok
-        ok = ok and passed
-        marker = passed_marker if passed else failed_marker
-        style = "green" if passed else "red"
-        table.add_row(f"[{style}]{marker}[/]", label, detail)
+    name: str
+    passed: bool
+    detail: str
+    informational: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Integration:
+    """The active create-forge/forge-template integration line and its
+    versions -- see docs/engine-resolution.md for what each field means and
+    when it is populated. Every engine/ProjectSpec field is `None` under the
+    v0.1.x direct-Copier line; there is no engine package to report yet.
+    """  # noqa: D205
+
+    line: str
+    copier: str
+    engine_package: str | None
+    engine_range: str | None
+    projectspec_supported: str | None
+    projectspec_detected: str | None
+    template_source: str | None
+    template_ref: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ConfigSummary:
+    """Where config was read from and which keys it set."""
+
+    path: str
+    keys: list[str]
+
+
+@dataclass(frozen=True, slots=True)
+class Diagnostics:
+    """Everything `doctor` reports, gathered once so the table and `--json`
+    output can never disagree.
+    """  # noqa: D205
+
+    create_forge: str
+    python: str
+    platform: str
+    integration: Integration
+    config: ConfigSummary
+    checks: list[Check]
+
+    @property
+    def ok(self) -> bool:
+        """Whether every non-informational check passed."""
+        return all(check.passed for check in self.checks if not check.informational)
+
+
+def _gather_diagnostics() -> Diagnostics:
+    """Run every doctor check and collect every reportable fact.
+
+    `doctor` stays offline: it reports the registry's bundled template source
+    but never resolves a ref, since that would mean a network call for what
+    is meant to be a fast local health check.
+    """
+    checks: list[Check] = []
+
+    def check(passed: bool, name: str, detail: str) -> None:
+        checks.append(Check(name, passed, detail))
+
+    def info(name: str, detail: str) -> None:
+        checks.append(Check(name, True, detail, informational=True))
 
     py = sys.version_info
-    row(py >= (3, 11), "Python 3.11+", f"{py.major}.{py.minor}.{py.micro}")
+    python_version = f"{py.major}.{py.minor}.{py.micro}"
+    check(py >= (3, 11), "Python 3.11+", python_version)
 
     for tool, why in (
         ("git", "required to clone templates"),
         ("uv", "required by generated projects"),
     ):
         found = shutil.which(tool)
-        row(bool(found), tool, found or f"not on PATH — {why}")
+        check(bool(found), tool, found or f"not on PATH — {why}")
 
     if shutil.which("git"):
         name = _git_config("user.name")
         email = _git_config("user.email")
-        row(
+        check(
             bool(name and email),
             "git identity",
             f"{name} <{email}>"
@@ -367,23 +437,127 @@ def doctor() -> None:
             else "unset — scaffolding cannot commit",
         )
 
+    registry: Registry | None = None
     try:
         registry = load_registry()
-        row(True, "registry", f"{len(registry.templates)} template(s)")
+        check(True, "registry", f"{len(registry.templates)} template(s)")
     except RuntimeError as exc:
-        row(False, "registry", str(exc).splitlines()[0])
+        check(False, "registry", str(exc).splitlines()[0])
 
+    template_source: str | None = None
+    if registry is not None:
+        default = registry.get(registry.default_template)
+        template_source = str(default.url)
+        source_detail = (
+            f"{template_source} (default: {registry.default_template}, "
+            "ref: latest PEP 440 tag — resolved at scaffold time)"
+        )
+    else:
+        source_detail = "unavailable — registry did not load"
+
+    config_keys: list[str] = []
     try:
         config = load_config()
-        keys = (
-            ", ".join(sorted(config.model_dump(exclude_none=True))) or "no values set"
-        )
-        row(True, "config", f"{config_path()} — {keys}")
+        config_keys = sorted(config.model_dump(exclude_none=True))
+        keys_detail = ", ".join(config_keys) or "no values set"
+        check(True, "config", f"{config_path()} — {keys_detail}")
     except ValueError as exc:
-        row(False, "config", str(exc).splitlines()[0])
+        check(False, "config", str(exc).splitlines()[0])
 
-    console.print(table)
-    if not ok:
+    info("create-forge", _dist_version("create-forge"))
+    info("copier", _dist_version("copier"))
+    info("template source", source_detail)
+    info("engine", "not installed — v0.1.x direct-Copier line")
+    info("ProjectSpec protocol", "n/a — assigned at Stage 06")
+
+    return Diagnostics(
+        create_forge=_dist_version("create-forge"),
+        python=python_version,
+        platform=sys.platform,
+        integration=Integration(
+            line="v0.1.x-copier",
+            copier=_dist_version("copier"),
+            engine_package=None,
+            engine_range=None,
+            projectspec_supported=None,
+            projectspec_detected=None,
+            template_source=template_source,
+            template_ref=None,
+        ),
+        config=ConfigSummary(path=str(config_path()), keys=config_keys),
+        checks=checks,
+    )
+
+
+def _render_diagnostics_table(diagnostics: Diagnostics, target: Console) -> None:
+    """Render `doctor`'s checks as the human-facing Rich table."""
+    passed_marker, failed_marker = _markers(target)
+
+    table = Table(box=None, pad_edge=False)
+    table.add_column("")
+    table.add_column("Check")
+    table.add_column("Detail", style="dim")
+
+    for entry in diagnostics.checks:
+        if entry.informational:
+            table.add_row("[dim]-[/]", entry.name, entry.detail)
+            continue
+        marker = passed_marker if entry.passed else failed_marker
+        style = "green" if entry.passed else "red"
+        table.add_row(f"[{style}]{marker}[/]", entry.name, entry.detail)
+
+    target.print(table)
+
+
+def _diagnostics_payload(diagnostics: Diagnostics) -> dict[str, object]:
+    """The stable JSON shape `doctor --json` emits.
+
+    Documented field-by-field in docs/engine-resolution.md's diagnostics
+    contract -- new fields may be added, but existing ones keep their meaning.
+    """
+    integration = diagnostics.integration
+    return {
+        "create_forge": diagnostics.create_forge,
+        "python": diagnostics.python,
+        "platform": diagnostics.platform,
+        "integration": {
+            "line": integration.line,
+            "copier": integration.copier,
+            "engine_package": integration.engine_package,
+            "engine_range": integration.engine_range,
+            "projectspec_protocol": {
+                "supported": integration.projectspec_supported,
+                "detected": integration.projectspec_detected,
+            },
+            "template_source": integration.template_source,
+            "template_ref": integration.template_ref,
+        },
+        "config": {"path": diagnostics.config.path, "keys": diagnostics.config.keys},
+        "checks": [
+            {"name": c.name, "ok": c.passed, "detail": c.detail}
+            for c in diagnostics.checks
+            if not c.informational
+        ],
+        "ok": diagnostics.ok,
+    }
+
+
+@app.command("doctor")
+def doctor(
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print machine-readable diagnostics."),
+    ] = False,
+) -> None:
+    """Check that the environment can scaffold and update projects."""
+    diagnostics = _gather_diagnostics()
+
+    if as_json:
+        typer.echo(json.dumps(_diagnostics_payload(diagnostics), indent=2))
+    else:
+        _render_diagnostics_table(diagnostics, console)
+
+    if not diagnostics.ok:
         raise typer.Exit(1)
 
 

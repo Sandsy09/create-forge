@@ -134,11 +134,16 @@ Run this once `forge-template`'s `FT-06.07` publishes an installable engine:
   guards that no speculative engine range is reserved ahead of a real
   dependency, and that this document stays linked from `CLAUDE.md`,
   `CONTRIBUTING.md`, and the integration contract.
-
-The diagnostics contract above is characterized once `doctor`'s engine rows
-and `doctor --json` ship; that change adds `tests/test_cli.py` and
-`tests/test_config.py::test_config_cannot_redirect_the_template_source`
-entries here.
+- [`tests/test_cli.py`](../tests/test_cli.py) —
+  `test_doctor_reports_versions_and_the_unimplemented_engine`,
+  `test_doctor_json_emits_the_documented_shape`, and
+  `test_doctor_json_exits_1_when_a_check_fails` characterize the diagnostics
+  contract's table and `--json` output, including the engine and
+  ProjectSpec-protocol fields staying `null`/absent under v0.1.x.
+- [`tests/test_config.py`](../tests/test_config.py) —
+  `test_config_cannot_redirect_the_template_source` and
+  `test_no_config_field_looks_like_a_source_or_version_selector`
+  characterize the "ordinary configuration may never do" rule above.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

@@ -90,6 +90,12 @@ either stage leaves the scaffold uninvoked.
 Cancellation must not invoke scaffolding. Expected application failures are
 shown without a traceback and phrased as an action the user can take.
 
+`doctor --json` prints the same facts as the table — see
+[docs/engine-resolution.md](engine-resolution.md)'s diagnostics contract for
+the field list — as a single JSON object on stdout instead, with no table
+markup. It follows the same exit-status rule as the table form: `0` when
+every check passes, `1` when any does not.
+
 ## Validation ownership
 
 `create-forge` owns validation needed to operate its interface safely:
