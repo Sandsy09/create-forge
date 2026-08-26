@@ -90,6 +90,10 @@ evolving package/protocol rules live in the
 [integration contract](docs/integration-contract.md). The current v0.1.x
 Copier/registry implementation remains authoritative until that contract is
 implemented as one coordinated cutover.
+[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
+living [engine resolution contract](docs/engine-resolution.md) define how
+that future engine is sourced, overridden locally, diagnosed, and rejected
+when incompatible.
 
 The living [CLI UX and prompting conventions](docs/cli-conventions.md) define
 input precedence, prompt-skipping rules, interactive/non-interactive parity,

@@ -49,6 +49,10 @@ orchestrates the filesystem while a versioned `forge-template` package owns
 ProjectSpec validation, component discovery, composition, rendering and
 Copier. The living [integration contract](docs/integration-contract.md)
 records the compatibility and trust rules for that transition.
+[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
+living [engine resolution contract](docs/engine-resolution.md) define how
+that engine is sourced, overridden for local development, diagnosed, and
+rejected when incompatible — rules only, no code yet.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -114,6 +118,9 @@ Run this before any release.
 - The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
   defines how to validate sibling `create-forge` and `forge-template` changes
   before tagging or release.
+- The canonical [engine resolution contract](docs/engine-resolution.md)
+  defines how the template engine is sourced, overridden locally, diagnosed,
+  and rejected when incompatible. Treat it as a compatibility contract.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

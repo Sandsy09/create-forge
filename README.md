@@ -110,7 +110,9 @@ This describes the released v0.1.x architecture. Forge has accepted a future
 [public-engine integration contract](docs/integration-contract.md) in which a
 versioned `forge-template` package owns discovery and rendering. The current
 registry and `--template-url` behaviour remain unchanged until that complete,
-tested cutover is released.
+tested cutover is released — at which point `--engine-source`/`--engine-ref`
+(see the [engine resolution contract](docs/engine-resolution.md)) take over
+this role, not `--template-url`.
 
 ## Security
 

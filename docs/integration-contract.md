@@ -15,10 +15,14 @@ coordinated cutover.
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Assigned by CF-04.01 | Assigned by Stage 06 | Accepted target, not yet available |
+| First engine line | Unassigned | Unassigned | Accepted target, not yet available |
 
 Do not fill the future row speculatively. Record concrete values only when the
 engine package and ProjectSpec schema exist and their compatibility tests pass.
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md) and the canonical
+[engine resolution contract](engine-resolution.md) define *how* that row gets
+filled in — a bounded, install-time dependency plus an explicit, warned
+local/VCS override — without assigning it here.
 
 ## Ownership and dependency direction
 
@@ -87,6 +91,12 @@ The user must select it deliberately, receive a code-execution warning, and
 pass the same public-contract compatibility check before rendering. Ordinary
 saved CLI configuration cannot silently redirect the engine or template
 source.
+
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md) names that
+override `--engine-source`/`--engine-ref` and, symmetrically, reserves exit
+status `3` exclusively for a failed compatibility check — see the
+[engine resolution contract](engine-resolution.md) for both. Neither ships
+before the engine cutover.
 
 At the engine cutover this compatible override replaces the current arbitrary
 `--template-url` option. The v0.1.x option and warning remain supported until
