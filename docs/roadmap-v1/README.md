@@ -23,6 +23,14 @@ The [environment-variable conventions](https://github.com/Sandsy09/forge-templat
 define owner-prefixed generated runtime inputs, source precedence, and
 explicit local dotenv behaviour. They do not govern create-forge's own
 CLI-local `FORGE_*` configuration variables.
+The [structured logging capability](https://github.com/Sandsy09/forge-template/blob/main/docs/structured-logging.md)
+defines owner-local generated runtime events, one entrypoint-owned process
+configuration, the portable event envelope, and redaction boundaries.
+It does not change create-forge's CLI diagnostics or error presentation.
+The [path and resource ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/paths-and-resources.md)
+and [exception ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/exception-ownership.md)
+complete the owner-local generated runtime boundary without adding Foundation
+path helpers or a universal exception hierarchy.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

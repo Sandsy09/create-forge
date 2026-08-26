@@ -24,6 +24,15 @@ The [environment-variable conventions](https://github.com/Sandsy09/forge-templat
 define generated runtime names, precedence, examples, and local dotenv
 behaviour. The existing `FORGE_*` variables remain create-forge's own CLI
 configuration interface and are not generated-project runtime inputs.
+The [structured logging capability](https://github.com/Sandsy09/forge-template/blob/main/docs/structured-logging.md)
+defines generated runtime event ownership, process configuration, formatting,
+redaction, and platform-exporter boundaries. It does not govern create-forge's
+own CLI diagnostics or user-facing error presentation.
+The [path and resource ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/paths-and-resources.md)
+and [exception ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/exception-ownership.md)
+keep those generated runtime concerns with the contributing archetype or
+capability. They do not define create-forge's filesystem orchestration or CLI
+error presentation.
 
 ## `forge-template`
 
@@ -41,6 +50,9 @@ It owns:
 - generated-project Python support choices, defaults, and lifecycle;
 - owner-local generated-project runtime configuration and environment-input
   conventions;
+- owner-local generated-project structured-logging conventions and capability
+  contributions;
+- owner-local generated-project path, resource, and exception conventions;
 - composition, merge/conflict and override rules;
 - rendering/generation logic;
 - structured engine errors and generated-project validation;
@@ -65,8 +77,8 @@ It owns:
 
 It does **not** own copies of templates, a second component catalogue, Python
 support or editor-integration defaults, generated runtime configuration
-schemas or environment-variable contracts, compatibility rules, or
-rendering/composition logic.
+schemas, environment-variable, structured-logging, path/resource, or exception
+contracts, compatibility rules, or rendering/composition logic.
 
 ## Dependency direction
 
