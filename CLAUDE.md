@@ -97,7 +97,11 @@ confirmation. See [ADR 0005](docs/adr/0005-execute-template-tasks.md) and
 
 `runner.py`. It is public but evolves faster than the CLI, hence the
 `copier>=9.4,<10` pin. On a major bump, only that file should need attention.
-See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md).
+See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md). `copier`
+is today's *compatibility-line dependency* per
+[ADR 0012](docs/adr/0012-engine-dependency-update-policy.md): Dependabot is
+configured to never propose crossing that major on its own — see the
+[engine update policy](docs/engine-updates.md).
 
 ### 5. templates.toml must ship in the wheel
 
@@ -121,6 +125,9 @@ Run this before any release.
 - The canonical [engine resolution contract](docs/engine-resolution.md)
   defines how the template engine is sourced, overridden locally, diagnosed,
   and rejected when incompatible. Treat it as a compatibility contract.
+- The canonical [engine update policy](docs/engine-updates.md) defines how a
+  compatibility-line dependency update is adopted, how a breaking line is
+  crossed, and what automated dependency tooling may never do on its own.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

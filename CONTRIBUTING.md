@@ -67,7 +67,7 @@ request:
 | `test` | the fast suite, matrixed across Python 3.11–3.14 |
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
-| `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end |
+| `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
 | `all-green` | an aggregate check; this is the one branch protection requires |
 
 `network` also runs on a Monday cron, independent of any push here —
@@ -93,7 +93,10 @@ implemented as one coordinated cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected
-when incompatible.
+when incompatible. [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md)
+and the living [engine update policy](docs/engine-updates.md) define how a
+compatibility-line dependency update is adopted, how a breaking line is
+crossed, and what automated dependency tooling may never do unattended.
 
 The living [CLI UX and prompting conventions](docs/cli-conventions.md) define
 input precedence, prompt-skipping rules, interactive/non-interactive parity,

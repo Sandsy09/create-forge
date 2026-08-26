@@ -43,6 +43,12 @@ fallback; see the [engine resolution contract](docs/engine-resolution.md).
 This is an accepted target only; the v0.1.x rules above remain the current
 behaviour, and neither the new flags nor exit status `3` exist yet.
 
+Automated dependency tooling cannot cross the compatibility-line dependency
+(`copier` today) on its own — [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md)
+restricts Dependabot to proposing updates within the declared range; crossing
+one requires a deliberate, human-authored pull request. See the
+[engine update policy](docs/engine-updates.md).
+
 ## Supported versions
 
 Only the latest tagged release is supported. There is no backport policy.
