@@ -14,6 +14,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0009 — `pyproject.toml` as the single version source](0009-pyproject-as-the-single-version-source.md)
 - [0010 — Adopt the forge-template public engine contract](0010-public-engine-integration-contract.md)
 - [0011 — Resolve the template engine from a bounded installed dependency](0011-engine-source-and-version-resolution.md)
+- [0012 — Adopt engine updates within one compatibility line behind a review gate](0012-engine-dependency-update-policy.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

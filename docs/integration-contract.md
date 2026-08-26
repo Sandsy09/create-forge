@@ -105,8 +105,12 @@ then; there is no dual direct-Copier path afterward.
 ## Release coordination
 
 Compatible `forge-template` releases may be adopted within the declared range
-only after contract and end-to-end tests pass. A breaking integration change
-uses this order:
+only after contract and end-to-end tests pass. [ADR 0012](adr/0012-engine-dependency-update-policy.md)
+and the canonical [engine update policy](engine-updates.md) define that
+adoption rule in full — the CI proof a compatibility-line bump requires, and
+why automated dependency tooling (`.github/dependabot.yml`) is restricted to
+proposing updates inside a declared range, never across one. A breaking
+integration change uses this order:
 
 1. release a new `forge-template` compatibility line, including engine and
    reviewed assets;

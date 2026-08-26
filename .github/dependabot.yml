@@ -26,3 +26,11 @@ updates:
       prefix: "chore"
     open-pull-requests-limit: 5
     labels: ["type:chore", "area:packaging"]
+    # The compatibility-line dependency (ADR 0012). Crossing a Copier major
+    # must change runner.py, the bound, and the documented compatibility
+    # table together -- see CLAUDE.md invariant 4 -- so Dependabot proposes
+    # updates inside the line only. tests/test_engine_contract.py reads this
+    # block; deleting it fails the fast suite.
+    ignore:
+      - dependency-name: "copier"
+        update-types: ["version-update:semver-major"]

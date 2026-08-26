@@ -2,7 +2,7 @@
 
 This is the live repository-local index for the Forge Foundation roadmap,
 reconciled against the v0.1.0 baseline, filed on GitHub on 2026-08-23, and
-updated through CF-04.01 on 2026-08-26. GitHub issue bodies are the source of
+updated through CF-05.02 on 2026-08-26. GitHub issue bodies are the source of
 truth for open work; completed baseline items were not backfilled as closed
 issues.
 
@@ -21,9 +21,9 @@ issues.
 | CF-03.03 | Existing CI and network compatibility jobs | Complete before roadmap | — | — | — |
 | CF-EPIC-04 | [#35](https://github.com/Sandsy09/create-forge/issues/35) | Complete | — | — | Runtime & Security — Stages 04–05 |
 | CF-04.01 | [#44](https://github.com/Sandsy09/create-forge/issues/44) and [ADR 0011](../../../adr/0011-engine-source-and-version-resolution.md) | Complete | [#35](https://github.com/Sandsy09/create-forge/issues/35) | [#41](https://github.com/Sandsy09/create-forge/issues/41) (complete), [FT-00.03](https://github.com/Sandsy09/forge-template/issues/21) (complete) | Runtime & Security — Stages 04–05 |
-| CF-EPIC-05 | [#36](https://github.com/Sandsy09/create-forge/issues/36) | Open | — | — | Runtime & Security — Stages 04–05 |
+| CF-EPIC-05 | [#36](https://github.com/Sandsy09/create-forge/issues/36) | Complete | — | — | Runtime & Security — Stages 04–05 |
 | CF-05.01 | Existing least-privilege CI/release workflows | Complete before roadmap | — | — | — |
-| CF-05.02 | [#45](https://github.com/Sandsy09/create-forge/issues/45) | Open | [#36](https://github.com/Sandsy09/create-forge/issues/36) | [#41](https://github.com/Sandsy09/create-forge/issues/41) (complete), [#44](https://github.com/Sandsy09/create-forge/issues/44) (complete) | Runtime & Security — Stages 04–05 |
+| CF-05.02 | [#45](https://github.com/Sandsy09/create-forge/issues/45) and [ADR 0012](../../../adr/0012-engine-dependency-update-policy.md) | Complete | [#36](https://github.com/Sandsy09/create-forge/issues/36) | [#41](https://github.com/Sandsy09/create-forge/issues/41) (complete), [#44](https://github.com/Sandsy09/create-forge/issues/44) (complete) | Runtime & Security — Stages 04–05 |
 | CF-EPIC-06 | [#37](https://github.com/Sandsy09/create-forge/issues/37) | Blocked | — | — | Composition Contract — Stage 06 |
 | CF-06.01 | [#46](https://github.com/Sandsy09/create-forge/issues/46) | Blocked | [#37](https://github.com/Sandsy09/create-forge/issues/37) | [#41](https://github.com/Sandsy09/create-forge/issues/41) (complete), [FT-06.01](https://github.com/Sandsy09/forge-template/issues/32), [FT-06.05](https://github.com/Sandsy09/forge-template/issues/36), [FT-06.07](https://github.com/Sandsy09/forge-template/issues/38) | Composition Contract — Stage 06 |
 | CF-06.02 | [#47](https://github.com/Sandsy09/create-forge/issues/47) | Blocked | [#37](https://github.com/Sandsy09/create-forge/issues/37) | [#41](https://github.com/Sandsy09/create-forge/issues/41) (complete), [FT-06.02](https://github.com/Sandsy09/forge-template/issues/33), [FT-06.07](https://github.com/Sandsy09/forge-template/issues/38) | Composition Contract — Stage 06 |

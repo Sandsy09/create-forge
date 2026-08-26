@@ -33,8 +33,11 @@ satisfy normal operation.
 
 The distribution channel behind that dependency — a package index, a pinned
 VCS revision, or another mechanism — is explicitly out of scope here and is
-tracked by [CF-05.02 / #45](https://github.com/Sandsy09/create-forge/issues/45)
-and [PyPI publishing / #9](https://github.com/Sandsy09/create-forge/issues/9).
+tracked by [PyPI publishing / #9](https://github.com/Sandsy09/create-forge/issues/9);
+[ADR 0012](adr/0012-engine-dependency-update-policy.md) explains why that
+question stays with #9 rather than moving to CF-05.02. How a compatible
+update to this dependency is *adopted*, once a range exists, is a separate
+question answered by the canonical [engine update policy](engine-updates.md).
 
 ## Local development resolution
 
@@ -124,7 +127,8 @@ Run this once `forge-template`'s `FT-06.07` publishes an installable engine:
 3. Fill in the real values in this document's resolution table and in
    `docs/integration-contract.md`'s compatibility table.
 4. Add contract and end-to-end tests exercising the exact supported pair, per
-   the [cross-repository contributor workflow](cross-repository-workflow.md).
+   the [cross-repository contributor workflow](cross-repository-workflow.md)
+   and the [engine update policy](engine-updates.md)'s adoption rule.
 5. Remove `tests/test_engine_contract.py`'s "no engine dependency declared"
    branch, since it stops being true.
 
