@@ -8,6 +8,7 @@ docs/plan-v0.1.0.md's manual verification steps, not in this fast suite.
 
 from __future__ import annotations
 
+import json
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
 
@@ -77,6 +78,72 @@ def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None
     result = runner.invoke(app, ["doctor"])
     assert result.exception is None
     assert "registry" in result.output
+
+
+def test_doctor_reports_versions_and_the_unimplemented_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CF-04.01's diagnostics contract (docs/engine-resolution.md): doctor
+    must report the create-forge and Copier versions plus an explicit engine
+    row, even though no engine package exists yet under the v0.1.x
+    direct-Copier line."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    result = runner.invoke(app, ["doctor"])
+    assert result.exception is None, result.output
+    assert "create-forge" in result.output
+    assert "copier" in result.output
+    assert "not installed" in result.output
+    assert "engine" in result.output
+
+
+def test_doctor_json_emits_the_documented_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`doctor --json` must carry every field docs/engine-resolution.md's
+    diagnostics contract documents, print no table, and still exit 0 when
+    every check passes."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    result = runner.invoke(app, ["doctor", "--json"])
+    assert result.exit_code == 0, result.output
+
+    payload = json.loads(result.output)
+    assert payload["create_forge"] == cli_module._version()
+    assert payload["ok"] is True
+    integration = payload["integration"]
+    assert integration["line"] == "v0.1.x-copier"
+    assert integration["engine_package"] is None
+    assert integration["engine_range"] is None
+    assert integration["projectspec_protocol"] == {"supported": None, "detected": None}
+    assert integration["template_source"] is not None
+    assert {"name", "ok", "detail"} <= payload["checks"][0].keys()
+    # The table's own column header must not leak into --json output, and
+    # informational rows (already under "integration") must not duplicate
+    # into "checks".
+    assert "Check" not in result.output
+    assert all(c["name"] != "engine" for c in payload["checks"])
+
+
+def test_doctor_json_exits_1_when_a_check_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The `--json` flag changes the output format only -- an unhealthy
+    environment must still be reported through the exit status a script
+    would check."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+
+    def _broken_registry() -> object:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(cli_module, "load_registry", _broken_registry)
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    registry_check = next(c for c in payload["checks"] if c["name"] == "registry")
+    assert registry_check["ok"] is False
 
 
 def test_doctor_survives_a_console_that_cannot_encode_check_marks(

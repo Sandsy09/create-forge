@@ -95,3 +95,25 @@ def test_env_overrides_reports_nothing_set() -> None:
 def test_env_overrides_reports_set_variables(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FORGE_GITHUB_ORG", "env-org")
     assert env_overrides() == {"github_org": "env-org"}
+
+
+@pytest.mark.parametrize(
+    "field", ["template_url", "engine_source", "engine_ref", "template_source"]
+)
+def test_config_cannot_redirect_the_template_source(field: str, tmp_path: Path) -> None:
+    """docs/engine-resolution.md's trust rule: ordinary saved configuration
+    can never select a template or engine source. `extra="forbid"` is the
+    enforcement point -- a source-shaped key raises the same "Invalid
+    configuration" error as any other unknown field, per ADR 0011."""
+    path = tmp_path / "config.toml"
+    path.write_text(f'{field} = "https://example.invalid/whatever"\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="Invalid configuration"):
+        load_config(path)
+
+
+def test_no_config_field_looks_like_a_source_or_version_selector() -> None:
+    """Guards the trust rule at the model level too, so the parametrized
+    negative test above can't silently pass because someone renamed a field
+    without noticing it now matches a forbidden name."""
+    forbidden = {"template_url", "engine_source", "engine_ref", "ref", "url", "source"}
+    assert not (set(UserConfig.model_fields) & forbidden)
