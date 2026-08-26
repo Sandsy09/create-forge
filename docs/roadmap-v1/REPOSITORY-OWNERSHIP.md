@@ -20,6 +20,10 @@ capabilities and keeps canonical validation independent of editor state.
 The [configuration ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/configuration-ownership.md)
 assign generated runtime settings to their owning archetype or capability;
 `create-forge` presents inputs but does not own or duplicate those schemas.
+The [environment-variable conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/environment-variables.md)
+define generated runtime names, precedence, examples, and local dotenv
+behaviour. The existing `FORGE_*` variables remain create-forge's own CLI
+configuration interface and are not generated-project runtime inputs.
 
 ## `forge-template`
 
@@ -35,7 +39,8 @@ It owns:
 - the canonical ProjectSpec input contract;
 - template variables and validation;
 - generated-project Python support choices, defaults, and lifecycle;
-- owner-local generated-project runtime configuration conventions;
+- owner-local generated-project runtime configuration and environment-input
+  conventions;
 - composition, merge/conflict and override rules;
 - rendering/generation logic;
 - structured engine errors and generated-project validation;
@@ -60,7 +65,8 @@ It owns:
 
 It does **not** own copies of templates, a second component catalogue, Python
 support or editor-integration defaults, generated runtime configuration
-schemas, compatibility rules, or rendering/composition logic.
+schemas or environment-variable contracts, compatibility rules, or
+rendering/composition logic.
 
 ## Dependency direction
 

@@ -7,7 +7,9 @@
 - [x] [**FT-04.01 — Define configuration ownership and extension conventions**](https://github.com/Sandsy09/forge-template/issues/24)
   ([canonical conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/configuration-ownership.md),
   [ADR 0015](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0015-owner-local-runtime-configuration.md))
-- **FT-04.02 — Define environment-variable conventions**
+- [x] [**FT-04.02 — Define environment-variable conventions**](https://github.com/Sandsy09/forge-template/issues/25)
+  ([canonical conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/environment-variables.md),
+  [ADR 0016](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0016-owner-local-environment-inputs.md))
 - **FT-04.03 — Define structured logging baseline**
 - **FT-04.04 — Define path and resource handling conventions**
 - **FT-04.05 — Define exception conventions**
@@ -19,10 +21,11 @@
 
 ## Stage record
 
-The completed forge-template FT-04.01 decision keeps configuration owner-local
-and explicitly injected. It changes no CLI behaviour: `create-forge` will
-eventually collect inputs and construct ProjectSpec, while `forge-template`
-continues to own generated-project schemas and validation.
+The completed forge-template FT-04.01 and FT-04.02 decisions keep runtime
+configuration and environment inputs owner-local, explicitly assembled, and
+provider-neutral. They change no CLI behaviour: create-forge's current
+`FORGE_*` variables remain CLI-local configuration, while `forge-template`
+owns generated-project schemas, validation, and environment conventions.
 
 ## Stage completion rule
 
