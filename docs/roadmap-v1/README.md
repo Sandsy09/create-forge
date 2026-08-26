@@ -19,6 +19,10 @@ boundary for future optional editor capabilities.
 The [configuration ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/configuration-ownership.md)
 keep generated runtime settings with their owning archetype or capability and
 require explicit entrypoint assembly and injection.
+The [environment-variable conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/environment-variables.md)
+define owner-prefixed generated runtime inputs, source precedence, and
+explicit local dotenv behaviour. They do not govern create-forge's own
+CLI-local `FORGE_*` configuration variables.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 
