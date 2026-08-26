@@ -17,6 +17,9 @@ repository that owns those outputs. The
 [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
 assigns future editor-specific bridges to optional `forge-template`
 capabilities and keeps canonical validation independent of editor state.
+The [configuration ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/configuration-ownership.md)
+assign generated runtime settings to their owning archetype or capability;
+`create-forge` presents inputs but does not own or duplicate those schemas.
 
 ## `forge-template`
 
@@ -32,6 +35,7 @@ It owns:
 - the canonical ProjectSpec input contract;
 - template variables and validation;
 - generated-project Python support choices, defaults, and lifecycle;
+- owner-local generated-project runtime configuration conventions;
 - composition, merge/conflict and override rules;
 - rendering/generation logic;
 - structured engine errors and generated-project validation;
@@ -55,8 +59,8 @@ It owns:
 - end-to-end scaffolding tests.
 
 It does **not** own copies of templates, a second component catalogue, Python
-support or editor-integration defaults, compatibility rules, or
-rendering/composition logic.
+support or editor-integration defaults, generated runtime configuration
+schemas, compatibility rules, or rendering/composition logic.
 
 ## Dependency direction
 
