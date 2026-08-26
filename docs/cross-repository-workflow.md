@@ -28,9 +28,12 @@ uses the existing code-execution warning and trust boundary.
 The accepted target in [ADR 0010](adr/0010-public-engine-integration-contract.md)
 replaces direct Copier integration with the versioned public `forge-template`
 engine. Cross-repository development will retain an explicit, warned local or
-VCS override, but its exact interface belongs to CF-04.01. Do not treat the
-v0.1.x option name as the future contract or bypass the compatibility rules in
-the [integration contract](integration-contract.md).
+VCS override; [ADR 0011](adr/0011-engine-source-and-version-resolution.md) and
+the canonical [engine resolution contract](engine-resolution.md) define that
+interface as `--engine-source`/`--engine-ref`, shipping at the coordinated
+engine cutover rather than today. Do not treat the v0.1.x option name as the
+future contract or bypass the compatibility rules in the
+[integration contract](integration-contract.md).
 
 ## Prepare both working trees
 

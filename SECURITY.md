@@ -34,10 +34,14 @@ metadata and executable assets shipped in the reviewed engine release. Runtime
 remote registries and arbitrary component plugins are not accepted.
 
 At the coordinated cutover, an explicit, warned, contract-compatible local or
-VCS engine override replaces arbitrary `--template-url` execution. Unsupported
-engine or ProjectSpec protocol versions fail before discovery, template tasks
-or destination writes, with no silent direct-Copier fallback. This is an
-accepted target only; the v0.1.x rules above remain the current behaviour.
+VCS engine override — `--engine-source`/`--engine-ref`, per
+[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) — replaces
+arbitrary `--template-url` execution. Unsupported engine or ProjectSpec
+protocol versions fail before discovery, template tasks or destination
+writes, exiting with a dedicated status (`3`) and no silent direct-Copier
+fallback; see the [engine resolution contract](docs/engine-resolution.md).
+This is an accepted target only; the v0.1.x rules above remain the current
+behaviour, and neither the new flags nor exit status `3` exist yet.
 
 ## Supported versions
 

@@ -58,6 +58,12 @@ remains authoritative for v0.1.x; the compatible local/VCS engine override
 described by the [integration contract](integration-contract.md) replaces it
 only at the coordinated engine cutover.
 
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md) specifies that
+replacement's interface — `--engine-source`/`--engine-ref` — and the
+[engine resolution contract](engine-resolution.md) records it in full. Until
+the cutover ships it, `--template-url`/`--ref` above are the only source and
+version options this CLI accepts; the new names are not yet implemented.
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.
@@ -78,6 +84,7 @@ either stage leaves the scaffold uninvoked.
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
 | `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, or scaffold/update failures. |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, or malformed `--data` without `key=value`. |
+| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Not yet raised — no code path can produce it under the v0.1.x direct-Copier line. Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); ships at the engine cutover. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are
