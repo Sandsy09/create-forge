@@ -13,6 +13,9 @@ define the mandatory generated-project outcomes, while the
 defines which concerns may belong in that baseline. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines the generated-project CPython window, defaults, and release lifecycle.
+The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
+keeps Foundation and Forge's default profile editor-neutral while defining the
+boundary for future optional editor capabilities.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

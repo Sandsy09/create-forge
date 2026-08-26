@@ -4,10 +4,16 @@
 
 ### forge-template
 
-- **FT-02.01 — Define canonical developer command contract**
-- **FT-02.02 — Create first-run developer workflow**
-- **FT-02.03 — Add developer helper scripts only where justified**
-- **FT-02.04 — Define optional editor integration strategy**
+- ~~**FT-02.01 — Define canonical developer command contract**~~ — completed
+  before the roadmap through the generated Poe task contract.
+- ~~**FT-02.02 — Create first-run developer workflow**~~ — completed before
+  the roadmap through generated setup guidance and the first aggregate check.
+- ~~**FT-02.03 — Add developer helper scripts only where justified**~~ —
+  completed before the roadmap through Poe orchestration and the scoped
+  `verify-ci.sh` helper.
+- ~~[**FT-02.04 — Define optional editor integration strategy**](https://github.com/Sandsy09/forge-template/issues/23)~~ — complete; see the
+  [canonical strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
+  and [ADR 0014](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0014-editor-neutral-foundation.md).
 
 ### create-forge
 
@@ -17,12 +23,12 @@
 - ~~[**CF-02.02 — Document the cross-repository contributor workflow**](https://github.com/Sandsy09/create-forge/issues/43)~~
   — complete; see the [cross-repository workflow](../../../cross-repository-workflow.md)
 
-The create-forge Stage 02 epic is complete. The shared stage remains open for
-[forge-template#23 / FT-02.04](https://github.com/Sandsy09/forge-template/issues/23).
+The [forge-template Stage 02 counterpart](https://github.com/Sandsy09/forge-template/issues/12)
+and the create-forge Stage 02 epic are complete. The shared stage is complete.
 
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [x] Repo-local issues are complete or explicitly deferred.
+- [x] Cross-repository blockers are resolved.
+- [x] Public contracts changed by this stage are documented/versioned.
+- [x] No implementation concern is duplicated across repositories.

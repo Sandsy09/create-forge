@@ -13,7 +13,10 @@ define the mandatory outcomes and concern-level boundary that this ownership
 model must preserve. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines generated-project interpreter choices, defaults, and lifecycle in the
-repository that owns those outputs.
+repository that owns those outputs. The
+[editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
+assigns future editor-specific bridges to optional `forge-template`
+capabilities and keeps canonical validation independent of editor state.
 
 ## `forge-template`
 
@@ -23,6 +26,7 @@ It owns:
 
 - Foundation and archetype templates;
 - capability and platform components;
+- optional editor capabilities and their project-scoped contributions;
 - profile and organisation-policy selection inputs;
 - component manifests and compatibility metadata;
 - the canonical ProjectSpec input contract;
@@ -51,7 +55,8 @@ It owns:
 - end-to-end scaffolding tests.
 
 It does **not** own copies of templates, a second component catalogue, Python
-support defaults, compatibility rules, or rendering/composition logic.
+support or editor-integration defaults, compatibility rules, or
+rendering/composition logic.
 
 ## Dependency direction
 
