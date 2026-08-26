@@ -16,6 +16,9 @@ defines the generated-project CPython window, defaults, and release lifecycle.
 The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
 keeps Foundation and Forge's default profile editor-neutral while defining the
 boundary for future optional editor capabilities.
+The [configuration ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/configuration-ownership.md)
+keep generated runtime settings with their owning archetype or capability and
+require explicit entrypoint assembly and injection.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 
