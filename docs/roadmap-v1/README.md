@@ -31,6 +31,10 @@ The [path and resource ownership conventions](https://github.com/Sandsy09/forge-
 and [exception ownership conventions](https://github.com/Sandsy09/forge-template/blob/main/docs/exception-ownership.md)
 complete the owner-local generated runtime boundary without adding Foundation
 path helpers or a universal exception hierarchy.
+The [GitHub Action pinning policy](https://github.com/Sandsy09/forge-template/blob/main/docs/github-action-pinning.md)
+requires immutable remote workflow references for automation owned or generated
+by `forge-template`. It does not govern `create-forge`'s repository-local
+workflows, which remain independently owned and unchanged.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 
