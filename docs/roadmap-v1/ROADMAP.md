@@ -1,8 +1,9 @@
 # Forge Foundation Two-Repository Roadmap
 
 > **Architecture status:** [ADR 0010](../adr/0010-public-engine-integration-contract.md)
-> accepts the public-engine/ProjectSpec target. Stages 04–09 now implement that
-> contract in dependency order; the current v0.1.x Copier architecture remains
+> accepts the public-engine/ProjectSpec target. ProjectSpec protocol v1 is now
+> defined, and Stages 06–09 complete the contract in dependency order; the
+> current v0.1.x Copier architecture remains
 > operational until the atomic cutover. The [create-forge live issue index](github-issues/create-forge/ISSUE-INDEX.md)
 > records completed baseline work and the filed dependency graph.
 

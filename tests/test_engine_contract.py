@@ -76,7 +76,7 @@ def _dependabot_uv_ignores() -> list[dict[str, Any]]:
     return []
 
 
-def test_no_engine_dependency_means_no_assigned_range() -> None:
+def test_no_engine_dependency_means_no_assigned_engine_range() -> None:
     """ADR 0011 and the integration contract say the first engine range must
     not be reserved speculatively -- only assigned once a real dependency
     exists and its compatibility tests pass. This is the executable form of
@@ -91,9 +91,11 @@ def test_no_engine_dependency_means_no_assigned_range() -> None:
         "docs/engine-resolution.md's 'Assigning the first engine range' "
         "checklist, then update this test and the contract table together."
     )
-    assert "| First engine line | Unassigned | Unassigned |" in contract_text, (
-        "No forge-template dependency is declared yet, so "
-        "docs/integration-contract.md's future row must stay unassigned."
+    expected = "| First engine line | Unassigned | 1 (defined; not yet supported) |"
+    assert expected in contract_text, (
+        "No forge-template dependency is declared yet, so the future engine "
+        "range must stay unassigned while the defined protocol remains "
+        "explicitly unsupported."
     )
 
 

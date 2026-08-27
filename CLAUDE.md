@@ -41,7 +41,7 @@ src/create_forge/
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
 `models`. Nothing lower imports anything higher.
 
-## Accepted target — not yet implemented
+## Accepted target — schema defined, engine not integrated
 
 [ADR 0010](docs/adr/0010-public-engine-integration-contract.md) accepts a
 future one-way integration in which `create-forge` constructs ProjectSpec and
@@ -49,6 +49,9 @@ orchestrates the filesystem while a versioned `forge-template` package owns
 ProjectSpec validation, component discovery, composition, rendering and
 Copier. The living [integration contract](docs/integration-contract.md)
 records the compatibility and trust rules for that transition.
+Strict [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+is now defined, but no current CLI path constructs it and no stable engine
+facade consumes it.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and

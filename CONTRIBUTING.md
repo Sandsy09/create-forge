@@ -87,9 +87,12 @@ consistent — filenames, numbering, the index, and the four required headings.
 The accepted future boundary with `forge-template` is recorded in
 [ADR 0010](docs/adr/0010-public-engine-integration-contract.md), while the
 evolving package/protocol rules live in the
-[integration contract](docs/integration-contract.md). The current v0.1.x
-Copier/registry implementation remains authoritative until that contract is
-implemented as one coordinated cutover.
+[integration contract](docs/integration-contract.md). The canonical
+[ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+is defined by `forge-template`; this repository will construct it only through
+the later supported engine facade. The current v0.1.x Copier/registry
+implementation remains authoritative until that contract is implemented as
+one coordinated cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected
