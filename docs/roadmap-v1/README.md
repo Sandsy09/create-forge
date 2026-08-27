@@ -42,8 +42,13 @@ defines the strict effective generation request owned by `forge-template`.
 unimplemented until the supported engine cutover.
 The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-defines engine-owned bundled component metadata and compatibility. Production
-manifests and CLI discovery remain later coordinated work.
+defines engine-owned bundled component metadata and compatibility. The
+[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
+now exposes typed discovery, validation, planning, in-memory rendering, and
+structured errors under
+[ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+Its production catalogue is empty; production manifests and CLI discovery
+remain later coordinated work.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

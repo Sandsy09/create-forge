@@ -45,7 +45,8 @@ dependency; channel deferred to CF-05.02), the explicit
 `--template-url` only at the coordinated cutover, the diagnostics contract
 `create-forge doctor`/`doctor --json` now implement, and the reserved exit
 status `3` for a future unsupported engine or ProjectSpec protocol. No engine
-package exists yet, so no version range is assigned — `templates.toml`,
+integration exists here yet, so no version range is assigned even though the
+canonical `forge-template` `0.2.x` API is now defined — `templates.toml`,
 `--template-url`, and `--ref` are unchanged in v0.1.x.
 
 The create-forge epic ([CF-EPIC-04 / #35](https://github.com/Sandsy09/create-forge/issues/35))

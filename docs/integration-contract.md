@@ -10,22 +10,25 @@ the compatibility rules that later releases must keep current.
 The public engine is the accepted target architecture. Strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-are now defined by `forge-template`, but production manifests, discovery,
-composition, rendering, the stable engine facade, and CLI consumption remain
-unimplemented. The released v0.1.x CLI remains a thin Copier wrapper with a
+are implemented by `forge-template` together with the
+[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md),
+recorded by [ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The `0.2.x` engine line has an empty production catalogue. Production
+components and CLI consumption remain unimplemented. The released v0.1.x CLI
+remains a thin Copier wrapper with a
 bundled registry, and its current security and update invariants remain
 authoritative until the coordinated cutover.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Unassigned | 1 (defined; not yet supported) | Schema available; engine integration not yet available |
+| First engine line | Unassigned | 1 (defined; not yet supported) | Engine API available; CLI integration and compatibility tests pending |
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
 It is not a protocol supported by any released `create-forge` line yet. Do not
-assign the future engine range or mark the pair supported until the remaining
-engine package, facade, and compatibility tests pass.
+assign the future engine range or mark the pair supported until CLI
+implementation and cross-repository compatibility tests pass.
 
 [Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
 assigns component manifest protocol `1`. It defines strict bundled identity,
