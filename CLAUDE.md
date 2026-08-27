@@ -50,8 +50,9 @@ ProjectSpec validation, component discovery, composition, rendering and
 Copier. The living [integration contract](docs/integration-contract.md)
 records the compatibility and trust rules for that transition.
 Strict [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-is now defined, but no current CLI path constructs it and no stable engine
-facade consumes it.
+and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+are now defined, but no current CLI path constructs ProjectSpec or discovers
+components and no stable engine facade consumes either contract.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and

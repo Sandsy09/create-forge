@@ -9,11 +9,12 @@ the compatibility rules that later releases must keep current.
 
 The public engine is the accepted target architecture. Strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-is now defined by `forge-template`, but discovery, composition, rendering, the
-stable engine facade, and CLI consumption remain unimplemented. The released
-v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
-current security and update invariants remain authoritative until the
-coordinated cutover.
+and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+are now defined by `forge-template`, but production manifests, discovery,
+composition, rendering, the stable engine facade, and CLI consumption remain
+unimplemented. The released v0.1.x CLI remains a thin Copier wrapper with a
+bundled registry, and its current security and update invariants remain
+authoritative until the coordinated cutover.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
@@ -26,6 +27,11 @@ It is not a protocol supported by any released `create-forge` line yet. Do not
 assign the future engine range or mark the pair supported until the remaining
 engine package, facade, and compatibility tests pass.
 
+[Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
+assigns component manifest protocol `1`. It defines strict bundled identity,
+display, version, compatibility, content, dependency, and conflict metadata;
+it does not make component discovery available to a released CLI line.
+
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md) and the canonical
 [engine resolution contract](engine-resolution.md) define how the remaining
 engine-range cell gets filled — a bounded, install-time dependency plus an
@@ -36,8 +42,8 @@ explicit, warned local/VCS override — without assigning that range here.
 `create-forge` owns user interaction: commands, flags, prompts, user-facing
 validation, ProjectSpec construction, diagnostics and safe filesystem
 orchestration. `forge-template` owns the canonical ProjectSpec types and
-validation, component discovery and compatibility, composition, rendering,
-Copier integration, and generated content.
+validation, component manifests, discovery and compatibility, composition,
+rendering, Copier integration, and generated content.
 
 The dependency is one-way:
 
@@ -56,8 +62,9 @@ remain independent of both packages during normal development and runtime.
 
 ## Version and protocol compatibility
 
-A `forge-template` release is one installable unit containing its engine and
-reviewed template assets. Its package version and the ProjectSpec protocol are
+A `forge-template` release is one installable unit containing its engine,
+component manifests, and reviewed template assets. Its package version,
+ProjectSpec protocol, manifest protocol, and bundled component versions are
 related but independent:
 
 - For `forge-template` versions below 1.0, a supported dependency range stays
@@ -94,6 +101,12 @@ Normal operation discovers components and executes assets only from the
 installed, version-constrained `forge-template` release. A remote registry or
 arbitrary installed component plugin cannot change executable sources at
 runtime.
+
+The engine-owned
+[manifest contract](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+is the sole component metadata source. `create-forge` must not retain its
+bundled registry as a fallback or recreate compatibility, dependency, or
+conflict rules after cutover.
 
 Cross-repository development may use an explicit local or VCS engine override.
 The user must select it deliberately, receive a code-execution warning, and

@@ -110,8 +110,9 @@ This describes the released v0.1.x architecture. Forge has accepted a future
 [public-engine integration contract](docs/integration-contract.md) in which a
 versioned `forge-template` package owns discovery and rendering. Its strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-is now defined, but the current registry and `--template-url` behaviour remain
-unchanged until the complete, tested cutover is released — at which point
+and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+are now defined, but the current registry and `--template-url` behaviour
+remain unchanged until the complete, tested cutover is released — at which point
 `--engine-source`/`--engine-ref` (see the
 [engine resolution contract](docs/engine-resolution.md)) take over this role,
 not `--template-url`.
