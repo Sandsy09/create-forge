@@ -2,9 +2,10 @@
 
 > **Implementation status:** The ProjectSpec/public-engine ownership below is
 > accepted by [ADR 0010](../adr/0010-public-engine-integration-contract.md),
-> and strict ProjectSpec protocol v1 is now defined. Its stable engine facade
-> and CLI construction are not current repository behaviour. The v0.1.x
-> Copier/registry ownership remains operational until the coordinated cutover.
+> and strict ProjectSpec plus component manifest protocol v1 are now defined.
+> Production discovery, the stable engine facade, and CLI construction are not
+> current repository behaviour. The v0.1.x Copier/registry ownership remains
+> operational until the coordinated cutover.
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
 defines the component kinds and selection inputs referenced here. The
@@ -42,7 +43,11 @@ or workflow behaviour here.
 The canonical
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 defines the schema `create-forge` will construct without duplicating its
-validation. No current CLI path consumes it.
+validation. The canonical
+[component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+defines the engine-owned identity, display, version, compatibility, content,
+dependency, and conflict metadata that replaces the bundled CLI catalogue at
+cutover. No current CLI path consumes either contract.
 
 ## `forge-template`
 

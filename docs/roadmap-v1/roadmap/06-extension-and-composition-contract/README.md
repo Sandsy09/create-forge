@@ -7,7 +7,9 @@
 - [x] [**FT-06.01 — Design ProjectSpec schema**](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md) —
   protocol v1 is complete under
   [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
-- **FT-06.02 — Define component manifest format**
+- [x] [**FT-06.02 — Define component manifest format**](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md) —
+  strict TOML protocol v1 is complete under
+  [forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md).
 - **FT-06.03 — Define deterministic composition order**
 - **FT-06.04 — Define file conflict and override rules**
 - **FT-06.05 — Design template variable contract**

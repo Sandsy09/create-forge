@@ -40,6 +40,10 @@ The canonical
 defines the strict effective generation request owned by `forge-template`.
 `create-forge` retains construction and user-facing orchestration, which remain
 unimplemented until the supported engine cutover.
+The canonical
+[component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+defines engine-owned bundled component metadata and compatibility. Production
+manifests and CLI discovery remain later coordinated work.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

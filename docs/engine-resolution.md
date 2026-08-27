@@ -14,11 +14,13 @@ contract; today's mechanisms are not.
 
 The public engine is the accepted target architecture. Strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-is defined, but the engine facade and CLI integration are not implemented.
-The released v0.1.x CLI remains a thin Copier wrapper with a bundled registry
-(`src/create_forge/templates.toml`), calling Copier directly through
-`src/create_forge/runner.py`. Everything in this document describes rules that
-hold once the engine exists, plus what is real today.
+and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
+are defined, but production component discovery, the engine facade, and CLI
+integration are not implemented. The released v0.1.x CLI remains a thin Copier
+wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
+Copier directly through `src/create_forge/runner.py`. Everything in this
+document describes rules that hold once the engine exists, plus what is real
+today.
 
 ## Normal installed resolution
 
