@@ -1,9 +1,11 @@
 # Forge Two-Repository Architecture
 
 > **Implementation status:** This is the accepted target architecture under
-> [ADR 0010](../adr/0010-public-engine-integration-contract.md), but it is
-> not the current implementation. The released v0.1.x CLI remains a thin
-> Copier wrapper with a bundled registry until the coordinated cutover.
+> [ADR 0010](../adr/0010-public-engine-integration-contract.md). Strict
+> [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+> is now defined, but the stable engine facade and CLI integration are not the
+> current implementation. The released v0.1.x CLI remains a thin Copier
+> wrapper with a bundled registry until the coordinated cutover.
 
 ```text
 ┌─────────────────────────────┐

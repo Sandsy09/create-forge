@@ -35,6 +35,11 @@ The [GitHub Action pinning policy](https://github.com/Sandsy09/forge-template/bl
 requires immutable remote workflow references for automation owned or generated
 by `forge-template`. It does not govern `create-forge`'s repository-local
 workflows, which remain independently owned and unchanged.
+The canonical
+[ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+defines the strict effective generation request owned by `forge-template`.
+`create-forge` retains construction and user-facing orchestration, which remain
+unimplemented until the supported engine cutover.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

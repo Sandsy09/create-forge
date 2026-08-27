@@ -12,11 +12,13 @@ contract; today's mechanisms are not.
 
 ## Status
 
-The public engine is the accepted target architecture and is not yet
-implemented. The released v0.1.x CLI remains a thin Copier wrapper with a
-bundled registry (`src/create_forge/templates.toml`), calling Copier
-directly through `src/create_forge/runner.py`. Everything in this document
-describes rules that hold once the engine exists, plus what is real today.
+The public engine is the accepted target architecture. Strict
+[ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+is defined, but the engine facade and CLI integration are not implemented.
+The released v0.1.x CLI remains a thin Copier wrapper with a bundled registry
+(`src/create_forge/templates.toml`), calling Copier directly through
+`src/create_forge/runner.py`. Everything in this document describes rules that
+hold once the engine exists, plus what is real today.
 
 ## Normal installed resolution
 
@@ -29,7 +31,7 @@ satisfy normal operation.
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | *Unassigned* | *Unassigned* | Rules defined by ADR 0011; see "Assigning the first engine range" below |
+| First engine line | *Unassigned* | `1` (defined; not yet supported) | Schema defined; see "Assigning the first engine range" below |
 
 The distribution channel behind that dependency — a package index, a pinned
 VCS revision, or another mechanism — is explicitly out of scope here and is

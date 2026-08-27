@@ -7,22 +7,29 @@ the compatibility rules that later releases must keep current.
 
 ## Status
 
-The public engine is the accepted target architecture but is not implemented.
-The released v0.1.x CLI remains a thin Copier wrapper with a bundled registry,
-and its current security and update invariants remain authoritative until the
+The public engine is the accepted target architecture. Strict
+[ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+is now defined by `forge-template`, but discovery, composition, rendering, the
+stable engine facade, and CLI consumption remain unimplemented. The released
+v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
+current security and update invariants remain authoritative until the
 coordinated cutover.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Unassigned | Unassigned | Accepted target, not yet available |
+| First engine line | Unassigned | 1 (defined; not yet supported) | Schema available; engine integration not yet available |
 
-Do not fill the future row speculatively. Record concrete values only when the
-engine package and ProjectSpec schema exist and their compatibility tests pass.
+Protocol 1 is assigned by
+[forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
+It is not a protocol supported by any released `create-forge` line yet. Do not
+assign the future engine range or mark the pair supported until the remaining
+engine package, facade, and compatibility tests pass.
+
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md) and the canonical
-[engine resolution contract](engine-resolution.md) define *how* that row gets
-filled in — a bounded, install-time dependency plus an explicit, warned
-local/VCS override — without assigning it here.
+[engine resolution contract](engine-resolution.md) define how the remaining
+engine-range cell gets filled — a bounded, install-time dependency plus an
+explicit, warned local/VCS override — without assigning that range here.
 
 ## Ownership and dependency direction
 
@@ -59,7 +66,9 @@ related but independent:
   `>=n.a,<n+1`.
 - Every dependency declaration has a tested lower bound and a strict upper
   bound. An unbounded engine dependency is unsupported.
-- ProjectSpec carries an explicit protocol version. Breaking serialisation,
+- The canonical
+  [ProjectSpec protocol](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
+  carries explicit version `1`. Breaking serialisation,
   validation or semantic changes increment it; backward-compatible additions
   may remain on the current protocol.
 - Each `create-forge` release documents the engine range and protocol versions
