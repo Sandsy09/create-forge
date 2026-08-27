@@ -15,8 +15,11 @@ contract; today's mechanisms are not.
 The public engine is the accepted target architecture. Strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-are defined, but production component discovery, the engine facade, and CLI
-integration are not implemented. The released v0.1.x CLI remains a thin Copier
+are implemented by the
+[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
+under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The engine's production catalogue is empty, and CLI integration is not
+implemented. The released v0.1.x CLI remains a thin Copier
 wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
 Copier directly through `src/create_forge/runner.py`. Everything in this
 document describes rules that hold once the engine exists, plus what is real
@@ -24,7 +27,7 @@ today.
 
 ## Normal installed resolution
 
-Once an engine package exists, `create-forge` depends on it the same way it
+At the CLI cutover, `create-forge` will depend on the engine package the same way it
 depends on `copier`, `typer`, or `pydantic` today: a bounded version range in
 `pyproject.toml`, resolved by the installer at install time. There is no
 runtime fetch — the CLI never clones or downloads executable content to
@@ -33,7 +36,7 @@ satisfy normal operation.
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | *Unassigned* | `1` (defined; not yet supported) | Schema defined; see "Assigning the first engine range" below |
+| First engine line | *Unassigned* | `1` (defined; not yet supported) | Engine API defined; see "Assigning the first engine range" below |
 
 The distribution channel behind that dependency — a package index, a pinned
 VCS revision, or another mechanism — is explicitly out of scope here and is
@@ -121,7 +124,10 @@ absence from `cli.py` is legible as deliberate rather than an oversight.
 
 ## Assigning the first engine range
 
-Run this once `forge-template`'s `FT-06.07` publishes an installable engine:
+`forge-template` FT-06.07 now defines the `0.2.x` engine API, but no range is
+assigned merely from that upstream merge. Perform these steps together in the
+coordinated CLI adoption after its implementation and cross-repository tests
+pass:
 
 1. Add the engine as a real dependency in `pyproject.toml` with a tested
    lower bound.

@@ -90,12 +90,14 @@ evolving package/protocol rules live in the
 [integration contract](docs/integration-contract.md). The canonical
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 is defined by `forge-template`; this repository will construct it only through
-the later supported engine facade. The canonical
+the [supported engine facade](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md).
+That API begins its compatibility contract at `forge-template` `0.2.x`, but
+this repository assigns no dependency range until its adapter and
+cross-repository tests pass. The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 likewise remains engine-owned discovery metadata rather than a schema this
 repository recreates. The current v0.1.x Copier/registry implementation
-remains authoritative until those contracts are implemented as one coordinated
-cutover.
+remains authoritative until the coordinated CLI cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected

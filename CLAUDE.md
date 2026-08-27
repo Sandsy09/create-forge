@@ -41,7 +41,7 @@ src/create_forge/
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
 `models`. Nothing lower imports anything higher.
 
-## Accepted target — schema defined, engine not integrated
+## Accepted target — engine available, CLI not integrated
 
 [ADR 0010](docs/adr/0010-public-engine-integration-contract.md) accepts a
 future one-way integration in which `create-forge` constructs ProjectSpec and
@@ -51,8 +51,12 @@ Copier. The living [integration contract](docs/integration-contract.md)
 records the compatibility and trust rules for that transition.
 Strict [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-are now defined, but no current CLI path constructs ProjectSpec or discovers
-components and no stable engine facade consumes either contract.
+are implemented by the
+[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
+under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The engine's `0.2.x` compatibility line currently has an empty production
+catalogue. No current CLI path depends on it, constructs ProjectSpec, or
+discovers components, and no supported engine range is assigned here yet.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and

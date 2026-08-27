@@ -14,8 +14,9 @@ engine cutover approaches.
 
 ## Status
 
-The public engine is the accepted target architecture and is not yet
-implemented. Today, `copier` is the compatibility-line dependency — the one
+The public engine is implemented by `forge-template`, beginning with its
+documented `0.2.x` compatibility line, but it is not yet integrated here.
+Today, `copier` is the compatibility-line dependency — the one
 [CLAUDE.md](../CLAUDE.md) invariant 4 already singles out. After the engine
 cutover, the `forge-template` engine package takes over that role.
 
