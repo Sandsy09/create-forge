@@ -12,6 +12,12 @@ uv sync --all-groups
 uv run pre-commit install --install-hooks
 ```
 
+`uv sync` clones `forge-template` at a pinned commit as part of the `engine`
+dependency group (`[tool.uv] default-groups = ["dev"]` includes it). This is
+a development-only dependency for `src/create_forge/engine.py` — see
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — not a
+runtime dependency of the released CLI.
+
 ## Before opening a pull request
 
 ```bash
@@ -93,7 +99,11 @@ is defined by `forge-template`; this repository will construct it only through
 the [supported engine facade](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md).
 That API begins its compatibility contract at `forge-template` `0.2.x`, but
 this repository assigns no dependency range until its adapter and
-cross-repository tests pass. The canonical
+cross-repository tests pass. [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
+and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
+record that adapter's shape — `spec.py` builds the wire payload, `engine.py`
+is the one module that calls the facade — ahead of any command using it. The
+canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 likewise remains engine-owned discovery metadata rather than a schema this
 repository recreates. The current v0.1.x Copier/registry implementation

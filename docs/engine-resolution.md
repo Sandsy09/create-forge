@@ -21,9 +21,13 @@ under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/
 The engine's production catalogue is empty, and CLI integration is not
 implemented. The released v0.1.x CLI remains a thin Copier
 wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
-Copier directly through `src/create_forge/runner.py`. Everything in this
-document describes rules that hold once the engine exists, plus what is real
-today.
+Copier directly through `src/create_forge/runner.py`. [CF-06.01](https://github.com/Sandsy09/create-forge/issues/46)
+added a construction boundary — `src/create_forge/spec.py` and
+`src/create_forge/engine.py`, recorded by
+[ADR 0013](adr/0013-projectspec-construction-boundary.md) and the canonical
+[ProjectSpec construction contract](project-spec-construction.md) — ahead of
+any command calling it; `new` is unchanged. Everything in this document
+describes rules that hold once the engine exists, plus what is real today.
 
 ## Normal installed resolution
 
@@ -45,6 +49,13 @@ tracked by [PyPI publishing / #9](https://github.com/Sandsy09/create-forge/issue
 question stays with #9 rather than moving to CF-05.02. How a compatible
 update to this dependency is *adopted*, once a range exists, is a separate
 question answered by the canonical [engine update policy](engine-updates.md).
+
+A development-only dependency exists ahead of that runtime one:
+`src/create_forge/engine.py` depends on `forge-template` via a `uv`
+dependency group pinned to a commit SHA, not a released version — see
+[ADR 0013](adr/0013-projectspec-construction-boundary.md). This is not the
+range assigned below; it exists so the construction boundary can exercise
+the real engine before `forge-template` publishes anything installable.
 
 ## Local development resolution
 
@@ -137,8 +148,10 @@ pass:
 3. Fill in the real values in this document's resolution table and in
    `docs/integration-contract.md`'s compatibility table.
 4. Add contract and end-to-end tests exercising the exact supported pair, per
-   the [cross-repository contributor workflow](cross-repository-workflow.md)
-   and the [engine update policy](engine-updates.md)'s adoption rule.
+   the [cross-repository contributor workflow](cross-repository-workflow.md),
+   the [engine update policy](engine-updates.md)'s adoption rule, and the
+   [ProjectSpec construction contract](project-spec-construction.md)'s
+   negotiation and validation rules.
 5. Remove `tests/test_engine_contract.py`'s "no engine dependency declared"
    branch, since it stops being true.
 

@@ -263,6 +263,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "forge-template" },
     { name = "git-cliff" },
     { name = "mypy" },
     { name = "poethepoet" },
@@ -273,6 +274,9 @@ dev = [
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "types-pyyaml" },
+]
+engine = [
+    { name = "forge-template" },
 ]
 lint = [
     { name = "pre-commit" },
@@ -300,6 +304,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=2158c85" },
     { name = "git-cliff", specifier = ">=2.7" },
     { name = "mypy", specifier = ">=1.14" },
     { name = "poethepoet", specifier = ">=0.31" },
@@ -311,6 +316,7 @@ dev = [
     { name = "ruff", specifier = ">=0.14" },
     { name = "types-pyyaml", specifier = ">=6.0" },
 ]
+engine = [{ name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=2158c85" }]
 lint = [
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.14" },
@@ -354,6 +360,16 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7d/64/a02e6765de08964ed371eca577870593245afc9dfac16d037de7c10d18e6/filelock-3.32.3.tar.gz", hash = "sha256:0ffa185a3540854c95caa7fa76b76cb219d907415e2c5dc9af25fd970563487f", size = 218135, upload-time = "2026-08-13T16:00:05.577Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/8e/50f46a9c0ce8d2861a394c1347caae037ea0431d2f67d7feb151cbc4649a/filelock-3.32.3-py3-none-any.whl", hash = "sha256:7f0ca4bcc0e181c60dbbd8aa9ab5b120ebb99e4e064e83636340056f833a1f09", size = 98901, upload-time = "2026-08-13T16:00:03.974Z" },
+]
+
+[[package]]
+name = "forge-template"
+version = "0.2.0"
+source = { git = "https://github.com/Sandsy09/forge-template?rev=2158c85#2158c85a46efffc7d8ea2d43e347b943359baed1" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pydantic" },
 ]
 
 [[package]]

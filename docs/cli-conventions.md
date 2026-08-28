@@ -84,7 +84,7 @@ either stage leaves the scaffold uninvoked.
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
 | `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, or scaffold/update failures. |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, or malformed `--data` without `key=value`. |
-| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Not yet raised — no code path can produce it under the v0.1.x direct-Copier line. Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); ships at the engine cutover. |
+| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Not yet raised by any command — `create-forge new` is still the v0.1.x direct-Copier line. Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`, reachable once CF-07.01 wires the engine into `new`. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are
@@ -118,6 +118,12 @@ At the accepted engine cutover, `forge-template` owns the canonical ProjectSpec
 types, semantic validation, and component compatibility. `create-forge` may
 translate a Copier or engine failure into actionable terminal guidance; it must
 not reproduce the template or ProjectSpec validation predicate in CLI code.
+[ADR 0013](adr/0013-projectspec-construction-boundary.md) and the canonical
+[ProjectSpec construction contract](project-spec-construction.md) state this
+precisely as create-forge maps, forge-template validates: `spec.py` places
+answers into their canonical position and validates nothing; `engine.py`
+negotiates the protocol and calls the engine's own validation, translating its
+structured errors rather than reimplementing their predicates.
 
 ## Executable examples
 

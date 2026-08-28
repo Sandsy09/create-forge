@@ -40,6 +40,13 @@ it does not make component discovery available to a released CLI line.
 engine-range cell gets filled — a bounded, install-time dependency plus an
 explicit, warned local/VCS override — without assigning that range here.
 
+[ADR 0013](adr/0013-projectspec-construction-boundary.md) adds a
+ProjectSpec-building boundary (`src/create_forge/spec.py` and
+`src/create_forge/engine.py`) ahead of this row being filled in — a
+development-only dependency pinned to a commit, not the runtime range this
+table records. `create-forge new` does not call it yet; see the canonical
+[ProjectSpec construction contract](project-spec-construction.md).
+
 ## Ownership and dependency direction
 
 `create-forge` owns user interaction: commands, flags, prompts, user-facing

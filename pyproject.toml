@@ -57,16 +57,30 @@ test = [
     "pyyaml>=6.0",
 ]
 typecheck = ["mypy>=1.14", "types-PyYAML>=6.0"]
+engine = [
+    # Development-only: forge-template 0.2.0 is unreleased (no PEP440 tag,
+    # still `Private :: Do Not Upload`), so this cannot be a runtime
+    # dependency yet -- a direct git URL cannot express the bounded range
+    # docs/integration-contract.md requires. src/create_forge/engine.py is
+    # the only module that imports it (ADR 0013); no engine range is
+    # assigned (docs/engine-resolution.md). Pinned to a commit, not a
+    # branch, for reproducibility.
+    "forge-template",
+]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
     { include-group = "typecheck" },
+    { include-group = "engine" },
     "poethepoet>=0.31",
     "git-cliff>=2.7",
 ]
 
 [tool.uv]
 default-groups = ["dev"]
+
+[tool.uv.sources]
+forge-template = { git = "https://github.com/Sandsy09/forge-template", rev = "2158c85" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/create_forge"]

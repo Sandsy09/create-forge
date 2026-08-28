@@ -1,14 +1,15 @@
-"""Guards keeping CF-04.01's engine-resolution documentation and CF-05.02's
-engine-update policy internally consistent with the code -- the same "docs
-and code must not drift" idea as `tests/test_adr.py` and
-`tests/test_drift.py`, applied to ADR 0011's and ADR 0012's rules rather than
-to a Copier template.
+"""Guards keeping CF-04.01's engine-resolution documentation, CF-05.02's
+engine-update policy, and CF-06.01's engine import boundary internally
+consistent with the code -- the same "docs and code must not drift" idea as
+`tests/test_adr.py` and `tests/test_drift.py`, applied to ADR 0011's, ADR
+0012's, and ADR 0013's rules rather than to a Copier template.
 
 No network, no filesystem outside this repository.
 """
 
 from __future__ import annotations
 
+import ast
 import re
 import tomllib
 from pathlib import Path
@@ -24,6 +25,13 @@ ENGINE_RESOLUTION = REPO_ROOT / "docs" / "engine-resolution.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
+SRC_ROOT = REPO_ROOT / "src" / "create_forge"
+
+# Every module reachable from create-forge's shipped entry point
+# (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
+# one module ADR 0013 permits to import forge_template, mirroring invariant
+# 4's rule that runner.py is the only module touching Copier's Python API.
+_SHIPPED_MODULES = ("cli", "prompts", "runner", "registry", "models", "config", "spec")
 
 # The one dependency ADR 0012 governs: Copier today, the forge-template
 # engine after cutover. Kept as a constant so both decisions' tests agree on
@@ -210,4 +218,34 @@ def test_declaring_the_engine_requires_a_matching_automation_gate() -> None:
             "forge-template is pre-1.0, so a minor bump is a compatibility "
             "line too -- the ignore rule must block semver-minor as well "
             "as semver-major (ADR 0012)."
+        )
+
+
+def _imported_top_level_names(path: Path) -> set[str]:
+    """Every top-level module name a file imports, via `import` or `from`."""
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module.split(".")[0])
+    return names
+
+
+def test_shipped_cli_modules_do_not_import_the_engine() -> None:
+    """ADR 0013: `engine.py` is the only module allowed to import
+    `forge_template`, mirroring invariant 4's rule that `runner.py` is the
+    only module touching Copier's Python API. `forge_template` lives in a
+    dev-only dependency group (pinned to an unreleased commit) -- if any
+    module reachable from `create-forge`'s shipped entry point ever imports
+    it, a built wheel stops installing for real users.
+    """
+    for module_name in _SHIPPED_MODULES:
+        path = SRC_ROOT / f"{module_name}.py"
+        imported = _imported_top_level_names(path)
+        assert "forge_template" not in imported, (
+            f"{path.name} imports forge_template directly -- only engine.py "
+            "may (ADR 0013). Route the call through create_forge.engine "
+            "instead."
         )
