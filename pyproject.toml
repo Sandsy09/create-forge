@@ -145,6 +145,7 @@ addopts = [
 ]
 markers = [
     "network: hits GitHub; deselect with -m 'not network'",
+    "e2e: scaffolds a real project and runs its checks; deselect with -m 'not e2e'",
 ]
 
 [tool.coverage.run]
@@ -167,8 +168,9 @@ format = "ruff format ."
 "lint:fix" = "ruff check --fix ."
 "format:check" = "ruff format --check ."
 typecheck = "mypy"
-test = "pytest -m 'not network'"
+test = "pytest -m 'not network and not e2e'"
 "test:all" = "pytest"
+"test:e2e" = "pytest -m e2e"
 check = ["format:check", "lint", "typecheck", "test"]
 changelog = "git-cliff --output CHANGELOG.md"
 

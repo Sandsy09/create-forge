@@ -19,7 +19,8 @@
 - ~~**CF-07.03 — Implement non-interactive CLI parity**~~ — completed before roadmap filing.
 - [x] [**CF-07.04 — Implement safe filesystem generation**](https://github.com/Sandsy09/create-forge/issues/50)
   ([ADR 0015](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0015-staged-filesystem-generation.md))
-- [**CF-07.06 — Create end-to-end CLI generation tests**](https://github.com/Sandsy09/create-forge/issues/51)
+- [x] [**CF-07.06 — Create end-to-end CLI generation tests**](https://github.com/Sandsy09/create-forge/issues/51)
+  ([ADR 0016](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0016-end-to-end-reference-client-tests.md))
 
 ## Stage record
 
@@ -47,16 +48,31 @@ generated-project validation (`render_project` now calls
 `validate_rendered_project` before returning) -- see the canonical
 [filesystem generation contract](https://github.com/Sandsy09/create-forge/blob/main/docs/filesystem-generation.md).
 `--engine-preview` still deterministically fails today, now at validation
-rather than ever reaching staging. CF-07.06 remains open; the atomic
-cutover that replaces both the v0.1.x registry seam and `--engine-preview`
-stays gated on [#9](https://github.com/Sandsy09/create-forge/issues/9).
+rather than ever reaching staging.
+
+CF-07.06 (ADR 0016) closes the epic with real, CI-enforced coverage of the
+default `new` path as users experience it: the actual `create-forge` console
+script, run against `forge-template`'s latest released tag, its `_tasks`,
+and the generated project's own `uv run poe check` -- a new `e2e` marker and
+CI job, distinct from `network`, since it costs well over a minute. Two of
+the issue's seven acceptance criteria could not be met -- generating through
+the *public engine* against a *released* engine-and-assets unit -- because
+neither exists yet: `forge-template` has no `0.2.x` release and its
+production catalogue stays empty until
+[FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41).
+Those two criteria carry forward verbatim to **CF-08.04**, filed under
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39) and blocked
+on the same two things. See the canonical
+[end-to-end tests contract](https://github.com/Sandsy09/create-forge/blob/main/docs/end-to-end-tests.md).
+The atomic cutover that replaces both the v0.1.x registry seam and
+`--engine-preview` stays gated on
+[#9](https://github.com/Sandsy09/create-forge/issues/9).
 
 ## Stage completion rule
 
-The `forge-template` counterpart is complete. The shared stage remains open
-for the one remaining `create-forge` issue above.
+Both repositories' work is complete. Stage 07 is closed.
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [x] Repo-local issues are complete or explicitly deferred.
+- [x] Cross-repository blockers are resolved.
+- [x] Public contracts changed by this stage are documented/versioned.
+- [x] No implementation concern is duplicated across repositories.

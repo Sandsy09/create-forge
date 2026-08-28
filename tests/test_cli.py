@@ -2,8 +2,12 @@
 
 `scaffold` is monkeypatched with a recorder so these assert the resolved
 `ScaffoldRequest` rather than actually invoking Copier -- `ScaffoldRequest` is
-frozen/slots, so it compares by value. The one real network scaffold lives in
-docs/plan-v0.1.0.md's manual verification steps, not in this fast suite.
+frozen/slots, so it compares by value. The real console script, a real
+scaffold, and generated-project checks are covered by
+`tests/test_e2e_generation.py` (CF-07.06), not this fast suite; the three
+conflict/cleanup cases below use the real `scaffold` with only
+`runner.run_copy` faked, matching `tests/test_runner.py`'s style, to prove
+the same behaviour at the CLI layer without paying for a real clone.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import typer
+from copier.errors import CopierError
 from forge_template import (
     EngineInfo,
     GenerationPlan,
@@ -28,6 +33,7 @@ from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
+import create_forge.runner as runner_module
 from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
 from create_forge.cli import _markers, app
@@ -448,6 +454,74 @@ def test_new_reports_a_scaffold_error(
 
     assert result.exit_code == 1
     assert "boom" in result.output
+
+
+# --- CF-07.06: conflict and cleanup, at the CLI layer ------------------------
+#
+# The real `scaffold()` runs here (no `recorder` fixture) with only
+# `runner.run_copy` faked -- these prove `staging.py`'s conflict/cleanup
+# integration (already unit-tested by tests/test_runner.py) also holds
+# through `new`'s actual command wiring, without a real Copier clone.
+
+
+def test_new_rejects_a_non_empty_destination_before_copier(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dest = tmp_path / "proj"
+    dest.mkdir()
+    (dest / "existing.txt").write_text("hi", encoding="utf-8")
+
+    def unexpected_run_copy(**_kwargs: object) -> None:
+        raise AssertionError("run_copy must not run against a non-empty destination")
+
+    monkeypatch.setattr(runner_module, "run_copy", unexpected_run_copy)
+
+    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+
+    assert result.exit_code == 1, result.output
+    normalised_output = " ".join(result.output.split())
+    assert "already exists and is not empty" in normalised_output
+    assert (dest / "existing.txt").read_text(encoding="utf-8") == "hi"
+
+
+def test_new_removes_a_destination_it_created_on_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dest = tmp_path / "proj"
+
+    def failing_run_copy(**kwargs: object) -> None:
+        # A realistic partial Copier run: some output landed before Copier
+        # itself failed.
+        Path(str(kwargs["dst_path"])).mkdir(parents=True, exist_ok=True)
+        (Path(str(kwargs["dst_path"])) / "partial.txt").write_text(
+            "x", encoding="utf-8"
+        )
+        raise CopierError("simulated render failure")
+
+    monkeypatch.setattr(runner_module, "run_copy", failing_run_copy)
+
+    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+
+    assert result.exit_code == 1, result.output
+    assert not dest.exists()
+
+
+def test_new_leaves_a_pre_existing_destination_untouched_on_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    dest = tmp_path / "proj"
+    dest.mkdir()  # exists and is empty -- a legitimate --path target
+
+    def failing_run_copy(**_kwargs: object) -> None:
+        raise CopierError("simulated render failure")
+
+    monkeypatch.setattr(runner_module, "run_copy", failing_run_copy)
+
+    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+
+    assert result.exit_code == 1, result.output
+    assert dest.is_dir()
+    assert list(dest.iterdir()) == []
 
 
 def test_new_reports_where_the_project_was_created(

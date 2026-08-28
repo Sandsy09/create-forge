@@ -153,12 +153,45 @@ jobs:
         run: uv run pytest -m network
 
   # ---------------------------------------------------------------------------
+  # Everything marked @pytest.mark.e2e (CF-07.06, ADR 0016): the real
+  # `create-forge` console script against forge-template's latest released
+  # tag, its post-generation `_tasks` (git init, uv sync, pre-commit
+  # install), and the generated project's own `uv run poe check`. A
+  # distinct job and marker from `network` above -- this is dramatically
+  # slower (minutes, not seconds) and must stay separable from the drift
+  # guard. Git identity is supplied per-subprocess by the tests themselves,
+  # so no runner-level git config step is needed here. Skips (not fails) if
+  # GitHub is unreachable, and also runs on the Monday cron alongside
+  # `network` for the same reason.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: End-to-end generation
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: End-to-end tests
+        run: uv run poe test:e2e
+
+  # ---------------------------------------------------------------------------
   # Single required status check for branch protection.
   # ---------------------------------------------------------------------------
   all-green:
     name: All checks passed
     runs-on: ubuntu-latest
-    needs: [lint, test, windows, wheel, network]
+    needs: [lint, test, windows, wheel, network, e2e]
     if: always()
     steps:
       - name: Verify

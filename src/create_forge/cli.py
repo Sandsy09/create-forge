@@ -330,7 +330,8 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
             "--engine-preview",
             hidden=True,
             help="Development-only: build via the public forge-template engine "
-            "instead of Copier. No files are ever written by this path yet.",
+            "instead of Copier. Fails before any write today -- the "
+            "production catalogue is still empty.",
         ),
     ] = False,
 ) -> None:

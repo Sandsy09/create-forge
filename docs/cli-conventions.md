@@ -173,6 +173,12 @@ The contract is characterized by these tests:
   conflict detection, target-safety refusals, staging placement and atomic
   finalisation, and cleanup after failure — see the canonical
   [filesystem generation contract](filesystem-generation.md).
+- [`tests/test_e2e_generation.py`](../tests/test_e2e_generation.py) runs the
+  real console script against a released template, proving the generated
+  tree, its recorded answers, and its own `poe check` — not resolved values,
+  the genuine thing. See the canonical
+  [end-to-end tests contract](end-to-end-tests.md) and
+  [ADR 0016](adr/0016-end-to-end-reference-client-tests.md).
 - [`tests/test_prompts.py`](../tests/test_prompts.py) covers preset suppression,
   config pre-filling, derived defaults, conditional questions, and automatic
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,

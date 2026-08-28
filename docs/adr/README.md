@@ -18,6 +18,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0013 — Build ProjectSpec as a wire payload behind a single engine adapter](0013-projectspec-construction-boundary.md)
 - [0014 — Reach the engine from a command through a lazy, opt-in preview flag](0014-lazy-engine-reachability.md)
 - [0015 — Render into an adjacent staging directory and finalise by rename](0015-staged-filesystem-generation.md)
+- [0016 — Test the reference client end to end against the released template](0016-end-to-end-reference-client-tests.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.
