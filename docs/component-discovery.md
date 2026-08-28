@@ -22,17 +22,19 @@ reason to fall back to `templates.toml`.
 `engine.discover()` performs these operations in order:
 
 1. call the public `forge_template.get_engine_info()` facade once;
-2. require an overlap between the installed engine's ProjectSpec protocols and
+2. require exact development package version `0.2.0`;
+3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.engine.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
-3. require an overlap between its component-manifest protocols and
+4. require an overlap between its component-manifest protocols and
    `create_forge.engine.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS`; and
-4. call the public `forge_template.discover_components()` facade.
+5. call the public `forge_template.discover_components()` facade.
 
-Either disjoint protocol set raises `EngineCompatibilityError` before the
-engine scans its catalogue. The message names the detected engine package
-version and the detected and supported protocol sets. No engine package range
-is checked yet: the dependency remains a development-only commit pin, and
-CF-06.03 owns assigning and testing the first bounded package/protocol pair.
+An untested package or either disjoint protocol set raises
+`EngineCompatibilityError` before the engine scans its catalogue. The message
+names the detected engine package version and the exact development version or
+detected/supported protocol sets. No released engine range is checked: the
+dependency remains a development-only commit pin, as distinguished by the
+[cross-repository engine contract tests](engine-contract-tests.md).
 
 ## Descriptor ownership
 
@@ -69,8 +71,8 @@ engine internals to obtain them.
 
 ## What changes next
 
-- **CF-06.03** proves discovery, ProjectSpec validation, rendering, and the
-  exact supported package/protocol pair across repositories.
+- **CF-06.03** proves discovery, ProjectSpec validation, fail-closed rendering,
+  and the exact development package/protocol pair across repositories.
 - **CF-07.01** makes this adapter reachable from the shared `new` pipeline and
   replaces the v0.1.x registry seam atomically.
 - **Stage 08** adds production manifests, after which real discovery will
@@ -83,6 +85,8 @@ real empty catalogue, unmodified archetype/capability/platform descriptors,
 both protocol mismatches before catalogue access, and structured discovery
 failure propagation. The engine import boundary remains enforced by
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py).
+The exact installed/sibling pair and public rendering boundary are covered by
+[`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py).
 
 When discovery behaviour changes, update this contract and its executable
 examples in the same pull request.

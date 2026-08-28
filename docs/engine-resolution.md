@@ -52,10 +52,14 @@ question answered by the canonical [engine update policy](engine-updates.md).
 
 A development-only dependency exists ahead of that runtime one:
 `src/create_forge/engine.py` depends on `forge-template` via a `uv`
-dependency group pinned to a commit SHA, not a released version — see
+dependency group constrained to exact package version `0.2.0` and pinned to
+full commit SHA `2158c85a46efffc7d8ea2d43e347b943359baed1`, not a released
+version — see
 [ADR 0013](adr/0013-projectspec-construction-boundary.md). This is not the
 range assigned below; it exists so the construction boundary can exercise
-the real engine before `forge-template` publishes anything installable.
+the real engine before `forge-template` publishes anything installable. The
+[cross-repository engine contract tests](engine-contract-tests.md) reject any
+other development package version until it is deliberately adopted.
 
 ## Local development resolution
 
@@ -133,12 +137,17 @@ It does not exist in the v0.1.x line today — nothing in the current
 direct-Copier path can raise it — and is documented here as reserved so its
 absence from `cli.py` is legible as deliberate rather than an oversight.
 
+The development-only adapter already applies the same ordering to its exact
+`0.2.0` pair: package and protocol mismatches fail before parsing, discovery,
+validation, or in-memory rendering. This is development-contract evidence,
+not a claim that v0.1.x supports an engine package.
+
 ## Assigning the first engine range
 
-`forge-template` FT-06.07 now defines the `0.2.x` engine API, but no range is
-assigned merely from that upstream merge. Perform these steps together in the
-coordinated CLI adoption after its implementation and cross-repository tests
-pass:
+`forge-template` FT-06.07 defines the `0.2.x` engine API and CF-06.03 proves
+the exact development pair described above, but neither action assigns a
+released range. After #9 chooses an installable distribution channel, perform
+these steps together in CF-07.01's coordinated CLI adoption:
 
 1. Add the engine as a real dependency in `pyproject.toml` with a tested
    lower bound.
@@ -147,12 +156,14 @@ pass:
    `>=0.y.a,<0.(y+1)` pre-1.0, `>=n.a,<n+1` from 1.0.
 3. Fill in the real values in this document's resolution table and in
    `docs/integration-contract.md`'s compatibility table.
-4. Add contract and end-to-end tests exercising the exact supported pair, per
+4. Replace the exact development assertion with contract and end-to-end tests
+   exercising the declared lower bound and a representative latest compatible
+   release, per
    the [cross-repository contributor workflow](cross-repository-workflow.md),
    the [engine update policy](engine-updates.md)'s adoption rule, and the
    [ProjectSpec construction contract](project-spec-construction.md)'s
    negotiation and validation rules.
-5. Remove `tests/test_engine_contract.py`'s "no engine dependency declared"
+5. Remove `tests/test_engine_contract.py`'s "no runtime engine dependency"
    branch, since it stops being true.
 
 ## Executable examples

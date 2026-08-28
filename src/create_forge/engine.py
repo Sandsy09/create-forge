@@ -25,14 +25,24 @@ from forge_template import (
     EngineInfo,
     ForgeEngineError,
     ProjectSpec,
+    RenderedProject,
     get_engine_info,
 )
 from forge_template import discover_components as _discover_components
 from forge_template import parse_project_spec as _parse_project_spec
+from forge_template import render_project as _render_project
 from forge_template import validate_project_spec as _validate_project_spec
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+TESTED_ENGINE_PACKAGE_VERSION = "0.2.0"
+"""Exact forge-template package version in the Stage 06 development contract.
+
+This is deliberately not a released compatibility range. The engine remains a
+development-only dependency pinned to an immutable commit until #9 chooses an
+installable distribution channel and CF-07.01 performs the atomic cutover.
+"""
 
 SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
 """ProjectSpec wire protocols this create-forge release has implemented
@@ -41,9 +51,9 @@ against.
 Deliberately not read from `forge_template.SUPPORTED_PROJECTSPEC_PROTOCOLS`
 -- that constant is what the *installed engine* accepts, and this one is
 what *create-forge* supports; negotiation compares the two rather than
-assuming they agree. No engine package-version range is assigned yet, so
-`negotiate_protocol` checks the ProjectSpec wire protocol only, not the
-`forge-template` package version.
+assuming they agree. No released engine package range is assigned yet:
+`negotiate_protocol` requires the exact development package above, then checks
+the ProjectSpec wire protocol independently.
 """
 
 SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS: tuple[int, ...] = (1,)
@@ -57,7 +67,7 @@ protocol compatible.
 
 
 class EngineCompatibilityError(Exception):
-    """An installed engine speaks no required protocol this CLI supports.
+    """An installed engine is outside the tested package/protocol contract.
 
     Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
     ADR 0011 for exactly this failure class. Implemented here at the engine
@@ -65,6 +75,21 @@ class EngineCompatibilityError(Exception):
     `negotiate_protocol` or `discover` until CF-07.01 wires the engine into
     `new`.
     """
+
+
+def _require_tested_package(info: EngineInfo) -> None:
+    """Reject an engine package outside the exact Stage 06 development pair."""
+    if info.package_version == TESTED_ENGINE_PACKAGE_VERSION:
+        return
+
+    msg = (
+        f"Detected forge-template {info.package_version}, but this create-forge "
+        f"development contract is tested only with forge-template "
+        f"{TESTED_ENGINE_PACKAGE_VERSION}. No released engine range is assigned; "
+        "install the pinned development dependency or validate and adopt the new "
+        "pair through the cross-repository contract workflow."
+    )
+    raise EngineCompatibilityError(msg)
 
 
 def _require_protocol_overlap(
@@ -109,11 +134,13 @@ def _require_component_manifest_protocol(info: EngineInfo) -> None:
 
 
 def negotiate_protocol() -> None:
-    """Confirm the installed engine speaks a supported ProjectSpec protocol.
+    """Confirm the engine matches the tested package/ProjectSpec pair.
 
     Runs before any payload is parsed, validated, or rendered.
     """
-    _require_projectspec_protocol(get_engine_info())
+    info = get_engine_info()
+    _require_tested_package(info)
+    _require_projectspec_protocol(info)
 
 
 def discover() -> tuple[ComponentDescriptor, ...]:
@@ -125,6 +152,7 @@ def discover() -> tuple[ComponentDescriptor, ...]:
     relationships, and options remain owned and validated by `forge-template`.
     """
     info = get_engine_info()
+    _require_tested_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _discover_components()
@@ -151,7 +179,25 @@ def validate(spec: ProjectSpec) -> ProjectSpec:
     which documents this outcome and is expected to start passing once a real
     manifest exists.
     """
+    info = get_engine_info()
+    _require_tested_package(info)
+    _require_projectspec_protocol(info)
+    _require_component_manifest_protocol(info)
     return _validate_project_spec(spec)
+
+
+def render(spec: ProjectSpec) -> RenderedProject:
+    """Render one spec to immutable in-memory files after compatibility checks.
+
+    The public engine owns validation, composition, and rendering. This adapter
+    deliberately accepts no destination path and performs no filesystem writes;
+    CF-07.04 will own staging and finalisation around the returned files.
+    """
+    info = get_engine_info()
+    _require_tested_package(info)
+    _require_projectspec_protocol(info)
+    _require_component_manifest_protocol(info)
+    return _render_project(spec)
 
 
 def explain(exc: ForgeEngineError) -> str:

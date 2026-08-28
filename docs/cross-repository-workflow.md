@@ -71,6 +71,20 @@ cd ../create-forge
 uv run poe check
 ```
 
+When either side changes the public engine contract, install both working
+trees in an isolated environment and run the focused Stage 06 suite:
+
+```bash
+uv run --no-project --isolated --with . --with ../forge-template --with pytest python -m pytest -o addopts= tests/test_engine_cross_repository.py
+```
+
+This builds current local source, including uncommitted changes, rather than
+using create-forge's immutable Git pin. It exercises only the top-level public
+`forge_template` facade. The sibling must still declare package version
+`0.2.0`; a version bump is a new development pair and fails until the pin,
+contract, and tests are deliberately adopted together. See the canonical
+[cross-repository engine contract tests](engine-contract-tests.md).
+
 When `copier.yml` and `templates.toml` change together, point the drift suite
 at the working tree rather than its latest release:
 

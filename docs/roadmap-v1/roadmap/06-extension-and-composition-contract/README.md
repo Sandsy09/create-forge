@@ -24,9 +24,9 @@
   with an empty production catalogue until Stage 08.
 
 The counterpart [forge-template epic #15](https://github.com/Sandsy09/forge-template/issues/15)
-is complete. The `create-forge` engine range remains unassigned and ProjectSpec
-protocol 1 remains unsupported by released CLI lines until the three local
-issues below and their cross-repository tests pass.
+is complete. The `create-forge` Stage 06 development contract is also complete:
+the released engine range remains unassigned and ProjectSpec protocol 1 remains
+unsupported by released CLI lines until the later atomic cutover.
 
 ### create-forge
 
@@ -36,7 +36,8 @@ issues below and their cross-repository tests pass.
   [canonical ProjectSpec construction contract](https://github.com/Sandsy09/create-forge/blob/main/docs/project-spec-construction.md))
 - [x] [**CF-06.02 — Implement component discovery adapter**](https://github.com/Sandsy09/create-forge/issues/47)
   ([canonical component discovery contract](https://github.com/Sandsy09/create-forge/blob/main/docs/component-discovery.md))
-- [**CF-06.03 — Add cross-repository contract tests**](https://github.com/Sandsy09/create-forge/issues/48)
+- [x] [**CF-06.03 — Add cross-repository contract tests**](https://github.com/Sandsy09/create-forge/issues/48)
+  ([canonical cross-repository engine contract tests](https://github.com/Sandsy09/create-forge/blob/main/docs/engine-contract-tests.md))
 
 ## Stage record
 
@@ -53,12 +54,17 @@ catalogue; that characterization is expected to flip once Stage 08 migrates
 the Library archetype. CF-06.02 adds `engine.discover()`, which checks both
 ProjectSpec and component-manifest protocol compatibility before returning the
 engine's immutable descriptors unchanged. It deliberately has no registry
-fallback and remains unreachable from the CLI until CF-07.01. CF-06.03 remains
-open, and the epic stays in progress until it lands.
+fallback and remains unreachable from the CLI until CF-07.01. CF-06.03 pins
+and proves exact development pair `forge-template==0.2.0`, ProjectSpec
+protocol `1`, and component-manifest protocol `1`; package and protocol
+mismatches fail before public engine operations. Its render adapter is
+in-memory and currently fails closed against the intentionally empty catalogue,
+while forge-template's golden suite remains the successful rendering proof.
+No released engine range or CLI behavior changes in this completed stage.
 
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [x] Repo-local issues are complete or explicitly deferred.
+- [x] Cross-repository blockers are resolved.
+- [x] Public contracts changed by this stage are documented/versioned.
+- [x] No implementation concern is duplicated across repositories.

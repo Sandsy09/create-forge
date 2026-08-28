@@ -14,7 +14,8 @@ are implemented by `forge-template` together with the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md),
 recorded by [ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
 The `0.2.x` engine line has an empty production catalogue. Development-only
-ProjectSpec construction and component-discovery adapters now exist, but
+ProjectSpec construction, component-discovery, validation, and rendering
+adapters now exist and are tested against an exact development pair, but
 production components and CLI consumption remain unimplemented. The released
 v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
 current security and update invariants remain authoritative until the
@@ -23,13 +24,20 @@ coordinated cutover.
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Unassigned | 1 (defined; not yet supported) | Construction/discovery adapters available; CLI integration and compatibility tests pending |
+| First engine line | Unassigned | 1 (defined; not yet supported) | Stage 06 development contract tested; distribution and CLI cutover pending |
+
+The separate development contract is `forge-template==0.2.0` at
+`2158c85a46efffc7d8ea2d43e347b943359baed1`, ProjectSpec protocol `1`, and
+component-manifest protocol `1`. The canonical
+[cross-repository engine contract tests](engine-contract-tests.md) make that
+pair executable. It is deliberately not the first row's installable range.
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
 It is not a protocol supported by any released `create-forge` line yet. Do not
-assign the future engine range or mark the pair supported until CLI
-implementation and cross-repository compatibility tests pass.
+assign the future engine range or mark the pair supported by a released CLI
+until #9 resolves distribution and CF-07.01 completes the atomic cutover with
+released lower/latest compatibility tests.
 
 [Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
 assigns component manifest protocol `1`. It defines strict bundled identity,
@@ -53,6 +61,11 @@ second operation to that same boundary. It negotiates both the ProjectSpec and
 component-manifest protocols before calling the public engine and returns the
 engine's descriptors unchanged. It assigns no package range and is likewise
 unreachable from the released CLI.
+
+The canonical [cross-repository engine contract tests](engine-contract-tests.md)
+then prove the exact development package/protocol pair and the public
+discovery, validation, and rendering boundary without changing that released
+compatibility table.
 
 ## Ownership and dependency direction
 
