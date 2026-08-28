@@ -107,20 +107,22 @@ responsibilities at the future cutover.
 Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), but
 this repository assigns no released dependency range until #9 resolves the
-distribution channel and CF-07.01 performs the atomic cutover.
+distribution channel and CF-07.04 performs the atomic cutover.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
 and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
 record that adapter's shape — `spec.py` builds the wire payload, `engine.py`
-is the one module that calls the facade — ahead of any command using it. The
-canonical
+is the one module that calls the facade. The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 likewise remains engine-owned discovery metadata rather than a schema this
 repository recreates. The living
 [component discovery contract](docs/component-discovery.md) records how
 `engine.py` checks both protocol axes before returning those public descriptors
-unchanged. Neither adapter is reachable from a shipped command yet; the current
-v0.1.x Copier/registry implementation remains authoritative until the
-coordinated CLI cutover.
+unchanged. [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds
+`pipeline.py` and reaches this boundary from a real command for the first
+time, via the hidden `new --engine-preview` flag and a lazily-imported
+module `cli.py` otherwise never touches. The default `new` path, and every
+other command, remain the current v0.1.x Copier/registry implementation,
+authoritative until the coordinated CLI cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected

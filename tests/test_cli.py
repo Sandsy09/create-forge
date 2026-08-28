@@ -8,23 +8,30 @@ docs/plan-v0.1.0.md's manual verification steps, not in this fast suite.
 
 from __future__ import annotations
 
+import builtins
 import json
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import typer
+from forge_template import EngineInfo
 from pydantic import HttpUrl
 from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
+from create_forge import engine as engine_module
 from create_forge.cli import _markers, app
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
 from create_forge.prompts import PromptAbortedError
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 runner = CliRunner()
 
@@ -462,6 +469,151 @@ def test_new_reports_where_the_project_was_created(
     # short and stable, and still proves the destination reached the report.
     assert "created at" in result.output
     assert dest.name in result.output
+
+
+# --- --engine-preview (CF-07.01 / #49, ADR 0014) ------------------------------
+
+_ENGINE_PREVIEW_ANSWERS = [
+    "--data",
+    "github_org=test-org",
+    "--data",
+    "license=mit",
+    "--data",
+    "author_name=Test User",
+    "--data",
+    "author_email=test@example.invalid",
+    "--data",
+    "python_min_version=3.11",
+    "--data",
+    "python_version=3.13",
+]
+
+
+def test_new_without_engine_preview_is_unchanged(
+    recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """The hidden flag defaults to False; every existing test above already
+    proves this, but this makes the default explicit and future-proof.
+    """
+    result = runner.invoke(
+        app, ["new", "Foo", "--yes", "--path", str(tmp_path / "proj")]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(recorder) == 1
+    assert "Engine preview" not in result.output
+
+
+def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """Simulates a real `uvx create-forge` install, where forge-template is
+    not installed at all. cli.py's lazy import must fail cleanly rather than
+    crash the whole command with a raw traceback -- and must never fall back
+    to actually scaffolding.
+
+    Blocking via `sys.modules["forge_template"] = None` alone is not
+    reliable here: `create_forge.engine`/`create_forge.pipeline` are already
+    imported by other test modules in this same process, and CPython's
+    `from package import submodule` machinery can satisfy that from the
+    parent package's already-set `submodule` attribute without re-executing
+    the submodule at all, even after deleting it from `sys.modules`.
+    Patching `builtins.__import__` intercepts the actual import call
+    `cli.py` makes, regardless of caching.
+    """
+    real_import = builtins.__import__
+
+    def blocking_import(
+        name: str,
+        globals: Mapping[str, object] | None = None,  # noqa: A002 - matches __import__
+        locals: Mapping[str, object] | None = None,  # noqa: A002 - matches __import__
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "create_forge" and "pipeline" in fromlist:
+            msg = "forge_template not installed (simulated)"
+            raise ImportError(msg)
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocking_import)
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(tmp_path / "proj"),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "engine dependency isn't installed" in result.output
+    assert recorder == []
+    assert not (tmp_path / "proj").exists()
+
+
+def test_new_engine_preview_fails_closed_against_the_empty_catalogue(
+    recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """The real, unmocked engine: `forge-template` 0.2.0's production
+    catalogue is intentionally empty until Stage 08, so this fails at
+    validation today -- by design, mirroring
+    `tests/test_pipeline.py::test_build_generation_request_fails_closed_against_the_empty_catalogue`.
+    """
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "invalid-component-selection" in result.output
+    assert recorder == []
+    assert not dest.exists()
+
+
+def test_new_engine_preview_exits_3_on_incompatible_engine(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        engine_module,
+        "get_engine_info",
+        lambda: EngineInfo(
+            package_version="9.0.0",
+            projectspec_protocols=(99,),
+            component_manifest_protocols=(1,),
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(tmp_path / "proj"),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 3, result.output
+    assert recorder == []
+    assert not (tmp_path / "proj").exists()
 
 
 # --- config wiring (issue #3) ------------------------------------------------
