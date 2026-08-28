@@ -99,7 +99,14 @@ v0.1.x users receive. Keep the option and path in the single equals-form
 argument shown above so pytest does not discover the sibling test suite while
 processing its initial paths.
 
-Then exercise the real CLI-to-Copier path. Choose an empty disposable target;
+`uv run poe test:e2e` (the canonical [end-to-end tests contract](end-to-end-tests.md))
+already runs this same CLI-to-Copier path against `forge-template`'s latest
+*released* tag on every pull request here. It cannot cover a pending sibling
+change, since it always resolves the published tag rather than a local
+checkout — that is what the manual step below is for.
+
+Then exercise the real CLI-to-Copier path against the sibling checkout.
+Choose an empty disposable target;
 the command below uses a sibling directory so neither repository becomes
 dirty:
 

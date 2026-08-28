@@ -106,6 +106,12 @@ the hidden `new --engine-preview` flag that reaches this boundary from a real
 command for the first time, via a lazily-imported module `cli.py` otherwise
 never touches — the default `new` path remains unchanged. [ADR 0015](docs/adr/0015-staged-filesystem-generation.md)
 completes that flag with real staging and finalisation via `staging.py`.
+CF-07.06 ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md))
+closes Stage 07 with real, CI-enforced coverage of the Copier path — the real
+console script, its `_tasks`, and the generated project's own checks — see
+the canonical [end-to-end tests contract](docs/end-to-end-tests.md). The
+engine path stays untested end-to-end, tracked as CF-08.04, since it has no
+released version or non-empty catalogue to generate from yet.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -206,6 +212,10 @@ Run this before any release.
   defines destination-conflict, staging, target-safety, finalisation, and
   cleanup rules implemented by `staging.py` and used by both `runner.py` and
   `pipeline.py`.
+- The canonical [end-to-end tests contract](docs/end-to-end-tests.md) defines
+  the fast/`network`/`e2e` test-tier split, what the real console script is
+  proven to do against a released template, and the engine-path gap tracked
+  as CF-08.04.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

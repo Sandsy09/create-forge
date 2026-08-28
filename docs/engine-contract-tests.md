@@ -64,6 +64,15 @@ composition and rendering are already proven inside `forge-template` by its
 [`tests/test_composition_contract.py`](https://github.com/Sandsy09/forge-template/blob/main/tests/test_composition_contract.py)
 goldens. `create-forge` does not import their private fixture-catalogue seam.
 
+This empty catalogue is also why
+[CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51)'s
+[end-to-end suite](end-to-end-tests.md) covers the Copier path only: there is
+nothing yet for `--engine-preview` to generate through the engine.
+**CF-08.04**, under
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), carries
+that gap forward and is blocked on the same catalogue and on
+[#9](https://github.com/Sandsy09/create-forge/issues/9).
+
 ## Validate a sibling checkout
 
 The normal fast suite uses the immutable Git source in `uv.lock`. To validate

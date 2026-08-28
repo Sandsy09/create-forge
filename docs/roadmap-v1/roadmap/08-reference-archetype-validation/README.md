@@ -16,6 +16,12 @@
 - ~~**CF-08.01 — Expose Library archetype through create-forge**~~ — completed before roadmap filing.
 - [**CF-08.02 — Expose a second archetype through create-forge**](https://github.com/Sandsy09/create-forge/issues/10)
 - [**CF-08.03 — Run CLI archetype-parity review**](https://github.com/Sandsy09/create-forge/issues/52)
+- [**CF-08.04 — Extend end-to-end generation to the public engine**](https://github.com/Sandsy09/create-forge/issues/85)
+  — successor to [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51),
+  carrying forward the two acceptance criteria that need a released engine and
+  a non-empty production catalogue, neither of which exists yet. Blocked on
+  [FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41)
+  and [#9](https://github.com/Sandsy09/create-forge/issues/9).
 
 ## Stage completion rule
 

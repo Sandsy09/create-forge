@@ -26,7 +26,7 @@ uv run poe check
 ```
 
 Runs `ruff format --check`, `ruff check`, `mypy`, and the fast test suite —
-`pytest -m 'not network'`.
+`pytest -m 'not network and not e2e'`.
 
 The network-marked tests are separate:
 
@@ -44,6 +44,24 @@ unknown `data` key with no error, the answer vanishes, and the template's own
 default applies instead. A typo here produces a scaffold that looks fine and
 is subtly wrong, which is exactly the failure mode this test is for. Run it
 whenever `templates.toml` changes, or whenever `forge-template` cuts a new tag.
+
+## End-to-end tests
+
+A third tier, separate from both the fast suite and `network`:
+
+```bash
+uv run poe test:e2e
+```
+
+This runs the real `create-forge` console script against `forge-template`'s
+latest released tag, then the generated project's own `uv run poe check`.
+It is dramatically slower than `network` — well over a minute, since it runs
+`copier.yml`'s `_tasks` (`git init`, `uv sync --all-groups`,
+`pre-commit install --install-hooks`) and then a full check on the result —
+so it carries its own `e2e` marker and CI job rather than joining `network`.
+Like the network-marked tests, it skips rather than fails when GitHub is
+unreachable. See the canonical [end-to-end tests contract](docs/end-to-end-tests.md)
+and [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md).
 
 Before any release, also run:
 
@@ -75,11 +93,12 @@ request:
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
+| `e2e` | `pytest -m e2e` — the real console script against a real destination, and the generated project's own `uv run poe check` ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md)) |
 | `all-green` | an aggregate check; this is the one branch protection requires |
 
-`network` also runs on a Monday cron, independent of any push here —
+`network` and `e2e` also run on a Monday cron, independent of any push here —
 `forge-template` moves on its own schedule, so a PR is not the only thing that
-can surface a registry mismatch.
+can surface a registry mismatch or a template regression.
 
 ## Architecture decisions
 
@@ -130,6 +149,11 @@ module `cli.py` otherwise never touches; ADR 0015 completes that flag with
 real staging and finalisation. The default `new` path, and every other
 command, remain the current v0.1.x Copier/registry implementation,
 authoritative until the coordinated CLI cutover.
+[ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
+[end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
+real, CI-enforced coverage of that default `new` path against a released
+template — the engine path stays untested end to end until it has a released
+version and a non-empty catalogue to generate from, tracked as CF-08.04.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected

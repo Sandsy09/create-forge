@@ -25,6 +25,7 @@ ENGINE_RESOLUTION = REPO_ROOT / "docs" / "engine-resolution.md"
 ENGINE_CONTRACT_TESTS = REPO_ROOT / "docs" / "engine-contract-tests.md"
 COMPONENT_DISCOVERY = REPO_ROOT / "docs" / "component-discovery.md"
 FILESYSTEM_GENERATION = REPO_ROOT / "docs" / "filesystem-generation.md"
+END_TO_END_TESTS = REPO_ROOT / "docs" / "end-to-end-tests.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
@@ -188,6 +189,21 @@ def test_filesystem_generation_doc_is_linked_from_canonical_entry_points() -> No
         )
 
     assert FILESYSTEM_GENERATION.is_file()
+
+
+def test_end_to_end_tests_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-07.06's living end-to-end contract must remain discoverable
+    wherever contributors enter the engine integration documentation,
+    mirroring component-discovery.md's and filesystem-generation.md's
+    equivalent guards.
+    """
+    link_re = re.compile(r"\([^)]*end-to-end-tests\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link end-to-end-tests.md"
+
+    assert END_TO_END_TESTS.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:
