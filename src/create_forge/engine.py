@@ -23,11 +23,16 @@ from typing import TYPE_CHECKING
 from forge_template import (
     ComponentDescriptor,
     EngineInfo,
-    ForgeEngineError,
     ProjectSpec,
     RenderedProject,
     get_engine_info,
 )
+
+# Explicit self-reexport: mypy strict's no_implicit_reexport otherwise blocks
+# `cli.py`'s lazy `except engine.ForgeEngineError` (a direct import of this
+# module, not merely an attribute chain) from typing against a name this
+# module only imported rather than defined.
+from forge_template import ForgeEngineError as ForgeEngineError  # noqa: PLC0414
 from forge_template import discover_components as _discover_components
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import render_project as _render_project

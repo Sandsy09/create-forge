@@ -64,6 +64,25 @@ replacement's interface — `--engine-source`/`--engine-ref` — and the
 the cutover ships it, `--template-url`/`--ref` above are the only source and
 version options this CLI accepts; the new names are not yet implemented.
 
+## The `--engine-preview` development flag
+
+`new --engine-preview` is a hidden, development-only option (absent from
+`--help`) that builds, validates, and renders through the public
+`forge-template` engine instead of Copier — see
+[ADR 0014](adr/0014-lazy-engine-reachability.md) and the canonical
+[ProjectSpec construction contract](project-spec-construction.md). It always
+prints an informational note that it is development-only, unconditionally
+and regardless of `--yes` — but unlike `--template-url`'s warning, this is
+not a confirmation gate: `forge-template` is a reviewed, pinned dependency,
+not arbitrary user-supplied code, so there is no code-execution trust
+question to ask. It reuses the same answer collection as the Copier path
+(no parallel prompt flow), never writes a destination regardless of
+`--dry-run`, and fails deterministically today — `forge-template`'s
+production catalogue is intentionally empty until Stage 08. `--engine-source`/
+`--engine-ref` above remain the names reserved for the eventual public
+override; `--engine-preview` is a distinct, temporary flag retired at the
+coordinated cutover, not renamed into that pair.
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.
@@ -84,7 +103,7 @@ either stage leaves the scaffold uninvoked.
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
 | `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, or scaffold/update failures. |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, or malformed `--data` without `key=value`. |
-| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Not yet raised by any command — `create-forge new` is still the v0.1.x direct-Copier line. Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`, reachable once CF-07.01 wires the engine into `new`. |
+| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md)) — the default `new` path is still v0.1.x direct-Copier and cannot produce it. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are
@@ -135,8 +154,10 @@ The contract is characterized by these tests:
   error presentation. In particular, see
   `test_new_dry_run_records_the_request_and_writes_nothing`,
   `test_new_bad_data_format_is_rejected`, the two
-  `test_new_aborting_*_exits_130` cases, and
-  `test_new_template_url_declined_scaffolds_nothing`.
+  `test_new_aborting_*_exits_130` cases,
+  `test_new_template_url_declined_scaffolds_nothing`, and the
+  `test_new_engine_preview_*`/`test_new_without_engine_preview_is_unchanged`
+  group covering the `--engine-preview` flag from ADR 0014.
 - [`tests/test_prompts.py`](../tests/test_prompts.py) covers preset suppression,
   config pre-filling, derived defaults, conditional questions, and automatic
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,

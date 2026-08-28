@@ -8,9 +8,13 @@ this document defines only the client adapter and its compatibility boundary.
 
 ## Status
 
-`src/create_forge/engine.py` exposes a tested `discover()` adapter, but no
-shipped command calls it yet. The released v0.1.x CLI continues to use its
-bundled registry and direct-Copier path until the atomic cutover in CF-07.01.
+`src/create_forge/engine.py` exposes a tested `discover()` adapter, called
+by the shared pipeline (`src/create_forge/pipeline.py`) as of CF-07.01 --
+reachable today only via the hidden `new --engine-preview` flag
+([ADR 0014](adr/0014-lazy-engine-reachability.md)). The default `new` path
+continues to use the bundled registry and direct-Copier integration
+unchanged; the atomic cutover away from it remains blocked on
+[#9](https://github.com/Sandsy09/create-forge/issues/9) and CF-07.04.
 
 The development-only `forge-template` 0.2.0 dependency currently has an empty
 production catalogue, so real discovery returns `()`. That is expected until
@@ -73,8 +77,13 @@ engine internals to obtain them.
 
 - **CF-06.03** proves discovery, ProjectSpec validation, fail-closed rendering,
   and the exact development package/protocol pair across repositories.
-- **CF-07.01** makes this adapter reachable from the shared `new` pipeline and
-  replaces the v0.1.x registry seam atomically.
+- **CF-07.01** makes this adapter reachable from the shared pipeline via the
+  hidden `new --engine-preview` flag (ADR 0014). Selection stays
+  caller-supplied (`archetype=template.id`, no capabilities/platforms) --
+  discovery runs for real but does not yet drive it.
+- **CF-07.04**, once [#9](https://github.com/Sandsy09/create-forge/issues/9)
+  resolves a distribution channel, performs the atomic cutover that replaces
+  the v0.1.x registry seam and `--engine-preview` together.
 - **Stage 08** adds production manifests, after which real discovery will
   return the Library and later archetype descriptors.
 

@@ -35,16 +35,22 @@ src/create_forge/
 ├── config.py       User config (~/.config/create-forge/config.toml). NOT WIRED.
 ├── prompts.py      questionary flow. Driven entirely by registry data.
 ├── runner.py       The ONLY module that touches Copier's Python API.
-├── spec.py         Pure ProjectSpec wire-payload builder. No engine import. NOT WIRED.
-├── engine.py       The ONLY module that touches the forge-template engine. NOT WIRED.
+├── spec.py         Pure ProjectSpec wire-payload builder. No engine import.
+├── engine.py       The ONLY module that touches the forge-template engine.
+├── pipeline.py     Shared discover→build→validate→render pipeline. Reachable
+│                   only via `new --engine-preview` (hidden, dev-only; ADR 0014).
 └── cli.py          Typer app: new, list, update, doctor.
 ```
 
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
-`models`. Nothing lower imports anything higher. `spec.py` and `engine.py`
-are not yet reachable from `cli.py` — CF-07.01 wires them in — but the same
-rule already applies to `engine.py`: nothing outside it may import
-`forge_template` (ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py)).
+`models`. Nothing lower imports anything higher. `engine.py` is the only
+module whose *source* imports `forge_template`
+(ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py));
+`pipeline.py` depends on it but imports `forge_template` only under
+`TYPE_CHECKING`. `cli.py` imports `pipeline`/`engine` lazily — inside
+`--engine-preview`'s branch only, guarded by `try/except ImportError` — so
+every other command stays unaffected by whether `forge-template` is
+installed (ADR 0014).
 
 ## Accepted target — engine available, CLI not integrated
 
@@ -65,10 +71,12 @@ is accepted under
 [forge-template ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md).
 The engine's `0.2.x` compatibility line currently has an empty production
 catalogue. The development boundary can construct ProjectSpec, discover
-components, validate, and render through the public facade, but no current CLI
-path calls it and no released engine range is assigned here yet. Stage 06's
-exact `forge-template==0.2.0` / protocol-1 development pair is recorded by the
-canonical [cross-repository engine contract tests](docs/engine-contract-tests.md).
+components, validate, and render through the public facade; as of CF-07.01
+this is reachable from a real command via the hidden `new --engine-preview`
+flag (ADR 0014), though not from the default `new` path, and no released
+engine range is assigned here yet. Stage 06's exact `forge-template==0.2.0` /
+protocol-1 development pair is recorded by the canonical
+[cross-repository engine contract tests](docs/engine-contract-tests.md).
 That commit-pinned pair predates generated-project validation and remains
 unchanged until the coordinated Stage 07 integration work updates and tests it.
 The canonical
@@ -81,8 +89,12 @@ rejected when incompatible. The exact development check is implemented; the
 installable runtime range and CLI integration are not.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
 code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against a
-development-only, commit-pinned `forge-template`, but no command calls them
-yet — see the canonical [ProjectSpec construction contract](docs/project-spec-construction.md).
+development-only, commit-pinned `forge-template` — see the canonical
+[ProjectSpec construction contract](docs/project-spec-construction.md).
+[ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
+the hidden `new --engine-preview` flag that reaches this boundary from a real
+command for the first time, via a lazily-imported module `cli.py` otherwise
+never touches — the default `new` path remains unchanged.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -134,7 +146,11 @@ configured to never propose crossing that major on its own — see the
 [engine update policy](docs/engine-updates.md). `engine.py` follows the same
 one-module rule for `forge_template`, per
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — nothing
-else in this package may import it.
+else in this package may import it. `cli.py` reaches it only through a
+lazy, guarded import inside `--engine-preview`'s branch
+([ADR 0014](docs/adr/0014-lazy-engine-reachability.md)) — `forge-template`
+stays a development-only dependency, so no module reachable at `cli.py`'s
+own import time may depend on it, directly or through `pipeline.py`.
 
 ### 5. templates.toml must ship in the wheel
 

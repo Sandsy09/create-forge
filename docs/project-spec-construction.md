@@ -12,12 +12,17 @@ contract — today's mechanisms will change as the engine cutover approaches.
 
 ## Status
 
-The construction boundary exists and is fully tested, but nothing calls it
-yet: `create-forge new` keeps its v0.1.x direct-Copier path unchanged.
-CF-07.01 is the issue that wires this boundary into a command.
-`forge-template`'s production component catalogue is intentionally empty
-until Stage 08, so calling this boundary end-to-end always fails validation
-today — see "Validation and today's expected failure" below.
+The construction boundary is reachable from a real command, but only behind
+a hidden, opt-in flag: `create-forge new --engine-preview`. Without that
+flag, `new` keeps its v0.1.x direct-Copier path completely unchanged. [ADR
+0014](adr/0014-lazy-engine-reachability.md) records why a hidden flag with a
+lazy import, rather than a default-path cutover, is what CF-07.01 shipped —
+`forge-template` remains a development-only dependency, so `cli.py` cannot
+import the engine unconditionally without breaking every real `uvx
+create-forge` install. `forge-template`'s production component catalogue is
+intentionally empty until Stage 08, so calling this boundary end-to-end
+always fails validation today — see "Validation and today's expected
+failure" below.
 
 ## The map-vs-validate principle
 
@@ -48,7 +53,7 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. |
 | `python_version` | `python.development` | Same. `python` is omitted entirely unless *both* bounds are known — a partial `PythonSelection` is not a smaller valid one. |
-| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; until CF-07.01 wires selection into the CLI, direct callers still pass the chosen IDs. |
+| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` today passes `archetype=template.id` with empty capabilities/platforms rather than driving real selection from discovery — nothing non-empty to select until Stage 08 (ADR 0014). |
 | *caller-supplied* | `component_options` | Copied through unchanged, namespaced by component ID. |
 | — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
 
@@ -98,10 +103,9 @@ package version `0.2.0`. This is the Stage 06 development contract, not a
 released package range; see the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
-This is implemented at the engine boundary but not yet reachable from any
-shipped command: no code path calls `negotiate_protocol` until CF-07.01
-wires the engine into `new`. `docs/cli-conventions.md`'s exit-status table
-reflects this precisely — implemented, not yet raised by any command.
+This is reachable from a real command as of CF-07.01, but only behind
+`new --engine-preview` — see [ADR 0014](adr/0014-lazy-engine-reachability.md).
+`docs/cli-conventions.md`'s exit-status table reflects this precisely.
 
 No bounded runtime engine range is checked yet. The exact development version
 guard is replaced by the installable lower/upper range only at the atomic
@@ -151,9 +155,17 @@ not a consequence of this repository adding a development dependency.
 
 - **CF-06.03** proves the exact development package/protocol pair, including
   fail-closed public-facade rendering against the empty production catalogue.
-- **CF-07.01** wires this boundary into `create-forge new`, making
-  ProjectSpec construction, [component discovery](component-discovery.md), and
-  exit status `3` reachable for the first time.
+- **CF-07.01** wires this boundary into `create-forge new --engine-preview`
+  (ADR 0014), making ProjectSpec construction,
+  [component discovery](component-discovery.md), and exit status `3`
+  reachable for the first time — behind a hidden, opt-in flag, not the
+  default `new` path.
+- **CF-07.04** consumes the `GenerationRequest`
+  `src/create_forge/pipeline.py` produces for real filesystem staging and
+  finalisation, and, once [#9](https://github.com/Sandsy09/create-forge/issues/9)
+  resolves a distribution channel, performs the atomic cutover that replaces
+  `--engine-preview` and the exact development-package assertion with a
+  bounded runtime dependency.
 - **Stage 08** (`forge-template`) migrates the Library archetype, giving the
   empty catalogue its first real manifest and flipping
   `test_validate_fails_closed_against_the_empty_catalogue` from a
@@ -174,6 +186,13 @@ not a consequence of this repository adding a development dependency.
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — exact package/protocol agreement and fail-before-engine-call behavior,
   runnable against either the immutable pin or a sibling working tree.
+- [`tests/test_pipeline.py`](../tests/test_pipeline.py) — the shared
+  pipeline's discover → build → validate → render orchestration order, and
+  the real, unmocked end-to-end characterized failure against the empty
+  catalogue.
+- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s three
+  outcomes (dependency missing, characterized validation failure, exit `3`
+  on an incompatible engine), and that omitting it leaves `new` unchanged.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

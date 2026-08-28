@@ -201,6 +201,49 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
         raise typer.Exit(1) from exc
 
 
+def _run_engine_preview(answers: dict[str, object], archetype: str) -> None:
+    """The --engine-preview path: build, validate, and render in-memory only.
+
+    No destination is computed and no file is written -- CF-07.04 owns
+    staging. `forge-template` stays a development-only dependency (ADR 0014),
+    so the import is lazy and guarded: every other command, and `new` without
+    this flag, must keep working with the dependency absent.
+    """
+    err.print(
+        "[dim]--engine-preview is a development-only path (ADR 0014). "
+        "forge-template's production catalogue is still empty, so this "
+        "fails at validation today by design.[/dim]"
+    )
+    try:
+        # Lazy by necessity, not style: forge-template is a development-only
+        # dependency (ADR 0014), so this import must not run unless this
+        # branch is actually reached. `engine` is imported directly here
+        # (rather than accessed as `pipeline.engine`) so mypy's strict
+        # implicit-reexport check has a real, direct import to type against.
+        from create_forge import engine, pipeline  # noqa: PLC0415
+    except ImportError:
+        err.print(
+            "[red]The engine dependency isn't installed.[/red] This is a "
+            "development-only path -- run `uv sync --all-groups` in a "
+            "create-forge checkout to use it."
+        )
+        raise typer.Exit(1) from None
+
+    try:
+        pipeline.build_generation_request(answers, archetype=archetype)
+    except engine.EngineCompatibilityError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(3) from exc
+    except engine.ForgeEngineError as exc:
+        err.print(f"[red]{engine.explain(exc)}[/red]")
+        raise typer.Exit(1) from exc
+
+    console.print(
+        "[green]Engine preview succeeded.[/green] Nothing was written -- "
+        "CF-07.04 adds real staging."
+    )
+
+
 def _report_created(project_name: object, dst: Path) -> None:
     """Print the success panel once a project has actually been written."""
     console.print(
@@ -252,6 +295,15 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
         bool,
         typer.Option("--dry-run", help="Show what would be written, write nothing."),
     ] = False,
+    engine_preview: Annotated[
+        bool,
+        typer.Option(
+            "--engine-preview",
+            hidden=True,
+            help="Development-only: build via the public forge-template engine "
+            "instead of Copier. No files are ever written by this path yet.",
+        ),
+    ] = False,
 ) -> None:
     """Create a new project."""
     registry = load_registry()
@@ -264,6 +316,10 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
 
     template = _select_template(registry, config, template_id, yes=yes)
     answers = _collect_answers(template, preset, cfg_answers, yes=yes)
+
+    if engine_preview:
+        _run_engine_preview(answers, template.id)
+        return
 
     slug = slugify(str(answers["project_name"]))
     dst = (path or Path.cwd() / slug).resolve()
