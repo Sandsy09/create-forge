@@ -13,6 +13,10 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are implemented by `forge-template` together with the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md),
 recorded by [ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The canonical
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md),
+recorded by [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md),
+now validates rendered output in memory before the engine returns it.
 The `0.2.x` engine line has an empty production catalogue. Development-only
 ProjectSpec construction, component-discovery, validation, and rendering
 adapters now exist and are tested against an exact development pair, but
@@ -31,6 +35,9 @@ The separate development contract is `forge-template==0.2.0` at
 component-manifest protocol `1`. The canonical
 [cross-repository engine contract tests](engine-contract-tests.md) make that
 pair executable. It is deliberately not the first row's installable range.
+It also predates the generated-project validator and is not changed by this
+documentation link; Stage 07 must update and test the development pair before
+the CLI consumes that API.
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).

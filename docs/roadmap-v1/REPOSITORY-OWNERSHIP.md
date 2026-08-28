@@ -51,8 +51,11 @@ dependency, and conflict metadata that replaces the bundled CLI catalogue at
 cutover. The canonical
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 provides path-free discovery, validation, planning, rendering, and structured
-failures without taking over this repository's filesystem orchestration. No
-current CLI path consumes these contracts.
+failures. Its canonical
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
+checks the immutable rendered result before it is returned, without taking
+over this repository's filesystem staging, finalisation, or command execution.
+No current CLI path consumes these contracts.
 
 ## `forge-template`
 

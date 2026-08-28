@@ -99,6 +99,11 @@ evolving package/protocol rules live in the
 is defined by `forge-template`; this repository will construct it only through
 the [supported engine facade](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md).
 That API begins its compatibility contract at `forge-template` `0.2.x`.
+Its canonical
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
+checks rendered output in memory before the facade returns it. Filesystem
+staging, finalisation, and command execution remain `create-forge`
+responsibilities at the future cutover.
 Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), but
 this repository assigns no released dependency range until #9 resolves the

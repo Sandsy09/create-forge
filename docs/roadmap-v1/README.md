@@ -47,6 +47,12 @@ defines engine-owned bundled component metadata and compatibility. The
 now exposes typed discovery, validation, planning, in-memory rendering, and
 structured errors under
 [ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The canonical
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
+and [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md)
+complete the `forge-template` side of Stage 07 by validating rendered output
+in memory. The shared stage remains open for `create-forge` CLI orchestration,
+filesystem safety, and end-to-end coverage.
 Its production catalogue is empty; production manifests and CLI discovery
 remain later coordinated work.
 This roadmap links to the canonical sources rather than maintaining second

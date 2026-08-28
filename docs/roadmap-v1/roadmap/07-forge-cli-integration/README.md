@@ -2,9 +2,13 @@
 
 ## Repository ownership
 
-### forge-template
+### forge-template — complete
 
-- **FT-07.05 — Add generated-project validation**
+- ~~[**FT-07.05 — Add generated-project validation**](https://github.com/Sandsy09/forge-template/issues/39)~~
+  — completed by the canonical
+  [validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md),
+  [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md),
+  and [forge-template PR #77](https://github.com/Sandsy09/forge-template/pull/77).
 
 ### create-forge
 
@@ -16,6 +20,9 @@
 - [**CF-07.06 — Create end-to-end CLI generation tests**](https://github.com/Sandsy09/create-forge/issues/51)
 
 ## Stage completion rule
+
+The `forge-template` counterpart is complete. The shared stage remains open
+for the three `create-forge` issues above.
 
 - [ ] Repo-local issues are complete or explicitly deferred.
 - [ ] Cross-repository blockers are resolved.
