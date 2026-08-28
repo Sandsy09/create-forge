@@ -13,16 +13,17 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are implemented by `forge-template` together with the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md),
 recorded by [ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
-The `0.2.x` engine line has an empty production catalogue. Production
-components and CLI consumption remain unimplemented. The released v0.1.x CLI
-remains a thin Copier wrapper with a
-bundled registry, and its current security and update invariants remain
-authoritative until the coordinated cutover.
+The `0.2.x` engine line has an empty production catalogue. Development-only
+ProjectSpec construction and component-discovery adapters now exist, but
+production components and CLI consumption remain unimplemented. The released
+v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
+current security and update invariants remain authoritative until the
+coordinated cutover.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Unassigned | 1 (defined; not yet supported) | Engine API available; CLI integration and compatibility tests pending |
+| First engine line | Unassigned | 1 (defined; not yet supported) | Construction/discovery adapters available; CLI integration and compatibility tests pending |
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
@@ -46,6 +47,12 @@ ProjectSpec-building boundary (`src/create_forge/spec.py` and
 development-only dependency pinned to a commit, not the runtime range this
 table records. `create-forge new` does not call it yet; see the canonical
 [ProjectSpec construction contract](project-spec-construction.md).
+
+The canonical [component discovery contract](component-discovery.md) adds a
+second operation to that same boundary. It negotiates both the ProjectSpec and
+component-manifest protocols before calling the public engine and returns the
+engine's descriptors unchanged. It assigns no package range and is likewise
+unreachable from the released CLI.
 
 ## Ownership and dependency direction
 
@@ -116,7 +123,8 @@ The engine-owned
 [manifest contract](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 is the sole component metadata source. `create-forge` must not retain its
 bundled registry as a fallback or recreate compatibility, dependency, or
-conflict rules after cutover.
+conflict rules after cutover. The client-side mechanics and current pre-cutover
+status are recorded in the [component discovery contract](component-discovery.md).
 
 Cross-repository development may use an explicit local or VCS engine override.
 The user must select it deliberately, receive a code-execution warning, and

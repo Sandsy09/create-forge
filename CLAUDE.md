@@ -60,8 +60,11 @@ are implemented by the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
 The engine's `0.2.x` compatibility line currently has an empty production
-catalogue. No current CLI path depends on it, constructs ProjectSpec, or
-discovers components, and no supported engine range is assigned here yet.
+catalogue. The development boundary can construct ProjectSpec and discover
+components, but no current CLI path calls it and no supported engine range is
+assigned here yet. The canonical
+[component discovery contract](docs/component-discovery.md) records the
+protocol-first, no-fallback adapter semantics.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and
@@ -152,6 +155,9 @@ Run this before any release.
   defines the CLI-answer-to-ProjectSpec field mapping, derivation rules,
   protocol negotiation, and validation behaviour `spec.py`/`engine.py`
   implement.
+- The canonical [component discovery contract](docs/component-discovery.md)
+  defines protocol negotiation before catalogue access, descriptor ownership,
+  and the no-fallback trust boundary implemented by `engine.py`.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

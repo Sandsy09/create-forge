@@ -10,7 +10,14 @@ call of its own.
 from __future__ import annotations
 
 import pytest
-from forge_template import EngineInfo, ForgeEngineError
+from forge_template import (
+    ComponentDescriptor,
+    ComponentOption,
+    ComponentRelation,
+    EngineErrorCode,
+    EngineInfo,
+    ForgeEngineError,
+)
 
 from create_forge import engine
 from create_forge.spec import build_spec_payload
@@ -24,6 +31,18 @@ _VALID_ANSWERS = {
     "python_min_version": "3.11",
     "python_version": "3.13",
 }
+
+
+def _engine_info(
+    *,
+    projectspec_protocols: tuple[int, ...] = (1,),
+    component_manifest_protocols: tuple[int, ...] = (1,),
+) -> EngineInfo:
+    return EngineInfo(
+        package_version="0.2.0",
+        projectspec_protocols=projectspec_protocols,
+        component_manifest_protocols=component_manifest_protocols,
+    )
 
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
@@ -48,6 +67,142 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
 
     with pytest.raises(engine.EngineCompatibilityError, match="protocol"):
         engine.negotiate_protocol()
+
+
+def test_discover_returns_the_real_empty_production_catalogue() -> None:
+    """Stage 08 has not shipped a production manifest yet."""
+    assert engine.discover() == ()
+
+
+def test_discover_preserves_public_component_descriptors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    info_calls = 0
+
+    def get_info() -> EngineInfo:
+        nonlocal info_calls
+        info_calls += 1
+        return _engine_info()
+
+    descriptors = (
+        ComponentDescriptor(
+            id="library",
+            name="Python Library",
+            description="A reusable Python package.",
+            kind="archetype",
+            version="1.0.0",
+            projectspec_protocols=(1,),
+            requires_python=">=3.11",
+            requires=(ComponentRelation(id="documentation", version=">=1,<2"),),
+            conflicts=(ComponentRelation(id="application"),),
+            options=(
+                ComponentOption(
+                    name="build_backend",
+                    type="string",
+                    required=True,
+                    default="uv_build",
+                    choices=("uv_build", "hatchling"),
+                    description="Build backend.",
+                ),
+            ),
+        ),
+        ComponentDescriptor(
+            id="documentation",
+            name="Documentation",
+            description="A documentation site.",
+            kind="capability",
+            version="1.0.0",
+            projectspec_protocols=(1,),
+            requires_python=">=3.11",
+            requires=(),
+            conflicts=(),
+            options=(),
+        ),
+        ComponentDescriptor(
+            id="github",
+            name="GitHub",
+            description="GitHub repository integration.",
+            kind="platform",
+            version="1.0.0",
+            projectspec_protocols=(1,),
+            requires_python=">=3.11",
+            requires=(),
+            conflicts=(),
+            options=(),
+        ),
+    )
+    monkeypatch.setattr(engine, "get_engine_info", get_info)
+    monkeypatch.setattr(engine, "_discover_components", lambda: descriptors)
+
+    discovered = engine.discover()
+
+    assert info_calls == 1
+    assert discovered is descriptors
+    assert [component.kind for component in discovered] == [
+        "archetype",
+        "capability",
+        "platform",
+    ]
+    assert discovered[0].id == "library"
+    assert discovered[0].name == "Python Library"
+    assert discovered[0].requires[0].id == "documentation"
+    assert discovered[0].conflicts[0].id == "application"
+    assert discovered[0].options[0].name == "build_backend"
+
+
+@pytest.mark.parametrize(
+    ("info", "message"),
+    [
+        (_engine_info(projectspec_protocols=(2,)), "ProjectSpec"),
+        (
+            _engine_info(component_manifest_protocols=(2,)),
+            "component manifest",
+        ),
+    ],
+)
+def test_discover_rejects_incompatible_protocols_before_catalogue_access(
+    monkeypatch: pytest.MonkeyPatch,
+    info: EngineInfo,
+    message: str,
+) -> None:
+    discovered = False
+
+    def fake_discover() -> tuple[ComponentDescriptor, ...]:
+        nonlocal discovered
+        discovered = True
+        return ()
+
+    monkeypatch.setattr(engine, "get_engine_info", lambda: info)
+    monkeypatch.setattr(engine, "_discover_components", fake_discover)
+
+    with pytest.raises(engine.EngineCompatibilityError, match=message) as excinfo:
+        engine.discover()
+
+    assert discovered is False
+    assert "forge-template 0.2.0" in str(excinfo.value)
+    assert "[2]" in str(excinfo.value)
+    assert "[1]" in str(excinfo.value)
+
+
+def test_discover_propagates_structured_engine_failure_without_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = ForgeEngineError(
+        code=EngineErrorCode.COMPONENT_DISCOVERY_FAILED,
+        operation="discover",
+        message="The installed component catalogue is invalid.",
+    )
+
+    def fail_discovery() -> tuple[ComponentDescriptor, ...]:
+        raise expected
+
+    monkeypatch.setattr(engine, "get_engine_info", _engine_info)
+    monkeypatch.setattr(engine, "_discover_components", fail_discovery)
+
+    with pytest.raises(ForgeEngineError) as excinfo:
+        engine.discover()
+
+    assert excinfo.value is expected
 
 
 def test_build_project_spec_parses_a_complete_payload() -> None:
