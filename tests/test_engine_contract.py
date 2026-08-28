@@ -22,11 +22,16 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT = REPO_ROOT / ".github" / "dependabot.yml"
 INTEGRATION_CONTRACT = REPO_ROOT / "docs" / "integration-contract.md"
 ENGINE_RESOLUTION = REPO_ROOT / "docs" / "engine-resolution.md"
+ENGINE_CONTRACT_TESTS = REPO_ROOT / "docs" / "engine-contract-tests.md"
 COMPONENT_DISCOVERY = REPO_ROOT / "docs" / "component-discovery.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
+ENGINE_ADAPTER = SRC_ROOT / "engine.py"
+
+TESTED_ENGINE_REQUIREMENT = "forge-template==0.2.0"
+TESTED_ENGINE_REVISION = "2158c85a46efffc7d8ea2d43e347b943359baed1"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -106,6 +111,29 @@ def test_no_engine_dependency_means_no_assigned_engine_range() -> None:
         "range must stay unassigned while the defined protocol remains "
         "explicitly unsupported."
     )
+
+
+def test_development_engine_pair_is_exact_and_immutable() -> None:
+    """The Stage 06 pair is reproducible without becoming a runtime range."""
+    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+
+    assert data["dependency-groups"]["engine"] == [TESTED_ENGINE_REQUIREMENT]
+    source = data["tool"]["uv"]["sources"]["forge-template"]
+    assert source["rev"] == TESTED_ENGINE_REVISION
+    assert re.fullmatch(r"[0-9a-f]{40}", source["rev"])
+    assert "forge-template" not in _declared_dependency_names()
+
+
+def test_engine_contract_doc_is_linked_from_canonical_entry_points() -> None:
+    link_re = re.compile(r"\([^)]*engine-contract-tests\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link engine-contract-tests.md"
+        )
+
+    assert ENGINE_CONTRACT_TESTS.is_file()
 
 
 def test_engine_resolution_doc_is_linked_from_the_canonical_entry_points() -> None:
@@ -245,6 +273,22 @@ def _imported_top_level_names(path: Path) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.module:
             names.add(node.module.split(".")[0])
     return names
+
+
+def test_engine_adapter_imports_only_the_public_forge_template_facade() -> None:
+    """No create-forge adapter call may reach into a private engine module."""
+    tree = ast.parse(
+        ENGINE_ADAPTER.read_text(encoding="utf-8"), filename=str(ENGINE_ADAPTER)
+    )
+    imported_modules = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module is not None
+        and node.module.startswith("forge_template")
+    }
+
+    assert imported_modules == {"forge_template"}
 
 
 def test_shipped_cli_modules_do_not_import_the_engine() -> None:

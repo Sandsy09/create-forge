@@ -93,15 +93,20 @@ engine's `get_engine_info().projectspec_protocols`. A disjoint set raises
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md) reserved for
 exit status `3`. Negotiation runs before parsing, so before any side effect.
 
+Before that protocol comparison, the development adapter requires exact
+package version `0.2.0`. This is the Stage 06 development contract, not a
+released package range; see the
+[cross-repository engine contract tests](engine-contract-tests.md).
+
 This is implemented at the engine boundary but not yet reachable from any
 shipped command: no code path calls `negotiate_protocol` until CF-07.01
 wires the engine into `new`. `docs/cli-conventions.md`'s exit-status table
 reflects this precisely — implemented, not yet raised by any command.
 
-Negotiation checks the ProjectSpec wire protocol only, not the
-`forge-template` package version: no engine range is assigned yet (see
-[`docs/engine-resolution.md`](engine-resolution.md#assigning-the-first-engine-range)),
-so there is no package-version range to check against.
+No bounded runtime engine range is checked yet. The exact development version
+guard is replaced by the installable lower/upper range only at the atomic
+cutover described by
+[`docs/engine-resolution.md`](engine-resolution.md#assigning-the-first-engine-range).
 
 ## Validation and today's expected failure
 
@@ -124,9 +129,11 @@ pattern-matching message text.
 
 ## The engine dependency
 
-`forge-template` is a development-only dependency today: a new `engine`
-`uv` dependency group, resolved via a `[tool.uv.sources]` git entry pinned to
-a commit SHA (not a tag or branch). `[project.dependencies]` is unchanged, so
+`forge-template` is a development-only dependency today: an `engine` `uv`
+dependency group constrained to `forge-template==0.2.0`, resolved via a
+`[tool.uv.sources]` git entry pinned to the full commit SHA
+`2158c85a46efffc7d8ea2d43e347b943359baed1` (not a tag or branch).
+`[project.dependencies]` is unchanged, so
 no engine range is assigned and
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
 existing ADR 0011/0012 guards continue to hold.
@@ -142,8 +149,8 @@ not a consequence of this repository adding a development dependency.
 
 ## What changes next
 
-- **CF-06.03** adds cross-repository contract tests exercising the exact
-  supported package/protocol pair once one is assigned.
+- **CF-06.03** proves the exact development package/protocol pair, including
+  fail-closed public-facade rendering against the empty production catalogue.
 - **CF-07.01** wires this boundary into `create-forge new`, making
   ProjectSpec construction, [component discovery](component-discovery.md), and
   exit status `3` reachable for the first time.
@@ -164,6 +171,9 @@ not a consequence of this repository adding a development dependency.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) —
   `test_shipped_cli_modules_do_not_import_the_engine` guards the one-module
   import boundary.
+- [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
+  — exact package/protocol agreement and fail-before-engine-call behavior,
+  runnable against either the immutable pin or a sibling working tree.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

@@ -9,6 +9,8 @@ call of its own.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from forge_template import (
     ComponentDescriptor,
@@ -35,11 +37,12 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
+    package_version: str = "0.2.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
     return EngineInfo(
-        package_version="0.2.0",
+        package_version=package_version,
         projectspec_protocols=projectspec_protocols,
         component_manifest_protocols=component_manifest_protocols,
     )
@@ -52,6 +55,22 @@ def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
     engine.negotiate_protocol()
 
 
+def test_negotiate_protocol_rejects_an_untested_package_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        engine,
+        "get_engine_info",
+        lambda: _engine_info(package_version="0.2.1"),
+    )
+
+    with pytest.raises(
+        engine.EngineCompatibilityError,
+        match=r"0\.2\.1.*tested only with forge-template 0\.2\.0",
+    ):
+        engine.negotiate_protocol()
+
+
 def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -59,7 +78,7 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="9.0.0",
+            package_version="0.2.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -226,7 +245,7 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="9.0.0",
+            package_version="0.2.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -266,6 +285,21 @@ def test_validate_fails_closed_against_the_empty_catalogue() -> None:
         engine.validate(spec)
 
     assert excinfo.value.code.value == "invalid-component-selection"
+
+
+def test_render_fails_closed_without_writing_against_the_empty_catalogue(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = build_spec_payload(_VALID_ANSWERS, archetype="library")
+    spec = engine.build_project_spec(payload)
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ForgeEngineError) as excinfo:
+        engine.render(spec)
+
+    assert excinfo.value.code is EngineErrorCode.INVALID_COMPONENT_SELECTION
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_explain_formats_code_and_located_details() -> None:
