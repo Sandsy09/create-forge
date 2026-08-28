@@ -1,0 +1,104 @@
+"""The single module that touches the `forge_template` engine.
+
+Mirrors `runner.py`'s role for Copier's Python API (invariant 4): the engine
+is imported in exactly one place, so it evolves without every module needing
+attention. Importing this module requires the `engine` dependency group
+(`uv sync --all-groups`) -- it is a `[tool.uv.sources]`-pinned development
+dependency, not yet a runtime one, since `forge-template` 0.2.0 is unreleased
+and no engine range is assigned (docs/engine-resolution.md). No module
+reachable from create-forge's shipped CLI entry point may import this module;
+`tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
+enforces that.
+
+`spec.py` builds the wire payload this module parses and validates -- see
+ADR 0013 and docs/project-spec-construction.md for the full contract.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from forge_template import ForgeEngineError, ProjectSpec, get_engine_info
+from forge_template import parse_project_spec as _parse_project_spec
+from forge_template import validate_project_spec as _validate_project_spec
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
+"""ProjectSpec wire protocols this create-forge release has implemented
+against.
+
+Deliberately not read from `forge_template.SUPPORTED_PROJECTSPEC_PROTOCOLS`
+-- that constant is what the *installed engine* accepts, and this one is
+what *create-forge* supports; negotiation compares the two rather than
+assuming they agree. No engine package-version range is assigned yet, so
+`negotiate_protocol` checks the ProjectSpec wire protocol only, not the
+`forge-template` package version.
+"""
+
+
+class EngineCompatibilityError(Exception):
+    """An installed engine speaks no ProjectSpec protocol this CLI supports.
+
+    Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
+    ADR 0011 for exactly this failure class. Implemented here at the engine
+    boundary but not yet raised from any shipped command -- no command calls
+    `negotiate_protocol` until CF-07.01 wires the engine into `new`.
+    """
+
+
+def negotiate_protocol() -> None:
+    """Confirm the installed engine speaks a supported ProjectSpec protocol.
+
+    Runs before any payload is parsed, validated, or rendered.
+    """
+    info = get_engine_info()
+    supported = set(SUPPORTED_PROJECTSPEC_PROTOCOLS)
+    detected = set(info.projectspec_protocols)
+    if not supported & detected:
+        msg = (
+            f"forge-template {info.package_version} supports ProjectSpec "
+            f"protocol(s) {sorted(detected)}, but this create-forge release "
+            f"supports {sorted(supported)}."
+        )
+        raise EngineCompatibilityError(msg)
+
+
+def build_project_spec(payload: Mapping[str, object]) -> ProjectSpec:
+    """Negotiate the protocol, then strictly parse a ProjectSpec payload.
+
+    Negotiation runs before `parse_project_spec` ever inspects `payload`,
+    satisfying #46's "negotiate the supported ProjectSpec protocol before any
+    side effect" criterion independent of what the payload itself contains.
+    """
+    negotiate_protocol()
+    return _parse_project_spec(payload)
+
+
+def validate(spec: ProjectSpec) -> ProjectSpec:
+    """Validate a parsed ProjectSpec against the installed component catalogue.
+
+    Expected to fail with `EngineErrorCode.INVALID_COMPONENT_SELECTION` today:
+    the installed `forge-template` 0.2.0 catalogue is intentionally empty
+    until Stage 08 migrates the Library archetype. See
+    `tests/test_engine_adapter.py::test_validate_fails_closed_against_the_empty_catalogue`,
+    which documents this outcome and is expected to start passing once a real
+    manifest exists.
+    """
+    return _validate_project_spec(spec)
+
+
+def explain(exc: ForgeEngineError) -> str:
+    """Translate a structured `ForgeEngineError` into terminal-ready text.
+
+    Mirrors `runner._explain()`'s job for Copier's freeform messages, but
+    from a structured source: `ForgeEngineError` already carries a stable
+    code and located details, so this formats them rather than pattern
+    matching on message text.
+    """
+    lines = [f"{exc.message} ({exc.code.value})"]
+    for detail in exc.details:
+        location = ".".join(str(part) for part in detail.path) or exc.operation
+        lines.append(f"  {location}: {detail.message}")
+    return "\n".join(lines)

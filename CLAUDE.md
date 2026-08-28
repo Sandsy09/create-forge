@@ -35,11 +35,16 @@ src/create_forge/
 ├── config.py       User config (~/.config/create-forge/config.toml). NOT WIRED.
 ├── prompts.py      questionary flow. Driven entirely by registry data.
 ├── runner.py       The ONLY module that touches Copier's Python API.
+├── spec.py         Pure ProjectSpec wire-payload builder. No engine import. NOT WIRED.
+├── engine.py       The ONLY module that touches the forge-template engine. NOT WIRED.
 └── cli.py          Typer app: new, list, update, doctor.
 ```
 
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
-`models`. Nothing lower imports anything higher.
+`models`. Nothing lower imports anything higher. `spec.py` and `engine.py`
+are not yet reachable from `cli.py` — CF-07.01 wires them in — but the same
+rule already applies to `engine.py`: nothing outside it may import
+`forge_template` (ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py)).
 
 ## Accepted target — engine available, CLI not integrated
 
@@ -61,6 +66,10 @@ discovers components, and no supported engine range is assigned here yet.
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and
 rejected when incompatible — rules only, no code yet.
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
+code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against a
+development-only, commit-pinned `forge-template`, but no command calls them
+yet — see the canonical [ProjectSpec construction contract](docs/project-spec-construction.md).
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -109,7 +118,10 @@ See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md). `copier`
 is today's *compatibility-line dependency* per
 [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md): Dependabot is
 configured to never propose crossing that major on its own — see the
-[engine update policy](docs/engine-updates.md).
+[engine update policy](docs/engine-updates.md). `engine.py` follows the same
+one-module rule for `forge_template`, per
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — nothing
+else in this package may import it.
 
 ### 5. templates.toml must ship in the wheel
 
@@ -136,6 +148,10 @@ Run this before any release.
 - The canonical [engine update policy](docs/engine-updates.md) defines how a
   compatibility-line dependency update is adopted, how a breaking line is
   crossed, and what automated dependency tooling may never do on its own.
+- The canonical [ProjectSpec construction contract](docs/project-spec-construction.md)
+  defines the CLI-answer-to-ProjectSpec field mapping, derivation rules,
+  protocol negotiation, and validation behaviour `spec.py`/`engine.py`
+  implement.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

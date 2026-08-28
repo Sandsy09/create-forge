@@ -31,9 +31,26 @@ issues below and their cross-repository tests pass.
 ### create-forge
 
 - Epic: [CF-EPIC-06 / #37](https://github.com/Sandsy09/create-forge/issues/37)
-- [**CF-06.01 — Implement canonical ProjectSpec builder**](https://github.com/Sandsy09/create-forge/issues/46)
+- [x] [**CF-06.01 — Implement canonical ProjectSpec builder**](https://github.com/Sandsy09/create-forge/issues/46)
+  ([ADR 0013](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0013-projectspec-construction-boundary.md),
+  [canonical ProjectSpec construction contract](https://github.com/Sandsy09/create-forge/blob/main/docs/project-spec-construction.md))
 - [**CF-06.02 — Implement component discovery adapter**](https://github.com/Sandsy09/create-forge/issues/47)
 - [**CF-06.03 — Add cross-repository contract tests**](https://github.com/Sandsy09/create-forge/issues/48)
+
+## Stage record
+
+CF-06.01 builds the create-forge-owned half of ProjectSpec construction ahead
+of any command using it: `src/create_forge/spec.py` maps CLI answers to the
+ProjectSpec wire payload and validates nothing; `src/create_forge/engine.py`
+is the one module that imports `forge_template`, negotiating the ProjectSpec
+protocol and calling the engine's own parsing and catalogue validation. The
+engine is a development-only dependency pinned to a commit — `forge-template`
+`0.2.0` has no PEP 440 tag yet — so no engine range is assigned and
+`create-forge new` is unchanged. Catalogue validation is proven to fail
+closed against `forge-template`'s intentionally empty `0.2.0` production
+catalogue; that characterization is expected to flip once Stage 08 migrates
+the Library archetype. CF-06.02 and CF-06.03 remain open, and the epic stays
+in progress until they land.
 
 ## Stage completion rule
 
