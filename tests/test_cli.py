@@ -653,7 +653,11 @@ def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
     )
 
     assert result.exit_code == 1, result.output
-    assert "already exists and is not empty" in result.output
+    # Rich wraps long lines to the console width, which varies by
+    # environment (narrower in CI than a local wide terminal) -- normalise
+    # whitespace before matching so a mid-phrase line break can't fail this.
+    normalised_output = " ".join(result.output.split())
+    assert "already exists and is not empty" in normalised_output
     assert recorder == []
     assert (dest / "existing.txt").read_text(encoding="utf-8") == "hi"
 
@@ -741,7 +745,10 @@ def test_new_engine_preview_finalises_a_successful_render(
     assert recorder == []
     assert (dest / "pyproject.toml").read_bytes() == b"[project]\n"
     assert "created at" in result.output
-    assert "create-forge update does not apply" in result.output
+    # Normalise whitespace: Rich wraps long lines to the console width,
+    # which varies by environment (see the destination-conflict test above).
+    normalised_output = " ".join(result.output.split())
+    assert "create-forge update does not apply" in normalised_output
 
 
 # --- config wiring (issue #3) ------------------------------------------------
