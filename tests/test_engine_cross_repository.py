@@ -11,7 +11,17 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
-from forge_template import EngineInfo, ProjectSpec, get_engine_info
+from forge_template import (
+    EngineInfo,
+    ForgeEngineError,
+    GenerationPlan,
+    PlannedFile,
+    ProjectSpec,
+    RenderedFile,
+    RenderedProject,
+    get_engine_info,
+    validate_rendered_project,
+)
 
 from create_forge import engine
 from create_forge.spec import build_spec_payload
@@ -124,3 +134,33 @@ def test_render_rejects_unsupported_protocol_before_public_engine_call(
         engine.render(spec)
 
     assert rendered is False
+
+
+def test_validate_rendered_project_is_the_adopted_generated_project_gate() -> None:
+    """CF-07.04 (ADR 0015) adopted `forge-template`'s generated-project
+    validation: `validate_rendered_project` is on the public facade, and a
+    `RenderedProject` whose files don't match its own plan fails with
+    `generated-project-invalid`. `render_project` calls this same function
+    internally before returning (proven by `forge-template`'s own test
+    suite, per docs/generated-project-validation.md) -- this is what lets
+    `pipeline.finalise_generation_request` (ADR 0015) trust a
+    `RenderedProject` it receives without revalidating it itself.
+    """
+    spec = _spec()
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="pyproject.toml", owner_component_id="library"),
+            PlannedFile(target="README.md", owner_component_id="library"),
+        ),
+    )
+    inconsistent = RenderedProject(
+        plan=plan,
+        # README.md is planned but missing from the rendered result.
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+    )
+
+    with pytest.raises(ForgeEngineError) as excinfo:
+        validate_rendered_project(spec, inconsistent)
+
+    assert excinfo.value.code.value == "generated-project-invalid"

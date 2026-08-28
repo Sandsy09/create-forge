@@ -53,13 +53,16 @@ question answered by the canonical [engine update policy](engine-updates.md).
 A development-only dependency exists ahead of that runtime one:
 `src/create_forge/engine.py` depends on `forge-template` via a `uv`
 dependency group constrained to exact package version `0.2.0` and pinned to
-full commit SHA `2158c85a46efffc7d8ea2d43e347b943359baed1`, not a released
+full commit SHA `bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c`, not a released
 version — see
 [ADR 0013](adr/0013-projectspec-construction-boundary.md). This is not the
 range assigned below; it exists so the construction boundary can exercise
 the real engine before `forge-template` publishes anything installable. The
 [cross-repository engine contract tests](engine-contract-tests.md) reject any
-other development package version until it is deliberately adopted.
+other development package version until it is deliberately adopted; CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this pin once,
+within the same `0.2.0` development contract, to adopt generated-project
+validation.
 
 ## Local development resolution
 

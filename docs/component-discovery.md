@@ -11,10 +11,13 @@ this document defines only the client adapter and its compatibility boundary.
 `src/create_forge/engine.py` exposes a tested `discover()` adapter, called
 by the shared pipeline (`src/create_forge/pipeline.py`) as of CF-07.01 --
 reachable today only via the hidden `new --engine-preview` flag
-([ADR 0014](adr/0014-lazy-engine-reachability.md)). The default `new` path
-continues to use the bundled registry and direct-Copier integration
+([ADR 0014](adr/0014-lazy-engine-reachability.md)), which CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) completed with real
+filesystem staging and finalisation -- see the canonical
+[filesystem generation contract](filesystem-generation.md). The default `new`
+path continues to use the bundled registry and direct-Copier integration
 unchanged; the atomic cutover away from it remains blocked on
-[#9](https://github.com/Sandsy09/create-forge/issues/9) and CF-07.04.
+[#9](https://github.com/Sandsy09/create-forge/issues/9).
 
 The development-only `forge-template` 0.2.0 dependency currently has an empty
 production catalogue, so real discovery returns `()`. That is expected until
@@ -81,9 +84,12 @@ engine internals to obtain them.
   hidden `new --engine-preview` flag (ADR 0014). Selection stays
   caller-supplied (`archetype=template.id`, no capabilities/platforms) --
   discovery runs for real but does not yet drive it.
-- **CF-07.04**, once [#9](https://github.com/Sandsy09/create-forge/issues/9)
-  resolves a distribution channel, performs the atomic cutover that replaces
-  the v0.1.x registry seam and `--engine-preview` together.
+- **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) gives
+  `--engine-preview` a real filesystem finalisation step, still without
+  changing selection. The atomic cutover that replaces the v0.1.x registry
+  seam and `--engine-preview` together still waits on
+  [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
+  distribution channel.
 - **Stage 08** adds production manifests, after which real discovery will
   return the Library and later archetype descriptors.
 

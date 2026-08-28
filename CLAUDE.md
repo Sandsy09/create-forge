@@ -34,23 +34,29 @@ src/create_forge/
 ├── registry.py     Loads + validates templates.toml. Cached.
 ├── config.py       User config (~/.config/create-forge/config.toml). NOT WIRED.
 ├── prompts.py      questionary flow. Driven entirely by registry data.
+├── staging.py      Destination conflicts, staging, atomic finalisation,
+│                   cleanup. Engine-free; shared by runner.py and pipeline.py
+│                   (ADR 0015).
 ├── runner.py       The ONLY module that touches Copier's Python API.
 ├── spec.py         Pure ProjectSpec wire-payload builder. No engine import.
 ├── engine.py       The ONLY module that touches the forge-template engine.
-├── pipeline.py     Shared discover→build→validate→render pipeline. Reachable
-│                   only via `new --engine-preview` (hidden, dev-only; ADR 0014).
+├── pipeline.py     Shared discover→build→validate→render→finalise pipeline.
+│                   Reachable only via `new --engine-preview` (hidden,
+│                   dev-only; ADR 0014, ADR 0015).
 └── cli.py          Typer app: new, list, update, doctor.
 ```
 
-Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry` →
-`models`. Nothing lower imports anything higher. `engine.py` is the only
-module whose *source* imports `forge_template`
+Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry`/
+`staging` → `models`. Nothing lower imports anything higher. `engine.py` is
+the only module whose *source* imports `forge_template`
 (ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py));
 `pipeline.py` depends on it but imports `forge_template` only under
 `TYPE_CHECKING`. `cli.py` imports `pipeline`/`engine` lazily — inside
 `--engine-preview`'s branch only, guarded by `try/except ImportError` — so
 every other command stays unaffected by whether `forge-template` is
-installed (ADR 0014).
+installed (ADR 0014). `staging.py` is engine-free and imported unconditionally
+by both `runner.py` and `cli.py` — see the canonical
+[filesystem generation contract](docs/filesystem-generation.md) (ADR 0015).
 
 ## Accepted target — engine available, CLI not integrated
 
@@ -70,18 +76,22 @@ The engine's
 is accepted under
 [forge-template ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md).
 The engine's `0.2.x` compatibility line currently has an empty production
-catalogue. The development boundary can construct ProjectSpec, discover
-components, validate, and render through the public facade; as of CF-07.01
-this is reachable from a real command via the hidden `new --engine-preview`
-flag (ADR 0014), though not from the default `new` path, and no released
-engine range is assigned here yet. Stage 06's exact `forge-template==0.2.0` /
-protocol-1 development pair is recorded by the canonical
+catalogue. The development boundary can construct ProjectSpec, discover,
+validate, render, and finalise a project to disk through the public facade;
+as of CF-07.01 this is reachable from a real command via the hidden
+`new --engine-preview` flag (ADR 0014), though not from the default `new`
+path, and no released engine range is assigned here yet. The development
+`forge-template==0.2.0` / protocol-1 pair is recorded by the canonical
 [cross-repository engine contract tests](docs/engine-contract-tests.md).
-That commit-pinned pair predates generated-project validation and remains
-unchanged until the coordinated Stage 07 integration work updates and tests it.
-The canonical
+CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
+that commit pin forward once, within the same unreleased `0.2.0` contract,
+to adopt generated-project validation — `render_project` now calls the
+public `validate_rendered_project` before returning. The canonical
 [component discovery contract](docs/component-discovery.md) records the
-protocol-first, no-fallback adapter semantics.
+protocol-first, no-fallback adapter semantics, and the canonical
+[filesystem generation contract](docs/filesystem-generation.md) records how
+`staging.py` stages and finalises a validated render, and how the Copier
+path cleans up after a failure instead.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and
@@ -94,7 +104,8 @@ development-only, commit-pinned `forge-template` — see the canonical
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
 command for the first time, via a lazily-imported module `cli.py` otherwise
-never touches — the default `new` path remains unchanged.
+never touches — the default `new` path remains unchanged. [ADR 0015](docs/adr/0015-staged-filesystem-generation.md)
+completes that flag with real staging and finalisation via `staging.py`.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -151,6 +162,10 @@ lazy, guarded import inside `--engine-preview`'s branch
 ([ADR 0014](docs/adr/0014-lazy-engine-reachability.md)) — `forge-template`
 stays a development-only dependency, so no module reachable at `cli.py`'s
 own import time may depend on it, directly or through `pipeline.py`.
+`staging.py` is the exception that proves the rule: it is imported
+unconditionally by both `cli.py` and `runner.py` precisely because it is
+engine-free by construction — no `forge_template` import, not even under
+`TYPE_CHECKING` ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)).
 
 ### 5. templates.toml must ship in the wheel
 
@@ -187,6 +202,10 @@ Run this before any release.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the exact development package/protocol pair, public-facade coverage,
   empty-catalogue rendering boundary, and sibling-checkout command.
+- The canonical [filesystem generation contract](docs/filesystem-generation.md)
+  defines destination-conflict, staging, target-safety, finalisation, and
+  cleanup rules implemented by `staging.py` and used by both `runner.py` and
+  `pipeline.py`.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

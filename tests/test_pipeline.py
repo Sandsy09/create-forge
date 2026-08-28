@@ -1,4 +1,5 @@
-"""`pipeline.build_generation_request` -- orchestration order and the real,
+"""`pipeline.build_generation_request`/`finalise_generation_request` --
+orchestration order, staging/finalisation (ADR 0015), and the real,
 end-to-end characterized failure against `forge-template`'s empty catalogue.
 
 Exercises the real `forge_template` package (the `engine` dev-group
@@ -8,13 +9,25 @@ mirroring `tests/test_engine_adapter.py`'s style.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from forge_template import ForgeEngineError
+from forge_template import (
+    ForgeEngineError,
+    GenerationPlan,
+    PlannedFile,
+    RenderedFile,
+    RenderedProject,
+)
 
 from create_forge import engine, pipeline
-from create_forge.pipeline import GenerationRequest, build_generation_request
+from create_forge.pipeline import (
+    GenerationRequest,
+    build_generation_request,
+    finalise_generation_request,
+)
+from create_forge.staging import DestinationConflictError
 
 _VALID_ANSWERS = {
     "project_name": "Credit Risk Utils",
@@ -123,3 +136,87 @@ def test_build_generation_request_fails_closed_against_the_empty_catalogue() -> 
         pipeline.build_generation_request(_VALID_ANSWERS, archetype="library")
 
     assert excinfo.value.code.value == "invalid-component-selection"
+
+
+def _synthetic_request() -> GenerationRequest:
+    """A `GenerationRequest` built from the real public models, entirely
+    without a component catalogue -- `finalise_generation_request` only
+    needs `request.rendered.files`, so this stands in for a real render.
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="pyproject.toml", owner_component_id="library"),
+            PlannedFile(target="src/pkg/__init__.py", owner_component_id="library"),
+        ),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(
+            RenderedFile(target="pyproject.toml", content=b"[project]\n"),
+            RenderedFile(target="src/pkg/__init__.py", content=b""),
+        ),
+    )
+    # A real `ProjectSpec` plays no part in finalisation -- only
+    # `request.rendered.files` does -- so a plain placeholder stands in,
+    # the same `cast(Any, ...)` pattern used above.
+    return GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+
+
+def test_finalise_generation_request_stages_and_moves_into_place(
+    tmp_path: Path,
+) -> None:
+    request = _synthetic_request()
+    dst = tmp_path / "proj"
+
+    finalise_generation_request(request, dst)
+
+    assert (dst / "pyproject.toml").read_bytes() == b"[project]\n"
+    assert (dst / "src" / "pkg" / "__init__.py").exists()
+    # Nothing but the destination itself was left behind next to it.
+    assert list(tmp_path.iterdir()) == [dst]
+
+
+def test_finalise_generation_request_rejects_a_non_empty_destination(
+    tmp_path: Path,
+) -> None:
+    request = _synthetic_request()
+    dst = tmp_path / "proj"
+    dst.mkdir()
+    (dst / "existing.txt").write_text("hi", encoding="utf-8")
+
+    with pytest.raises(DestinationConflictError):
+        finalise_generation_request(request, dst)
+
+    # The pre-existing destination is untouched.
+    assert list(dst.iterdir()) == [dst / "existing.txt"]
+
+
+def test_finalise_generation_request_leaves_nothing_on_a_mid_write_failure(
+    tmp_path: Path,
+) -> None:
+    """A target that escapes the staging root fails `write_files` partway
+    through; nothing must survive at or beside `dst`.
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="ok.txt", owner_component_id="library"),
+            PlannedFile(target="../escape.txt", owner_component_id="library"),
+        ),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(
+            RenderedFile(target="ok.txt", content=b"fine"),
+            RenderedFile(target="../escape.txt", content=b"malicious"),
+        ),
+    )
+    request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    dst = tmp_path / "proj"
+
+    with pytest.raises(Exception, match="refusing to write"):
+        finalise_generation_request(request, dst)
+
+    assert not dst.exists()
+    assert list(tmp_path.iterdir()) == []

@@ -42,11 +42,14 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 TESTED_ENGINE_PACKAGE_VERSION = "0.2.0"
-"""Exact forge-template package version in the Stage 06 development contract.
+"""Exact forge-template package version in the development contract.
 
 This is deliberately not a released compatibility range. The engine remains a
 development-only dependency pinned to an immutable commit until #9 chooses an
-installable distribution channel and CF-07.01 performs the atomic cutover.
+installable distribution channel and a future cutover issue performs the
+atomic cutover. The pinned commit itself has already moved once, from Stage
+06's original revision to the one CF-07.04 (ADR 0015) adopted, within this
+same `0.2.0` development contract -- see docs/engine-contract-tests.md.
 """
 
 SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
@@ -75,10 +78,9 @@ class EngineCompatibilityError(Exception):
     """An installed engine is outside the tested package/protocol contract.
 
     Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
-    ADR 0011 for exactly this failure class. Implemented here at the engine
-    boundary but not yet raised from any shipped command -- no command calls
-    `negotiate_protocol` or `discover` until CF-07.01 wires the engine into
-    `new`.
+    ADR 0011 for exactly this failure class. Reachable today only via the
+    hidden `new --engine-preview` flag (ADR 0014); the default `new` path
+    still cannot produce it.
     """
 
 
@@ -194,9 +196,13 @@ def validate(spec: ProjectSpec) -> ProjectSpec:
 def render(spec: ProjectSpec) -> RenderedProject:
     """Render one spec to immutable in-memory files after compatibility checks.
 
-    The public engine owns validation, composition, and rendering. This adapter
-    deliberately accepts no destination path and performs no filesystem writes;
-    CF-07.04 will own staging and finalisation around the returned files.
+    The public engine owns validation, composition, rendering, and, as of the
+    development pin CF-07.04 adopted, generated-project validation -- the
+    `RenderedProject` returned here has already passed
+    `forge_template.validate_rendered_project`. This adapter deliberately
+    accepts no destination path and performs no filesystem writes;
+    `pipeline.finalise_generation_request` (ADR 0015) owns staging and
+    finalisation around the returned files.
     """
     info = get_engine_info()
     _require_tested_package(info)

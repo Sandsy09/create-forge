@@ -26,6 +26,11 @@ from create_forge.config import (
 from create_forge.prompts import PromptAbortedError, ask_all, choose_template, slugify
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+from create_forge.staging import (
+    DestinationConflictError,
+    StagingError,
+    ensure_available,
+)
 
 if TYPE_CHECKING:
     from create_forge.models import Registry, Template
@@ -201,19 +206,28 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
         raise typer.Exit(1) from exc
 
 
-def _run_engine_preview(answers: dict[str, object], archetype: str) -> None:
-    """The --engine-preview path: build, validate, and render in-memory only.
+def _run_engine_preview(
+    answers: dict[str, object], archetype: str, dst: Path, *, dry_run: bool
+) -> None:
+    """The --engine-preview path: build, validate, render, stage, finalise.
 
-    No destination is computed and no file is written -- CF-07.04 owns
-    staging. `forge-template` stays a development-only dependency (ADR 0014),
-    so the import is lazy and guarded: every other command, and `new` without
-    this flag, must keep working with the dependency absent.
+    Stages and finalises into `dst` exactly like the Copier path, just
+    through the engine (ADR 0015). `forge-template` stays a development-only
+    dependency (ADR 0014), so the import is lazy and guarded: every other
+    command, and `new` without this flag, must keep working with the
+    dependency absent.
     """
     err.print(
         "[dim]--engine-preview is a development-only path (ADR 0014). "
         "forge-template's production catalogue is still empty, so this "
         "fails at validation today by design.[/dim]"
     )
+    try:
+        ensure_available(dst)
+    except DestinationConflictError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
     try:
         # Lazy by necessity, not style: forge-template is a development-only
         # dependency (ADR 0014), so this import must not run unless this
@@ -230,7 +244,7 @@ def _run_engine_preview(answers: dict[str, object], archetype: str) -> None:
         raise typer.Exit(1) from None
 
     try:
-        pipeline.build_generation_request(answers, archetype=archetype)
+        request = pipeline.build_generation_request(answers, archetype=archetype)
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
@@ -238,20 +252,35 @@ def _run_engine_preview(answers: dict[str, object], archetype: str) -> None:
         err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
-    console.print(
-        "[green]Engine preview succeeded.[/green] Nothing was written -- "
-        "CF-07.04 adds real staging."
-    )
+    if dry_run:
+        for file in request.rendered.files:
+            console.print(f"[dim]would write[/dim] {file.target}")
+        console.print("[dim]Dry run — nothing written.[/dim]")
+        return
+
+    try:
+        pipeline.finalise_generation_request(request, dst)
+    except StagingError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    _report_created(answers["project_name"], dst, updatable=False)
 
 
-def _report_created(project_name: object, dst: Path) -> None:
+def _report_created(project_name: object, dst: Path, *, updatable: bool = True) -> None:
     """Print the success panel once a project has actually been written."""
+    update_line = (
+        "[dim]Pull later template changes with: uvx create-forge update[/dim]"
+        if updatable
+        else "[dim]Built via --engine-preview -- create-forge update does not "
+        "apply.[/dim]"
+    )
     console.print(
         Panel(
             f"[bold]{project_name}[/bold] created at [dim]{dst}[/dim]\n\n"
             f"  cd {dst.name}\n"
             "  uv run poe check\n\n"
-            "[dim]Pull later template changes with: uvx create-forge update[/dim]",
+            f"{update_line}",
             border_style="green",
         )
     )
@@ -317,12 +346,13 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     template = _select_template(registry, config, template_id, yes=yes)
     answers = _collect_answers(template, preset, cfg_answers, yes=yes)
 
-    if engine_preview:
-        _run_engine_preview(answers, template.id)
-        return
-
     slug = slugify(str(answers["project_name"]))
     dst = (path or Path.cwd() / slug).resolve()
+
+    if engine_preview:
+        _run_engine_preview(answers, template.id, dst, dry_run=dry_run)
+        return
+
     src = template_url or str(template.url)
 
     _confirm_third_party(template_url, yes=yes)
