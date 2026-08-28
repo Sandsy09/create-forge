@@ -114,6 +114,11 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are now implemented behind the canonical
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 ([ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md)).
+The engine now also defines in-memory
+[generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
+([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
+before rendered output is returned. The current CLI does not yet consume that
+facade.
 Its production catalogue is empty, and the current registry and
 `--template-url` behaviour remain unchanged until the complete, tested cutover
 is released — at which point

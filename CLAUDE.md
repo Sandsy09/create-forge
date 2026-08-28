@@ -59,12 +59,18 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are implemented by the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
+The engine's
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
+is accepted under
+[forge-template ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md).
 The engine's `0.2.x` compatibility line currently has an empty production
 catalogue. The development boundary can construct ProjectSpec, discover
 components, validate, and render through the public facade, but no current CLI
 path calls it and no released engine range is assigned here yet. Stage 06's
 exact `forge-template==0.2.0` / protocol-1 development pair is recorded by the
 canonical [cross-repository engine contract tests](docs/engine-contract-tests.md).
+That commit-pinned pair predates generated-project validation and remains
+unchanged until the coordinated Stage 07 integration work updates and tests it.
 The canonical
 [component discovery contract](docs/component-discovery.md) records the
 protocol-first, no-fallback adapter semantics.
