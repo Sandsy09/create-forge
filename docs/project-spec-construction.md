@@ -48,7 +48,7 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. |
 | `python_version` | `python.development` | Same. `python` is omitted entirely unless *both* bounds are known — a partial `PythonSelection` is not a smaller valid one. |
-| *caller-supplied* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). Until CF-06.02 supplies them from `discover_components`, callers are responsible for values a real manifest will accept. |
+| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; until CF-07.01 wires selection into the CLI, direct callers still pass the chosen IDs. |
 | *caller-supplied* | `component_options` | Copied through unchanged, namespaced by component ID. |
 | — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
 
@@ -57,12 +57,13 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 `templates.toml` collects several answers with no ProjectSpec home today,
 because no component manifest declares them as options yet:
 `github_org`, `build_backend`, `versioning`, `type_checking`, `use_docs`,
-`codeowners_team`. This is an expected, temporary gap — CF-06.02's component
-discovery adapter and Stage 08's Library manifest migration are what give
-these a home, most likely under `component_options` namespaced by whichever
-component ends up owning each one (a `github` platform, a `library`
-archetype, and so on). This document does not invent those names ahead of
-the manifests that will define them.
+`codeowners_team`. This is an expected, temporary gap: the discovery adapter
+preserves option declarations, but the empty production catalogue declares
+none yet. Stage 08's Library manifest migration is what gives these answers a
+home, most likely under `component_options` namespaced by whichever component
+ends up owning each one (a `github` platform, a `library` archetype, and so
+on). This document does not invent those names ahead of the manifests that
+will define them.
 
 ## Derivation rules
 
@@ -141,12 +142,11 @@ not a consequence of this repository adding a development dependency.
 
 ## What changes next
 
-- **CF-06.02** supplies real archetype/capability/platform identifiers from
-  `discover_components()`, replacing today's caller-supplied placeholders.
 - **CF-06.03** adds cross-repository contract tests exercising the exact
   supported package/protocol pair once one is assigned.
 - **CF-07.01** wires this boundary into `create-forge new`, making
-  `negotiate_protocol` and exit status `3` reachable for the first time.
+  ProjectSpec construction, [component discovery](component-discovery.md), and
+  exit status `3` reachable for the first time.
 - **Stage 08** (`forge-template`) migrates the Library archetype, giving the
   empty catalogue its first real manifest and flipping
   `test_validate_fails_closed_against_the_empty_catalogue` from a

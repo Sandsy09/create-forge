@@ -34,7 +34,8 @@ issues below and their cross-repository tests pass.
 - [x] [**CF-06.01 — Implement canonical ProjectSpec builder**](https://github.com/Sandsy09/create-forge/issues/46)
   ([ADR 0013](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0013-projectspec-construction-boundary.md),
   [canonical ProjectSpec construction contract](https://github.com/Sandsy09/create-forge/blob/main/docs/project-spec-construction.md))
-- [**CF-06.02 — Implement component discovery adapter**](https://github.com/Sandsy09/create-forge/issues/47)
+- [x] [**CF-06.02 — Implement component discovery adapter**](https://github.com/Sandsy09/create-forge/issues/47)
+  ([canonical component discovery contract](https://github.com/Sandsy09/create-forge/blob/main/docs/component-discovery.md))
 - [**CF-06.03 — Add cross-repository contract tests**](https://github.com/Sandsy09/create-forge/issues/48)
 
 ## Stage record
@@ -49,8 +50,11 @@ engine is a development-only dependency pinned to a commit — `forge-template`
 `create-forge new` is unchanged. Catalogue validation is proven to fail
 closed against `forge-template`'s intentionally empty `0.2.0` production
 catalogue; that characterization is expected to flip once Stage 08 migrates
-the Library archetype. CF-06.02 and CF-06.03 remain open, and the epic stays
-in progress until they land.
+the Library archetype. CF-06.02 adds `engine.discover()`, which checks both
+ProjectSpec and component-manifest protocol compatibility before returning the
+engine's immutable descriptors unchanged. It deliberately has no registry
+fallback and remains unreachable from the CLI until CF-07.01. CF-06.03 remains
+open, and the epic stays in progress until it lands.
 
 ## Stage completion rule
 

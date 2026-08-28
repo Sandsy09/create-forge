@@ -1,5 +1,5 @@
 """Guards keeping CF-04.01's engine-resolution documentation, CF-05.02's
-engine-update policy, and CF-06.01's engine import boundary internally
+engine-update policy, and CF-06.01/02's engine boundaries internally
 consistent with the code -- the same "docs and code must not drift" idea as
 `tests/test_adr.py` and `tests/test_drift.py`, applied to ADR 0011's, ADR
 0012's, and ADR 0013's rules rather than to a Copier template.
@@ -22,6 +22,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT = REPO_ROOT / ".github" / "dependabot.yml"
 INTEGRATION_CONTRACT = REPO_ROOT / "docs" / "integration-contract.md"
 ENGINE_RESOLUTION = REPO_ROOT / "docs" / "engine-resolution.md"
+COMPONENT_DISCOVERY = REPO_ROOT / "docs" / "component-discovery.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
@@ -120,6 +121,19 @@ def test_engine_resolution_doc_is_linked_from_the_canonical_entry_points() -> No
         assert link_re.search(text), f"{path.name} does not link engine-resolution.md"
 
     assert ENGINE_RESOLUTION.is_file()
+
+
+def test_component_discovery_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-06.02's living adapter contract must remain discoverable wherever
+    contributors enter the engine integration documentation.
+    """
+    link_re = re.compile(r"\([^)]*component-discovery\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link component-discovery.md"
+
+    assert COMPONENT_DISCOVERY.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

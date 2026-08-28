@@ -10,15 +10,24 @@ reachable from create-forge's shipped CLI entry point may import this module;
 `tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
 enforces that.
 
-`spec.py` builds the wire payload this module parses and validates -- see
-ADR 0013 and docs/project-spec-construction.md for the full contract.
+`spec.py` builds the wire payload this module parses and validates, while this
+module also exposes the discovery adapter used by the future CLI pipeline --
+see ADR 0013, docs/project-spec-construction.md, and
+docs/component-discovery.md for the full contracts.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from forge_template import ForgeEngineError, ProjectSpec, get_engine_info
+from forge_template import (
+    ComponentDescriptor,
+    EngineInfo,
+    ForgeEngineError,
+    ProjectSpec,
+    get_engine_info,
+)
+from forge_template import discover_components as _discover_components
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import validate_project_spec as _validate_project_spec
 
@@ -37,15 +46,66 @@ assuming they agree. No engine package-version range is assigned yet, so
 `forge-template` package version.
 """
 
+SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS: tuple[int, ...] = (1,)
+"""Component-manifest protocols this create-forge release understands.
+
+Kept independent from the installed engine's advertised protocols for the
+same reason as :data:`SUPPORTED_PROJECTSPEC_PROTOCOLS`: discovery must compare
+the two sides rather than assume that installing an engine makes every data
+protocol compatible.
+"""
+
 
 class EngineCompatibilityError(Exception):
-    """An installed engine speaks no ProjectSpec protocol this CLI supports.
+    """An installed engine speaks no required protocol this CLI supports.
 
     Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
     ADR 0011 for exactly this failure class. Implemented here at the engine
     boundary but not yet raised from any shipped command -- no command calls
-    `negotiate_protocol` until CF-07.01 wires the engine into `new`.
+    `negotiate_protocol` or `discover` until CF-07.01 wires the engine into
+    `new`.
     """
+
+
+def _require_protocol_overlap(
+    info: EngineInfo,
+    *,
+    protocol_name: str,
+    supported: tuple[int, ...],
+    detected: tuple[int, ...],
+) -> None:
+    """Reject an engine with no protocol version in common with this CLI."""
+    supported_set = set(supported)
+    detected_set = set(detected)
+    if supported_set & detected_set:
+        return
+
+    msg = (
+        f"forge-template {info.package_version} supports {protocol_name} "
+        f"protocol(s) {sorted(detected_set)}, but this create-forge release "
+        f"supports {sorted(supported_set)}."
+    )
+    raise EngineCompatibilityError(msg)
+
+
+def _require_projectspec_protocol(info: EngineInfo) -> None:
+    """Require a shared ProjectSpec protocol for every engine operation."""
+    _require_protocol_overlap(
+        info,
+        protocol_name="ProjectSpec",
+        supported=SUPPORTED_PROJECTSPEC_PROTOCOLS,
+        detected=info.projectspec_protocols,
+    )
+
+
+def _require_component_manifest_protocol(info: EngineInfo) -> None:
+    """Require a shared component-manifest protocol before discovery."""
+    _require_protocol_overlap(
+        info,
+        protocol_name="component manifest",
+        supported=SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
+        detected=info.component_manifest_protocols,
+    )
 
 
 def negotiate_protocol() -> None:
@@ -53,16 +113,21 @@ def negotiate_protocol() -> None:
 
     Runs before any payload is parsed, validated, or rendered.
     """
+    _require_projectspec_protocol(get_engine_info())
+
+
+def discover() -> tuple[ComponentDescriptor, ...]:
+    """Return engine-owned component descriptors after protocol negotiation.
+
+    ProjectSpec and component-manifest compatibility are checked before the
+    engine scans its installed catalogue. The descriptors are returned
+    unchanged: their identifiers, presentation metadata, compatibility,
+    relationships, and options remain owned and validated by `forge-template`.
+    """
     info = get_engine_info()
-    supported = set(SUPPORTED_PROJECTSPEC_PROTOCOLS)
-    detected = set(info.projectspec_protocols)
-    if not supported & detected:
-        msg = (
-            f"forge-template {info.package_version} supports ProjectSpec "
-            f"protocol(s) {sorted(detected)}, but this create-forge release "
-            f"supports {sorted(supported)}."
-        )
-        raise EngineCompatibilityError(msg)
+    _require_projectspec_protocol(info)
+    _require_component_manifest_protocol(info)
+    return _discover_components()
 
 
 def build_project_spec(payload: Mapping[str, object]) -> ProjectSpec:

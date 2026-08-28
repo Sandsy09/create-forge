@@ -106,8 +106,12 @@ is the one module that calls the facade — ahead of any command using it. The
 canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 likewise remains engine-owned discovery metadata rather than a schema this
-repository recreates. The current v0.1.x Copier/registry implementation
-remains authoritative until the coordinated CLI cutover.
+repository recreates. The living
+[component discovery contract](docs/component-discovery.md) records how
+`engine.py` checks both protocol axes before returning those public descriptors
+unchanged. Neither adapter is reachable from a shipped command yet; the current
+v0.1.x Copier/registry implementation remains authoritative until the
+coordinated CLI cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected
