@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 from copier import run_copy, run_update
 from copier.errors import CopierError
 
+from create_forge import staging
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -45,25 +47,34 @@ def scaffold(request: ScaffoldRequest) -> None:
     the same team publishes. Never widen the registry to arbitrary URLs without
     revisiting this.
     """
-    if request.dst.exists() and any(request.dst.iterdir()):
-        msg = f"{request.dst} already exists and is not empty"
-        raise ScaffoldError(msg)
-
     try:
-        run_copy(
-            src_path=request.src,
-            dst_path=request.dst,
-            data=dict(request.data),
-            vcs_ref=request.vcs_ref,
-            # Anything not answered by the CLI falls back to the template's own
-            # default, so copier.yml stays the source of truth.
-            defaults=True,
-            unsafe=True,
-            quiet=True,
-            pretend=request.dry_run,
-        )
-    except CopierError as exc:
-        raise ScaffoldError(_explain(exc)) from exc
+        staging.ensure_available(request.dst)
+    except staging.DestinationConflictError as exc:
+        raise ScaffoldError(str(exc)) from exc
+
+    # Copier cannot be staged and moved into place the way the engine path
+    # is (ADR 0015): its templates declare `_tasks` that run `uv sync` and
+    # `pre-commit install`, baking dst's absolute path into `.venv/pyvenv.cfg`,
+    # console-script shims, and `.git/hooks/pre-commit`. Renaming a completed
+    # output afterward would silently break all three. So this only cleans up
+    # a failure at the path Copier already wrote to -- it never stages.
+    with staging.discard_on_failure(request.dst):
+        try:
+            run_copy(
+                src_path=request.src,
+                dst_path=request.dst,
+                data=dict(request.data),
+                vcs_ref=request.vcs_ref,
+                # Anything not answered by the CLI falls back to the
+                # template's own default, so copier.yml stays the source of
+                # truth.
+                defaults=True,
+                unsafe=True,
+                quiet=True,
+                pretend=request.dry_run,
+            )
+        except CopierError as exc:
+            raise ScaffoldError(_explain(exc)) from exc
 
 
 def update(project: Path, *, vcs_ref: str | None = None) -> None:

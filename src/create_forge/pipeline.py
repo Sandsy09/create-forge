@@ -21,11 +21,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from create_forge import engine
+from create_forge import engine, staging
 from create_forge.spec import build_spec_payload
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from pathlib import Path
 
     from forge_template import ProjectSpec, RenderedProject
 
@@ -79,3 +80,22 @@ def build_generation_request(
     validated = engine.validate(spec)
     rendered = engine.render(validated)
     return GenerationRequest(spec=validated, rendered=rendered)
+
+
+def finalise_generation_request(request: GenerationRequest, destination: Path) -> None:
+    """Stage and finalise `request`'s rendered files (ADR 0015).
+
+    Renders them into a directory adjacent to `destination`, then moves that
+    directory into place atomically.
+
+    `create-forge` does not call `forge_template.validate_rendered_project`
+    itself -- `engine.render()` already did, as the last step inside
+    `build_generation_request`. Reaching this function at all means that
+    validation already passed; this function's only job is the filesystem
+    half create-forge owns: staging, target-safety, and an atomic rename.
+    """
+    with staging.staged(destination) as staging_dir:
+        staging.write_files(
+            staging_dir,
+            ((file.target, file.content) for file in request.rendered.files),
+        )

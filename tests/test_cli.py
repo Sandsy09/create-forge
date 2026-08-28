@@ -12,20 +12,28 @@ import builtins
 import json
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import typer
-from forge_template import EngineInfo
+from forge_template import (
+    EngineInfo,
+    GenerationPlan,
+    PlannedFile,
+    RenderedFile,
+    RenderedProject,
+)
 from pydantic import HttpUrl
 from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
 from create_forge import engine as engine_module
+from create_forge import pipeline as pipeline_module
 from create_forge.cli import _markers, app
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
+from create_forge.pipeline import GenerationRequest
 from create_forge.prompts import PromptAbortedError
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest
@@ -614,6 +622,133 @@ def test_new_engine_preview_exits_3_on_incompatible_engine(
     assert result.exit_code == 3, result.output
     assert recorder == []
     assert not (tmp_path / "proj").exists()
+
+
+def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """ADR 0015: the destination conflict is checked before the engine is
+    even imported, let alone negotiated or validated against.
+    """
+    dest = tmp_path / "proj"
+    dest.mkdir()
+    (dest / "existing.txt").write_text("hi", encoding="utf-8")
+
+    def unexpected_get_engine_info() -> EngineInfo:
+        raise AssertionError("the engine must not be reached for a conflict")
+
+    monkeypatch.setattr(engine_module, "get_engine_info", unexpected_get_engine_info)
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    # Rich wraps long lines to the console width, which varies by
+    # environment (narrower in CI than a local wide terminal) -- normalise
+    # whitespace before matching so a mid-phrase line break can't fail this.
+    normalised_output = " ".join(result.output.split())
+    assert "already exists and is not empty" in normalised_output
+    assert recorder == []
+    assert (dest / "existing.txt").read_text(encoding="utf-8") == "hi"
+
+
+def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """`--dry-run` short-circuits before staging (ADR 0015). In practice
+    today's empty catalogue would fail validation first regardless, so
+    `build_generation_request` is faked here with a successful result --
+    the same technique test_pipeline.py uses -- to actually exercise the
+    dry-run branch past that point.
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(PlannedFile(target="pyproject.toml", owner_component_id="library"),),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+    )
+    fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    monkeypatch.setattr(
+        pipeline_module, "build_generation_request", lambda *a, **k: fake_request
+    )
+
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "pyproject.toml" in result.output
+    assert recorder == []
+    assert not dest.exists()
+
+
+def test_new_engine_preview_finalises_a_successful_render(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """A successful (faked) render is staged and moved into place exactly
+    like the Copier path, and reports success without claiming the project
+    is `create-forge update`-able (ADR 0015).
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(PlannedFile(target="pyproject.toml", owner_component_id="library"),),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+    )
+    fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    monkeypatch.setattr(
+        pipeline_module, "build_generation_request", lambda *a, **k: fake_request
+    )
+
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert recorder == []
+    assert (dest / "pyproject.toml").read_bytes() == b"[project]\n"
+    assert "created at" in result.output
+    # Normalise whitespace: Rich wraps long lines to the console width,
+    # which varies by environment (see the destination-conflict test above).
+    normalised_output = " ".join(result.output.split())
+    assert "create-forge update does not apply" in normalised_output
 
 
 # --- config wiring (issue #3) ------------------------------------------------

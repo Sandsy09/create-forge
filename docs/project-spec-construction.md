@@ -19,10 +19,15 @@ flag, `new` keeps its v0.1.x direct-Copier path completely unchanged. [ADR
 lazy import, rather than a default-path cutover, is what CF-07.01 shipped —
 `forge-template` remains a development-only dependency, so `cli.py` cannot
 import the engine unconditionally without breaking every real `uvx
-create-forge` install. `forge-template`'s production component catalogue is
-intentionally empty until Stage 08, so calling this boundary end-to-end
-always fails validation today — see "Validation and today's expected
-failure" below.
+create-forge` install. CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
+completed the flag: it now stages a successful render adjacent to the
+computed destination and finalises it by atomic rename, exactly like the
+Copier path, through `src/create_forge/pipeline.py`'s
+`finalise_generation_request` — see the canonical
+[filesystem generation contract](filesystem-generation.md). `forge-template`'s
+production component catalogue is intentionally empty until Stage 08, so
+calling this boundary end-to-end always fails validation today, before any
+staging happens — see "Validation and today's expected failure" below.
 
 ## The map-vs-validate principle
 
@@ -136,7 +141,10 @@ pattern-matching message text.
 `forge-template` is a development-only dependency today: an `engine` `uv`
 dependency group constrained to `forge-template==0.2.0`, resolved via a
 `[tool.uv.sources]` git entry pinned to the full commit SHA
-`2158c85a46efffc7d8ea2d43e347b943359baed1` (not a tag or branch).
+`bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c` (not a tag or branch) — moved
+forward once from Stage 06's original pin by CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) to adopt generated-
+project validation, within the same `0.2.0` development contract.
 `[project.dependencies]` is unchanged, so
 no engine range is assigned and
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
@@ -160,12 +168,14 @@ not a consequence of this repository adding a development dependency.
   [component discovery](component-discovery.md), and exit status `3`
   reachable for the first time — behind a hidden, opt-in flag, not the
   default `new` path.
-- **CF-07.04** consumes the `GenerationRequest`
-  `src/create_forge/pipeline.py` produces for real filesystem staging and
-  finalisation, and, once [#9](https://github.com/Sandsy09/create-forge/issues/9)
-  resolves a distribution channel, performs the atomic cutover that replaces
-  `--engine-preview` and the exact development-package assertion with a
-  bounded runtime dependency.
+- **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) consumes
+  the `GenerationRequest` `src/create_forge/pipeline.py` produces, staging and
+  finalising it exactly like the Copier path — see the canonical
+  [filesystem generation contract](filesystem-generation.md). The atomic
+  cutover that replaces `--engine-preview` and the exact development-package
+  assertion with a bounded runtime dependency still waits on
+  [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
+  distribution channel.
 - **Stage 08** (`forge-template`) migrates the Library archetype, giving the
   empty catalogue its first real manifest and flipping
   `test_validate_fails_closed_against_the_empty_catalogue` from a
@@ -185,14 +195,18 @@ not a consequence of this repository adding a development dependency.
   import boundary.
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — exact package/protocol agreement and fail-before-engine-call behavior,
-  runnable against either the immutable pin or a sibling working tree.
+  runnable against either the immutable pin or a sibling working tree, and
+  the adopted `validate_rendered_project` contract against the real pinned
+  engine.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) — the shared
-  pipeline's discover → build → validate → render orchestration order, and
-  the real, unmocked end-to-end characterized failure against the empty
-  catalogue.
-- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s three
-  outcomes (dependency missing, characterized validation failure, exit `3`
-  on an incompatible engine), and that omitting it leaves `new` unchanged.
+  pipeline's discover → build → validate → render orchestration order, the
+  real, unmocked end-to-end characterized failure against the empty
+  catalogue, and `finalise_generation_request`'s staging/rename behaviour —
+  see also the canonical [filesystem generation contract](filesystem-generation.md).
+- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s outcomes
+  (dependency missing, characterized validation failure, exit `3` on an
+  incompatible engine, a pre-existing destination conflict), and that
+  omitting it leaves `new` unchanged.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

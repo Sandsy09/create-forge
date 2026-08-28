@@ -103,11 +103,17 @@ Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 checks rendered output in memory before the facade returns it. Filesystem
 staging, finalisation, and command execution remain `create-forge`
-responsibilities at the future cutover.
+responsibilities at the future cutover — the living
+[filesystem generation contract](docs/filesystem-generation.md) records how
+`staging.py` already implements the staging and finalisation half of that
+today, behind `--engine-preview`.
 Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), but
 this repository assigns no released dependency range until #9 resolves the
-distribution channel and CF-07.04 performs the atomic cutover.
+distribution channel and a future cutover issue performs the atomic cutover.
+CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
+the development pin forward once, within that same unreleased `0.2.0`
+contract, to adopt generated-project validation.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
 and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
 record that adapter's shape — `spec.py` builds the wire payload, `engine.py`
@@ -120,8 +126,9 @@ repository recreates. The living
 unchanged. [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds
 `pipeline.py` and reaches this boundary from a real command for the first
 time, via the hidden `new --engine-preview` flag and a lazily-imported
-module `cli.py` otherwise never touches. The default `new` path, and every
-other command, remain the current v0.1.x Copier/registry implementation,
+module `cli.py` otherwise never touches; ADR 0015 completes that flag with
+real staging and finalisation. The default `new` path, and every other
+command, remain the current v0.1.x Copier/registry implementation,
 authoritative until the coordinated CLI cutover.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how

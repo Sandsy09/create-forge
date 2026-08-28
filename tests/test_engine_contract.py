@@ -24,6 +24,7 @@ INTEGRATION_CONTRACT = REPO_ROOT / "docs" / "integration-contract.md"
 ENGINE_RESOLUTION = REPO_ROOT / "docs" / "engine-resolution.md"
 ENGINE_CONTRACT_TESTS = REPO_ROOT / "docs" / "engine-contract-tests.md"
 COMPONENT_DISCOVERY = REPO_ROOT / "docs" / "component-discovery.md"
+FILESYSTEM_GENERATION = REPO_ROOT / "docs" / "filesystem-generation.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
@@ -31,13 +32,22 @@ SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
 TESTED_ENGINE_REQUIREMENT = "forge-template==0.2.0"
-TESTED_ENGINE_REVISION = "2158c85a46efffc7d8ea2d43e347b943359baed1"
+TESTED_ENGINE_REVISION = "bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
 # one module ADR 0013 permits to import forge_template, mirroring invariant
 # 4's rule that runner.py is the only module touching Copier's Python API.
-_SHIPPED_MODULES = ("cli", "prompts", "runner", "registry", "models", "config", "spec")
+_SHIPPED_MODULES = (
+    "cli",
+    "prompts",
+    "runner",
+    "registry",
+    "models",
+    "config",
+    "spec",
+    "staging",
+)
 
 # The one dependency ADR 0012 governs: Copier today, the forge-template
 # engine after cutover. Kept as a constant so both decisions' tests agree on
@@ -162,6 +172,22 @@ def test_component_discovery_doc_is_linked_from_canonical_entry_points() -> None
         assert link_re.search(text), f"{path.name} does not link component-discovery.md"
 
     assert COMPONENT_DISCOVERY.is_file()
+
+
+def test_filesystem_generation_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-07.04's living staging/finalisation contract must remain
+    discoverable wherever contributors enter the engine integration
+    documentation, mirroring component-discovery.md's equivalent guard.
+    """
+    link_re = re.compile(r"\([^)]*filesystem-generation\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link filesystem-generation.md"
+        )
+
+    assert FILESYSTEM_GENERATION.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

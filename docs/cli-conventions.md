@@ -67,21 +67,28 @@ version options this CLI accepts; the new names are not yet implemented.
 ## The `--engine-preview` development flag
 
 `new --engine-preview` is a hidden, development-only option (absent from
-`--help`) that builds, validates, and renders through the public
+`--help`) that builds, validates, renders, and finalises through the public
 `forge-template` engine instead of Copier — see
-[ADR 0014](adr/0014-lazy-engine-reachability.md) and the canonical
-[ProjectSpec construction contract](project-spec-construction.md). It always
+[ADR 0014](adr/0014-lazy-engine-reachability.md),
+[ADR 0015](adr/0015-staged-filesystem-generation.md), and the canonical
+[ProjectSpec construction](project-spec-construction.md) and
+[filesystem generation](filesystem-generation.md) contracts. It always
 prints an informational note that it is development-only, unconditionally
 and regardless of `--yes` — but unlike `--template-url`'s warning, this is
 not a confirmation gate: `forge-template` is a reviewed, pinned dependency,
 not arbitrary user-supplied code, so there is no code-execution trust
-question to ask. It reuses the same answer collection as the Copier path
-(no parallel prompt flow), never writes a destination regardless of
-`--dry-run`, and fails deterministically today — `forge-template`'s
-production catalogue is intentionally empty until Stage 08. `--engine-source`/
-`--engine-ref` above remain the names reserved for the eventual public
-override; `--engine-preview` is a distinct, temporary flag retired at the
-coordinated cutover, not renamed into that pair.
+question to ask. It reuses the same answer collection and destination
+computation as the Copier path (no parallel prompt flow), rejects a
+non-empty destination before any engine call, and stages and moves a
+successful render into place exactly as the Copier path does — `--dry-run`
+lists the planned targets and writes nothing, on both paths alike. It fails
+deterministically today regardless: `forge-template`'s production catalogue
+is intentionally empty until Stage 08, so validation fails before staging is
+ever reached. `--engine-source`/`--engine-ref` above remain the names
+reserved for the eventual public override; `--engine-preview` is a distinct,
+temporary flag retired at the coordinated cutover, not renamed into that
+pair. A project it does create is not `create-forge update`-able — it writes
+no `.copier-answers.yml`.
 
 ## Interactive and non-interactive parity
 
@@ -94,14 +101,17 @@ cutover.
 
 For `new`, no scaffold call or destination write may occur before answer
 collection and any required source confirmation have completed. Cancelling
-either stage leaves the scaffold uninvoked.
+either stage leaves the scaffold uninvoked. On both the Copier and engine
+paths, a non-empty destination is rejected before any other side effect —
+see the canonical [filesystem generation contract](filesystem-generation.md)
+for the full staging, finalisation, and cleanup rules ADR 0015 introduces.
 
 ## Exit statuses
 
 | Status | Meaning | Examples |
 | --- | --- | --- |
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
-| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, or scaffold/update failures. |
+| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, or a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)). |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, or malformed `--data` without `key=value`. |
 | `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md)) — the default `new` path is still v0.1.x direct-Copier and cannot produce it. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
@@ -157,7 +167,12 @@ The contract is characterized by these tests:
   `test_new_aborting_*_exits_130` cases,
   `test_new_template_url_declined_scaffolds_nothing`, and the
   `test_new_engine_preview_*`/`test_new_without_engine_preview_is_unchanged`
-  group covering the `--engine-preview` flag from ADR 0014.
+  group covering the `--engine-preview` flag from ADR 0014 and its ADR 0015
+  finalisation.
+- [`tests/test_staging.py`](../tests/test_staging.py) covers destination
+  conflict detection, target-safety refusals, staging placement and atomic
+  finalisation, and cleanup after failure — see the canonical
+  [filesystem generation contract](filesystem-generation.md).
 - [`tests/test_prompts.py`](../tests/test_prompts.py) covers preset suppression,
   config pre-filling, derived defaults, conditional questions, and automatic
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,

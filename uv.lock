@@ -304,7 +304,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=2158c85a46efffc7d8ea2d43e347b943359baed1" },
+    { name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c" },
     { name = "git-cliff", specifier = ">=2.7" },
     { name = "mypy", specifier = ">=1.14" },
     { name = "poethepoet", specifier = ">=0.31" },
@@ -316,7 +316,7 @@ dev = [
     { name = "ruff", specifier = ">=0.14" },
     { name = "types-pyyaml", specifier = ">=6.0" },
 ]
-engine = [{ name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=2158c85a46efffc7d8ea2d43e347b943359baed1" }]
+engine = [{ name = "forge-template", git = "https://github.com/Sandsy09/forge-template?rev=bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c" }]
 lint = [
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.14" },
@@ -365,7 +365,7 @@ wheels = [
 [[package]]
 name = "forge-template"
 version = "0.2.0"
-source = { git = "https://github.com/Sandsy09/forge-template?rev=2158c85a46efffc7d8ea2d43e347b943359baed1#2158c85a46efffc7d8ea2d43e347b943359baed1" }
+source = { git = "https://github.com/Sandsy09/forge-template?rev=bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c#bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c" }
 dependencies = [
     { name = "jinja2" },
     { name = "packaging" },
