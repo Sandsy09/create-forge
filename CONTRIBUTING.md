@@ -126,6 +126,13 @@ responsibilities at the future cutover — the living
 [filesystem generation contract](docs/filesystem-generation.md) records how
 `staging.py` already implements the staging and finalisation half of that
 today, behind `--engine-preview`.
+The canonical
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+defines the production `library` component and the manifest/option/planning
+migration FT-08.02 must implement. This repository keeps its exact `0.2.0`
+development pair, empty-catalogue expectation, and unassigned released engine
+range until that migration and the coordinated cutover are implemented and
+tested.
 Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), but
 this repository assigns no released dependency range until #9 resolves the

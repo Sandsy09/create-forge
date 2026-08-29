@@ -75,6 +75,12 @@ The engine's
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 is accepted under
 [forge-template ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md).
+The accepted
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+and [forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md)
+define the first future production component and the manifest/option/planning
+changes owned by FT-08.02. They do not change the exact development pair or
+make a released CLI line support the engine.
 The engine's `0.2.x` compatibility line currently has an empty production
 catalogue. The development boundary can construct ProjectSpec, discover,
 validate, render, and finalise a project to disk through the public facade;
@@ -216,6 +222,10 @@ Run this before any release.
   the fast/`network`/`e2e` test-tier split, what the real console script is
   proven to do against a released template, and the engine-path gap tracked
   as CF-08.04.
+- The canonical
+  [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+  defines engine-owned Library semantics; this CLI owns only selection,
+  ProjectSpec construction, and orchestration at the future cutover.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

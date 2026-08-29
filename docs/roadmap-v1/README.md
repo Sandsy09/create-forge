@@ -11,6 +11,9 @@ repositories. The [Foundation guarantees](https://github.com/Sandsy09/forge-temp
 define the mandatory generated-project outcomes, while the
 [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
 defines which concerns may belong in that baseline. The
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+defines the first production archetype and the protocol/API migration
+FT-08.02 must implement without changing this repository's current CLI. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines the generated-project CPython window, defaults, and release lifecycle.
 The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
@@ -53,8 +56,8 @@ and [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/003
 complete the `forge-template` side of Stage 07 by validating rendered output
 in memory. The shared stage remains open for `create-forge` CLI orchestration,
 filesystem safety, and end-to-end coverage.
-Its production catalogue is empty; production manifests and CLI discovery
-remain later coordinated work.
+Its production catalogue is empty; Library's contract is accepted, while its
+production manifest and CLI discovery remain later coordinated work.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

@@ -14,6 +14,10 @@ defines the component kinds and selection inputs referenced here. The
 and [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
 define the mandatory outcomes and concern-level boundary that this ownership
 model must preserve. The
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+defines the distributable-package additions and implicit Foundation source
+that `forge-template` will implement in FT-08.02; `create-forge` owns only
+their future selection and ProjectSpec construction. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines generated-project interpreter choices, defaults, and lifecycle in the
 repository that owns those outputs. The
@@ -64,6 +68,8 @@ Owns **what a generated project is** and **how it is composed**.
 It owns:
 
 - Foundation and archetype templates;
+- the Library archetype's package, manifest, option, and Foundation-extension
+  contract;
 - capability and platform components;
 - optional editor capabilities and their project-scoped contributions;
 - profile and organisation-policy selection inputs;

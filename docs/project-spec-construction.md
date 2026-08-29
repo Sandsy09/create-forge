@@ -70,10 +70,21 @@ because no component manifest declares them as options yet:
 `codeowners_team`. This is an expected, temporary gap: the discovery adapter
 preserves option declarations, but the empty production catalogue declares
 none yet. Stage 08's Library manifest migration is what gives these answers a
-home, most likely under `component_options` namespaced by whichever component
-ends up owning each one (a `github` platform, a `library` archetype, and so
-on). This document does not invent those names ahead of the manifests that
-will define them.
+home under `component_options` namespaced by their owning component. The
+canonical
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+now fixes the packaging mapping that FT-08.02 must implement:
+
+- `build_backend=uv_build` becomes
+  `component_options.library.packaging_mode=uv-build-static`;
+- `build_backend=hatchling` with absent or static versioning becomes
+  `hatchling-static`; and
+- `build_backend=hatchling` with VCS versioning becomes `hatchling-vcs`.
+
+The remaining answers retain the owner assigned by their eventual component,
+such as a GitHub platform or optional capability. Current CLI code still maps
+none of these values into component options because the production catalogue
+is empty; this link-only record does not pre-empt FT-08.02 or the CLI cutover.
 
 ## Derivation rules
 
@@ -179,7 +190,9 @@ not a consequence of this repository adding a development dependency.
 - **Stage 08** (`forge-template`) migrates the Library archetype, giving the
   empty catalogue its first real manifest and flipping
   `test_validate_fails_closed_against_the_empty_catalogue` from a
-  characterized failure to a real pass.
+  characterized failure to a real pass. The accepted
+  [Library contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+  defines that migration without changing this repository's current adapter.
 
 ## Executable examples
 

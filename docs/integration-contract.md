@@ -17,6 +17,13 @@ The canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md),
 recorded by [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md),
 now validates rendered output in memory before the engine returns it.
+The accepted
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md),
+recorded by
+[forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md),
+defines the first production component and the manifest protocol `2`, option
+schema `2`, implicit Foundation source, and `0.3.0` planning-owner migration
+FT-08.02 must implement.
 The `0.2.x` engine line has an empty production catalogue. Development-only
 ProjectSpec construction, component-discovery, validation, and rendering
 adapters now exist and are tested against an exact development pair, but
@@ -35,6 +42,9 @@ The separate development contract is `forge-template==0.2.0` at
 component-manifest protocol `1`. The canonical
 [cross-repository engine contract tests](engine-contract-tests.md) make that
 pair executable. It is deliberately not the first row's installable range.
+The Library decision is future implementation guidance: this exact
+`0.2.0`/protocol-1 development pair, the empty-catalogue expectation, and the
+unassigned released range remain unchanged here.
 CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this
 pin forward from Stage 06's original revision specifically to adopt the
 generated-project validator: `render_project` now calls the public
