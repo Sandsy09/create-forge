@@ -4,10 +4,13 @@
 
 ### forge-template
 
-- **FT-08.01 — Define Library archetype contract**
-- **FT-08.02 — Implement Library reference archetype**
-- **FT-08.03 — Define Data Science archetype contract**
-- **FT-08.04 — Implement Data Science reference archetype**
+- ~~**FT-08.01 — Define Library archetype contract**~~ — complete via the
+  [canonical contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md),
+  [ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md),
+  and [forge-template PR #79](https://github.com/Sandsy09/forge-template/pull/79).
+- **FT-08.02 — Migrate the Library archetype to the composition contract**
+- **FT-08.03 — Select and define the second reference archetype contract**
+- **FT-08.04 — Implement the selected second reference archetype**
 - **FT-08.05 — Run composition architecture review**
 
 ### create-forge
@@ -22,6 +25,12 @@
   a non-empty production catalogue, neither of which exists yet. Blocked on
   [FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41)
   and [#9](https://github.com/Sandsy09/create-forge/issues/9).
+
+The Library decision records the legacy answer mapping into
+`component_options.library.packaging_mode`, but no create-forge code, exact
+development pin, released engine range, or protocol-support claim changes in
+this documentation handoff. The second archetype remains deliberately unnamed
+until FT-08.03 selects it.
 
 ## Stage completion rule
 

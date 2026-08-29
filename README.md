@@ -114,6 +114,11 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are now implemented behind the canonical
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 ([ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md)).
+The accepted
+[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
+defines the first future production component and the Foundation integration
+FT-08.02 must implement; it does not change this CLI's current answers,
+registry, or engine dependency.
 The engine now also defines in-memory
 [generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 ([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
