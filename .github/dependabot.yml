@@ -26,11 +26,18 @@ updates:
       prefix: "chore"
     open-pull-requests-limit: 5
     labels: ["type:chore", "area:packaging"]
-    # The compatibility-line dependency (ADR 0012). Crossing a Copier major
-    # must change runner.py, the bound, and the documented compatibility
-    # table together -- see CLAUDE.md invariant 4 -- so Dependabot proposes
-    # updates inside the line only. tests/test_engine_contract.py reads this
-    # block; deleting it fails the fast suite.
+    # Two compatibility-line dependencies now (ADR 0012). Crossing a Copier
+    # major must change runner.py, the bound, and the documented
+    # compatibility table together -- see CLAUDE.md invariant 4 -- so
+    # Dependabot proposes updates inside the line only.
+    # forge-template (ADR 0018) is pre-1.0, so a minor bump is itself a new
+    # compatibility line, same as a Copier major -- both semver-major and
+    # semver-minor are ignored for it, not just semver-major.
+    # tests/test_engine_contract.py reads this block; deleting either rule
+    # fails the fast suite.
     ignore:
       - dependency-name: "copier"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "forge-template"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]

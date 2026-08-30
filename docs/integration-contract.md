@@ -28,76 +28,72 @@ now implemented on `forge-template/main`. The accepted
 recorded by
 [forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0034-select-cli-application-reference-archetype.md),
 selects the optionless engine-owned `cli` archetype. Its console command is
-derived from `ProjectSpec.project.repository_name`; FT-08.04 owns its future
-manifest and content.
-This repository's exact development line is now `forge-template==0.3.0`
-(CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)),
-whose production catalogue ships both `library` and `cli`. Development-only
-ProjectSpec construction, component-discovery, validation, and rendering
-adapters exist and are tested against that exact development pair, and are
-reachable — behind the hidden `new --engine-preview` flag, with a
-discovery-driven `--archetype` selection — for both production archetypes.
-The released v0.1.x CLI remains a thin Copier wrapper with a bundled
-registry, and its current security and update invariants remain
-authoritative until the coordinated cutover.
+derived from `ProjectSpec.project.repository_name`; FT-08.04 implemented its
+manifest and content, exposed here by CF-08.02.
+
+[#9](https://github.com/Sandsy09/create-forge/issues/9) and
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) assign
+this repository's **first released engine range**:
+`forge-template>=0.3.1,<0.4`, declared as the optional `engine` extra
+(`create-forge[engine]`) rather than a `[project.dependencies]` entry or a
+development-only pin. ProjectSpec construction, component-discovery,
+validation, and rendering adapters are tested against that real, installed
+range, and are reachable — behind the hidden `new --engine-preview` flag,
+with a discovery-driven `--archetype` selection — for both production
+archetypes. **This is not the CLI cutover.** The released default `new`
+command remains a thin Copier wrapper with a bundled registry, and its
+current security and update invariants remain authoritative until a future,
+still-unfiled cutover replaces it.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
-| v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | Unassigned | 1 (defined; not yet supported) | Stage 06 development contract tested; distribution and CLI cutover pending |
+| v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
+| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Current released architecture (ADR 0018) |
 
-The separate development contract is `forge-template==0.3.0` at tag
-`v0.3.0`, ProjectSpec protocol `1`, and component-manifest protocol
-`(1, 2)`. The canonical
-[cross-repository engine contract tests](engine-contract-tests.md) make that
-pair executable. It is deliberately not the first row's installable range.
-The Library migration and CLI Application implementation are what CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) adopted this
-exact pair to consume: its production-catalogue expectation replaces the
-prior `0.2.0`/empty-catalogue one, and the released range remains
-unassigned here regardless.
-CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this
-pin forward from Stage 06's original revision specifically to adopt the
-generated-project validator: `render_project` now calls the public
-`validate_rendered_project` before returning, which is what lets
-`create-forge` finalise a rendered project to disk on the strength of the
-engine's own in-memory check rather than reimplementing it. CF-08.02 moved
-it again, from that commit to the `v0.3.0` tag.
+`forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
+catalogue CF-08.02 adopted -- is the first version published to PyPI
+([forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)).
+Since it is also the only released version, it is simultaneously the
+declared lower bound and "a representative latest compatible release"; the
+[cross-repository engine contract tests](engine-contract-tests.md) will gain
+a second, higher-version case the first time a compatible `0.3.x` release
+exists to test against. Component-manifest protocol `(1, 2)` is unaffected --
+CF-08.02 already widened it to consume the `library`/`cli` production
+manifests, and `0.3.1` changes no wire protocol.
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
-It is not a protocol supported by any released `create-forge` line yet. Do not
-assign the future engine range or mark the pair supported by a released CLI
-until #9 resolves distribution and a future cutover issue completes the
-atomic cutover with released lower/latest compatibility tests.
+It is now the protocol the current released `create-forge` line (v0.2.x)
+supports, reachable through the `engine` extra.
 
 [Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
-assigns component manifest protocol `1`. It defines strict bundled identity,
-display, version, compatibility, content, dependency, and conflict metadata;
-it does not make component discovery available to a released CLI line.
+assigns component manifest protocol `1`; forge-template ADR 0031 later added
+protocol `2` for the production `library`/`cli` manifests this release
+consumes. Component discovery is now available behind `--engine-preview`,
+not yet from the default `new` path.
 
-[ADR 0011](adr/0011-engine-source-and-version-resolution.md) and the canonical
-[engine resolution contract](engine-resolution.md) define how the remaining
-engine-range cell gets filled — a bounded, install-time dependency plus an
-explicit, warned local/VCS override — without assigning that range here.
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md), ADR 0018, and
+the canonical [engine resolution contract](engine-resolution.md) define how
+the range in the table above is resolved -- a bounded, install-time
+dependency -- and how cross-repository development still overrides it
+locally without a committed pin.
 
-[ADR 0013](adr/0013-projectspec-construction-boundary.md) adds a
+[ADR 0013](adr/0013-projectspec-construction-boundary.md) added the
 ProjectSpec-building boundary (`src/create_forge/spec.py` and
-`src/create_forge/engine.py`) ahead of this row being filled in — a
-development-only dependency pinned to a commit, not the runtime range this
-table records. `create-forge new` does not call it yet; see the canonical
-[ProjectSpec construction contract](project-spec-construction.md).
+`src/create_forge/engine.py`) ahead of this row being filled in; ADR 0018
+fills it. `create-forge new` (the default path) still does not call it; see
+the canonical [ProjectSpec construction contract](project-spec-construction.md).
 
 The canonical [component discovery contract](component-discovery.md) adds a
-second operation to that same boundary. It negotiates both the ProjectSpec and
-component-manifest protocols before calling the public engine and returns the
-engine's descriptors unchanged. It assigns no package range and is likewise
-unreachable from the released CLI.
+second operation to that same boundary. It negotiates both the ProjectSpec
+and component-manifest protocols before calling the public engine and
+returns the engine's descriptors unchanged, now against the range this table
+records rather than a development-only pin.
 
 The canonical [cross-repository engine contract tests](engine-contract-tests.md)
-then prove the exact development package/protocol pair and the public
-discovery, validation, and rendering boundary without changing that released
-compatibility table.
+prove that range and the public discovery, validation, and rendering
+boundary, and are what a future compatible `forge-template` release must
+pass before this table's range is widened.
 
 ## Ownership and dependency direction
 

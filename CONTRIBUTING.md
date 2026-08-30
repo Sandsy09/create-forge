@@ -8,16 +8,18 @@ and so on — see [CLAUDE.md](CLAUDE.md); this file won't restate them.
 ## Setup
 
 ```bash
-uv sync --all-groups
+uv sync --all-groups --all-extras
 uv run pre-commit install --install-hooks
 ```
 
-`uv sync` clones `forge-template==0.3.0` at a pinned tag as part of the
-`engine`
-dependency group (`[tool.uv] default-groups = ["dev"]` includes it). This is
-a development-only dependency for `src/create_forge/engine.py` — see
-[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — not a
-runtime dependency of the released CLI.
+`--all-extras` resolves `forge-template>=0.3.1,<0.4` from PyPI as the
+optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
+plain `uv sync` (or `pip install create-forge`) never resolves it. That
+optionality is what lets `src/create_forge/engine.py` — see
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — stay out of
+every `uvx create-forge` user's install. Omit `--all-extras` to work on
+anything that doesn't touch `--engine-preview`, `engine.py`, or `pipeline.py`.
 
 ## Before opening a pull request
 
@@ -136,20 +138,24 @@ from `ProjectSpec.project.repository_name`; FT-08.04 implemented it, and
 CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
 exposes both archetypes via a discovery-driven `--archetype` option and
 prompt, behind the same hidden `--engine-preview` flag.
-This repository's exact development pair is now `forge-template==0.3.0`
-(tag `v0.3.0`), whose production catalogue is no longer empty; the released
-engine range remains unassigned until the coordinated cutover is implemented
-and tested.
+This repository's development pair moved through `forge-template==0.3.0`
+(tag `v0.3.0`), whose production catalogue is no longer empty, to a real
+released range: `forge-template>=0.3.1,<0.4`, declared as the optional
+`engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
 Stage 06 first proved an exact development package/protocol pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), and
-CF-08.02 moved that pair forward to `0.3.0`; this repository still assigns no
-released dependency range until #9 resolves the distribution channel and a
-future cutover issue performs the atomic cutover.
+CF-08.02 moved that pair forward to `0.3.0`; ADR 0018 then replaced the
+development pin with the released range above, resolved from PyPI. The
+coordinated CLI cutover -- the engine replacing direct Copier as the default
+`new` path -- remains a separate, still-unfiled decision; ADR 0018 assigns
+the range, it does not perform that cutover.
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
 the development pin forward once, within the prior unreleased `0.2.0`
 contract, to adopt generated-project validation; CF-08.02
 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)) moved it
-again, to the first tagged release.
+again, to the first tagged release; ADR 0018 replaced it a final time with
+the released range.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
 and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
 record that adapter's shape — `spec.py` builds the wire payload, `engine.py`
@@ -169,15 +175,18 @@ authoritative until the coordinated CLI cutover.
 [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
 [end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
 real, CI-enforced coverage of that default `new` path against a released
-template — the engine path stays untested end to end until it has a released,
-range-assigned engine version, tracked as CF-08.04.
-[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
-living [engine resolution contract](docs/engine-resolution.md) define how
-that future engine is sourced, overridden locally, diagnosed, and rejected
-when incompatible. [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md)
+template — the engine path still has no CI-enforced end-to-end coverage;
+ADR 0018 cleared its last native blocker (a released, range-assigned engine
+to install), but writing that coverage is CF-08.04's own separate work.
+[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
+and the living [engine resolution contract](docs/engine-resolution.md)
+define how that engine is sourced, overridden locally, diagnosed, and
+rejected when incompatible. [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md)
 and the living [engine update policy](docs/engine-updates.md) define how a
 compatibility-line dependency update is adopted, how a breaking line is
-crossed, and what automated dependency tooling may never do unattended.
+crossed, and what automated dependency tooling may never do unattended --
+`forge-template` is now a second compatibility-line dependency alongside
+`copier`, each gated independently.
 
 The living [CLI UX and prompting conventions](docs/cli-conventions.md) define
 input precedence, prompt-skipping rules, interactive/non-interactive parity,
@@ -230,5 +239,11 @@ why the release workflow itself does not choose a version bump.
 2. Merge it. Wait for `All checks passed` on `main`.
 3. Actions → Release → Run workflow, with `dry_run` checked. Confirm the
    computed tag and generated notes in the run summary.
-4. Run it again with `dry_run` unchecked. This tags `main`, pushes the tag, and
-   publishes the GitHub release.
+4. Run it again with `dry_run` unchecked. This tags `main`, pushes the tag,
+   publishes the GitHub release, and -- since
+   [#9](https://github.com/Sandsy09/create-forge/issues/9)
+   ([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
+   -- publishes `create-forge` to PyPI via Trusted Publishing (OIDC; no
+   stored token, gated by the `pypi` GitHub Environment). `forge-template`
+   releases the same way on its own repository and schedule -- see
+   [forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md).

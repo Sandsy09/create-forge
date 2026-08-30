@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "create-forge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Scaffold modern Python projects from maintained templates."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -37,6 +37,15 @@ dependencies = [
     "rich>=13.9",
 ]
 
+[project.optional-dependencies]
+# ADR 0018: the first assigned, released engine range -- an optional extra
+# rather than a hard dependency, so ADR 0014's guarded `try/except
+# ImportError` in cli.py stays meaningful and the default Copier path never
+# downloads an engine it doesn't call. src/create_forge/engine.py is the
+# only module that imports it; src/create_forge/compat.py holds the range
+# itself so cli.py's `doctor` can report it without importing the engine.
+engine = ["forge-template>=0.3.1,<0.4"]
+
 [project.scripts]
 create-forge = "create_forge.cli:app"
 
@@ -57,26 +66,16 @@ test = [
     "pyyaml>=6.0",
 ]
 typecheck = ["mypy>=1.14", "types-PyYAML>=6.0"]
-engine = [
-    # Exact development contract only: this is not the released runtime
-    # range, which remains unassigned until #9 and the atomic cutover in
-    # #50. src/create_forge/engine.py is the only module that imports it.
-    "forge-template==0.3.0",
-]
 dev = [
     { include-group = "lint" },
     { include-group = "test" },
     { include-group = "typecheck" },
-    { include-group = "engine" },
     "poethepoet>=0.31",
     "git-cliff>=2.7",
 ]
 
 [tool.uv]
 default-groups = ["dev"]
-
-[tool.uv.sources]
-forge-template = { git = "https://github.com/Sandsy09/forge-template", tag = "v0.3.0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/create_forge"]

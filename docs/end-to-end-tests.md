@@ -9,8 +9,10 @@ records the decision this document keeps current.
 `tests/test_e2e_generation.py` runs the real `create-forge` console script
 against `forge-template`'s latest released tag, then the generated project's
 own `uv run poe check`. It covers the Copier path only — the engine path has
-no released, range-assigned engine to install and generate through in an
-`e2e`-tier test yet; see [the engine-path gap](#the-engine-path-gap) below.
+no `e2e`-tier coverage yet, even though #9 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+has now assigned it a released, installable range; see
+[the engine-path gap](#the-engine-path-gap) below for what changed and what
+is still open.
 
 ## The three-tier test split
 
@@ -61,22 +63,26 @@ clone:
 ## The engine-path gap
 
 `--engine-preview` cannot be exercised end-to-end (i.e. in a CI-enforced
-`e2e`-marked test) today, but the reason has narrowed. CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved this
-repository's exact development pin to `forge-template==0.3.0`, whose
-production catalogue ships both `library` and `cli` — `--engine-preview` now
-generates a real project, proven at the fast-suite level by
+`e2e`-marked test) today, but the reason has narrowed twice now. CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) first moved this
+repository's development pin to `forge-template==0.3.0`, whose production
+catalogue ships both `library` and `cli` — `--engine-preview` generates a
+real project, proven at the fast-suite level by
 `test_pipeline.py::test_build_generation_request_succeeds_against_the_real_catalogue`
 and `test_cli.py::test_new_engine_preview_generates_a_real_cli_application`.
-What remains missing is a *released, range-assigned* engine: `forge-template`
-publishes no installable range yet (it stays unassigned until
-[#9](https://github.com/Sandsy09/create-forge/issues/9)), and this pin is
-still a development-only tag, not a dependency an `e2e`-tier test could
-install the way it installs `forge-template`'s Copier template today. This
-gap is tracked as **CF-08.04**, under
-[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), blocked on
-[#9](https://github.com/Sandsy09/create-forge/issues/9) alone now that the
-catalogue is no longer empty.
+#9 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+then removed the second blocker: `forge-template` now publishes an
+installable, range-assigned `0.3.1` release to PyPI, and `create-forge[engine]`
+is an ordinary optional dependency an `e2e`-tier test *could* install, the
+same way it installs `forge-template`'s Copier template today.
+
+What remains is writing that coverage: an `e2e`-marked test that installs
+`create-forge[engine]`, drives `new --engine-preview` for real, and runs the
+generated project's own checks, plus the "unsupported combination makes no
+final writes" proof against the released range rather than a development
+pin. That work is **CF-08.04**, under
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39) — now
+unblocked, not yet done.
 
 ## Running it
 

@@ -1,14 +1,15 @@
 """`engine.py` -- protocol negotiation, parsing, validation, and error text.
 
-Exercises the real `forge_template` package (the `engine` dev-group
-dependency, present by default per `[tool.uv] default-groups = ["dev"]").
-This is deliberately not network-marked: the dependency was already resolved
-at `uv sync` time from a pinned tag, so importing it here makes no network
+Exercises the real `forge_template` package -- the `engine` optional extra
+(ADR 0018), present when `uv sync --all-extras` was used to set up this
+checkout. This is deliberately not network-marked: the dependency was
+already resolved at `uv sync` time, so importing it here makes no network
 call of its own.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,7 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
-    package_version: str = "0.3.0",
+    package_version: str = "0.3.1",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -49,24 +50,33 @@ def _engine_info(
 
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
-    """No exception -- the installed 0.3.0 engine and this CLI both speak
-    ProjectSpec protocol 1 today.
+    """No exception -- the installed engine falls within the supported
+    `forge-template>=0.3.1,<0.4` range and both sides speak ProjectSpec
+    protocol 1.
     """
     engine.negotiate_protocol()
 
 
-def test_negotiate_protocol_rejects_an_untested_package_version(
+@pytest.mark.parametrize(
+    "package_version",
+    [
+        "0.3.0",  # below the lower bound
+        "0.4.0",  # at the excluded upper bound
+    ],
+)
+def test_negotiate_protocol_rejects_a_package_outside_the_supported_range(
     monkeypatch: pytest.MonkeyPatch,
+    package_version: str,
 ) -> None:
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _engine_info(package_version="0.3.1"),
+        lambda: _engine_info(package_version=package_version),
     )
 
     with pytest.raises(
         engine.EngineCompatibilityError,
-        match=r"0\.3\.1.*tested only with forge-template 0\.3\.0",
+        match=rf"{re.escape(package_version)}.*supports forge-template>=0\.3\.1,<0\.4",
     ):
         engine.negotiate_protocol()
 
@@ -78,7 +88,7 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.3.0",
+            package_version="0.3.1",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -89,7 +99,9 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
 
 
 def test_discover_returns_the_real_production_catalogue() -> None:
-    """`forge-template` 0.3.0 ships both reference archetypes (CF-08.02)."""
+    """The installed `forge-template` release ships both reference
+    archetypes (CF-08.02).
+    """
     discovered = {component.id: component for component in engine.discover()}
 
     assert {"library", "cli"} <= discovered.keys()
@@ -205,7 +217,7 @@ def test_discover_rejects_incompatible_protocols_before_catalogue_access(
         engine.discover()
 
     assert discovered is False
-    assert "forge-template 0.3.0" in str(excinfo.value)
+    assert "forge-template 0.3.1" in str(excinfo.value)
 
 
 def test_discover_propagates_structured_engine_failure_without_fallback(
@@ -250,13 +262,13 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.3.0",
+            package_version="0.3.1",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
     )
 
-    with pytest.raises(engine.EngineCompatibilityError):
+    with pytest.raises(engine.EngineCompatibilityError, match="protocol"):
         engine.build_project_spec({"this": "is not even a valid shape"})
 
 
@@ -323,7 +335,7 @@ def test_map_legacy_library_options_negotiates_first(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _engine_info(package_version="0.3.1"),
+        lambda: _engine_info(package_version="0.4.0"),
     )
 
     with pytest.raises(engine.EngineCompatibilityError):

@@ -16,11 +16,14 @@ reachable today only via the hidden `new --engine-preview` flag
 filesystem staging and finalisation -- see the canonical
 [filesystem generation contract](filesystem-generation.md). The default `new`
 path continues to use the bundled registry and direct-Copier integration
-unchanged; the atomic cutover away from it remains blocked on
-[#9](https://github.com/Sandsy09/create-forge/issues/9).
+unchanged; the atomic cutover away from it remains a future, unfiled
+decision, now that [#9](https://github.com/Sandsy09/create-forge/issues/9)
+has resolved the narrower question of an installable engine range.
 
-The development-only `forge-template` dependency is pinned to `0.3.0`
-(CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)), whose
+The `forge-template` dependency -- the optional `engine` extra since #9
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
+is range-bound to `>=0.3.1,<0.4` (CF-08.02,
+[ADR 0017](adr/0017-cli-application-archetype-exposure.md); ADR 0018), whose
 production catalogue ships both `library` and the optionless `cli` archetype
 -- real discovery now returns both descriptors. `pipeline.discover_archetypes()`
 filters the result to `kind == "archetype"` for
@@ -33,20 +36,21 @@ filters the result to `kind == "archetype"` for
 `engine.discover()` performs these operations in order:
 
 1. call the public `forge_template.get_engine_info()` facade once;
-2. require exact development package version `0.3.0`;
+2. require the installed package version to fall within
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.3.1,<0.4`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
-   `create_forge.engine.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
+   `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and
-   `create_forge.engine.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2)` as
+   `create_forge.compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2)` as
    of CF-08.02, since the `library`/`cli` manifests this pair discovers are
    protocol-2); and
 5. call the public `forge_template.discover_components()` facade.
 
-An untested package or either disjoint protocol set raises
+A package outside the range, or either disjoint protocol set, raises
 `EngineCompatibilityError` before the engine scans its catalogue. The message
-names the detected engine package version and the exact development version or
-detected/supported protocol sets. No released engine range is checked: the
-dependency remains a development-only tag pin, as distinguished by the
+names the detected engine package version and the supported range or
+detected/supported protocol sets -- checked with
+`packaging.specifiers.SpecifierSet`, as distinguished by the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 ## Descriptor ownership
@@ -84,8 +88,9 @@ engine internals to obtain them.
 
 ## What changes next
 
-- **CF-06.03** proves discovery, ProjectSpec validation, fail-closed rendering,
-  and the exact development package/protocol pair across repositories.
+- **CF-06.03** proves discovery, ProjectSpec validation, and fail-closed
+  rendering across repositories, first against an exact development
+  package/protocol pair.
 - **CF-07.01** makes this adapter reachable from the shared pipeline via the
   hidden `new --engine-preview` flag (ADR 0014).
 - **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) gives
@@ -94,12 +99,16 @@ engine internals to obtain them.
   `0.3.0`; **FT-08.04** added the independent optionless `cli` manifest in
   the same release. **CF-08.02**
   ([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved this
-  adapter's exact pin to `0.3.0` and added the discovery-driven selection
-  layer described above, so `--engine-preview` now discovers and chooses
-  between both real production descriptors. The atomic cutover that replaces
-  the v0.1.x registry seam and `--engine-preview` together still waits on
-  [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
-  distribution channel.
+  adapter's development pin to `0.3.0` and added the discovery-driven
+  selection layer described above, so `--engine-preview` now discovers and
+  chooses between both real production descriptors.
+- **#9** ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+  replaced that development pin with the first released, range-bound
+  dependency -- `forge-template>=0.3.1,<0.4` as the optional `engine`
+  extra -- so this adapter now checks a real installable range rather than
+  an exact development version. The atomic cutover that replaces the
+  v0.1.x registry seam and `--engine-preview` together with the engine as
+  the default path remains a future, unfiled decision.
 
 ## Executable examples
 

@@ -1,9 +1,10 @@
-"""Executable create-forge/forge-template Stage 06 development contract.
+"""Executable create-forge/forge-template engine contract (ADR 0018).
 
-The normal suite exercises the immutable Git dependency from ``uv.lock``.
-The sibling-checkout command in ``docs/cross-repository-workflow.md`` installs
-both working trees in isolation and runs this same file against pending local
-changes without exposing forge-template's private fixture-catalogue seam.
+The normal suite exercises the released `forge-template>=0.3.1,<0.4` range
+resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
+``docs/cross-repository-workflow.md`` installs both working trees in
+isolation and runs this same file against pending local changes without
+exposing forge-template's private fixture-catalogue seam.
 """
 
 from __future__ import annotations
@@ -23,8 +24,10 @@ from forge_template import (
     get_engine_info,
     validate_rendered_project,
 )
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
 
-from create_forge import engine
+from create_forge import compat, engine
 from create_forge.spec import build_spec_payload
 
 _VALID_ANSWERS = {
@@ -46,7 +49,7 @@ def _spec() -> ProjectSpec:
 
 def _info(
     *,
-    package_version: str = "0.3.0",
+    package_version: str = "0.3.1",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -57,13 +60,16 @@ def _info(
     )
 
 
-def test_real_engine_matches_the_exact_development_contract() -> None:
+def test_real_engine_matches_the_supported_range() -> None:
+    """ADR 0018: the installed engine must fall within the declared,
+    released range -- not the exact-pin equality Stage 06's development
+    contract used before a real release existed."""
     info = get_engine_info()
 
-    assert info.package_version == engine.TESTED_ENGINE_PACKAGE_VERSION == "0.3.0"
-    assert set(info.projectspec_protocols) & set(engine.SUPPORTED_PROJECTSPEC_PROTOCOLS)
+    assert Version(info.package_version) in SpecifierSet(compat.SUPPORTED_ENGINE_RANGE)
+    assert set(info.projectspec_protocols) & set(compat.SUPPORTED_PROJECTSPEC_PROTOCOLS)
     assert set(info.component_manifest_protocols) & set(
-        engine.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS
+        compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS
     )
     assert _spec().protocol_version == 1
     discovered = {component.id for component in engine.discover()}
@@ -86,7 +92,7 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _info(package_version="0.3.1"),
+        lambda: _info(package_version="0.4.0"),
     )
     monkeypatch.setattr(engine, "_parse_project_spec", unexpected("parse"))
     monkeypatch.setattr(engine, "_discover_components", unexpected("discover"))
@@ -102,7 +108,7 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     for operation in operations:
         with pytest.raises(
             engine.EngineCompatibilityError,
-            match=r"0\.3\.1.*tested only with forge-template 0\.3\.0",
+            match=r"0\.4\.0.*supports forge-template>=0\.3\.1,<0\.4",
         ):
             operation()
 

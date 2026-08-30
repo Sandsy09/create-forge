@@ -10,7 +10,7 @@ decision this document keeps current.
 `src/create_forge/staging.py` is the one module both generation paths share.
 It is deliberately engine-free — it imports nothing from `forge_template`,
 not even under `TYPE_CHECKING` — so it ships in the wheel and runs in the
-fast test suite with no `engine` dependency group installed.
+fast test suite with no `engine` extra installed.
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
 `_SHIPPED_MODULES` guard enforces this the same way it enforces
 `engine.py`'s import boundary.
