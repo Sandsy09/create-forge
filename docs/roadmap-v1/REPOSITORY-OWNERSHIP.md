@@ -4,9 +4,11 @@
 > accepted by [ADR 0010](../adr/0010-public-engine-integration-contract.md),
 > and strict ProjectSpec plus component manifest protocol v1 and the
 > [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
-> are now implemented by `forge-template`. Its production catalogue is empty,
-> and CLI construction remains unimplemented. The v0.1.x Copier/registry
-> ownership remains operational until the coordinated cutover.
+> are now implemented by `forge-template`. Its `0.3.0` main line contains the
+> production Library archetype; CLI Application is selected for FT-08.04 but
+> not yet implemented. This repository's exact `0.2.0` pair still has an empty
+> catalogue, and CLI construction remains unimplemented. The v0.1.x
+> Copier/registry ownership remains operational until the coordinated cutover.
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
 defines the component kinds and selection inputs referenced here. The
@@ -16,8 +18,11 @@ define the mandatory outcomes and concern-level boundary that this ownership
 model must preserve. The
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the distributable-package additions and implicit Foundation source
-that `forge-template` will implement in FT-08.02; `create-forge` owns only
-their future selection and ProjectSpec construction. The
+implemented by `forge-template` in FT-08.02. The
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+defines the future optionless `cli` component and derives its command from
+`ProjectSpec.project.repository_name`; `create-forge` owns only future
+selection and ProjectSpec construction for both archetypes. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines generated-project interpreter choices, defaults, and lifecycle in the
 repository that owns those outputs. The
@@ -70,6 +75,8 @@ It owns:
 - Foundation and archetype templates;
 - the Library archetype's package, manifest, option, and Foundation-extension
   contract;
+- the CLI Application archetype's identity, runtime shape, and future
+  package-bound implementation;
 - capability and platform components;
 - optional editor capabilities and their project-scoped contributions;
 - profile and organisation-policy selection inputs;

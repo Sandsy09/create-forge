@@ -62,10 +62,11 @@ clone:
 
 `--engine-preview` cannot be exercised end-to-end today: `forge-template`
 publishes no `0.2.x` release (the runtime dependency range stays unassigned
-until [#9](https://github.com/Sandsy09/create-forge/issues/9)), and its
-production catalogue is empty until
-[FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41)
-lands the Library archetype there. `--engine-preview` fails deterministically
+until [#9](https://github.com/Sandsy09/create-forge/issues/9)), and this
+repository's exact `0.2.0` development pair retains its empty production
+catalogue. FT-08.02 has landed Library on `forge-template/main` at `0.3.0`, but
+the dependency cutover and released compatibility range have not followed.
+`--engine-preview` therefore fails deterministically
 at `validate()` before any write, already proven by
 `test_pipeline.py::test_build_generation_request_fails_closed_against_the_empty_catalogue`
 and `test_cli.py::test_new_engine_preview_fails_closed_against_the_empty_catalogue` —

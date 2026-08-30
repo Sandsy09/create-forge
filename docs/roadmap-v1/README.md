@@ -12,8 +12,13 @@ define the mandatory generated-project outcomes, while the
 [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
 defines which concerns may belong in that baseline. The
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the first production archetype and the protocol/API migration
-FT-08.02 must implement without changing this repository's current CLI. The
+defines the first production archetype now implemented on
+`forge-template/main` at `0.3.0`. The
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+selects the engine-owned, optionless `cli` archetype and derives its command
+from `ProjectSpec.project.repository_name`; FT-08.04 owns implementation.
+Neither contract changes this repository's current CLI, exact `0.2.0`
+development pair, or unassigned released engine range. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines the generated-project CPython window, defaults, and release lifecycle.
 The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
@@ -56,8 +61,10 @@ and [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/003
 complete the `forge-template` side of Stage 07 by validating rendered output
 in memory. The shared stage remains open for `create-forge` CLI orchestration,
 filesystem safety, and end-to-end coverage.
-Its production catalogue is empty; Library's contract is accepted, while its
-production manifest and CLI discovery remain later coordinated work.
+`forge-template/main` now contains the Library production catalogue, while
+this repository's exact development pin still sees the earlier empty
+catalogue. CLI Application implementation and coordinated CLI discovery remain
+later work.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

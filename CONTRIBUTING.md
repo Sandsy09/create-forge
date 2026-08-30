@@ -128,11 +128,14 @@ responsibilities at the future cutover — the living
 today, behind `--engine-preview`.
 The canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the production `library` component and the manifest/option/planning
-migration FT-08.02 must implement. This repository keeps its exact `0.2.0`
-development pair, empty-catalogue expectation, and unassigned released engine
-range until that migration and the coordinated cutover are implemented and
-tested.
+defines the production `library` component now shipped by
+`forge-template/main` at `0.3.0`. The canonical
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+selects the optionless engine-owned `cli` archetype and derives its command
+from `ProjectSpec.project.repository_name`; FT-08.04 owns its implementation.
+This repository nevertheless keeps its exact `0.2.0` development pair,
+empty-catalogue expectation, and unassigned released engine range until the
+coordinated cutover is implemented and tested.
 Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), but
 this repository assigns no released dependency range until #9 resolves the

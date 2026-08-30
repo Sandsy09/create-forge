@@ -78,10 +78,15 @@ is accepted under
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 and [forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md)
-define the first future production component and the manifest/option/planning
-changes owned by FT-08.02. They do not change the exact development pair or
-make a released CLI line support the engine.
-The engine's `0.2.x` compatibility line currently has an empty production
+define the first production component now implemented on
+`forge-template/main` at `0.3.0`. The accepted
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+and [forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0034-select-cli-application-reference-archetype.md)
+select the optionless engine-owned `cli` archetype and derive its command from
+`ProjectSpec.project.repository_name`; FT-08.04 owns implementation. These
+changes do not alter the exact development pair or make a released CLI line
+support the engine.
+This repository's exact `0.2.0` development pair still has an empty production
 catalogue. The development boundary can construct ProjectSpec, discover,
 validate, render, and finalise a project to disk through the public facade;
 as of CF-07.01 this is reachable from a real command via the hidden
@@ -226,6 +231,11 @@ Run this before any release.
   [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
   defines engine-owned Library semantics; this CLI owns only selection,
   ProjectSpec construction, and orchestration at the future cutover.
+- The canonical
+  [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+  defines the future optionless `cli` component and derives its console name
+  from `ProjectSpec.project.repository_name`; do not duplicate those semantics
+  in the registry or CLI models.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

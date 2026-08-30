@@ -18,8 +18,12 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are implemented by the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
-The engine's production catalogue is empty, and CLI integration is not
-implemented. The released v0.1.x CLI remains a thin Copier
+`forge-template/main` now ships Library in its `0.3.0` catalogue and has
+selected the future
+[CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md),
+but this repository's exact `0.2.0` development pair still has an empty
+catalogue and CLI integration is not implemented. The released v0.1.x CLI
+remains a thin Copier
 wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
 Copier directly through `src/create_forge/runner.py`. [CF-06.01](https://github.com/Sandsy09/create-forge/issues/46)
 added a construction boundary — `src/create_forge/spec.py` and

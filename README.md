@@ -116,15 +116,20 @@ are now implemented behind the canonical
 ([ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md)).
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the first future production component and the Foundation integration
-FT-08.02 must implement; it does not change this CLI's current answers,
-registry, or engine dependency.
+defines the first production component, implemented on `forge-template/main`
+at `0.3.0`. The accepted
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+selects the optionless engine-owned `cli` archetype and derives its console
+command from `ProjectSpec.project.repository_name`; implementation remains
+[FT-08.04](https://github.com/Sandsy09/forge-template/issues/4). Neither change
+alters this CLI's current answers, registry, or exact engine dependency.
 The engine now also defines in-memory
 [generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 ([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
 before rendered output is returned. The current CLI does not yet consume that
 facade.
-Its production catalogue is empty, and the current registry and
+The exact `forge-template==0.2.0` development pair exercised by this repository
+still has an empty catalogue, and the current registry and
 `--template-url` behaviour remain unchanged until the complete, tested cutover
 is released — at which point
 `--engine-source`/`--engine-ref` (see the

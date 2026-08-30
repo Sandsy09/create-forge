@@ -21,7 +21,8 @@
 - [x] [**FT-06.07 — Expose stable template-engine API**](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md) —
   the `0.2.x` public facade is complete under
   [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md),
-  with an empty production catalogue until Stage 08.
+  with an empty production catalogue on that compatibility line; Library
+  arrived later on `forge-template/main` at `0.3.0`.
 
 The counterpart [forge-template epic #15](https://github.com/Sandsy09/forge-template/issues/15)
 is complete. The `create-forge` Stage 06 development contract is also complete:
@@ -50,8 +51,9 @@ engine is a development-only dependency pinned to a commit — `forge-template`
 `0.2.0` has no PEP 440 tag yet — so no engine range is assigned and
 `create-forge new` is unchanged. Catalogue validation is proven to fail
 closed against `forge-template`'s intentionally empty `0.2.0` production
-catalogue; that characterization is expected to flip once Stage 08 migrates
-the Library archetype. CF-06.02 adds `engine.discover()`, which checks both
+catalogue; that characterisation remains correct for the fixed development
+pair even though Stage 08 has since added Library to `forge-template/main` at
+`0.3.0`. CF-06.02 adds `engine.discover()`, which checks both
 ProjectSpec and component-manifest protocol compatibility before returning the
 engine's immutable descriptors unchanged. It deliberately has no registry
 fallback and remains unreachable from the CLI until CF-07.01. CF-06.03 pins
