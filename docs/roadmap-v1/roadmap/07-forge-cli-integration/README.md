@@ -60,9 +60,15 @@ the *public engine* against a *released* engine-and-assets unit -- because
 neither exists yet: `forge-template` has no `0.2.x` release and its
 production catalogue stays empty until
 [FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41).
-Those two criteria carry forward verbatim to **CF-08.04**, filed under
+Those two criteria carried forward verbatim to **CF-08.04**, filed under
 [CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39) and blocked
-on the same two things. See the canonical
+on the same two things at the time. Both blockers have since resolved --
+[FT-08.02 / forge-template#41](https://github.com/Sandsy09/forge-template/issues/41)
+shipped the production catalogue, and
+[#9](https://github.com/Sandsy09/create-forge/issues/9) published a released
+engine range -- and CF-08.04 is complete
+([ADR 0020](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0020-engine-path-end-to-end-tests.md)).
+See the canonical
 [end-to-end tests contract](https://github.com/Sandsy09/create-forge/blob/main/docs/end-to-end-tests.md).
 The atomic cutover that replaces both the v0.1.x registry seam and
 `--engine-preview` stays gated on

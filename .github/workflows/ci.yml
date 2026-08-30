@@ -153,22 +153,28 @@ jobs:
         run: uv run pytest -m network
 
   # ---------------------------------------------------------------------------
-  # Everything marked @pytest.mark.e2e (CF-07.06, ADR 0016): the real
-  # `create-forge` console script against forge-template's latest released
-  # tag, its post-generation `_tasks` (git init, uv sync, pre-commit
-  # install), and the generated project's own `uv run poe check`. A
-  # distinct job and marker from `network` above -- this is dramatically
-  # slower (minutes, not seconds) and must stay separable from the drift
-  # guard. Git identity is supplied per-subprocess by the tests themselves,
-  # so no runner-level git config step is needed here. Skips (not fails) if
-  # GitHub is unreachable, and also runs on the Monday cron alongside
-  # `network` for the same reason.
+  # Everything marked @pytest.mark.e2e: the real `create-forge` console
+  # script against both generation paths, and each generated project's own
+  # `uv run poe check`. A distinct job and marker from `network` above --
+  # this is dramatically slower (minutes, not seconds) and must stay
+  # separable from the drift guard. Git identity is supplied per-subprocess
+  # by the tests themselves, so no runner-level git config step is needed
+  # here. Skips (not fails) if GitHub is unreachable, and also runs on the
+  # Monday cron alongside `network` for the same reason.
+  #
+  # Two suites: `test_e2e_generation.py` (CF-07.06, ADR 0016) is the Copier
+  # path -- forge-template's latest released tag, its post-generation
+  # `_tasks` (git init, uv sync, pre-commit install). `test_e2e_engine_generation.py`
+  # (CF-08.04, ADR 0020) is the public-engine path via `--engine-preview` --
+  # both archetypes, plus a real released-install compatibility boundary
+  # (an out-of-range engine, and no engine extra at all), each rejected with
+  # nothing written.
   # ---------------------------------------------------------------------------
   e2e:
     name: End-to-end generation
     runs-on: ubuntu-latest
     needs: lint
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 

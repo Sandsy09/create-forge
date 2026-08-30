@@ -39,15 +39,17 @@
   descriptor rather than a hardcoded archetype id. The engine path's
   Library-shaped prompt set was recorded, not fixed, and tracked by
   [create-forge#91](https://github.com/Sandsy09/create-forge/issues/91).
-- [**CF-08.04 — Extend end-to-end generation to the public engine**](https://github.com/Sandsy09/create-forge/issues/85)
-  — successor to [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51).
-  Its production-catalogue acceptance criterion is met by CF-08.02; its
-  released-range criterion is now also met — standalone
-  [#9](https://github.com/Sandsy09/create-forge/issues/9)
-  ([ADR 0018](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
-  publishes `forge-template>=0.3.1,<0.4` to PyPI as create-forge's `engine`
-  extra. CF-08.04 is unblocked; its own end-to-end coverage is not yet
-  started.
+- ~~**CF-08.04 — Extend end-to-end generation to the public engine**~~ —
+  complete via
+  [ADR 0020](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0020-engine-path-end-to-end-tests.md)
+  and [create-forge#85](https://github.com/Sandsy09/create-forge/issues/85),
+  successor to [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51).
+  `tests/test_e2e_engine_generation.py` generates both archetypes through
+  `--engine-preview` against the real installed engine, runs each generated
+  project's own checks, and proves the released-install compatibility
+  boundary (an out-of-range engine installed from a git tag, and no `engine`
+  extra at all) writes nothing. This closes
+  [CF-EPIC-08 / #39](https://github.com/Sandsy09/create-forge/issues/39).
 
 The Library decision records the legacy answer mapping into
 `component_options.library.packaging_mode`; CF-08.02 wires it on the engine
@@ -57,9 +59,19 @@ engine-owned ID `cli`, has no component options, and derives its console
 command from `ProjectSpec.project.repository_name`; FT-08.04 implemented it
 and create-forge #10 exposes it, both landing in this stage.
 
+All four `create-forge`-repo-local issues (CF-08.01 through CF-08.04) are
+complete, and CF-EPIC-08 / #39 is closed. This stage's `forge-template`-side
+item, FT-08.05 ("Run composition architecture review"), remains open
+independently in that repository -- Stage 08 as a whole stays open on this
+document until it closes too.
+
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [ ] Repo-local issues are complete or explicitly deferred. -- true for
+  `create-forge` (CF-08.01 through CF-08.04); `forge-template`'s FT-08.05 is
+  still open.
+- [x] Cross-repository blockers are resolved. -- #9/ADR 0018 was the last one.
+- [x] Public contracts changed by this stage are documented/versioned --
+  ADR 0017, ADR 0019, ADR 0020, and the canonical docs they reference.
+- [x] No implementation concern is duplicated across repositories -- CF-08.03
+  (ADR 0019) confirmed this directly.

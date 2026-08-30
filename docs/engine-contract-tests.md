@@ -80,15 +80,18 @@ fixture-catalogue seam or its own
 [`tests/test_composition_contract.py`](https://github.com/Sandsy09/forge-template/blob/main/tests/test_composition_contract.py)
 goldens; this contract proves the public facade only.
 
-This installable, range-assigned engine is what closes
+This installable, range-assigned engine is what closed
 [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51)'s
-[end-to-end suite](end-to-end-tests.md)'s engine-path blocker: CF-08.04, under
-[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), can now be
-attempted against `create-forge[engine]` rather than remaining blocked on #9.
-That end-to-end coverage is CF-08.04's own work, not this contract's --
-this file proves the public facade compiles and negotiates correctly, not
-that the console script's `--engine-preview` path is exercised end to end in
-CI.
+[end-to-end suite](end-to-end-tests.md)'s engine-path blocker:
+[CF-08.04 / #85](https://github.com/Sandsy09/create-forge/issues/85), under
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), wrote that
+coverage against `create-forge[engine]` --
+[`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py)
+(ADR 0020) drives the real `create-forge` console script's `--engine-preview`
+path in CI, generating both archetypes and proving the same package-range
+boundary this contract proves in-process. This file still proves the public
+facade compiles and negotiates correctly in isolation, distinct from -- and a
+cheaper complement to -- that end-to-end coverage.
 
 ## Validate a sibling checkout
 

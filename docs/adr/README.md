@@ -22,6 +22,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0017 — Expose the CLI Application archetype through discovery-driven selection](0017-cli-application-archetype-exposure.md)
 - [0018 — Publish to PyPI and assign the first bounded engine range](0018-pypi-distribution-and-the-first-engine-range.md)
 - [0019 — CLI archetype-parity review](0019-cli-archetype-parity-review.md)
+- [0020 — Test the public engine path end to end](0020-engine-path-end-to-end-tests.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.
