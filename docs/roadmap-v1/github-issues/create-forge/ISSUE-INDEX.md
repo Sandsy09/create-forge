@@ -2,7 +2,7 @@
 
 This is the live repository-local index for the Forge Foundation roadmap,
 reconciled against the v0.1.0 baseline, filed on GitHub on 2026-08-23, and
-updated through #52 on 2026-08-30. GitHub issue bodies are the source of
+updated through #85 on 2026-08-31. GitHub issue bodies are the source of
 truth for open work; completed baseline items were not backfilled as closed
 issues.
 
@@ -34,11 +34,11 @@ issues.
 | CF-07.03 | Existing `--yes`/`--data` flow and tests | Complete before roadmap | — | — | — |
 | CF-07.04 | [#50](https://github.com/Sandsy09/create-forge/issues/50) and [ADR 0015](../../../adr/0015-staged-filesystem-generation.md) | Complete | [#38](https://github.com/Sandsy09/create-forge/issues/38) | [#49](https://github.com/Sandsy09/create-forge/issues/49) (complete), [FT-06.07](https://github.com/Sandsy09/forge-template/issues/38) (complete) | CLI Scaffolding — Stage 07 |
 | CF-07.06 | [#51](https://github.com/Sandsy09/create-forge/issues/51) and [ADR 0016](../../../adr/0016-end-to-end-reference-client-tests.md) | Complete | [#38](https://github.com/Sandsy09/create-forge/issues/38) | [#49](https://github.com/Sandsy09/create-forge/issues/49) (complete), [#50](https://github.com/Sandsy09/create-forge/issues/50) (complete), [FT-06.07](https://github.com/Sandsy09/forge-template/issues/38) (complete), [FT-07.05](https://github.com/Sandsy09/forge-template/issues/39) (complete) | CLI Scaffolding — Stage 07 |
-| CF-EPIC-08 | [#39](https://github.com/Sandsy09/create-forge/issues/39) | Blocked | — | — | Reference Archetypes — Stage 08 |
+| CF-EPIC-08 | [#39](https://github.com/Sandsy09/create-forge/issues/39) | Complete | — | — | Reference Archetypes — Stage 08 |
 | CF-08.01 | Existing Library registry/prompt support and the canonical [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md) | Complete before roadmap | — | — | — |
 | CF-08.02 | [#10](https://github.com/Sandsy09/create-forge/issues/10) and [ADR 0017](../../../adr/0017-cli-application-archetype-exposure.md) | Complete | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#47](https://github.com/Sandsy09/create-forge/issues/47) (complete), [forge-template#4](https://github.com/Sandsy09/forge-template/issues/4) (complete) | Reference Archetypes — Stage 08 |
 | CF-08.03 | [#52](https://github.com/Sandsy09/create-forge/issues/52) and [ADR 0019](../../../adr/0019-cli-archetype-parity-review.md) | Complete | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#10](https://github.com/Sandsy09/create-forge/issues/10) (complete) | Reference Archetypes — Stage 08 |
-| CF-08.04 | [#85](https://github.com/Sandsy09/create-forge/issues/85) | Blocked | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#51](https://github.com/Sandsy09/create-forge/issues/51) (complete), [forge-template#41](https://github.com/Sandsy09/forge-template/issues/41) (complete), [#9](https://github.com/Sandsy09/create-forge/issues/9) (complete) | Reference Archetypes — Stage 08 |
+| CF-08.04 | [#85](https://github.com/Sandsy09/create-forge/issues/85) and [ADR 0020](../../../adr/0020-engine-path-end-to-end-tests.md) | Complete | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#51](https://github.com/Sandsy09/create-forge/issues/51) (complete), [forge-template#41](https://github.com/Sandsy09/forge-template/issues/41) (complete), [#9](https://github.com/Sandsy09/create-forge/issues/9) (complete) | Reference Archetypes — Stage 08 |
 | CF-EPIC-09 | [#40](https://github.com/Sandsy09/create-forge/issues/40) | Blocked | — | — | Blueprint Compatibility — Stage 09 |
 | CF-09.01 | [#53](https://github.com/Sandsy09/create-forge/issues/53) | Blocked | [#40](https://github.com/Sandsy09/create-forge/issues/40) | [#46](https://github.com/Sandsy09/create-forge/issues/46) (complete), [FT-09.01](https://github.com/Sandsy09/forge-template/issues/44) | Blueprint Compatibility — Stage 09 |
 | CF-09.02 | [#54](https://github.com/Sandsy09/create-forge/issues/54) | Blocked | [#40](https://github.com/Sandsy09/create-forge/issues/40) | [#53](https://github.com/Sandsy09/create-forge/issues/53), [FT-09.02](https://github.com/Sandsy09/forge-template/issues/45), [FT-09.04](https://github.com/Sandsy09/forge-template/issues/47) | Blueprint Compatibility — Stage 09 |

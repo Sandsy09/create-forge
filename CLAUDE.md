@@ -136,12 +136,7 @@ completes that flag with real staging and finalisation via `staging.py`.
 CF-07.06 ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md))
 closes Stage 07 with real, CI-enforced coverage of the Copier path — the real
 console script, its `_tasks`, and the generated project's own checks — see
-the canonical [end-to-end tests contract](docs/end-to-end-tests.md). The
-engine path still has no CI-enforced end-to-end coverage, tracked as
-CF-08.04: `--engine-preview` can generate for real since CF-08.02, and #9/
-ADR 0018 cleared its last native blocker by publishing a released,
-range-assigned engine — CF-08.04's own end-to-end coverage is separate,
-not-yet-started work.
+the canonical [end-to-end tests contract](docs/end-to-end-tests.md).
 CF-08.03 ([ADR 0019](docs/adr/0019-cli-archetype-parity-review.md)) reviewed
 both archetypes for parity: the shared ProjectSpec/pipeline construction path
 and engine-owned discovery hold generically, and the one archetype-specific
@@ -152,8 +147,16 @@ descriptor rather than a hardcoded id. That review also found, and left
 unfixed, that `--engine-preview` still prompts from the Copier registry's
 Library-shaped questions regardless of archetype — tracked by
 [#91](https://github.com/Sandsy09/create-forge/issues/91), since fixing it
-changes documented `--engine-preview` prompt-flow behaviour. Stage 08's only
-remaining open item is CF-08.04.
+changes documented `--engine-preview` prompt-flow behaviour.
+CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
+CF-EPIC-08's last open child issue: the engine path now has the same real,
+CI-enforced end-to-end coverage the Copier path already had — both
+archetypes generated through `--engine-preview` against the real installed
+engine, each project's own checks run, and a real released-install
+compatibility boundary (an out-of-range engine, and no engine extra at all)
+proven to write nothing. This repository's own Stage 08 work is complete;
+`forge-template`'s FT-08.05 composition architecture review remains open
+independently, tracked in that repository.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -260,9 +263,9 @@ Run this before any release.
   cleanup rules implemented by `staging.py` and used by both `runner.py` and
   `pipeline.py`.
 - The canonical [end-to-end tests contract](docs/end-to-end-tests.md) defines
-  the fast/`network`/`e2e` test-tier split, what the real console script is
-  proven to do against a released template, and the engine-path gap tracked
-  as CF-08.04.
+  the fast/`network`/`e2e` test-tier split and what the real console script
+  is proven to do, against a released template on the Copier path and the
+  real installed engine on the engine path (CF-08.04, ADR 0020).
 - The canonical
   [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
   defines engine-owned Library semantics; this CLI owns only selection,

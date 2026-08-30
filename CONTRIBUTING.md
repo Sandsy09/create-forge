@@ -175,9 +175,7 @@ authoritative until the coordinated CLI cutover.
 [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
 [end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
 real, CI-enforced coverage of that default `new` path against a released
-template — the engine path still has no CI-enforced end-to-end coverage;
-ADR 0018 cleared its last native blocker (a released, range-assigned engine
-to install), but writing that coverage is CF-08.04's own separate work.
+template.
 CF-08.03 ([ADR 0019](docs/adr/0019-cli-archetype-parity-review.md)) reviewed
 both archetypes for parity, confirmed the shared construction path and
 engine-owned discovery hold, and generalised the legacy `library` option
@@ -188,6 +186,15 @@ the current form. It also recorded, without fixing,
 [#91](https://github.com/Sandsy09/create-forge/issues/91): the engine path's
 prompt set is still the Copier registry's Library-shaped questions
 regardless of archetype.
+CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
+the gap ADR 0016 left open: the engine path now has its own CI-enforced
+`e2e`-marked coverage --
+[`tests/test_e2e_engine_generation.py`](tests/test_e2e_engine_generation.py)
+generates both archetypes through `--engine-preview` against the real
+installed engine, runs each generated project's own checks, and proves the
+released-install compatibility boundary (an out-of-range engine, and no
+`engine` extra at all) writes nothing -- closing
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39).
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 and the living [engine resolution contract](docs/engine-resolution.md)
 define how that engine is sourced, overridden locally, diagnosed, and
