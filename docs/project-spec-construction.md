@@ -136,37 +136,40 @@ registry prompt (see [`docs/cli-conventions.md`](cli-conventions.md)).
 
 ## Protocol negotiation and exit status 3
 
-`engine.negotiate_protocol()` compares `create_forge.engine.SUPPORTED_PROJECTSPEC_PROTOCOLS`
+`engine.negotiate_protocol()` compares `compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`
 — what this CLI release has implemented against — with the installed
 engine's `get_engine_info().projectspec_protocols`. A disjoint set raises
 `EngineCompatibilityError`, carrying the meaning
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md) reserved for
 exit status `3`. Negotiation runs before parsing, so before any side effect.
+`SUPPORTED_PROJECTSPEC_PROTOCOLS` lives in `src/create_forge/compat.py`, not
+`engine.py` — it moved there with ADR 0018 so `cli.py`'s `doctor` can report
+it without importing the engine; `engine.py` imports it from `compat.py` like
+everything else there.
 
-Before that protocol comparison, the development adapter requires exact
-package version `0.3.0`. This is the development contract CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved to, not a
-released package range; see the
+Before that protocol comparison, `engine._require_supported_package` checks
+the installed package version against `compat.SUPPORTED_ENGINE_RANGE`
+(`forge-template>=0.3.1,<0.4`) with `packaging.specifiers.SpecifierSet` — a
+real, released, bounded range as of #9
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)), not
+the exact-equality development pin `0.3.0` that preceded it; see the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 This is reachable from a real command as of CF-07.01, but only behind
 `new --engine-preview` — see [ADR 0014](adr/0014-lazy-engine-reachability.md).
 `docs/cli-conventions.md`'s exit-status table reflects this precisely.
 
-No bounded runtime engine range is checked yet. The exact development version
-guard is replaced by the installable lower/upper range only at the atomic
-cutover described by
-[`docs/engine-resolution.md`](engine-resolution.md#assigning-the-first-engine-range).
-
 ## Validation
 
 `engine.validate()` calls `forge_template.validate_project_spec` against the
-installed component catalogue. `forge-template` `0.3.0`'s production
-catalogue ships both `library` and `cli` at the exact pinned tag, so
-validating either archetype selection now succeeds.
+installed component catalogue. `forge-template`'s production catalogue
+(released at `0.3.0` and unchanged in substance through the `0.3.1`
+packaging patch #9 assigns as the installable lower bound) ships both
+`library` and `cli`, so validating either archetype selection succeeds.
 [`tests/test_engine_adapter.py::test_validate_succeeds_against_the_real_production_catalogue`](../tests/test_engine_adapter.py)
-characterizes this outcome for the pinned pair, replacing the Stage 06-era
-empty-catalogue characterization its own docstring anticipated retiring.
+characterizes this outcome against the real installed engine, replacing the
+Stage 06-era empty-catalogue characterization its own docstring anticipated
+retiring.
 
 ## Error presentation
 
@@ -246,7 +249,7 @@ by
 - [`tests/test_spec.py`](../tests/test_spec.py) — derivation, `--data`
   overrides, field omission, Python-bound fallback, legacy Library answer
   resolution, and interactive/non-interactive parity, entirely without the
-  `engine` dependency group.
+  optional `engine` extra installed.
 - [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) —
   protocol negotiation (including the compatible real engine and a
   monkeypatched incompatible one), parsing, structured error translation, the

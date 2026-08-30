@@ -2,7 +2,7 @@
 
 This is the one internal generation path CF-07.01 introduces (ADR 0014).
 It depends on `create_forge.engine` -- and therefore, transitively, on the
-development-only `forge-template` dependency -- but its own source never
+optional `forge-template` engine extra (ADR 0018) -- but its own source never
 imports `forge_template` directly: type annotations that need engine-owned
 types import them only under `TYPE_CHECKING`, so this module's runtime
 behaviour never requires the engine to be *type-checkable*, only to be
@@ -12,8 +12,8 @@ the only module whose source touches `forge_template` at runtime, per ADR
 
 `create_forge.cli` imports this module lazily, inside `--engine-preview`'s
 branch only, guarded by `try/except ImportError` -- see ADR 0014 for why:
-`forge-template` is not a runtime dependency of the released CLI, so no
-module reachable at `cli.py`'s own import time may depend on it.
+`forge-template` is not installed by a plain `pip install create-forge`, so
+no module reachable at `cli.py`'s own import time may depend on it.
 """
 
 from __future__ import annotations

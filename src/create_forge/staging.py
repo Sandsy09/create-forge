@@ -2,8 +2,8 @@
 
 Deliberately engine-free: nothing here imports `forge_template`, not even
 under `TYPE_CHECKING`. That keeps this module in the wheel and in the fast
-test suite with no `engine` dependency group installed, and lets it serve
-both `runner.scaffold()` (Copier writes straight to the destination; this
+test suite with no optional `engine` extra (ADR 0018) installed, and lets it
+serve both `runner.scaffold()` (Copier writes straight to the destination; this
 module only cleans up after a failure) and `pipeline.finalise_generation_request()`
 (the engine path; this module stages and atomically finalises). See
 [ADR 0015](../../docs/adr/0015-staged-filesystem-generation.md) and the

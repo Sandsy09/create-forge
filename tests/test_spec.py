@@ -1,9 +1,9 @@
 """`spec.build_spec_payload` -- derivation, overrides, omission, and parity.
 
 No engine import here: `spec.py` must stay importable and testable without
-the `engine` dependency group installed, so these tests exercise only the
-wire-payload shape, never `forge_template.ProjectSpec` itself. That real
-parse is `tests/test_engine_adapter.py`'s job.
+the optional `engine` extra (ADR 0018) installed, so these tests exercise
+only the wire-payload shape, never `forge_template.ProjectSpec` itself. That
+real parse is `tests/test_engine_adapter.py`'s job.
 """
 
 from __future__ import annotations

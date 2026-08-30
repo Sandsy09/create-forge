@@ -253,7 +253,7 @@ Run this before any release.
   defines protocol negotiation before catalogue access, descriptor ownership,
   and the no-fallback trust boundary implemented by `engine.py`.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
-  define the exact development package/protocol pair, public-facade coverage,
+  define the supported package/protocol range, public-facade coverage,
   production-catalogue rendering boundary, and sibling-checkout command.
 - The canonical [filesystem generation contract](docs/filesystem-generation.md)
   defines destination-conflict, staging, target-safety, finalisation, and

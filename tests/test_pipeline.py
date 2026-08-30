@@ -3,9 +3,9 @@ orchestration order, staging/finalisation (ADR 0015), legacy Library option
 derivation (CF-08.02), and the real, end-to-end success against
 `forge-template`'s production catalogue.
 
-Exercises the real `forge_template` package (the `engine` dev-group
-dependency, present by default per `[tool.uv] default-groups = ["dev"]`),
-mirroring `tests/test_engine_adapter.py`'s style.
+Exercises the real `forge_template` package -- the `engine` optional extra
+(ADR 0018), present when `uv sync --all-extras` was used to set up this
+checkout -- mirroring `tests/test_engine_adapter.py`'s style.
 """
 
 from __future__ import annotations
