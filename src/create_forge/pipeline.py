@@ -57,24 +57,44 @@ def _resolved_component_options(
     answers: Mapping[str, object],
     archetype: str,
     component_options: Mapping[str, Mapping[str, object]] | None,
+    descriptors: Sequence[ComponentDescriptor],
 ) -> Mapping[str, Mapping[str, object]] | None:
     """Derive `component_options` when the caller supplied none.
 
-    The one archetype-specific branch in this codebase (CF-08.02): `library`
-    predates the engine, so its legacy `build_backend`/`versioning`
-    answers need translating into the production `packaging_mode` option or
-    a user's choice silently reverts to the engine's own default. `cli` has
-    no options and needs no translation -- every other archetype passes
-    through unchanged, keyed on the engine's own
-    `map_legacy_library_answers` naming rather than on a local archetype
-    list, so this does not grow into a per-archetype registry here.
+    `library` predates the engine, so its legacy `build_backend`/`versioning`
+    answers need translating into the production `packaging_mode` option or a
+    user's choice silently reverts to the engine's own default. CF-08.03's
+    archetype-parity review (ADR 0019) found this derivation keyed on a
+    hardcoded `archetype != "library"` check -- the one archetype-specific
+    branch in this codebase -- and generalised it: `engine.map_legacy_library_options`
+    already names the option it produces (`packaging_mode`), and the
+    selected archetype's own discovered `ComponentDescriptor.options` already
+    declares whether it accepts that name. Applying the mapping only when the
+    descriptor declares it needs no archetype id anywhere in this function,
+    so a future archetype that also wants the legacy mapping (or `library`
+    itself being renamed) needs no change here -- only in the engine's own
+    manifest.
+
+    The descriptor lookup runs before the mapping call, not after: an
+    archetype that declares no options at all (`cli`) never needs
+    `engine.map_legacy_library_options` invoked on its behalf, matching the
+    old code's behaviour of never calling it for a non-`library` archetype.
     """
-    if component_options is not None or archetype != "library":
+    if component_options is not None:
         return component_options
+    descriptor = next((d for d in descriptors if d.id == archetype), None)
+    if descriptor is None or not descriptor.options:
+        return None
     legacy = legacy_library_answers(answers)
     if legacy is None:
         return None
-    return {"library": engine.map_legacy_library_options(legacy)}
+    mapped = engine.map_legacy_library_options(legacy)
+    if not mapped:
+        return None
+    declared = {option.name for option in descriptor.options}
+    if not set(mapped) <= declared:
+        return None
+    return {archetype: mapped}
 
 
 def build_generation_request(
@@ -95,19 +115,20 @@ def build_generation_request(
     this pipeline mints no component identifiers of its own. An explicit
     `component_options` is likewise passed through unchanged; when the
     caller supplies none, `_resolved_component_options` derives the one
-    legacy mapping this repository still owns. `discover()` runs for its own
-    compatibility-ladder effect and to surface real descriptors to callers;
-    `discover_archetypes()` is what actually drives selection, from
-    `cli.py`.
+    legacy mapping this repository still owns, gated on the selected
+    archetype's own discovered descriptor rather than a hardcoded id
+    (CF-08.03, ADR 0019). `discover()`'s result is reused for exactly that
+    gate; `discover_archetypes()` is the separate, `kind`-filtered view that
+    actually drives selection, from `cli.py`.
 
     Every downstream call (`build_project_spec`, `validate`, `render`)
     independently re-checks package/protocol compatibility before doing its
     own work, so there is no side effect -- in-memory or otherwise -- before
     every check has passed.
     """
-    engine.discover()
+    descriptors = engine.discover()
     resolved_options = _resolved_component_options(
-        answers, archetype, component_options
+        answers, archetype, component_options, descriptors
     )
     payload = build_spec_payload(
         answers,
