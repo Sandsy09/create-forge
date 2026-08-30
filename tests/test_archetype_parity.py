@@ -63,11 +63,16 @@ def test_both_archetypes_build_the_same_projectspec_shape() -> None:
     for key in shared_keys:
         assert library_payload[key] == cli_payload[key]
 
-    assert library_payload["components"]["archetype"] == "library"
-    assert cli_payload["components"]["archetype"] == "cli"
-    for payload in (library_payload, cli_payload):
-        assert payload["components"]["capabilities"] == []
-        assert payload["components"]["platforms"] == []
+    assert library_payload["components"] == {
+        "archetype": "library",
+        "capabilities": [],
+        "platforms": [],
+    }
+    assert cli_payload["components"] == {
+        "archetype": "cli",
+        "capabilities": [],
+        "platforms": [],
+    }
 
 
 def test_both_archetypes_render_through_the_one_shared_pipeline() -> None:
