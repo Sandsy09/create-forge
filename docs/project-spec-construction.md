@@ -68,7 +68,7 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
 | *discovered, then user- or caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. |
-| *caller-supplied, or derived for `library`* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not and the archetype is `library`, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02) — see "Unmapped answers" below. |
+| *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own discovered `ComponentDescriptor.options` declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
 | — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
 
 ## Unmapped answers
@@ -93,13 +93,19 @@ value `copier.yml` itself computes (`static` when `build_backend ==
 "uv_build"`, else `versioning`, defaulting to `static`), and
 `engine.map_legacy_library_options()` is a thin, compatibility-checked
 wrapper over the facade. `pipeline._resolved_component_options` calls both,
-but only when the caller supplied no explicit `component_options` and the
-archetype is `library` — this is the one archetype-specific branch in this
-codebase, kept narrow by keying it on the engine's own
-`map_legacy_library_answers` naming rather than a locally maintained
-archetype list. The remaining unmapped answers retain the owner assigned by
-their eventual component, such as a GitHub platform or optional capability,
-and stay unmapped until that component exists.
+but only when the caller supplied no explicit `component_options` *and* the
+selected archetype's own discovered `ComponentDescriptor.options` declares
+`packaging_mode` — `library`'s manifest does, so it applies there; `cli`
+declares no options at all, so the derivation is skipped before
+`map_legacy_library_options` is even called. CF-08.03's archetype-parity
+review ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) generalised this
+from an earlier `archetype != "library"` check to this descriptor-gated form,
+so no archetype id is hardcoded here or anywhere else in `src/create_forge/`
+— a future archetype that also declares `packaging_mode` (or `library` being
+renamed) needs no change to this function, only to the engine's own
+manifest. The remaining unmapped answers retain the owner assigned by their
+eventual component, such as a GitHub platform or optional capability, and
+stay unmapped until that component exists.
 
 The accepted
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
@@ -224,6 +230,16 @@ by
   `--template-url` with the engine as the default path remains a future,
   unfiled decision -- it is no longer blocked on a distribution channel, only
   on that decision being made.
+- **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) reviewed
+  both archetypes for parity, confirmed the shared ProjectSpec/pipeline path
+  and engine-owned discovery hold, and generalised the legacy `library`
+  option derivation above to be gated by the selected archetype's own
+  discovered descriptor rather than a hardcoded id. It also recorded, without
+  fixing, that the engine path's prompt set is still the Copier registry's
+  Library-shaped questions -- tracked by
+  [#91](https://github.com/Sandsy09/create-forge/issues/91) rather than made
+  here, since fixing it changes documented `--engine-preview` contract
+  behaviour (see [`docs/cli-conventions.md`](cli-conventions.md)).
 
 ## Executable examples
 
@@ -247,10 +263,16 @@ by
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) — the shared
   pipeline's discover → build → validate → render orchestration order, the
   real, unmocked end-to-end success against the production catalogue for
-  both archetypes, the legacy `library` option derivation and its
-  archetype-scoping, `discover_archetypes()`'s `kind` filter, and
-  `finalise_generation_request`'s staging/rename behaviour — see also the
+  both archetypes, the legacy `library` option derivation gated by
+  discovered descriptor (CF-08.03), `discover_archetypes()`'s `kind` filter,
+  and `finalise_generation_request`'s staging/rename behaviour — see also the
   canonical [filesystem generation contract](filesystem-generation.md).
+- [`tests/test_archetype_parity.py`](../tests/test_archetype_parity.py) — the
+  CF-08.03 review's executable record: shared payload shape, shared pipeline,
+  `cli`'s empty-options descriptor driving empty `component_options`, no
+  `command_name` anywhere, `repository_name` as the sole command identity,
+  and an AST guard against any shipped module hardcoding a component id
+  again.
 - [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s outcomes
   (dependency missing, a real generated project, exit `3` on an incompatible
   engine, a pre-existing destination conflict), `--archetype`'s explicit,

@@ -109,6 +109,12 @@ engine internals to obtain them.
   an exact development version. The atomic cutover that replaces the
   v0.1.x registry seam and `--engine-preview` together with the engine as
   the default path remains a future, unfiled decision.
+- **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
+  reviewed both archetypes for parity and confirmed discovery stays fully
+  engine-owned -- descriptors pass through this adapter unchanged, and
+  `pipeline._resolved_component_options` now gates its one derivation on a
+  discovered descriptor's declared options rather than a hardcoded archetype
+  id.
 
 ## Executable examples
 
