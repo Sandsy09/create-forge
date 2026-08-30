@@ -13,16 +13,17 @@ then the generated project's own `uv run poe check`), so it must stay
 separable from the drift guard's CI job. Like the other network-touching
 suites, it skips rather than fails when GitHub is unreachable.
 
-The `--engine-preview` path is deliberately out of scope here: `forge-template`
-has no released `0.2.x` line and its production catalogue is empty until
-FT-08.02/forge-template#41, so it cannot produce a real project today. See
-CF-08.04, filed as this issue's successor for that gap.
+The `--engine-preview` path is deliberately out of scope here: it is a
+materially different generation path (no `copier.yml` `_tasks`, a different
+answer set, archetype selection). See
+[`tests/test_e2e_engine_generation.py`](test_e2e_engine_generation.py)
+(CF-08.04, ADR 0020) for its own end-to-end coverage; the two modules share
+subprocess helpers via `tests/conftest.py`'s `create_forge_command` and
+`e2e_child_env` fixtures.
 """
 
 from __future__ import annotations
 
-import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -44,54 +45,15 @@ _ANSWERS = {
 _PACKAGE_NAME = "e2e_smoke_test"
 
 
-def _create_forge_command() -> str:
-    """Resolve the real console script -- not `python -m create_forge`, and
-    not Typer's `CliRunner`. Both would skip the `[project.scripts]` entry
-    point users actually invoke.
-    """
-    found = shutil.which("create-forge")
-    if found is None:  # pragma: no cover - packaging bug, not a test failure mode
-        pytest.fail(
-            "the 'create-forge' console script is not on PATH -- "
-            "run this suite via `uv run pytest`, which installs it"
-        )
-    return found
-
-
-def _child_env() -> dict[str, str]:
-    """The subprocess environment for the real `create-forge` invocation.
-
-    `copier.yml`'s `_tasks` run `git commit` and `uv sync --all-groups`
-    *inside the generated project*, as children of this subprocess. Two
-    things must hold for that inner `uv sync` to target the generated
-    project rather than this repository's own environment: `VIRTUAL_ENV`,
-    `UV_PROJECT_ENVIRONMENT`, `PYTHONHOME`, and `PYTHONPATH` -- all set by
-    `uv run` for *this* pytest process -- must not leak into the child. And
-    `git commit` needs an identity CI does not have, which a plain `env=`
-    argument supplies for the whole subprocess tree with no plumbum-snapshot
-    caveat (contrast `tests/test_update_network.py`'s
-    `_git_identity_for_template_tasks` fixture, needed only because that test
-    calls `scaffold()` in-process).
-    """
-    env = dict(os.environ)
-    for leak in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT", "PYTHONHOME", "PYTHONPATH"):
-        env.pop(leak, None)
-    env.update(
-        {
-            "GIT_AUTHOR_NAME": "create-forge e2e",
-            "GIT_AUTHOR_EMAIL": "create-forge-e2e@example.invalid",
-            "GIT_COMMITTER_NAME": "create-forge e2e",
-            "GIT_COMMITTER_EMAIL": "create-forge-e2e@example.invalid",
-        }
-    )
-    return env
-
-
 def _run_new(
-    dest: Path, *, extra_args: list[str] | None = None
+    command: str,
+    env: dict[str, str],
+    dest: Path,
+    *,
+    extra_args: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     args = [
-        _create_forge_command(),
+        command,
         "new",
         _ANSWERS["project_name"],
         "--yes",
@@ -107,7 +69,7 @@ def _run_new(
     return subprocess.run(  # noqa: S603
         args,
         cwd=dest.parent,
-        env=_child_env(),
+        env=env,
         capture_output=True,
         text=True,
         timeout=600,
@@ -137,7 +99,10 @@ def _template_reachable() -> None:
 
 @pytest.fixture(scope="session")
 def generated_project(
-    _template_reachable: None, tmp_path_factory: pytest.TempPathFactory
+    _template_reachable: None,
+    tmp_path_factory: pytest.TempPathFactory,
+    create_forge_command: str,
+    e2e_child_env: dict[str, str],
 ) -> Path:
     """Scaffold exactly once per test session; every test below asserts
     against this one real project rather than each paying for its own clone
@@ -146,7 +111,7 @@ def generated_project(
     del _template_reachable
     dest = tmp_path_factory.mktemp("e2e") / "e2e-smoke-test"
 
-    result = _run_new(dest)
+    result = _run_new(create_forge_command, e2e_child_env, dest)
     if result.returncode != 0:
         pytest.fail(
             f"create-forge new failed (exit {result.returncode}):\n"
@@ -209,7 +174,10 @@ def test_generated_project_passes_its_own_check(generated_project: Path) -> None
 
 
 def test_new_rejects_a_non_empty_destination(
-    _template_reachable: None, tmp_path: Path
+    _template_reachable: None,
+    tmp_path: Path,
+    create_forge_command: str,
+    e2e_child_env: dict[str, str],
 ) -> None:
     """No clone is attempted -- `staging.ensure_available` (ADR 0015) fails
     before Copier is even reached, so this costs nothing beyond the
@@ -220,7 +188,7 @@ def test_new_rejects_a_non_empty_destination(
     dest.mkdir()
     (dest / "existing.txt").write_text("hi", encoding="utf-8")
 
-    result = _run_new(dest)
+    result = _run_new(create_forge_command, e2e_child_env, dest)
 
     assert result.returncode == 1, result.stdout + result.stderr
     normalised = " ".join((result.stdout + result.stderr).split())
