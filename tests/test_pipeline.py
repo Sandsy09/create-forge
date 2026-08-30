@@ -1,6 +1,7 @@
 """`pipeline.build_generation_request`/`finalise_generation_request` --
-orchestration order, staging/finalisation (ADR 0015), and the real,
-end-to-end characterized failure against `forge-template`'s empty catalogue.
+orchestration order, staging/finalisation (ADR 0015), legacy Library option
+derivation (CF-08.02), and the real, end-to-end success against
+`forge-template`'s production catalogue.
 
 Exercises the real `forge_template` package (the `engine` dev-group
 dependency, present by default per `[tool.uv] default-groups = ["dev"]`),
@@ -14,7 +15,8 @@ from typing import Any, cast
 
 import pytest
 from forge_template import (
-    ForgeEngineError,
+    ComponentDescriptor,
+    ComponentOwner,
     GenerationPlan,
     PlannedFile,
     RenderedFile,
@@ -123,19 +125,149 @@ def test_build_generation_request_passes_component_selection_through(
     }
 
 
-def test_build_generation_request_fails_closed_against_the_empty_catalogue() -> None:
-    """The real, unmocked engine: `forge-template` 0.2.0's production
-    catalogue is intentionally empty until Stage 08, so the pipeline's
-    `validate()` stage fails today -- by design, mirroring
-    `tests/test_engine_adapter.py::test_validate_fails_closed_against_the_empty_catalogue`.
-    This test is expected to start failing, not stay green, the moment a
-    real 'library' manifest exists; replacing it with a success assertion at
-    that point is expected maintenance.
+@pytest.mark.parametrize("archetype", ["library", "cli"])
+def test_build_generation_request_succeeds_against_the_real_catalogue(
+    archetype: str,
+) -> None:
+    """The real, unmocked engine: `forge-template` 0.3.0's production
+    catalogue ships both reference archetypes (CF-08.02), replacing the
+    Stage 06-era empty-catalogue rejection this test's own docstring
+    anticipated retiring.
     """
-    with pytest.raises(ForgeEngineError) as excinfo:
-        pipeline.build_generation_request(_VALID_ANSWERS, archetype="library")
+    request = pipeline.build_generation_request(_VALID_ANSWERS, archetype=archetype)
 
-    assert excinfo.value.code.value == "invalid-component-selection"
+    assert request.spec.components.archetype == archetype
+    assert any(file.target == "pyproject.toml" for file in request.rendered.files)
+
+
+def test_build_generation_request_derives_legacy_library_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The one archetype-specific branch in this codebase (CF-08.02): with
+    no caller-supplied `component_options`, `library` gets its
+    `packaging_mode` derived from the legacy `build_backend`/`versioning`
+    answers via the engine's own `map_legacy_library_answers`.
+    """
+    seen_payload: dict[str, object] = {}
+
+    def fake_build_project_spec(payload: dict[str, object]) -> str:
+        seen_payload.update(payload)
+        return "spec"
+
+    monkeypatch.setattr(engine, "discover", lambda: ())
+    monkeypatch.setattr(engine, "build_project_spec", fake_build_project_spec)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+    monkeypatch.setattr(
+        engine,
+        "map_legacy_library_options",
+        lambda legacy: {"packaging_mode": "hatchling-vcs"},
+    )
+
+    answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
+    build_generation_request(answers, archetype="library")
+
+    assert seen_payload["component_options"] == {
+        "library": {"packaging_mode": "hatchling-vcs"}
+    }
+
+
+def test_build_generation_request_does_not_derive_options_for_other_archetypes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`cli` has no options (CF-08.02): the legacy Library mapping must not
+    fire for a different archetype, even when legacy answers are present.
+    """
+    seen_payload: dict[str, object] = {}
+
+    def fake_build_project_spec(payload: dict[str, object]) -> str:
+        seen_payload.update(payload)
+        return "spec"
+
+    def unexpected_mapping(_legacy: object) -> object:
+        raise AssertionError(
+            "map_legacy_library_options ran for a non-library archetype"
+        )
+
+    monkeypatch.setattr(engine, "discover", lambda: ())
+    monkeypatch.setattr(engine, "build_project_spec", fake_build_project_spec)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+    monkeypatch.setattr(engine, "map_legacy_library_options", unexpected_mapping)
+
+    answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
+    build_generation_request(answers, archetype="cli")
+
+    assert "component_options" not in seen_payload
+
+
+def test_build_generation_request_leaves_explicit_component_options_untouched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An explicit `component_options` always wins -- the legacy derivation
+    is strictly a fallback for the caller-supplies-nothing case (CF-08.02).
+    """
+    seen_payload: dict[str, object] = {}
+
+    def fake_build_project_spec(payload: dict[str, object]) -> str:
+        seen_payload.update(payload)
+        return "spec"
+
+    def unexpected_mapping(_legacy: object) -> object:
+        raise AssertionError(
+            "map_legacy_library_options ran despite an explicit override"
+        )
+
+    monkeypatch.setattr(engine, "discover", lambda: ())
+    monkeypatch.setattr(engine, "build_project_spec", fake_build_project_spec)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+    monkeypatch.setattr(engine, "map_legacy_library_options", unexpected_mapping)
+
+    answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
+    build_generation_request(
+        answers,
+        archetype="library",
+        component_options={"library": {"packaging_mode": "uv-build-static"}},
+    )
+
+    assert seen_payload["component_options"] == {
+        "library": {"packaging_mode": "uv-build-static"}
+    }
+
+
+def test_discover_archetypes_filters_to_archetype_kind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archetype_descriptor = ComponentDescriptor(
+        id="library",
+        name="Library",
+        description="An installable Python package.",
+        kind="archetype",
+        version="1.0.0",
+        projectspec_protocols=(1,),
+        requires_python=">=3.11",
+        requires=(),
+        conflicts=(),
+        options=(),
+    )
+    capability_descriptor = ComponentDescriptor(
+        id="documentation",
+        name="Documentation",
+        description="A documentation site.",
+        kind="capability",
+        version="1.0.0",
+        projectspec_protocols=(1,),
+        requires_python=">=3.11",
+        requires=(),
+        conflicts=(),
+        options=(),
+    )
+    monkeypatch.setattr(
+        engine, "discover", lambda: (archetype_descriptor, capability_descriptor)
+    )
+
+    assert pipeline.discover_archetypes() == (archetype_descriptor,)
 
 
 def _synthetic_request() -> GenerationRequest:
@@ -143,11 +275,12 @@ def _synthetic_request() -> GenerationRequest:
     without a component catalogue -- `finalise_generation_request` only
     needs `request.rendered.files`, so this stands in for a real render.
     """
+    owner = ComponentOwner(id="library")
     plan = GenerationPlan(
         component_order=("library",),
         files=(
-            PlannedFile(target="pyproject.toml", owner_component_id="library"),
-            PlannedFile(target="src/pkg/__init__.py", owner_component_id="library"),
+            PlannedFile(target="pyproject.toml", owner=owner),
+            PlannedFile(target="src/pkg/__init__.py", owner=owner),
         ),
     )
     rendered = RenderedProject(
@@ -198,11 +331,12 @@ def test_finalise_generation_request_leaves_nothing_on_a_mid_write_failure(
     """A target that escapes the staging root fails `write_files` partway
     through; nothing must survive at or beside `dst`.
     """
+    owner = ComponentOwner(id="library")
     plan = GenerationPlan(
         component_order=("library",),
         files=(
-            PlannedFile(target="ok.txt", owner_component_id="library"),
-            PlannedFile(target="../escape.txt", owner_component_id="library"),
+            PlannedFile(target="ok.txt", owner=owner),
+            PlannedFile(target="../escape.txt", owner=owner),
         ),
     )
     rendered = RenderedProject(

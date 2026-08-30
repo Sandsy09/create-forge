@@ -18,11 +18,12 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are implemented by the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
-`forge-template/main` now ships Library in its `0.3.0` catalogue and has
-selected the future
-[CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md),
-but this repository's exact `0.2.0` development pair still has an empty
-catalogue and CLI integration is not implemented. The released v0.1.x CLI
+`forge-template` ships both Library and the
+[CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+in its `0.3.0` release, and this repository's exact development pin moved to
+match (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)),
+so both are now real, discoverable, and exposed through the hidden
+`--engine-preview` flag's `--archetype` option. The released v0.1.x CLI
 remains a thin Copier
 wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
 Copier directly through `src/create_forge/runner.py`. [CF-06.01](https://github.com/Sandsy09/create-forge/issues/46)
@@ -56,17 +57,19 @@ question answered by the canonical [engine update policy](engine-updates.md).
 
 A development-only dependency exists ahead of that runtime one:
 `src/create_forge/engine.py` depends on `forge-template` via a `uv`
-dependency group constrained to exact package version `0.2.0` and pinned to
-full commit SHA `bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c`, not a released
-version — see
+dependency group constrained to exact package version `0.3.0` and pinned to
+`tag = "v0.3.0"`, not a released version range — see
 [ADR 0013](adr/0013-projectspec-construction-boundary.md). This is not the
 range assigned below; it exists so the construction boundary can exercise
 the real engine before `forge-template` publishes anything installable. The
 [cross-repository engine contract tests](engine-contract-tests.md) reject any
-other development package version until it is deliberately adopted; CF-07.04
-([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this pin once,
-within the same `0.2.0` development contract, to adopt generated-project
-validation.
+other development package version until it is deliberately adopted. This pin
+has moved twice: CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
+moved it once, within the prior unreleased `0.2.0` contract, to adopt
+generated-project validation; CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved it again,
+to the first tagged release, adopting a tag over a commit SHA now that one
+exists.
 
 ## Local development resolution
 
@@ -145,7 +148,7 @@ direct-Copier path can raise it — and is documented here as reserved so its
 absence from `cli.py` is legible as deliberate rather than an oversight.
 
 The development-only adapter already applies the same ordering to its exact
-`0.2.0` pair: package and protocol mismatches fail before parsing, discovery,
+`0.3.0` pair: package and protocol mismatches fail before parsing, discovery,
 validation, or in-memory rendering. This is development-contract evidence,
 not a claim that v0.1.x supports an engine package.
 

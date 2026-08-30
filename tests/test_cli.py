@@ -22,6 +22,7 @@ import pytest
 import typer
 from copier.errors import CopierError
 from forge_template import (
+    ComponentOwner,
     EngineInfo,
     GenerationPlan,
     PlannedFile,
@@ -568,6 +569,11 @@ _ENGINE_PREVIEW_ANSWERS = [
     "python_min_version=3.11",
     "--data",
     "python_version=3.13",
+    # A default archetype (CF-08.02): individual tests override this by
+    # appending a later --archetype, which wins under Click's last-flag-wins
+    # rule for a scalar option.
+    "--archetype",
+    "library",
 ]
 
 
@@ -638,13 +644,15 @@ def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
     assert not (tmp_path / "proj").exists()
 
 
-def test_new_engine_preview_fails_closed_against_the_empty_catalogue(
+def test_new_engine_preview_generates_a_real_cli_application(
     recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
-    """The real, unmocked engine: `forge-template` 0.2.0's production
-    catalogue is intentionally empty until Stage 08, so this fails at
-    validation today -- by design, mirroring
-    `tests/test_pipeline.py::test_build_generation_request_fails_closed_against_the_empty_catalogue`.
+    """The real, unmocked engine: `forge-template` 0.3.0's production
+    catalogue makes `--engine-preview` generate for real (CF-08.02),
+    superseding the Stage 06-era empty-catalogue rejection this test
+    replaces -- see
+    `tests/test_pipeline.py::test_build_generation_request_succeeds_against_the_real_catalogue`
+    for the equivalent pipeline-level proof.
     """
     dest = tmp_path / "proj"
 
@@ -658,13 +666,16 @@ def test_new_engine_preview_fails_closed_against_the_empty_catalogue(
             str(dest),
             *_ENGINE_PREVIEW_ANSWERS,
             "--engine-preview",
+            "--archetype",
+            "cli",
         ],
     )
 
-    assert result.exit_code == 1, result.output
-    assert "invalid-component-selection" in result.output
+    assert result.exit_code == 0, result.output
     assert recorder == []
-    assert not dest.exists()
+    assert (dest / "src" / "engine_preview" / "cli.py").exists()
+    pyproject = (dest / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'engine-preview = "engine_preview.cli:app"' in pyproject
 
 
 def test_new_engine_preview_exits_3_on_incompatible_engine(
@@ -739,15 +750,16 @@ def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
 def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
-    """`--dry-run` short-circuits before staging (ADR 0015). In practice
-    today's empty catalogue would fail validation first regardless, so
+    """`--dry-run` short-circuits before staging (ADR 0015).
     `build_generation_request` is faked here with a successful result --
-    the same technique test_pipeline.py uses -- to actually exercise the
-    dry-run branch past that point.
+    the same technique test_pipeline.py uses -- so this exercises the
+    dry-run branch in isolation from a real render.
     """
     plan = GenerationPlan(
         component_order=("library",),
-        files=(PlannedFile(target="pyproject.toml", owner_component_id="library"),),
+        files=(
+            PlannedFile(target="pyproject.toml", owner=ComponentOwner(id="library")),
+        ),
     )
     rendered = RenderedProject(
         plan=plan,
@@ -789,7 +801,9 @@ def test_new_engine_preview_finalises_a_successful_render(
     """
     plan = GenerationPlan(
         component_order=("library",),
-        files=(PlannedFile(target="pyproject.toml", owner_component_id="library"),),
+        files=(
+            PlannedFile(target="pyproject.toml", owner=ComponentOwner(id="library")),
+        ),
     )
     rendered = RenderedProject(
         plan=plan,
@@ -823,6 +837,172 @@ def test_new_engine_preview_finalises_a_successful_render(
     # which varies by environment (see the destination-conflict test above).
     normalised_output = " ".join(result.output.split())
     assert "create-forge update does not apply" in normalised_output
+
+
+def test_new_archetype_without_engine_preview_is_rejected(
+    recorder: list[ScaffoldRequest],
+) -> None:
+    """`--archetype` is meaningless on the Copier path (CF-08.02); passing it
+    without `--engine-preview` must not be silently ignored.
+    """
+    result = runner.invoke(app, ["new", "Foo", "--yes", "--archetype", "cli"])
+
+    assert result.exit_code == 1, result.output
+    assert "--archetype requires --engine-preview" in result.output
+    assert recorder == []
+
+
+def test_new_engine_preview_yes_without_archetype_is_rejected(
+    recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """`--yes` has no interactive fallback and the engine declares no
+    default archetype (CF-08.02) -- omitting `--archetype` must fail, not
+    silently pick one.
+    """
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            "--data",
+            "github_org=test-org",
+            "--data",
+            "license=mit",
+            "--data",
+            "author_name=Test User",
+            "--data",
+            "author_email=test@example.invalid",
+            "--data",
+            "python_min_version=3.11",
+            "--data",
+            "python_version=3.13",
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "--yes" in result.output
+    assert "requires --archetype" in result.output
+    assert "cli" in result.output
+    assert "library" in result.output
+    assert recorder == []
+    assert not dest.exists()
+
+
+def test_new_engine_preview_unknown_archetype_is_rejected(
+    recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+            "--archetype",
+            "nonexistent",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Unknown archetype 'nonexistent'" in result.output
+    assert recorder == []
+    assert not dest.exists()
+
+
+def test_new_engine_preview_prompts_when_archetype_is_omitted(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """Without `--yes` or `--archetype`, selection falls to an interactive
+    prompt over the real discovered catalogue (CF-08.02) -- mirroring
+    `test_new_interactive_resolves_template_and_answers`'s style of
+    monkeypatching the prompt functions themselves rather than driving real
+    stdin through questionary. Template selection and answer collection are
+    likewise faked here: only archetype selection is under test.
+    """
+    registry = load_registry()
+    template = registry.get(registry.default_template)
+    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
+    monkeypatch.setattr(
+        cli_module,
+        "ask_all",
+        lambda *_a, **_kw: {
+            "project_name": "Engine Preview",
+            "github_org": "test-org",
+            "license": "mit",
+            "author_name": "Test User",
+            "author_email": "test@example.invalid",
+            "python_min_version": "3.11",
+            "python_version": "3.13",
+        },
+    )
+
+    seen_archetypes: list[str] = []
+
+    def fake_choose_archetype(archetypes: object) -> object:
+        ids = [a.id for a in archetypes]  # type: ignore[attr-defined]
+        seen_archetypes.extend(ids)
+        return next(a for a in archetypes if a.id == "cli")  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(cli_module, "choose_archetype", fake_choose_archetype)
+
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(app, ["new", "--path", str(dest), "--engine-preview"])
+
+    assert result.exit_code == 0, result.output
+    assert {"library", "cli"} <= set(seen_archetypes)
+    assert recorder == []
+    assert (dest / "src" / "engine_preview" / "cli.py").exists()
+
+
+def test_new_engine_preview_aborting_archetype_choice_exits_130(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """Mirrors `test_new_aborting_the_template_choice_exits_130`'s shape for
+    the new archetype prompt (CF-08.02). Template selection and answer
+    collection are faked, same as the interactive-selection test above, so
+    only the abort itself is under test.
+    """
+    registry = load_registry()
+    template = registry.get(registry.default_template)
+    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
+    monkeypatch.setattr(
+        cli_module,
+        "ask_all",
+        lambda *_a, **_kw: {
+            "project_name": "Engine Preview",
+            "github_org": "test-org",
+            "license": "mit",
+            "author_name": "Test User",
+            "author_email": "test@example.invalid",
+            "python_min_version": "3.11",
+            "python_version": "3.13",
+        },
+    )
+
+    def _abort(*_args: object, **_kwargs: object) -> object:
+        raise PromptAbortedError
+
+    monkeypatch.setattr(cli_module, "choose_archetype", _abort)
+
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(app, ["new", "--path", str(dest), "--engine-preview"])
+
+    assert result.exit_code == 130, result.output
+    assert recorder == []
+    assert not dest.exists()
 
 
 # --- config wiring (issue #3) ------------------------------------------------

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from create_forge.spec import build_spec_payload
+from create_forge.spec import build_spec_payload, legacy_library_answers
 
 
 def _project(payload: dict[str, object]) -> dict[str, object]:
@@ -23,7 +23,7 @@ def test_omits_project_fields_with_no_source_value() -> None:
 
     assert payload["protocol_version"] == 1
     assert payload["project"] == {}
-    assert "python" not in payload
+    assert payload["python"] == {"minimum": "3.11", "development": "3.13"}
     assert "component_options" not in payload
 
 
@@ -118,12 +118,15 @@ def test_author_email_without_a_name_is_dropped() -> None:
     assert "authors" not in _project(payload)
 
 
-def test_python_selection_requires_both_bounds() -> None:
+def test_python_selection_falls_back_per_bound_independently() -> None:
+    """`ProjectSpec.python` is required (CF-08.02): an answer for one bound
+    does not force the other, it just leaves the missing one at its default.
+    """
     payload = build_spec_payload(
-        {"project_name": "X", "python_min_version": "3.11"}, archetype="library"
+        {"project_name": "X", "python_min_version": "3.12"}, archetype="library"
     )
 
-    assert "python" not in payload
+    assert payload["python"] == {"minimum": "3.12", "development": "3.13"}
 
 
 def test_python_selection_present_when_both_bounds_given() -> None:
@@ -186,3 +189,37 @@ def test_interactive_and_non_interactive_parity() -> None:
     assert build_spec_payload(
         interactive_answers, archetype="library"
     ) == build_spec_payload(non_interactive_answers, archetype="library")
+
+
+def test_legacy_library_answers_is_none_without_build_backend() -> None:
+    """No `build_backend` answer means the question was never asked --
+    `pipeline` reads `None` as "send no component_options", not as a static
+    default (CF-08.02).
+    """
+    assert legacy_library_answers({}) is None
+
+
+def test_legacy_library_answers_uv_build_forces_static() -> None:
+    """Mirrors copier.yml's `versioning_resolved`: `uv_build` is always
+    static regardless of what `versioning` says.
+    """
+    assert legacy_library_answers(
+        {"build_backend": "uv_build", "versioning": "vcs"}
+    ) == {"build_backend": "uv_build", "versioning_resolved": "static"}
+
+
+def test_legacy_library_answers_hatchling_passes_versioning_through() -> None:
+    assert legacy_library_answers(
+        {"build_backend": "hatchling", "versioning": "vcs"}
+    ) == {"build_backend": "hatchling", "versioning_resolved": "vcs"}
+
+
+def test_legacy_library_answers_hatchling_defaults_versioning_to_static() -> None:
+    """`versioning` is gated on `build_backend == hatchling` in `templates.toml`
+    -- a hatchling answer with no `versioning` key still resolves to `static`,
+    matching copier.yml's own question default.
+    """
+    assert legacy_library_answers({"build_backend": "hatchling"}) == {
+        "build_backend": "hatchling",
+        "versioning_resolved": "static",
+    }

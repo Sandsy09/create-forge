@@ -78,26 +78,31 @@ is accepted under
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 and [forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md)
-define the first production component now implemented on
-`forge-template/main` at `0.3.0`. The accepted
+define the first production component, implemented on `forge-template/main`
+and released at `0.3.0`. The accepted
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 and [forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0034-select-cli-application-reference-archetype.md)
 select the optionless engine-owned `cli` archetype and derive its command from
-`ProjectSpec.project.repository_name`; FT-08.04 owns implementation. These
-changes do not alter the exact development pair or make a released CLI line
-support the engine.
-This repository's exact `0.2.0` development pair still has an empty production
-catalogue. The development boundary can construct ProjectSpec, discover,
-validate, render, and finalise a project to disk through the public facade;
-as of CF-07.01 this is reachable from a real command via the hidden
-`new --engine-preview` flag (ADR 0014), though not from the default `new`
-path, and no released engine range is assigned here yet. The development
-`forge-template==0.2.0` / protocol-1 pair is recorded by the canonical
-[cross-repository engine contract tests](docs/engine-contract-tests.md).
+`ProjectSpec.project.repository_name`; FT-08.04 implemented it, and it ships
+alongside `library` in the same `0.3.0` release.
+This repository's exact development pair moved to `forge-template==0.3.0`
+(CF-08.02, [ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
+whose production catalogue is no longer empty. The development boundary can
+construct ProjectSpec, discover, validate, render, and finalise a project to
+disk through the public facade; as of CF-07.01 this is reachable from a real
+command via the hidden `new --engine-preview` flag (ADR 0014), though not
+from the default `new` path, and no released engine range is assigned here
+yet. CF-08.02 also adds a hidden `--archetype` option and a
+discovery-driven interactive prompt, so `--engine-preview` now selects for
+real between `library` and `cli` rather than passing a fixed id through. The
+development `forge-template==0.3.0` / protocol-1 pair is recorded by the
+canonical [cross-repository engine contract tests](docs/engine-contract-tests.md).
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
-that commit pin forward once, within the same unreleased `0.2.0` contract,
-to adopt generated-project validation — `render_project` now calls the
-public `validate_rendered_project` before returning. The canonical
+the pin once already, within the prior unreleased `0.2.0` contract, to adopt
+generated-project validation; CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
+moved it again, to the first tagged release, once a tag existed to move it
+to — `render_project` still calls the public `validate_rendered_project`
+before returning. The canonical
 [component discovery contract](docs/component-discovery.md) records the
 protocol-first, no-fallback adapter semantics, and the canonical
 [filesystem generation contract](docs/filesystem-generation.md) records how
@@ -110,7 +115,7 @@ rejected when incompatible. The exact development check is implemented; the
 installable runtime range and CLI integration are not.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
 code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against a
-development-only, commit-pinned `forge-template` — see the canonical
+development-only, tag-pinned `forge-template` — see the canonical
 [ProjectSpec construction contract](docs/project-spec-construction.md).
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
@@ -121,8 +126,10 @@ CF-07.06 ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md))
 closes Stage 07 with real, CI-enforced coverage of the Copier path — the real
 console script, its `_tasks`, and the generated project's own checks — see
 the canonical [end-to-end tests contract](docs/end-to-end-tests.md). The
-engine path stays untested end-to-end, tracked as CF-08.04, since it has no
-released version or non-empty catalogue to generate from yet.
+engine path still has no CI-enforced end-to-end coverage, tracked as
+CF-08.04: `--engine-preview` can generate for real since CF-08.02, but the
+engine remains an unranged development dependency, not a released one, which
+is what CF-08.04 still waits on.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -218,7 +225,7 @@ Run this before any release.
   and the no-fallback trust boundary implemented by `engine.py`.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the exact development package/protocol pair, public-facade coverage,
-  empty-catalogue rendering boundary, and sibling-checkout command.
+  production-catalogue rendering boundary, and sibling-checkout command.
 - The canonical [filesystem generation contract](docs/filesystem-generation.md)
   defines destination-conflict, staging, target-safety, finalisation, and
   cleanup rules implemented by `staging.py` and used by both `runner.py` and
@@ -233,9 +240,10 @@ Run this before any release.
   ProjectSpec construction, and orchestration at the future cutover.
 - The canonical
   [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-  defines the future optionless `cli` component and derives its console name
-  from `ProjectSpec.project.repository_name`; do not duplicate those semantics
-  in the registry or CLI models.
+  defines the optionless `cli` component, exposed via `--engine-preview
+  --archetype cli` since CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
+  and derives its console name from `ProjectSpec.project.repository_name`; do
+  not duplicate those semantics in the registry or CLI models.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

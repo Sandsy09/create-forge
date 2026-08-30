@@ -12,7 +12,7 @@ uv sync --all-groups
 uv run pre-commit install --install-hooks
 ```
 
-`uv sync` clones `forge-template==0.2.0` at a full pinned commit as part of the
+`uv sync` clones `forge-template==0.3.0` at a pinned tag as part of the
 `engine`
 dependency group (`[tool.uv] default-groups = ["dev"]` includes it). This is
 a development-only dependency for `src/create_forge/engine.py` — see
@@ -128,21 +128,28 @@ responsibilities at the future cutover — the living
 today, behind `--engine-preview`.
 The canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the production `library` component now shipped by
-`forge-template/main` at `0.3.0`. The canonical
+defines the production `library` component shipped by `forge-template` at
+`0.3.0`. The canonical
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 selects the optionless engine-owned `cli` archetype and derives its command
-from `ProjectSpec.project.repository_name`; FT-08.04 owns its implementation.
-This repository nevertheless keeps its exact `0.2.0` development pair,
-empty-catalogue expectation, and unassigned released engine range until the
-coordinated cutover is implemented and tested.
-Stage 06 proves an exact `0.2.0`/protocol-1 development pair through the
-[cross-repository engine contract tests](docs/engine-contract-tests.md), but
-this repository assigns no released dependency range until #9 resolves the
-distribution channel and a future cutover issue performs the atomic cutover.
+from `ProjectSpec.project.repository_name`; FT-08.04 implemented it, and
+CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
+exposes both archetypes via a discovery-driven `--archetype` option and
+prompt, behind the same hidden `--engine-preview` flag.
+This repository's exact development pair is now `forge-template==0.3.0`
+(tag `v0.3.0`), whose production catalogue is no longer empty; the released
+engine range remains unassigned until the coordinated cutover is implemented
+and tested.
+Stage 06 first proved an exact development package/protocol pair through the
+[cross-repository engine contract tests](docs/engine-contract-tests.md), and
+CF-08.02 moved that pair forward to `0.3.0`; this repository still assigns no
+released dependency range until #9 resolves the distribution channel and a
+future cutover issue performs the atomic cutover.
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
-the development pin forward once, within that same unreleased `0.2.0`
-contract, to adopt generated-project validation.
+the development pin forward once, within the prior unreleased `0.2.0`
+contract, to adopt generated-project validation; CF-08.02
+([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)) moved it
+again, to the first tagged release.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
 and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
 record that adapter's shape — `spec.py` builds the wire payload, `engine.py`
@@ -162,8 +169,8 @@ authoritative until the coordinated CLI cutover.
 [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
 [end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
 real, CI-enforced coverage of that default `new` path against a released
-template — the engine path stays untested end to end until it has a released
-version and a non-empty catalogue to generate from, tracked as CF-08.04.
+template — the engine path stays untested end to end until it has a released,
+range-assigned engine version, tracked as CF-08.04.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that future engine is sourced, overridden locally, diagnosed, and rejected

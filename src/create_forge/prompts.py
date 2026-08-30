@@ -8,7 +8,7 @@ to the template's own default in copier.yml.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 import questionary
 from questionary import Choice as QChoice
@@ -16,7 +16,38 @@ from questionary import Choice as QChoice
 from create_forge.models import PromptKind
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from create_forge.models import PromptSpec, Template
+
+
+class ArchetypeChoice(Protocol):
+    """The engine's `ComponentDescriptor` shape this module actually needs.
+
+    Structural, not imported: `prompts.py` is one of the shipped modules
+    `tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
+    guards, so it may not import `forge_template` even under
+    `TYPE_CHECKING`. `ComponentDescriptor` satisfies this without either
+    module knowing about the other (CF-08.02). Read-only properties, not
+    plain attributes: `ComponentDescriptor`'s fields are frozen, and a
+    read-write Protocol attribute would reject it as non-conforming.
+    """
+
+    @property
+    def id(self) -> str:
+        """The canonical component identifier."""
+        ...
+
+    @property
+    def name(self) -> str:
+        """The display name shown in the prompt."""
+        ...
+
+    @property
+    def description(self) -> str:
+        """The one-line description shown alongside the name."""
+        ...
+
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -64,6 +95,32 @@ def choose_template(templates: list[Template], default_id: str) -> Template:
         "What are you building?",
         choices=choices,
         default=default,
+        style=_STYLE,
+    ).ask()
+
+    if answer is None:
+        raise PromptAbortedError
+    return answer
+
+
+def choose_archetype(archetypes: Sequence[ArchetypeChoice]) -> ArchetypeChoice:
+    """Ask which engine archetype to build. Skipped when only one exists.
+
+    Mirrors `choose_template`'s shape for the engine-preview path (CF-08.02):
+    same skip-when-one behaviour, same `PromptAbortedError` on cancel.
+    `archetypes` is expected to be non-empty -- callers resolve an empty
+    catalogue as a compatibility failure before reaching here.
+    """
+    if len(archetypes) == 1:
+        return archetypes[0]
+
+    choices = [
+        QChoice(title=f"{a.name}  —  {a.description}", value=a) for a in archetypes
+    ]
+
+    answer: ArchetypeChoice | None = questionary.select(
+        "What are you building?",
+        choices=choices,
         style=_STYLE,
     ).ask()
 

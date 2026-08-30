@@ -61,7 +61,7 @@ engine = [
     # Exact development contract only: this is not the released runtime
     # range, which remains unassigned until #9 and the atomic cutover in
     # #50. src/create_forge/engine.py is the only module that imports it.
-    "forge-template==0.2.0",
+    "forge-template==0.3.0",
 ]
 dev = [
     { include-group = "lint" },
@@ -76,7 +76,7 @@ dev = [
 default-groups = ["dev"]
 
 [tool.uv.sources]
-forge-template = { git = "https://github.com/Sandsy09/forge-template", rev = "bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c" }
+forge-template = { git = "https://github.com/Sandsy09/forge-template", tag = "v0.3.0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/create_forge"]

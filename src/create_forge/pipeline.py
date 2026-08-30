@@ -22,13 +22,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from create_forge import engine, staging
-from create_forge.spec import build_spec_payload
+from create_forge.spec import build_spec_payload, legacy_library_answers
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from pathlib import Path
 
-    from forge_template import ProjectSpec, RenderedProject
+    from forge_template import ComponentDescriptor, ProjectSpec, RenderedProject
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +41,40 @@ class GenerationRequest:
 
     spec: ProjectSpec
     rendered: RenderedProject
+
+
+def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
+    """Engine-owned archetype descriptors, for `--engine-preview` selection.
+
+    Filters `engine.discover()` to `kind == "archetype"` so `cli.py` never
+    branches on engine-defined `kind` values itself (CF-08.02) -- discovery
+    stays the one place that interprets descriptor shape.
+    """
+    return tuple(d for d in engine.discover() if d.kind == "archetype")
+
+
+def _resolved_component_options(
+    answers: Mapping[str, object],
+    archetype: str,
+    component_options: Mapping[str, Mapping[str, object]] | None,
+) -> Mapping[str, Mapping[str, object]] | None:
+    """Derive `component_options` when the caller supplied none.
+
+    The one archetype-specific branch in this codebase (CF-08.02): `library`
+    predates the engine, so its legacy `build_backend`/`versioning`
+    answers need translating into the production `packaging_mode` option or
+    a user's choice silently reverts to the engine's own default. `cli` has
+    no options and needs no translation -- every other archetype passes
+    through unchanged, keyed on the engine's own
+    `map_legacy_library_answers` naming rather than on a local archetype
+    list, so this does not grow into a per-archetype registry here.
+    """
+    if component_options is not None or archetype != "library":
+        return component_options
+    legacy = legacy_library_answers(answers)
+    if legacy is None:
+        return None
+    return {"library": engine.map_legacy_library_options(legacy)}
 
 
 def build_generation_request(
@@ -57,11 +91,14 @@ def build_generation_request(
     they've collected the same `answers` mapping `cli._collect_answers`
     already produces today -- nothing about answer collection changes.
 
-    `archetype`/`capabilities`/`platforms`/`component_options` stay
-    caller-supplied (ADR 0013): this pipeline mints no component identifiers
-    of its own. `discover()` runs for its own compatibility-ladder effect and
-    to surface real descriptors to future callers; it does not yet drive
-    selection -- Stage 08 gives it something to drive.
+    `archetype`/`capabilities`/`platforms` stay caller-supplied (ADR 0013):
+    this pipeline mints no component identifiers of its own. An explicit
+    `component_options` is likewise passed through unchanged; when the
+    caller supplies none, `_resolved_component_options` derives the one
+    legacy mapping this repository still owns. `discover()` runs for its own
+    compatibility-ladder effect and to surface real descriptors to callers;
+    `discover_archetypes()` is what actually drives selection, from
+    `cli.py`.
 
     Every downstream call (`build_project_spec`, `validate`, `render`)
     independently re-checks package/protocol compatibility before doing its
@@ -69,12 +106,15 @@ def build_generation_request(
     every check has passed.
     """
     engine.discover()
+    resolved_options = _resolved_component_options(
+        answers, archetype, component_options
+    )
     payload = build_spec_payload(
         answers,
         archetype=archetype,
         capabilities=capabilities,
         platforms=platforms,
-        component_options=component_options,
+        component_options=resolved_options,
     )
     spec = engine.build_project_spec(payload)
     validated = engine.validate(spec)

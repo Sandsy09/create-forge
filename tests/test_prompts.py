@@ -1,4 +1,5 @@
-"""slugify, ask_all's preset/depends_on handling, and choose_template.
+"""slugify, ask_all's preset/depends_on handling, choose_template, and
+choose_archetype.
 
 All ask_all cases here fully satisfy every applicable prompt via `preset`, so
 no test actually drives questionary -- there is nothing left to ask.
@@ -6,11 +7,31 @@ no test actually drives questionary -- there is nothing left to ask.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import pytest
 import questionary
 
 from create_forge.models import Choice, PromptKind, PromptSpec, Template
-from create_forge.prompts import ask_all, choose_template, slugify
+from create_forge.prompts import (
+    PromptAbortedError,
+    ask_all,
+    choose_archetype,
+    choose_template,
+    slugify,
+)
+
+
+@dataclass(frozen=True)
+class _Archetype:
+    """A minimal stand-in satisfying `ArchetypeChoice` structurally --
+    `ComponentDescriptor` itself is out of reach here, same reasoning as the
+    Protocol's own docstring (CF-08.02).
+    """
+
+    id: str
+    name: str
+    description: str
 
 
 def _template(prompts: list[PromptSpec] | None = None, **overrides: object) -> Template:
@@ -35,6 +56,32 @@ def test_slugify_strips_leading_and_trailing_punctuation() -> None:
 def test_choose_template_skips_the_question_for_a_single_template() -> None:
     only = _template(id="lib")
     assert choose_template([only], "lib") is only
+
+
+def test_choose_archetype_skips_the_question_for_a_single_archetype() -> None:
+    only = _Archetype(id="cli", name="CLI Application", description="d")
+    assert choose_archetype([only]) is only
+
+
+def test_choose_archetype_returns_the_selected_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    library = _Archetype(id="library", name="Library", description="A package.")
+    cli = _Archetype(id="cli", name="CLI Application", description="An app.")
+    monkeypatch.setattr(questionary, "select", lambda *_a, **_kw: _FakeAnswer(cli))
+
+    assert choose_archetype([library, cli]) is cli
+
+
+def test_choose_archetype_raises_on_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    library = _Archetype(id="library", name="Library", description="A package.")
+    cli = _Archetype(id="cli", name="CLI Application", description="An app.")
+    monkeypatch.setattr(questionary, "select", lambda *_a, **_kw: _FakeAnswer(None))
+
+    with pytest.raises(PromptAbortedError):
+        choose_archetype([library, cli])
 
 
 def test_ask_all_does_not_reprompt_a_preset_key() -> None:

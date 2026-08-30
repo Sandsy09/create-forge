@@ -117,19 +117,23 @@ are now implemented behind the canonical
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the first production component, implemented on `forge-template/main`
-at `0.3.0`. The accepted
+and released at `0.3.0`. The accepted
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 selects the optionless engine-owned `cli` archetype and derives its console
-command from `ProjectSpec.project.repository_name`; implementation remains
-[FT-08.04](https://github.com/Sandsy09/forge-template/issues/4). Neither change
-alters this CLI's current answers, registry, or exact engine dependency.
+command from `ProjectSpec.project.repository_name`;
+[FT-08.04](https://github.com/Sandsy09/forge-template/issues/4) implemented
+it in the same `0.3.0` release, and
+[CF-08.02](https://github.com/Sandsy09/create-forge/issues/10) exposes both
+archetypes behind the hidden `new --engine-preview` flag's `--archetype`
+option. Neither change alters this CLI's default `new` answers, registry, or
+released dependency surface.
 The engine now also defines in-memory
 [generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 ([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
-before rendered output is returned. The current CLI does not yet consume that
-facade.
-The exact `forge-template==0.2.0` development pair exercised by this repository
-still has an empty catalogue, and the current registry and
+before rendered output is returned; `render_project` already calls it before
+`--engine-preview` receives a result.
+The exact `forge-template==0.3.0` development pair exercised by this repository
+now has a non-empty catalogue, and the current registry and
 `--template-url` behaviour remain unchanged until the complete, tested cutover
 is released — at which point
 `--engine-source`/`--engine-ref` (see the

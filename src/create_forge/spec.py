@@ -30,6 +30,19 @@ PROJECT_SPEC_PROTOCOL_VERSION = 1
 the engine, since this module must stay importable without it installed.
 """
 
+DEFAULT_PYTHON_MINIMUM = "3.11"
+DEFAULT_PYTHON_DEVELOPMENT = "3.13"
+"""Fallback `python` bounds, mirroring `copier.yml`'s own
+`python_min_version`/`python_version` defaults (CF-08.02).
+
+`ProjectSpec.python` is a required field, but `templates.toml` never prompts
+either key -- they're on the deliberately-unasked list in this file's
+sibling `templates.toml` header, same as every other question the Copier
+path lets fall through to its own default. The engine path has no template
+default to fall through to, so create-forge supplies the same values itself
+here rather than leaving `--engine-preview` unusable without `--data`.
+"""
+
 _PACKAGE_NAME_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -103,17 +116,40 @@ def _project_metadata(answers: Mapping[str, object]) -> dict[str, object]:
     return metadata
 
 
-def _python_selection(answers: Mapping[str, object]) -> dict[str, object] | None:
-    """Both bounds or neither.
+def _python_selection(answers: Mapping[str, object]) -> dict[str, object]:
+    """Resolve both `python` bounds, falling back per-bound to the defaults.
 
-    A partial `PythonSelection` is not a smaller valid one, so `python` is
-    omitted entirely unless both bounds are known.
+    `ProjectSpec.python` is required, so unlike `_project_metadata`'s
+    omit-if-absent fields, this always returns a value -- an explicit answer
+    for one bound does not require the other, it just leaves the missing one
+    at its own default (CF-08.02).
     """
-    minimum = _string_answer(answers, "python_min_version")
-    development = _string_answer(answers, "python_version")
-    if minimum is None or development is None:
-        return None
+    minimum = _string_answer(answers, "python_min_version") or DEFAULT_PYTHON_MINIMUM
+    development = (
+        _string_answer(answers, "python_version") or DEFAULT_PYTHON_DEVELOPMENT
+    )
     return {"minimum": minimum, "development": development}
+
+
+def legacy_library_answers(answers: Mapping[str, object]) -> dict[str, str] | None:
+    """Resolve the legacy Library answer pair for `map_legacy_library_options`.
+
+    Returns `None` if `build_backend` was never answered. Mirrors
+    `copier.yml`'s own `versioning_resolved` computation: `static`
+    when `build_backend` is `uv_build`, else whatever `versioning` says,
+    defaulting to `static` when that question was skipped (CF-08.02). This
+    stays pure and engine-free -- `engine.map_legacy_library_options` is the
+    only caller that hands the result to `forge_template`.
+    """
+    build_backend = _string_answer(answers, "build_backend")
+    if build_backend is None:
+        return None
+    versioning = _string_answer(answers, "versioning") or "static"
+    versioning_resolved = "static" if build_backend == "uv_build" else versioning
+    return {
+        "build_backend": build_backend,
+        "versioning_resolved": versioning_resolved,
+    }
 
 
 def build_spec_payload(
@@ -139,16 +175,13 @@ def build_spec_payload(
     payload: dict[str, object] = {
         "protocol_version": PROJECT_SPEC_PROTOCOL_VERSION,
         "project": _project_metadata(answers),
+        "python": _python_selection(answers),
         "components": {
             "archetype": archetype,
             "capabilities": list(capabilities),
             "platforms": list(platforms),
         },
     }
-
-    python = _python_selection(answers)
-    if python is not None:
-        payload["python"] = python
 
     if component_options:
         payload["component_options"] = {

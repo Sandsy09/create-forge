@@ -30,35 +30,39 @@ recorded by
 selects the optionless engine-owned `cli` archetype. Its console command is
 derived from `ProjectSpec.project.repository_name`; FT-08.04 owns its future
 manifest and content.
-This repository's exact `0.2.x` development line has an empty production
-catalogue. Development-only
+This repository's exact development line is now `forge-template==0.3.0`
+(CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)),
+whose production catalogue ships both `library` and `cli`. Development-only
 ProjectSpec construction, component-discovery, validation, and rendering
-adapters now exist and are tested against an exact development pair, but
-that pair predates the production Library catalogue and CLI consumption remains
-unimplemented. The released
-v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
-current security and update invariants remain authoritative until the
-coordinated cutover.
+adapters exist and are tested against that exact development pair, and are
+reachable — behind the hidden `new --engine-preview` flag, with a
+discovery-driven `--archetype` selection — for both production archetypes.
+The released v0.1.x CLI remains a thin Copier wrapper with a bundled
+registry, and its current security and update invariants remain
+authoritative until the coordinated cutover.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Current released architecture |
 | First engine line | Unassigned | 1 (defined; not yet supported) | Stage 06 development contract tested; distribution and CLI cutover pending |
 
-The separate development contract is `forge-template==0.2.0` at
-`bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c`, ProjectSpec protocol `1`, and
-component-manifest protocol `1`. The canonical
+The separate development contract is `forge-template==0.3.0` at tag
+`v0.3.0`, ProjectSpec protocol `1`, and component-manifest protocol
+`(1, 2)`. The canonical
 [cross-repository engine contract tests](engine-contract-tests.md) make that
 pair executable. It is deliberately not the first row's installable range.
-The Library migration and CLI Application decision do not update this exact
-`0.2.0`/protocol-1 development pair: its empty-catalogue expectation and the
-unassigned released range remain unchanged here.
+The Library migration and CLI Application implementation are what CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) adopted this
+exact pair to consume: its production-catalogue expectation replaces the
+prior `0.2.0`/empty-catalogue one, and the released range remains
+unassigned here regardless.
 CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this
 pin forward from Stage 06's original revision specifically to adopt the
 generated-project validator: `render_project` now calls the public
 `validate_rendered_project` before returning, which is what lets
 `create-forge` finalise a rendered project to disk on the strength of the
-engine's own in-memory check rather than reimplementing it.
+engine's own in-memory check rather than reimplementing it. CF-08.02 moved
+it again, from that commit to the `v0.3.0` tag.
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).

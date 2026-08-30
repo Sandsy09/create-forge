@@ -23,7 +23,14 @@ from create_forge.config import (
     load_config,
     write_example,
 )
-from create_forge.prompts import PromptAbortedError, ask_all, choose_template, slugify
+from create_forge.prompts import (
+    ArchetypeChoice,
+    PromptAbortedError,
+    ask_all,
+    choose_archetype,
+    choose_template,
+    slugify,
+)
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
 from create_forge.staging import (
@@ -33,6 +40,8 @@ from create_forge.staging import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from create_forge.models import Registry, Template
 
 app = typer.Typer(
@@ -206,10 +215,51 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
         raise typer.Exit(1) from exc
 
 
+def _select_archetype(
+    archetypes: Sequence[ArchetypeChoice], archetype: str | None, *, yes: bool
+) -> str:
+    """Resolve which archetype to build: explicit, --yes, then a prompt.
+
+    CF-08.02. Mirrors `_select_template`'s resolution shape for the Copier
+    path, but
+    with no config- or registry-supplied default: the engine declares no
+    default archetype, and `templates.toml`'s `default_template` is a
+    Copier-path concept the engine path deliberately does not inherit.
+    """
+    available = {a.id for a in archetypes}
+
+    if archetype is not None:
+        if archetype not in available:
+            err.print(
+                f"[red]Unknown archetype {archetype!r}. Available: "
+                f"{', '.join(sorted(available))}[/red]"
+            )
+            raise typer.Exit(1)
+        return archetype
+
+    if yes:
+        err.print(
+            "[red]--engine-preview with --yes requires --archetype. "
+            f"Available: {', '.join(sorted(available))}[/red]"
+        )
+        raise typer.Exit(1)
+
+    try:
+        return choose_archetype(archetypes).id
+    except PromptAbortedError:
+        err.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(130) from None
+
+
 def _run_engine_preview(
-    answers: dict[str, object], archetype: str, dst: Path, *, dry_run: bool
+    answers: dict[str, object],
+    archetype: str | None,
+    dst: Path,
+    *,
+    dry_run: bool,
+    yes: bool,
 ) -> None:
-    """The --engine-preview path: build, validate, render, stage, finalise.
+    """The --engine-preview path: discover, select, build, validate, render.
 
     Stages and finalises into `dst` exactly like the Copier path, just
     through the engine (ADR 0015). `forge-template` stays a development-only
@@ -217,11 +267,7 @@ def _run_engine_preview(
     command, and `new` without this flag, must keep working with the
     dependency absent.
     """
-    err.print(
-        "[dim]--engine-preview is a development-only path (ADR 0014). "
-        "forge-template's production catalogue is still empty, so this "
-        "fails at validation today by design.[/dim]"
-    )
+    err.print("[dim]--engine-preview is a development-only path (ADR 0014).[/dim]")
     try:
         ensure_available(dst)
     except DestinationConflictError as exc:
@@ -244,7 +290,20 @@ def _run_engine_preview(
         raise typer.Exit(1) from None
 
     try:
-        request = pipeline.build_generation_request(answers, archetype=archetype)
+        archetypes = pipeline.discover_archetypes()
+    except engine.EngineCompatibilityError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(3) from exc
+    except engine.ForgeEngineError as exc:
+        err.print(f"[red]{engine.explain(exc)}[/red]")
+        raise typer.Exit(1) from exc
+
+    resolved_archetype = _select_archetype(archetypes, archetype, yes=yes)
+
+    try:
+        request = pipeline.build_generation_request(
+            answers, archetype=resolved_archetype
+        )
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
@@ -330,12 +389,25 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
             "--engine-preview",
             hidden=True,
             help="Development-only: build via the public forge-template engine "
-            "instead of Copier. Fails before any write today -- the "
-            "production catalogue is still empty.",
+            "instead of Copier. Combine with --archetype to pick a "
+            "component; omit it to be prompted.",
         ),
     ] = False,
+    archetype: Annotated[
+        str | None,
+        typer.Option(
+            "--archetype",
+            hidden=True,
+            help="Development-only: the engine archetype to build. Requires "
+            "--engine-preview.",
+        ),
+    ] = None,
 ) -> None:
     """Create a new project."""
+    if archetype is not None and not engine_preview:
+        err.print("[red]--archetype requires --engine-preview.[/red]")
+        raise typer.Exit(1)
+
     registry = load_registry()
     preset = _parse_data(data or [])
     if name:
@@ -351,7 +423,7 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     dst = (path or Path.cwd() / slug).resolve()
 
     if engine_preview:
-        _run_engine_preview(answers, template.id, dst, dry_run=dry_run)
+        _run_engine_preview(answers, archetype, dst, dry_run=dry_run, yes=yes)
         return
 
     src = template_url or str(template.url)

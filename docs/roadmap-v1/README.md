@@ -12,13 +12,14 @@ define the mandatory generated-project outcomes, while the
 [Foundation scope](https://github.com/Sandsy09/forge-template/blob/main/docs/foundation-scope.md)
 defines which concerns may belong in that baseline. The
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the first production archetype now implemented on
-`forge-template/main` at `0.3.0`. The
+defines the first production archetype, implemented on
+`forge-template/main` and released at `0.3.0`. The
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 selects the engine-owned, optionless `cli` archetype and derives its command
-from `ProjectSpec.project.repository_name`; FT-08.04 owns implementation.
-Neither contract changes this repository's current CLI, exact `0.2.0`
-development pair, or unassigned released engine range. The
+from `ProjectSpec.project.repository_name`; FT-08.04 implemented it, and
+CF-08.02 exposes both archetypes behind `create-forge`'s hidden
+`--engine-preview` flag. Neither contract changes this repository's default
+`new` path or unassigned released engine range. The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines the generated-project CPython window, defaults, and release lifecycle.
 The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
