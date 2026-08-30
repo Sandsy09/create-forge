@@ -4,16 +4,18 @@ Mirrors `runner.py`'s role for Copier's Python API (invariant 4): the engine
 is imported in exactly one place, so it evolves without every module needing
 attention. Importing this module requires the `engine` dependency group
 (`uv sync --all-groups`) -- it is a `[tool.uv.sources]`-pinned development
-dependency, not yet a runtime one, since `forge-template` 0.2.0 is unreleased
-and no engine range is assigned (docs/engine-resolution.md). No module
-reachable from create-forge's shipped CLI entry point may import this module;
+dependency, not a runtime one: `forge-template` 0.3.0 is a real tagged
+release, but no engine range is assigned to `[project.dependencies]`
+(docs/engine-resolution.md). No module reachable from create-forge's shipped
+CLI entry point may import this module;
 `tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
 enforces that.
 
 `spec.py` builds the wire payload this module parses and validates, while this
-module also exposes the discovery adapter used by the future CLI pipeline --
-see ADR 0013, docs/project-spec-construction.md, and
-docs/component-discovery.md for the full contracts.
+module also exposes the discovery adapter `pipeline.py` uses, reachable today
+via the hidden `new --engine-preview` flag -- see ADR 0013,
+docs/project-spec-construction.md, and docs/component-discovery.md for the
+full contracts.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from forge_template import (
 # module only imported rather than defined.
 from forge_template import ForgeEngineError as ForgeEngineError  # noqa: PLC0414
 from forge_template import discover_components as _discover_components
+from forge_template import map_legacy_library_answers as _map_legacy_library_answers
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import render_project as _render_project
 from forge_template import validate_project_spec as _validate_project_spec
@@ -41,15 +44,16 @@ from forge_template import validate_project_spec as _validate_project_spec
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-TESTED_ENGINE_PACKAGE_VERSION = "0.2.0"
+TESTED_ENGINE_PACKAGE_VERSION = "0.3.0"
 """Exact forge-template package version in the development contract.
 
 This is deliberately not a released compatibility range. The engine remains a
-development-only dependency pinned to an immutable commit until #9 chooses an
+development-only dependency pinned to an immutable tag until #9 chooses an
 installable distribution channel and a future cutover issue performs the
-atomic cutover. The pinned commit itself has already moved once, from Stage
-06's original revision to the one CF-07.04 (ADR 0015) adopted, within this
-same `0.2.0` development contract -- see docs/engine-contract-tests.md.
+atomic cutover. The pinned tag itself has already moved twice, from Stage
+06's original commit to the one CF-07.04 (ADR 0015) adopted, and now to the
+first tagged release CF-08.02 (ADR 0017) adopted -- see
+docs/engine-contract-tests.md.
 """
 
 SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
@@ -64,13 +68,16 @@ assuming they agree. No released engine package range is assigned yet:
 the ProjectSpec wire protocol independently.
 """
 
-SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS: tuple[int, ...] = (1,)
+SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS: tuple[int, ...] = (1, 2)
 """Component-manifest protocols this create-forge release understands.
 
 Kept independent from the installed engine's advertised protocols for the
 same reason as :data:`SUPPORTED_PROJECTSPEC_PROTOCOLS`: discovery must compare
 the two sides rather than assume that installing an engine makes every data
-protocol compatible.
+protocol compatible. `2` was added by CF-08.02 (ADR 0017): the `library` and
+`cli` descriptors this release actually consumes are protocol-2 manifests, so
+declaring only `1` would understate what has been validated even though set
+overlap would still let a protocol-1-only engine through.
 """
 
 
@@ -179,12 +186,8 @@ def build_project_spec(payload: Mapping[str, object]) -> ProjectSpec:
 def validate(spec: ProjectSpec) -> ProjectSpec:
     """Validate a parsed ProjectSpec against the installed component catalogue.
 
-    Expected to fail with `EngineErrorCode.INVALID_COMPONENT_SELECTION` today:
-    the installed `forge-template` 0.2.0 catalogue is intentionally empty
-    until Stage 08 migrates the Library archetype. See
-    `tests/test_engine_adapter.py::test_validate_fails_closed_against_the_empty_catalogue`,
-    which documents this outcome and is expected to start passing once a real
-    manifest exists.
+    The installed `forge-template` 0.3.0 catalogue is production: `library`
+    and `cli` are both real, validated archetypes as of CF-08.02.
     """
     info = get_engine_info()
     _require_tested_package(info)
@@ -209,6 +212,27 @@ def render(spec: ProjectSpec) -> RenderedProject:
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _render_project(spec)
+
+
+def map_legacy_library_options(
+    legacy_answers: Mapping[str, str],
+) -> Mapping[str, object]:
+    """Translate legacy Library answers into the `library` component option.
+
+    Thin wrapper around the public `map_legacy_library_answers` facade after
+    the same compatibility checks every other operation here runs, so this
+    stays the only module that touches the mapping's implementation. The
+    mapping itself -- `build_backend`/`versioning_resolved` to
+    `packaging_mode` -- is engine-owned; see
+    docs/library-archetype.md#legacy-copier-answer-mapping in forge-template.
+    `pipeline.build_generation_request` is the only caller, and only for the
+    `library` archetype (CF-08.02).
+    """
+    info = get_engine_info()
+    _require_tested_package(info)
+    _require_projectspec_protocol(info)
+    _require_component_manifest_protocol(info)
+    return _map_legacy_library_answers(legacy_answers)
 
 
 def explain(exc: ForgeEngineError) -> str:

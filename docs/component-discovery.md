@@ -19,31 +19,34 @@ path continues to use the bundled registry and direct-Copier integration
 unchanged; the atomic cutover away from it remains blocked on
 [#9](https://github.com/Sandsy09/create-forge/issues/9).
 
-The development-only `forge-template` 0.2.0 dependency currently has an empty
-production catalogue, so real discovery returns `()`. `forge-template/main`
-now ships Library at `0.3.0`, while the accepted
-[CLI Application contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-reserves the optionless `cli` descriptor for FT-08.04. Neither fact changes
-the exact pair tested here, and an empty result is not a reason to fall back
-to `templates.toml`.
+The development-only `forge-template` dependency is pinned to `0.3.0`
+(CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)), whose
+production catalogue ships both `library` and the optionless `cli` archetype
+-- real discovery now returns both descriptors. `pipeline.discover_archetypes()`
+filters the result to `kind == "archetype"` for
+`--engine-preview`'s `--archetype` option and interactive prompt
+(`prompts.choose_archetype`); this document still covers only the adapter
+`engine.discover()` itself, not that selection layer.
 
 ## Compatibility before catalogue access
 
 `engine.discover()` performs these operations in order:
 
 1. call the public `forge_template.get_engine_info()` facade once;
-2. require exact development package version `0.2.0`;
+2. require exact development package version `0.3.0`;
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.engine.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and
-   `create_forge.engine.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS`; and
+   `create_forge.engine.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2)` as
+   of CF-08.02, since the `library`/`cli` manifests this pair discovers are
+   protocol-2); and
 5. call the public `forge_template.discover_components()` facade.
 
 An untested package or either disjoint protocol set raises
 `EngineCompatibilityError` before the engine scans its catalogue. The message
 names the detected engine package version and the exact development version or
 detected/supported protocol sets. No released engine range is checked: the
-dependency remains a development-only commit pin, as distinguished by the
+dependency remains a development-only tag pin, as distinguished by the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 ## Descriptor ownership
@@ -84,29 +87,33 @@ engine internals to obtain them.
 - **CF-06.03** proves discovery, ProjectSpec validation, fail-closed rendering,
   and the exact development package/protocol pair across repositories.
 - **CF-07.01** makes this adapter reachable from the shared pipeline via the
-  hidden `new --engine-preview` flag (ADR 0014). Selection stays
-  caller-supplied (`archetype=template.id`, no capabilities/platforms) --
-  discovery runs for real but does not yet drive it.
+  hidden `new --engine-preview` flag (ADR 0014).
 - **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) gives
-  `--engine-preview` a real filesystem finalisation step, still without
-  changing selection. The atomic cutover that replaces the v0.1.x registry
-  seam and `--engine-preview` together still waits on
+  `--engine-preview` a real filesystem finalisation step.
+- **FT-08.02** added the production Library manifest to `forge-template` at
+  `0.3.0`; **FT-08.04** added the independent optionless `cli` manifest in
+  the same release. **CF-08.02**
+  ([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved this
+  adapter's exact pin to `0.3.0` and added the discovery-driven selection
+  layer described above, so `--engine-preview` now discovers and chooses
+  between both real production descriptors. The atomic cutover that replaces
+  the v0.1.x registry seam and `--engine-preview` together still waits on
   [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
   distribution channel.
-- **FT-08.02** added the production Library manifest to
-  `forge-template/main` at `0.3.0`. **FT-08.04** will add the independent
-  optionless `cli` manifest. A coordinated dependency cutover is still needed
-  before this adapter discovers either production descriptor.
 
 ## Executable examples
 
 [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) covers the
-real empty catalogue, unmodified archetype/capability/platform descriptors,
-both protocol mismatches before catalogue access, and structured discovery
-failure propagation. The engine import boundary remains enforced by
+real production catalogue, unmodified archetype/capability/platform
+descriptors, both protocol mismatches before catalogue access, and structured
+discovery failure propagation. The engine import boundary remains enforced by
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py).
 The exact installed/sibling pair and public rendering boundary are covered by
 [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py).
+`pipeline.discover_archetypes()`'s `kind`-filtering and the `--archetype`
+selection surface are covered by
+[`tests/test_pipeline.py`](../tests/test_pipeline.py) and
+[`tests/test_cli.py`](../tests/test_cli.py).
 
 When discovery behaviour changes, update this contract and its executable
 examples in the same pull request.

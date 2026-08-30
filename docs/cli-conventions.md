@@ -70,7 +70,8 @@ version options this CLI accepts; the new names are not yet implemented.
 `--help`) that builds, validates, renders, and finalises through the public
 `forge-template` engine instead of Copier — see
 [ADR 0014](adr/0014-lazy-engine-reachability.md),
-[ADR 0015](adr/0015-staged-filesystem-generation.md), and the canonical
+[ADR 0015](adr/0015-staged-filesystem-generation.md),
+[ADR 0017](adr/0017-cli-application-archetype-exposure.md), and the canonical
 [ProjectSpec construction](project-spec-construction.md) and
 [filesystem generation](filesystem-generation.md) contracts. It always
 prints an informational note that it is development-only, unconditionally
@@ -81,14 +82,26 @@ question to ask. It reuses the same answer collection and destination
 computation as the Copier path (no parallel prompt flow), rejects a
 non-empty destination before any engine call, and stages and moves a
 successful render into place exactly as the Copier path does — `--dry-run`
-lists the planned targets and writes nothing, on both paths alike. It fails
-deterministically today regardless: `forge-template`'s production catalogue
-is intentionally empty until Stage 08, so validation fails before staging is
-ever reached. `--engine-source`/`--engine-ref` above remain the names
-reserved for the eventual public override; `--engine-preview` is a distinct,
+lists the planned targets and writes nothing, on both paths alike. Since
+CF-08.02, `forge-template`'s production catalogue ships both `library` and
+`cli`, so `--engine-preview` generates a real project when given a valid
+archetype. `--engine-source`/`--engine-ref` above remain the names reserved
+for the eventual public override; `--engine-preview` is a distinct,
 temporary flag retired at the coordinated cutover, not renamed into that
 pair. A project it does create is not `create-forge update`-able — it writes
 no `.copier-answers.yml`.
+
+A hidden `--archetype` option selects which engine archetype to build,
+resolved against `pipeline.discover_archetypes()` — the real, discovered
+catalogue, filtered to `kind == "archetype"`. An explicit `--archetype` not
+present in that catalogue is rejected before any engine call. Omitting it
+with `--yes` is rejected outright, naming the available ids: the engine
+declares no default archetype, and `templates.toml`'s `default_template` is
+a Copier-path concept this selection does not inherit. Omitting it
+interactively falls to a prompt (`prompts.choose_archetype`), mirroring
+`choose_template`'s shape including its skip-when-only-one-exists behaviour.
+`--archetype` without `--engine-preview` is rejected rather than silently
+ignored.
 
 ## Interactive and non-interactive parity
 
@@ -167,8 +180,9 @@ The contract is characterized by these tests:
   `test_new_aborting_*_exits_130` cases,
   `test_new_template_url_declined_scaffolds_nothing`, and the
   `test_new_engine_preview_*`/`test_new_without_engine_preview_is_unchanged`
-  group covering the `--engine-preview` flag from ADR 0014 and its ADR 0015
-  finalisation.
+  group covering the `--engine-preview` flag from ADR 0014, its ADR 0015
+  finalisation, and its ADR 0017 `--archetype` selection surface (explicit,
+  `--yes`-without-one, unknown-id, and interactive-prompt cases).
 - [`tests/test_staging.py`](../tests/test_staging.py) covers destination
   conflict detection, target-safety refusals, staging placement and atomic
   finalisation, and cleanup after failure — see the canonical
@@ -183,7 +197,8 @@ The contract is characterized by these tests:
   config pre-filling, derived defaults, conditional questions, and automatic
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,
   `test_defaults_pre_fill_a_text_prompt_without_suppressing_it`, and their
-  neighbouring cases.
+  neighbouring cases, plus `choose_archetype`'s equivalent skip-when-one,
+  selection, and cancellation cases (ADR 0017).
 - [`tests/test_drift.py`](../tests/test_drift.py) covers the v0.1.x boundary
   between registry presentation metadata and template-owned questions,
   choices, conditions, and defaults.

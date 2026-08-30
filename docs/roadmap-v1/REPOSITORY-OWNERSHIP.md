@@ -4,11 +4,15 @@
 > accepted by [ADR 0010](../adr/0010-public-engine-integration-contract.md),
 > and strict ProjectSpec plus component manifest protocol v1 and the
 > [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
-> are now implemented by `forge-template`. Its `0.3.0` main line contains the
-> production Library archetype; CLI Application is selected for FT-08.04 but
-> not yet implemented. This repository's exact `0.2.0` pair still has an empty
-> catalogue, and CLI construction remains unimplemented. The v0.1.x
-> Copier/registry ownership remains operational until the coordinated cutover.
+> are now implemented by `forge-template`. Its `0.3.0` release contains both
+> the production Library archetype and CLI Application. This repository's
+> exact development pair moved to match
+> ([CF-08.02](https://github.com/Sandsy09/create-forge/issues/10),
+> [ADR 0017](../adr/0017-cli-application-archetype-exposure.md)), so
+> `--engine-preview` can now discover, select, and construct a ProjectSpec
+> for either archetype. The v0.1.x Copier/registry ownership remains the
+> default `new` path's operational implementation until the coordinated
+> cutover.
 
 The [canonical Forge architectural terminology](https://github.com/Sandsy09/forge-template/blob/main/docs/terminology.md)
 defines the component kinds and selection inputs referenced here. The

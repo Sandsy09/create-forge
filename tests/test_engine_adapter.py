@@ -3,7 +3,7 @@
 Exercises the real `forge_template` package (the `engine` dev-group
 dependency, present by default per `[tool.uv] default-groups = ["dev"]").
 This is deliberately not network-marked: the dependency was already resolved
-at `uv sync` time from a pinned commit, so importing it here makes no network
+at `uv sync` time from a pinned tag, so importing it here makes no network
 call of its own.
 """
 
@@ -37,7 +37,7 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
-    package_version: str = "0.2.0",
+    package_version: str = "0.3.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -49,8 +49,8 @@ def _engine_info(
 
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
-    """No exception -- the installed 0.2.0 engine and this CLI both speak
-    protocol 1 today.
+    """No exception -- the installed 0.3.0 engine and this CLI both speak
+    ProjectSpec protocol 1 today.
     """
     engine.negotiate_protocol()
 
@@ -61,12 +61,12 @@ def test_negotiate_protocol_rejects_an_untested_package_version(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _engine_info(package_version="0.2.1"),
+        lambda: _engine_info(package_version="0.3.1"),
     )
 
     with pytest.raises(
         engine.EngineCompatibilityError,
-        match=r"0\.2\.1.*tested only with forge-template 0\.2\.0",
+        match=r"0\.3\.1.*tested only with forge-template 0\.3\.0",
     ):
         engine.negotiate_protocol()
 
@@ -78,7 +78,7 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.2.0",
+            package_version="0.3.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -88,9 +88,13 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine.negotiate_protocol()
 
 
-def test_discover_returns_the_real_empty_production_catalogue() -> None:
-    """Stage 08 has not shipped a production manifest yet."""
-    assert engine.discover() == ()
+def test_discover_returns_the_real_production_catalogue() -> None:
+    """`forge-template` 0.3.0 ships both reference archetypes (CF-08.02)."""
+    discovered = {component.id: component for component in engine.discover()}
+
+    assert {"library", "cli"} <= discovered.keys()
+    assert discovered["cli"].kind == "archetype"
+    assert discovered["cli"].options == ()
 
 
 def test_discover_preserves_public_component_descriptors(
@@ -174,7 +178,10 @@ def test_discover_preserves_public_component_descriptors(
     [
         (_engine_info(projectspec_protocols=(2,)), "ProjectSpec"),
         (
-            _engine_info(component_manifest_protocols=(2,)),
+            # 3 stays disjoint from SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS'S
+            # (1, 2) -- CF-08.02 widened that set, so a probe at 2 alone
+            # would no longer be a rejection case.
+            _engine_info(component_manifest_protocols=(3,)),
             "component manifest",
         ),
     ],
@@ -198,9 +205,7 @@ def test_discover_rejects_incompatible_protocols_before_catalogue_access(
         engine.discover()
 
     assert discovered is False
-    assert "forge-template 0.2.0" in str(excinfo.value)
-    assert "[2]" in str(excinfo.value)
-    assert "[1]" in str(excinfo.value)
+    assert "forge-template 0.3.0" in str(excinfo.value)
 
 
 def test_discover_propagates_structured_engine_failure_without_fallback(
@@ -245,7 +250,7 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.2.0",
+            package_version="0.3.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -271,35 +276,60 @@ def test_build_project_spec_translates_a_malformed_payload() -> None:
     assert any("project" in detail.path for detail in exc.details)
 
 
-def test_validate_fails_closed_against_the_empty_catalogue() -> None:
-    """`forge-template` 0.2.0 ships an intentionally empty production
-    catalogue (Stage 08 adds the first manifest), so validating any
-    archetype selection fails today -- by design, not by bug. This test is
-    expected to start failing the moment a real 'library' manifest exists;
-    when it does, replace it with an assertion that validation succeeds.
+def test_validate_succeeds_against_the_real_production_catalogue() -> None:
+    """`forge-template` 0.3.0 ships `library` as a real, validated archetype
+    (CF-08.02) -- this replaces the Stage 06-era empty-catalogue rejection
+    its own docstring anticipated retiring.
     """
     payload = build_spec_payload(_VALID_ANSWERS, archetype="library")
     spec = engine.build_project_spec(payload)
 
-    with pytest.raises(ForgeEngineError) as excinfo:
-        engine.validate(spec)
+    validated = engine.validate(spec)
 
-    assert excinfo.value.code.value == "invalid-component-selection"
+    assert validated.components.archetype == "library"
 
 
-def test_render_fails_closed_without_writing_against_the_empty_catalogue(
+def test_render_produces_files_without_writing_to_disk(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """`engine.render()` is in-memory only -- even a real, successful render
+    against the production catalogue (CF-08.02) writes nothing to `cwd`.
+    """
     payload = build_spec_payload(_VALID_ANSWERS, archetype="library")
     spec = engine.build_project_spec(payload)
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(ForgeEngineError) as excinfo:
-        engine.render(spec)
+    rendered = engine.render(spec)
 
-    assert excinfo.value.code is EngineErrorCode.INVALID_COMPONENT_SELECTION
+    assert any(file.target == "pyproject.toml" for file in rendered.files)
     assert list(tmp_path.iterdir()) == []
+
+
+def test_map_legacy_library_options_translates_the_real_engine_mapping() -> None:
+    """Thin wrapper over the public facade (CF-08.02) -- proves the real
+    mapping, not a monkeypatched stand-in.
+    """
+    options = engine.map_legacy_library_options(
+        {"build_backend": "hatchling", "versioning_resolved": "vcs"}
+    )
+
+    assert options == {"packaging_mode": "hatchling-vcs"}
+
+
+def test_map_legacy_library_options_negotiates_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        engine,
+        "get_engine_info",
+        lambda: _engine_info(package_version="0.3.1"),
+    )
+
+    with pytest.raises(engine.EngineCompatibilityError):
+        engine.map_legacy_library_options(
+            {"build_backend": "uv_build", "versioning_resolved": "static"}
+        )
 
 
 def test_explain_formats_code_and_located_details() -> None:

@@ -32,8 +32,8 @@ CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-TESTED_ENGINE_REQUIREMENT = "forge-template==0.2.0"
-TESTED_ENGINE_REVISION = "bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c"
+TESTED_ENGINE_REQUIREMENT = "forge-template==0.3.0"
+TESTED_ENGINE_TAG = "v0.3.0"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -130,8 +130,8 @@ def test_development_engine_pair_is_exact_and_immutable() -> None:
 
     assert data["dependency-groups"]["engine"] == [TESTED_ENGINE_REQUIREMENT]
     source = data["tool"]["uv"]["sources"]["forge-template"]
-    assert source["rev"] == TESTED_ENGINE_REVISION
-    assert re.fullmatch(r"[0-9a-f]{40}", source["rev"])
+    assert source["tag"] == TESTED_ENGINE_TAG
+    assert re.fullmatch(r"v\d+\.\d+\.\d+", source["tag"])
     assert "forge-template" not in _declared_dependency_names()
 
 

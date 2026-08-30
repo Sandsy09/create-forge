@@ -81,7 +81,7 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 This builds current local source, including uncommitted changes, rather than
 using create-forge's immutable Git pin. It exercises only the top-level public
 `forge_template` facade. The sibling must still declare package version
-`0.2.0`; a version bump is a new development pair and fails until the pin,
+`0.3.0`; a version bump is a new development pair and fails until the pin,
 contract, and tests are deliberately adopted together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
 

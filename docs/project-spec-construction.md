@@ -24,12 +24,12 @@ completed the flag: it now stages a successful render adjacent to the
 computed destination and finalises it by atomic rename, exactly like the
 Copier path, through `src/create_forge/pipeline.py`'s
 `finalise_generation_request` — see the canonical
-[filesystem generation contract](filesystem-generation.md). `forge-template`'s
-exact `0.2.0` production component catalogue used here is intentionally empty,
-so calling this boundary end-to-end always fails validation today, before any
-staging happens. `forge-template/main` has since moved to `0.3.0` with Library,
-without changing this repository's development pin — see "Validation and
-today's expected failure" below.
+[filesystem generation contract](filesystem-generation.md). CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved the
+development pin to `forge-template==0.3.0`, whose production catalogue ships
+both `library` and `cli` — calling this boundary end-to-end now succeeds,
+generating a real project, rather than failing validation as it did against
+the prior empty catalogue; see "Validation" below.
 
 ## The map-vs-validate principle
 
@@ -58,24 +58,22 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `project_description` | `project.description` | Passed through even when blank; omitted entirely (falls to the engine's own `""` default) when the answer is absent. |
 | `license` | `project.licence` | Renamed — ProjectSpec uses the British spelling. |
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
-| `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. |
-| `python_version` | `python.development` | Same. `python` is omitted entirely unless *both* bounds are known — a partial `PythonSelection` is not a smaller valid one. |
-| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` today passes `archetype=template.id` with empty capabilities/platforms rather than driving real selection from discovery because its exact `0.2.0` pair still has an empty catalogue (ADR 0014). |
-| *caller-supplied* | `component_options` | Copied through unchanged, namespaced by component ID. |
+| `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
+| `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
+| *discovered, then user- or caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. |
+| *caller-supplied, or derived for `library`* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not and the archetype is `library`, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02) — see "Unmapped answers" below. |
 | — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
 
 ## Unmapped answers
 
-`templates.toml` collects several answers with no ProjectSpec home today,
-because no component manifest declares them as options yet:
-`github_org`, `build_backend`, `versioning`, `type_checking`, `use_docs`,
-`codeowners_team`. This is an expected, temporary gap in the current CLI
-adapter: its exact `0.2.0` engine pair declares no production options.
-FT-08.02 has now given the Library answers a home on `forge-template/main`
-under `component_options` namespaced by their owning component. The
-canonical
+`templates.toml` collects several answers with no ProjectSpec home:
+`github_org`, `type_checking`, `use_docs`, `codeowners_team` remain
+genuinely unmapped today — no component manifest declares them as options
+yet. `build_backend`/`versioning` are the exception, and CF-08.02 closes
+that gap on the engine path. The canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-fixes the packaging mapping a future create-forge cutover must consume:
+fixes the packaging mapping, and `forge-template`'s public
+`map_legacy_library_answers()` facade implements it:
 
 - `build_backend=uv_build` becomes
   `component_options.library.packaging_mode=uv-build-static`;
@@ -83,17 +81,26 @@ fixes the packaging mapping a future create-forge cutover must consume:
   `hatchling-static`; and
 - `build_backend=hatchling` with VCS versioning becomes `hatchling-vcs`.
 
-The remaining answers retain the owner assigned by their eventual component,
-such as a GitHub platform or optional capability. Current CLI code still maps
-none of these values into component options because its exact production
-catalogue is empty; this link-only record does not pre-empt the CLI cutover.
+`spec.legacy_library_answers()` resolves the same `versioning_resolved`
+value `copier.yml` itself computes (`static` when `build_backend ==
+"uv_build"`, else `versioning`, defaulting to `static`), and
+`engine.map_legacy_library_options()` is a thin, compatibility-checked
+wrapper over the facade. `pipeline._resolved_component_options` calls both,
+but only when the caller supplied no explicit `component_options` and the
+archetype is `library` — this is the one archetype-specific branch in this
+codebase, kept narrow by keying it on the engine's own
+`map_legacy_library_answers` naming rather than a locally maintained
+archetype list. The remaining unmapped answers retain the owner assigned by
+their eventual component, such as a GitHub platform or optional capability,
+and stay unmapped until that component exists.
 
 The accepted
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 assigns the engine-owned ID `cli`, declares no component options, and derives
 its console command from `project.repository_name`. `create-forge` must not add
 a duplicate `command_name` field or recreate CLI component metadata in its own
-models or registry.
+models or registry — `--archetype cli` therefore never derives
+`component_options` for it.
 
 ## Derivation rules
 
@@ -124,7 +131,8 @@ engine's `get_engine_info().projectspec_protocols`. A disjoint set raises
 exit status `3`. Negotiation runs before parsing, so before any side effect.
 
 Before that protocol comparison, the development adapter requires exact
-package version `0.2.0`. This is the Stage 06 development contract, not a
+package version `0.3.0`. This is the development contract CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved to, not a
 released package range; see the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
@@ -137,17 +145,15 @@ guard is replaced by the installable lower/upper range only at the atomic
 cutover described by
 [`docs/engine-resolution.md`](engine-resolution.md#assigning-the-first-engine-range).
 
-## Validation and today's expected failure
+## Validation
 
 `engine.validate()` calls `forge_template.validate_project_spec` against the
-installed component catalogue. `forge-template` `0.2.0`'s production
-catalogue is intentionally empty at the exact pinned commit, so validating
-any archetype selection fails today with
-`EngineErrorCode.INVALID_COMPONENT_SELECTION` — by design, not by bug.
-[`tests/test_engine_adapter.py::test_validate_fails_closed_against_the_empty_catalogue`](../tests/test_engine_adapter.py)
-characterizes this outcome for that fixed pair. Moving the pin to a catalogue
-with production manifests must replace it with a success assertion and prove
-the new behaviour in the same coordinated change.
+installed component catalogue. `forge-template` `0.3.0`'s production
+catalogue ships both `library` and `cli` at the exact pinned tag, so
+validating either archetype selection now succeeds.
+[`tests/test_engine_adapter.py::test_validate_succeeds_against_the_real_production_catalogue`](../tests/test_engine_adapter.py)
+characterizes this outcome for the pinned pair, replacing the Stage 06-era
+empty-catalogue characterization its own docstring anticipated retiring.
 
 ## Error presentation
 
@@ -159,30 +165,32 @@ pattern-matching message text.
 ## The engine dependency
 
 `forge-template` is a development-only dependency today: an `engine` `uv`
-dependency group constrained to `forge-template==0.2.0`, resolved via a
-`[tool.uv.sources]` git entry pinned to the full commit SHA
-`bb5f6a7106b09176c8c5991f43d22ccdf8a05d3c` (not a tag or branch) — moved
-forward once from Stage 06's original pin by CF-07.04
-([ADR 0015](adr/0015-staged-filesystem-generation.md)) to adopt generated-
-project validation, within the same `0.2.0` development contract.
+dependency group constrained to `forge-template==0.3.0`, resolved via a
+`[tool.uv.sources]` git entry pinned to `tag = "v0.3.0"` — moved from a
+commit SHA to a tag by CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)), which also
+adopted the `library`/`cli` production catalogue; CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) had moved the prior
+commit pin once already, within the earlier unreleased `0.2.0` contract, to
+adopt generated-project validation.
 `[project.dependencies]` is unchanged, so
 no engine range is assigned and
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
 existing ADR 0011/0012 guards continue to hold.
 
-A commit pin, not a tag: `forge-template` has no `v0.2.0` tag, and cutting
-one is not a side effect available to this decision. Released `create-forge`
-v0.1.x clients resolve `forge-template`'s *latest* PEP 440 tag for the Copier
-template itself, so tagging `v0.2.0` would republish every `template/` change
-made since `v0.1.1` to existing users in the same act — a coordinated
-`forge-template` release decision, sequenced by
-[the cross-repository contributor workflow](cross-repository-workflow.md),
-not a consequence of this repository adding a development dependency.
+A tag, not a commit pin, unlike the prior `0.2.0` contract: `forge-template`
+had no `v0.2.0` tag, and cutting one was not a side effect available to that
+decision, since released `create-forge` v0.1.x clients resolve
+`forge-template`'s *latest* PEP 440 tag for the Copier template itself — see
+[ADR 0013](adr/0013-projectspec-construction-boundary.md) for that reasoning
+in full. `v0.3.0` is a real, independent release that reasoning does not
+apply to, so ADR 0017 names it directly.
 
 ## What changes next
 
 - **CF-06.03** proves the exact development package/protocol pair, including
-  fail-closed public-facade rendering against the empty production catalogue.
+  fail-closed public-facade rendering against the (then-empty) production
+  catalogue.
 - **CF-07.01** wires this boundary into `create-forge new --engine-preview`
   (ADR 0014), making ProjectSpec construction,
   [component discovery](component-discovery.md), and exit status `3`
@@ -191,29 +199,33 @@ not a consequence of this repository adding a development dependency.
 - **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) consumes
   the `GenerationRequest` `src/create_forge/pipeline.py` produces, staging and
   finalising it exactly like the Copier path — see the canonical
-  [filesystem generation contract](filesystem-generation.md). The atomic
-  cutover that replaces `--engine-preview` and the exact development-package
-  assertion with a bounded runtime dependency still waits on
+  [filesystem generation contract](filesystem-generation.md).
+- **FT-08.02** migrated the Library archetype into `forge-template/main`,
+  released at `0.3.0`. **FT-08.03**/**FT-08.04** selected and implemented the
+  optionless `cli` archetype in the same release; its
+  [canonical contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+  fixes identity and `repository_name` command derivation.
+- **CF-08.02** ([ADR 0017](adr/0017-cli-application-archetype-exposure.md))
+  moves this repository's exact pin to `0.3.0`, adds discovery-driven
+  archetype selection to `--engine-preview`, and derives the legacy
+  `library` option mapping described above. `--engine-preview` now succeeds
+  end-to-end for both archetypes. The atomic cutover that replaces
+  `--engine-preview` and the exact development-package assertion with a
+  bounded runtime dependency still waits on
   [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
   distribution channel.
-- **FT-08.02** migrated the Library archetype into
-  `forge-template/main` at `0.3.0`; this repository's exact `0.2.0` adapter
-  remains unchanged and therefore retains its characterised empty-catalogue
-  failure.
-- **FT-08.03** selected the optionless `cli` archetype. Its
-  [canonical contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-  fixes identity and `repository_name` command derivation; FT-08.04 owns its
-  implementation before create-forge #10 exposes it.
 
 ## Executable examples
 
 - [`tests/test_spec.py`](../tests/test_spec.py) — derivation, `--data`
-  overrides, field omission, and interactive/non-interactive parity, entirely
-  without the `engine` dependency group.
+  overrides, field omission, Python-bound fallback, legacy Library answer
+  resolution, and interactive/non-interactive parity, entirely without the
+  `engine` dependency group.
 - [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) —
   protocol negotiation (including the compatible real engine and a
-  monkeypatched incompatible one), parsing, structured error translation, and
-  the characterized empty-catalogue validation failure.
+  monkeypatched incompatible one), parsing, structured error translation, the
+  real production-catalogue validation and render, and the legacy Library
+  option mapping.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) —
   `test_shipped_cli_modules_do_not_import_the_engine` guards the one-module
   import boundary.
@@ -224,13 +236,16 @@ not a consequence of this repository adding a development dependency.
   engine.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) — the shared
   pipeline's discover → build → validate → render orchestration order, the
-  real, unmocked end-to-end characterized failure against the empty
-  catalogue, and `finalise_generation_request`'s staging/rename behaviour —
-  see also the canonical [filesystem generation contract](filesystem-generation.md).
+  real, unmocked end-to-end success against the production catalogue for
+  both archetypes, the legacy `library` option derivation and its
+  archetype-scoping, `discover_archetypes()`'s `kind` filter, and
+  `finalise_generation_request`'s staging/rename behaviour — see also the
+  canonical [filesystem generation contract](filesystem-generation.md).
 - [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s outcomes
-  (dependency missing, characterized validation failure, exit `3` on an
-  incompatible engine, a pre-existing destination conflict), and that
-  omitting it leaves `new` unchanged.
+  (dependency missing, a real generated project, exit `3` on an incompatible
+  engine, a pre-existing destination conflict), `--archetype`'s explicit,
+  `--yes`-without-one, unknown-id, and interactive-prompt paths, and that
+  omitting `--engine-preview` leaves `new` unchanged.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.
