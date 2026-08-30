@@ -30,8 +30,15 @@
   which moves this repository's exact development pin to `forge-template==0.3.0`
   and adds a discovery-driven `--archetype` option and prompt behind
   `--engine-preview`.
-- [**CF-08.03 — Run CLI archetype-parity review**](https://github.com/Sandsy09/create-forge/issues/52)
-  — unblocked now that CF-08.02 is complete.
+- ~~**CF-08.03 — Run CLI archetype-parity review**~~ — complete via
+  [ADR 0019](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0019-cli-archetype-parity-review.md)
+  and [create-forge#52](https://github.com/Sandsy09/create-forge/issues/52).
+  The shared ProjectSpec/pipeline path and engine-owned discovery were
+  confirmed generic; the one archetype-specific branch found
+  (`pipeline._resolved_component_options`) is now gated by a discovered
+  descriptor rather than a hardcoded archetype id. The engine path's
+  Library-shaped prompt set was recorded, not fixed, and tracked by
+  [create-forge#91](https://github.com/Sandsy09/create-forge/issues/91).
 - [**CF-08.04 — Extend end-to-end generation to the public engine**](https://github.com/Sandsy09/create-forge/issues/85)
   — successor to [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51).
   Its production-catalogue acceptance criterion is met by CF-08.02; its

@@ -105,6 +105,26 @@ interactively falls to a prompt (`prompts.choose_archetype`), mirroring
 `--archetype` without `--engine-preview` is rejected rather than silently
 ignored.
 
+CF-08.03's archetype-parity review ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
+recorded that reusing the Copier registry's answer collection means the
+prompt set stays Library-shaped for every archetype, since `templates.toml`
+has one template:
+
+| Registry question | Reaches ProjectSpec for `library`? | for `cli`? |
+| --- | --- | --- |
+| `project_name`, `project_description`, `license` | yes | yes |
+| `build_backend`, `versioning` | yes, via `map_legacy_library_options` | discarded |
+| `github_org`, `type_checking`, `use_docs` | discarded | discarded |
+
+The archetype is also selected *after* these answers are collected, so a
+user building a CLI Application still answers `build_backend`/`versioning`
+before it is silently dropped. This is accepted as a known limitation of
+reusing the Copier answer flow, not fixed by that review — doing so would
+mean the engine path stops sharing this section's "no parallel prompt flow"
+and "before any engine call" guarantees, both open questions tracked by
+[#91](https://github.com/Sandsy09/create-forge/issues/91) rather than decided
+here.
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.

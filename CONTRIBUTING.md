@@ -178,6 +178,16 @@ real, CI-enforced coverage of that default `new` path against a released
 template — the engine path still has no CI-enforced end-to-end coverage;
 ADR 0018 cleared its last native blocker (a released, range-assigned engine
 to install), but writing that coverage is CF-08.04's own separate work.
+CF-08.03 ([ADR 0019](docs/adr/0019-cli-archetype-parity-review.md)) reviewed
+both archetypes for parity, confirmed the shared construction path and
+engine-owned discovery hold, and generalised the legacy `library` option
+derivation above to be gated by a discovered descriptor rather than a
+hardcoded archetype id -- see the canonical
+[ProjectSpec construction contract](docs/project-spec-construction.md) for
+the current form. It also recorded, without fixing,
+[#91](https://github.com/Sandsy09/create-forge/issues/91): the engine path's
+prompt set is still the Copier registry's Library-shaped questions
+regardless of archetype.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 and the living [engine resolution contract](docs/engine-resolution.md)
 define how that engine is sourced, overridden locally, diagnosed, and

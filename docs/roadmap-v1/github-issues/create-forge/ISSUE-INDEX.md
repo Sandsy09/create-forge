@@ -2,7 +2,7 @@
 
 This is the live repository-local index for the Forge Foundation roadmap,
 reconciled against the v0.1.0 baseline, filed on GitHub on 2026-08-23, and
-updated through #9 on 2026-08-30. GitHub issue bodies are the source of
+updated through #52 on 2026-08-30. GitHub issue bodies are the source of
 truth for open work; completed baseline items were not backfilled as closed
 issues.
 
@@ -37,7 +37,7 @@ issues.
 | CF-EPIC-08 | [#39](https://github.com/Sandsy09/create-forge/issues/39) | Blocked | — | — | Reference Archetypes — Stage 08 |
 | CF-08.01 | Existing Library registry/prompt support and the canonical [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md) | Complete before roadmap | — | — | — |
 | CF-08.02 | [#10](https://github.com/Sandsy09/create-forge/issues/10) and [ADR 0017](../../../adr/0017-cli-application-archetype-exposure.md) | Complete | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#47](https://github.com/Sandsy09/create-forge/issues/47) (complete), [forge-template#4](https://github.com/Sandsy09/forge-template/issues/4) (complete) | Reference Archetypes — Stage 08 |
-| CF-08.03 | [#52](https://github.com/Sandsy09/create-forge/issues/52) | Blocked | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#10](https://github.com/Sandsy09/create-forge/issues/10) (complete) | Reference Archetypes — Stage 08 |
+| CF-08.03 | [#52](https://github.com/Sandsy09/create-forge/issues/52) and [ADR 0019](../../../adr/0019-cli-archetype-parity-review.md) | Complete | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#10](https://github.com/Sandsy09/create-forge/issues/10) (complete) | Reference Archetypes — Stage 08 |
 | CF-08.04 | [#85](https://github.com/Sandsy09/create-forge/issues/85) | Blocked | [#39](https://github.com/Sandsy09/create-forge/issues/39) | [#51](https://github.com/Sandsy09/create-forge/issues/51) (complete), [forge-template#41](https://github.com/Sandsy09/forge-template/issues/41) (complete), [#9](https://github.com/Sandsy09/create-forge/issues/9) (complete) | Reference Archetypes — Stage 08 |
 | CF-EPIC-09 | [#40](https://github.com/Sandsy09/create-forge/issues/40) | Blocked | — | — | Blueprint Compatibility — Stage 09 |
 | CF-09.01 | [#53](https://github.com/Sandsy09/create-forge/issues/53) | Blocked | [#40](https://github.com/Sandsy09/create-forge/issues/40) | [#46](https://github.com/Sandsy09/create-forge/issues/46) (complete), [FT-09.01](https://github.com/Sandsy09/forge-template/issues/44) | Blueprint Compatibility — Stage 09 |
@@ -48,6 +48,7 @@ issues.
 
 Issues [#8](https://github.com/Sandsy09/create-forge/issues/8),
 [#9](https://github.com/Sandsy09/create-forge/issues/9),
-[#25](https://github.com/Sandsy09/create-forge/issues/25), and
-[#26](https://github.com/Sandsy09/create-forge/issues/26) remain deliberately
+[#25](https://github.com/Sandsy09/create-forge/issues/25),
+[#26](https://github.com/Sandsy09/create-forge/issues/26), and
+[#91](https://github.com/Sandsy09/create-forge/issues/91) remain deliberately
 outside the roadmap epics.

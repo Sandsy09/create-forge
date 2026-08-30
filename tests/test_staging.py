@@ -2,7 +2,8 @@
 placement, atomic finalisation, and cleanup after failure (ADR 0015).
 
 No engine dependency: this module is deliberately engine-free, so these
-tests run in the fast suite with no `engine` dependency group installed.
+tests run in the fast suite with no optional `engine` extra (ADR 0018)
+installed.
 """
 
 from __future__ import annotations
