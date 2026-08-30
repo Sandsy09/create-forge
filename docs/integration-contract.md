@@ -21,13 +21,21 @@ The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md),
 recorded by
 [forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md),
-defines the first production component and the manifest protocol `2`, option
+defines the first production component, the manifest protocol `2`, option
 schema `2`, implicit Foundation source, and `0.3.0` planning-owner migration
-FT-08.02 must implement.
-The `0.2.x` engine line has an empty production catalogue. Development-only
+now implemented on `forge-template/main`. The accepted
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md),
+recorded by
+[forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0034-select-cli-application-reference-archetype.md),
+selects the optionless engine-owned `cli` archetype. Its console command is
+derived from `ProjectSpec.project.repository_name`; FT-08.04 owns its future
+manifest and content.
+This repository's exact `0.2.x` development line has an empty production
+catalogue. Development-only
 ProjectSpec construction, component-discovery, validation, and rendering
 adapters now exist and are tested against an exact development pair, but
-production components and CLI consumption remain unimplemented. The released
+that pair predates the production Library catalogue and CLI consumption remains
+unimplemented. The released
 v0.1.x CLI remains a thin Copier wrapper with a bundled registry, and its
 current security and update invariants remain authoritative until the
 coordinated cutover.
@@ -42,8 +50,8 @@ The separate development contract is `forge-template==0.2.0` at
 component-manifest protocol `1`. The canonical
 [cross-repository engine contract tests](engine-contract-tests.md) make that
 pair executable. It is deliberately not the first row's installable range.
-The Library decision is future implementation guidance: this exact
-`0.2.0`/protocol-1 development pair, the empty-catalogue expectation, and the
+The Library migration and CLI Application decision do not update this exact
+`0.2.0`/protocol-1 development pair: its empty-catalogue expectation and the
 unassigned released range remain unchanged here.
 CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md)) moved this
 pin forward from Stage 06's original revision specifically to adopt the

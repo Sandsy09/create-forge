@@ -20,9 +20,12 @@ unchanged; the atomic cutover away from it remains blocked on
 [#9](https://github.com/Sandsy09/create-forge/issues/9).
 
 The development-only `forge-template` 0.2.0 dependency currently has an empty
-production catalogue, so real discovery returns `()`. That is expected until
-Stage 08 migrates the first production archetype; an empty result is not a
-reason to fall back to `templates.toml`.
+production catalogue, so real discovery returns `()`. `forge-template/main`
+now ships Library at `0.3.0`, while the accepted
+[CLI Application contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+reserves the optionless `cli` descriptor for FT-08.04. Neither fact changes
+the exact pair tested here, and an empty result is not a reason to fall back
+to `templates.toml`.
 
 ## Compatibility before catalogue access
 
@@ -90,8 +93,10 @@ engine internals to obtain them.
   seam and `--engine-preview` together still waits on
   [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
   distribution channel.
-- **Stage 08** adds production manifests, after which real discovery will
-  return the Library and later archetype descriptors.
+- **FT-08.02** added the production Library manifest to
+  `forge-template/main` at `0.3.0`. **FT-08.04** will add the independent
+  optionless `cli` manifest. A coordinated dependency cutover is still needed
+  before this adapter discovers either production descriptor.
 
 ## Executable examples
 

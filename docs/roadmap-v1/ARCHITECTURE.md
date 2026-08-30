@@ -6,10 +6,13 @@
 > and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 > plus the [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 > and [generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
-> are now implemented by `forge-template`. Its production catalogue is empty,
-> and CLI integration is not the current implementation. The released v0.1.x
-> CLI remains a thin Copier wrapper with a bundled registry until the
-> coordinated cutover.
+> are now implemented by `forge-template`. Its `0.3.0` main line contains the
+> production Library archetype, and the future optionless
+> [CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+> is selected but not yet implemented. This repository's exact `0.2.0`
+> development pin still has an empty catalogue, and CLI integration is not the
+> current implementation. The released v0.1.x CLI remains a thin Copier
+> wrapper with a bundled registry until the coordinated cutover.
 
 ```text
 ┌─────────────────────────────┐

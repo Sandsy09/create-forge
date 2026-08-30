@@ -25,9 +25,11 @@ computed destination and finalises it by atomic rename, exactly like the
 Copier path, through `src/create_forge/pipeline.py`'s
 `finalise_generation_request` — see the canonical
 [filesystem generation contract](filesystem-generation.md). `forge-template`'s
-production component catalogue is intentionally empty until Stage 08, so
-calling this boundary end-to-end always fails validation today, before any
-staging happens — see "Validation and today's expected failure" below.
+exact `0.2.0` production component catalogue used here is intentionally empty,
+so calling this boundary end-to-end always fails validation today, before any
+staging happens. `forge-template/main` has since moved to `0.3.0` with Library,
+without changing this repository's development pin — see "Validation and
+today's expected failure" below.
 
 ## The map-vs-validate principle
 
@@ -58,7 +60,7 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. |
 | `python_version` | `python.development` | Same. `python` is omitted entirely unless *both* bounds are known — a partial `PythonSelection` is not a smaller valid one. |
-| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` today passes `archetype=template.id` with empty capabilities/platforms rather than driving real selection from discovery — nothing non-empty to select until Stage 08 (ADR 0014). |
+| *discovered, but caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` today passes `archetype=template.id` with empty capabilities/platforms rather than driving real selection from discovery because its exact `0.2.0` pair still has an empty catalogue (ADR 0014). |
 | *caller-supplied* | `component_options` | Copied through unchanged, namespaced by component ID. |
 | — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
 
@@ -67,13 +69,13 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 `templates.toml` collects several answers with no ProjectSpec home today,
 because no component manifest declares them as options yet:
 `github_org`, `build_backend`, `versioning`, `type_checking`, `use_docs`,
-`codeowners_team`. This is an expected, temporary gap: the discovery adapter
-preserves option declarations, but the empty production catalogue declares
-none yet. Stage 08's Library manifest migration is what gives these answers a
-home under `component_options` namespaced by their owning component. The
+`codeowners_team`. This is an expected, temporary gap in the current CLI
+adapter: its exact `0.2.0` engine pair declares no production options.
+FT-08.02 has now given the Library answers a home on `forge-template/main`
+under `component_options` namespaced by their owning component. The
 canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-now fixes the packaging mapping that FT-08.02 must implement:
+fixes the packaging mapping a future create-forge cutover must consume:
 
 - `build_backend=uv_build` becomes
   `component_options.library.packaging_mode=uv-build-static`;
@@ -83,8 +85,15 @@ now fixes the packaging mapping that FT-08.02 must implement:
 
 The remaining answers retain the owner assigned by their eventual component,
 such as a GitHub platform or optional capability. Current CLI code still maps
-none of these values into component options because the production catalogue
-is empty; this link-only record does not pre-empt FT-08.02 or the CLI cutover.
+none of these values into component options because its exact production
+catalogue is empty; this link-only record does not pre-empt the CLI cutover.
+
+The accepted
+[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+assigns the engine-owned ID `cli`, declares no component options, and derives
+its console command from `project.repository_name`. `create-forge` must not add
+a duplicate `command_name` field or recreate CLI component metadata in its own
+models or registry.
 
 ## Derivation rules
 
@@ -132,13 +141,13 @@ cutover described by
 
 `engine.validate()` calls `forge_template.validate_project_spec` against the
 installed component catalogue. `forge-template` `0.2.0`'s production
-catalogue is intentionally empty until Stage 08 migrates the Library
-archetype, so validating any archetype selection fails today with
+catalogue is intentionally empty at the exact pinned commit, so validating
+any archetype selection fails today with
 `EngineErrorCode.INVALID_COMPONENT_SELECTION` — by design, not by bug.
 [`tests/test_engine_adapter.py::test_validate_fails_closed_against_the_empty_catalogue`](../tests/test_engine_adapter.py)
-characterizes this outcome and is written to start failing, not stay green,
-the moment a real manifest exists — replacing it with a success assertion at
-that point is expected maintenance.
+characterizes this outcome for that fixed pair. Moving the pin to a catalogue
+with production manifests must replace it with a success assertion and prove
+the new behaviour in the same coordinated change.
 
 ## Error presentation
 
@@ -187,12 +196,14 @@ not a consequence of this repository adding a development dependency.
   assertion with a bounded runtime dependency still waits on
   [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
   distribution channel.
-- **Stage 08** (`forge-template`) migrates the Library archetype, giving the
-  empty catalogue its first real manifest and flipping
-  `test_validate_fails_closed_against_the_empty_catalogue` from a
-  characterized failure to a real pass. The accepted
-  [Library contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-  defines that migration without changing this repository's current adapter.
+- **FT-08.02** migrated the Library archetype into
+  `forge-template/main` at `0.3.0`; this repository's exact `0.2.0` adapter
+  remains unchanged and therefore retains its characterised empty-catalogue
+  failure.
+- **FT-08.03** selected the optionless `cli` archetype. Its
+  [canonical contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
+  fixes identity and `repository_name` command derivation; FT-08.04 owns its
+  implementation before create-forge #10 exposes it.
 
 ## Executable examples
 
