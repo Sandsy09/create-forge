@@ -32,8 +32,7 @@ CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-TESTED_ENGINE_REQUIREMENT = "forge-template==0.3.0"
-TESTED_ENGINE_TAG = "v0.3.0"
+ENGINE_REQUIREMENT = "forge-template>=0.3.1,<0.4"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -48,11 +47,13 @@ _SHIPPED_MODULES = (
     "config",
     "spec",
     "staging",
+    "compat",
 )
 
-# The one dependency ADR 0012 governs: Copier today, the forge-template
-# engine after cutover. Kept as a constant so both decisions' tests agree on
-# what "the compatibility-line dependency" currently names.
+# One of two compatibility-line dependencies ADR 0012 now governs -- Copier
+# for the default `new` path. `forge-template` (ADR 0018) is the other, and
+# is named directly in its own tests below rather than through this
+# constant, since it has always had exactly one name.
 COMPATIBILITY_LINE_DEPENDENCY = "copier"
 
 # PEP 503 normalisation: case-fold and collapse runs of -._ to a single "-".
@@ -63,12 +64,12 @@ def _normalise(name: str) -> str:
     return _NORMALISE_RE.sub("-", name).lower()
 
 
-def _declared_dependencies() -> dict[str, str]:
-    """Every top-level dependency pyproject.toml declares, as {normalised
-    name: full requirement string}.
+def _required_dependencies() -> dict[str, str]:
+    """Every unconditionally-required dependency, as {normalised name: spec}.
 
     Reads `[project.dependencies]` only -- dependency-groups are dev-only
-    tooling (ruff, pytest, ...) and never a runtime engine dependency.
+    tooling (ruff, pytest, ...), never a runtime dependency, and optional
+    extras are declared but not required.
     """
     data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
     deps: list[str] = data["project"]["dependencies"]
@@ -82,9 +83,23 @@ def _declared_dependencies() -> dict[str, str]:
     return declared
 
 
-def _declared_dependency_names() -> set[str]:
-    """Every top-level dependency name pyproject.toml declares, normalised."""
-    return set(_declared_dependencies())
+def _declared_dependencies() -> dict[str, str]:
+    """Every top-level dependency pyproject.toml declares -- required and
+    optional-extra -- as {normalised name: full requirement string}.
+
+    Dependency-groups (ruff, pytest, ...) are excluded: dev-only tooling,
+    never a dependency a consumer's install resolves.
+    """
+    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    deps: list[str] = list(data["project"]["dependencies"])
+    for extra_deps in data["project"].get("optional-dependencies", {}).values():
+        deps.extend(extra_deps)
+    declared = {}
+    for spec in deps:
+        match = re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]*", spec)
+        if match:
+            declared[_normalise(match.group(0))] = spec
+    return declared
 
 
 def _dependabot_uv_ignores() -> list[dict[str, Any]]:
@@ -101,38 +116,42 @@ def _dependabot_uv_ignores() -> list[dict[str, Any]]:
     return []
 
 
-def test_no_engine_dependency_means_no_assigned_engine_range() -> None:
-    """ADR 0011 and the integration contract say the first engine range must
-    not be reserved speculatively -- only assigned once a real dependency
-    exists and its compatibility tests pass. This is the executable form of
-    that rule: the moment someone adds a `forge-template` dependency without
-    updating the contract table, this must start failing.
+def test_engine_dependency_stays_out_of_required_dependencies() -> None:
+    """ADR 0018: forge-template is declared as the optional `engine` extra,
+    never a hard `[project.dependencies]` entry -- that is what keeps ADR
+    0014's guarded `try/except ImportError` in cli.py meaningful, and what
+    keeps a plain `pip install create-forge`/`uvx create-forge` from ever
+    resolving it.
     """
-    engine_declared = "forge-template" in _declared_dependency_names()
-    contract_text = INTEGRATION_CONTRACT.read_text(encoding="utf-8")
-
-    assert not engine_declared, (
-        "pyproject.toml now declares a forge-template dependency -- follow "
-        "docs/engine-resolution.md's 'Assigning the first engine range' "
-        "checklist, then update this test and the contract table together."
-    )
-    expected = "| First engine line | Unassigned | 1 (defined; not yet supported) |"
-    assert expected in contract_text, (
-        "No forge-template dependency is declared yet, so the future engine "
-        "range must stay unassigned while the defined protocol remains "
-        "explicitly unsupported."
+    assert "forge-template" not in _required_dependencies(), (
+        "forge-template must not be a required [project.dependencies] entry "
+        "-- it belongs in [project.optional-dependencies].engine (ADR 0018), "
+        "so the default `new` path never downloads an engine it doesn't call."
     )
 
 
-def test_development_engine_pair_is_exact_and_immutable() -> None:
-    """The Stage 06 pair is reproducible without becoming a runtime range."""
+def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None:
+    """The first released engine range (#9, ADR 0018), replacing the prior
+    'Unassigned' contract-table row and exact development pin.
+    """
     data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
 
-    assert data["dependency-groups"]["engine"] == [TESTED_ENGINE_REQUIREMENT]
-    source = data["tool"]["uv"]["sources"]["forge-template"]
-    assert source["tag"] == TESTED_ENGINE_TAG
-    assert re.fullmatch(r"v\d+\.\d+\.\d+", source["tag"])
-    assert "forge-template" not in _declared_dependency_names()
+    assert data["project"]["optional-dependencies"]["engine"] == [ENGINE_REQUIREMENT]
+    assert "sources" not in data.get("tool", {}).get("uv", {}), (
+        "a committed [tool.uv.sources] override must not survive ADR 0018 -- "
+        "the engine now resolves from PyPI like any other dependency."
+    )
+    assert "engine" not in data.get("dependency-groups", {}), (
+        "the exact-pin development [dependency-groups].engine block is "
+        "retired by ADR 0018."
+    )
+
+    contract_text = INTEGRATION_CONTRACT.read_text(encoding="utf-8")
+    expected = f"| v0.2.x (`engine` extra) | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
+    assert expected in contract_text, (
+        "docs/integration-contract.md's compatibility table must record the "
+        "same range this test just verified in pyproject.toml."
+    )
 
 
 def test_engine_contract_doc_is_linked_from_canonical_entry_points() -> None:
@@ -268,19 +287,28 @@ def test_automation_cannot_cross_the_copier_compatibility_line() -> None:
     )
 
 
-def test_declaring_the_engine_requires_a_matching_automation_gate() -> None:
-    """The self-arming half of ADR 0012: the moment a `forge-template`
-    dependency is declared, .github/dependabot.yml must gain a matching
-    ignore rule (major always; minor too while forge-template is pre-1.0) --
-    otherwise the review gate this decision describes silently does not
-    exist for the real engine. Vacuously true today, by design, since no
-    such dependency is declared yet.
+def test_forge_template_compatibility_line_keeps_a_strict_upper_bound() -> None:
+    """ADR 0012/0018: forge-template is now the second compatibility-line
+    dependency, mirroring the equivalent `copier` test above -- both a
+    tested lower bound and a strict upper bound, checked directly rather
+    than assumed from the extra's mere presence.
     """
     declared = _declared_dependencies()
-    engine_spec = declared.get("forge-template")
-    if engine_spec is None:
-        return
+    spec = declared.get("forge-template")
+    assert spec is not None, (
+        "forge-template must be declared in [project.optional-dependencies]."
+        "engine (ADR 0018) for this test to check its bound."
+    )
+    assert re.search(r">=\d", spec), f"{spec!r} has no tested lower bound"
+    assert re.search(r"<\d", spec), f"{spec!r} has no strict upper bound"
 
+
+def test_automation_cannot_cross_the_forge_template_compatibility_line() -> None:
+    """The self-arming half of ADR 0012: now that ADR 0018 declares a real
+    `forge-template` dependency, .github/dependabot.yml must ignore both
+    semver-major and semver-minor bumps for it -- pre-1.0, a minor version is
+    itself a compatibility line, unlike `copier`'s major-only gate.
+    """
     ignores = _dependabot_uv_ignores()
     matching = [
         rule
@@ -288,14 +316,16 @@ def test_declaring_the_engine_requires_a_matching_automation_gate() -> None:
         if _normalise(str(rule.get("dependency-name", ""))) == "forge-template"
     ]
     assert matching, (
-        "pyproject.toml now declares a forge-template dependency, but "
-        ".github/dependabot.yml's uv entry has no matching ignore rule -- "
-        "follow ADR 0012 and add one before this can merge."
+        ".github/dependabot.yml's uv entry has no ignore rule for "
+        "'forge-template' -- see ADR 0012, ADR 0018, and docs/engine-updates.md."
     )
     update_types = {
         update_type for rule in matching for update_type in rule.get("update-types", [])
     }
-    assert "version-update:semver-major" in update_types
+    assert "version-update:semver-major" in update_types, (
+        "the 'forge-template' ignore rule does not block semver-major updates"
+    )
+    engine_spec = _declared_dependencies()["forge-template"]
     is_pre_1_0 = re.search(r">=0\.", engine_spec) is not None
     if is_pre_1_0:
         assert "version-update:semver-minor" in update_types, (

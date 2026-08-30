@@ -74,18 +74,20 @@ version options this CLI accepts; the new names are not yet implemented.
 [ADR 0017](adr/0017-cli-application-archetype-exposure.md), and the canonical
 [ProjectSpec construction](project-spec-construction.md) and
 [filesystem generation](filesystem-generation.md) contracts. It always
-prints an informational note that it is development-only, unconditionally
+prints an informational note that it is a hidden preview path, unconditionally
 and regardless of `--yes` — but unlike `--template-url`'s warning, this is
-not a confirmation gate: `forge-template` is a reviewed, pinned dependency,
-not arbitrary user-supplied code, so there is no code-execution trust
-question to ask. It reuses the same answer collection and destination
-computation as the Copier path (no parallel prompt flow), rejects a
-non-empty destination before any engine call, and stages and moves a
-successful render into place exactly as the Copier path does — `--dry-run`
-lists the planned targets and writes nothing, on both paths alike. Since
-CF-08.02, `forge-template`'s production catalogue ships both `library` and
-`cli`, so `--engine-preview` generates a real project when given a valid
-archetype. `--engine-source`/`--engine-ref` above remain the names reserved
+not a confirmation gate: `forge-template` is a reviewed dependency (the
+optional `engine` extra, ADR 0018), not arbitrary user-supplied code, so
+there is no code-execution trust question to ask. It reuses the same answer
+collection and destination computation as the Copier path (no parallel
+prompt flow), rejects a non-empty destination before any engine call, and
+stages and moves a successful render into place exactly as the Copier path
+does — `--dry-run` lists the planned targets and writes nothing, on both
+paths alike. Since CF-08.02, `forge-template`'s production catalogue ships
+both `library` and `cli`, so `--engine-preview` generates a real project
+when given a valid archetype -- reachable since #9/ADR 0018 with nothing
+more than `pip install 'create-forge[engine]'`, not a source checkout.
+`--engine-source`/`--engine-ref` above remain the names reserved
 for the eventual public override; `--engine-preview` is a distinct,
 temporary flag retired at the coordinated cutover, not renamed into that
 pair. A project it does create is not `create-forge update`-able — it writes

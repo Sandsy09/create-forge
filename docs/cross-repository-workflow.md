@@ -50,8 +50,13 @@ cd ../create-forge
 git switch main
 git pull --ff-only
 git switch -c <type>/<cli-change>
-uv sync --all-groups
+uv sync --all-groups --all-extras
 ```
+
+`--all-extras` is what pulls in the optional `engine` extra
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
+`--all-groups` alone no longer does, since the engine moved out of the
+dev-only `engine` dependency group.
 
 Template schema, rendering, generated files, and update compatibility belong
 in `forge-template`. CLI flags, prompts, registry presentation metadata,
@@ -78,11 +83,12 @@ trees in an isolated environment and run the focused Stage 06 suite:
 uv run --no-project --isolated --with . --with ../forge-template --with pytest python -m pytest -o addopts= tests/test_engine_cross_repository.py
 ```
 
-This builds current local source, including uncommitted changes, rather than
-using create-forge's immutable Git pin. It exercises only the top-level public
-`forge_template` facade. The sibling must still declare package version
-`0.3.0`; a version bump is a new development pair and fails until the pin,
-contract, and tests are deliberately adopted together. See the canonical
+This builds current local source, including uncommitted changes, overriding
+create-forge's normal PyPI resolution for that one run only. It exercises
+only the top-level public `forge_template` facade. The sibling must still
+satisfy the declared range (`>=0.3.1,<0.4`); a version outside it is a new
+compatibility line and fails until the range, contract, and tests are
+deliberately widened together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 When `copier.yml` and `templates.toml` change together, point the drift suite

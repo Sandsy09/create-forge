@@ -1,47 +1,52 @@
 # Cross-Repository Engine Contract Tests
 
-This is the canonical executable contract for the development-only boundary
-between `create-forge` and `forge-template`. It records what Stage 06 proved,
-what CF-07.04 (ADR 0015) added on top of it, and what CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved the pin to,
-before the public engine is installed by, or reachable from, a released CLI.
+This is the canonical executable contract for the boundary between
+`create-forge` and `forge-template`. It records what Stage 06 proved as a
+development-only pair, what CF-07.04 (ADR 0015) and CF-08.02 (ADR 0017)
+moved that pair to, and what #9 (ADR 0018) then did: assigned the first
+*released* engine range, so this is no longer a development-only boundary --
+it is what a released `create-forge[engine]` install actually resolves.
 
-## Tested development pair
+## Supported range
 
-| Surface | Tested value |
+| Surface | Supported value |
 | --- | --- |
-| `forge-template` package | `0.3.0` |
-| Source | `tag = "v0.3.0"` |
+| `forge-template` distribution | PyPI, `create-forge`'s optional `engine` extra |
+| `forge-template` range | `>=0.3.1,<0.4` |
 | ProjectSpec protocol | `1` |
 | Component-manifest protocol | `1, 2` |
 
-`pyproject.toml` declares `forge-template==0.3.0` only in the `engine`
-development group and maps it to the tag above via `[tool.uv.sources]`. This
-exact pair is not a released compatibility range: the runtime dependency
-and its tested lower/upper bounds remain unassigned until
-[PyPI/distribution issue #9](https://github.com/Sandsy09/create-forge/issues/9)
-and the atomic CLI cutover in
-[CF-07.04 / #50](https://github.com/Sandsy09/create-forge/issues/50).
+`pyproject.toml` declares `forge-template>=0.3.1,<0.4` in
+`[project.optional-dependencies].engine` -- an ordinary, index-resolved,
+range-bounded dependency, exactly like `copier`, `typer`, or `pydantic`, not
+a `[tool.uv.sources]`-pinned commit or tag. `src/create_forge/compat.py`
+holds this range as `SUPPORTED_ENGINE_RANGE`; `src/create_forge/engine.py`
+checks an installed package against it with
+`packaging.specifiers.SpecifierSet` rather than the exact-equality check the
+development-only pair used before a real release existed.
 
-The pinned source has moved twice. First, from Stage 06's original commit to
-a later commit, adopted by
+The range has moved twice before becoming a real release. First, Stage 06's
+original development commit moved to a later one, adopted by
 [CF-07.04 / #50](https://github.com/Sandsy09/create-forge/issues/50)
 specifically to pick up `forge-template`'s
-[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md):
-`render_project` now calls the public `validate_rendered_project` before
-returning, so a `RenderedProject` this adapter receives has already passed
-that check. Second, from that commit to the `v0.3.0` tag, adopted by
-[CF-08.02 / #10](https://github.com/Sandsy09/create-forge/issues/10) to reach
-the first tagged, production-catalogue release — a tag rather than a commit
-SHA this time, since `v0.3.0` is a real independent release and the reason
-ADR 0013 gave for pinning `0.2.0` to a commit (no tag existed to move to) no
-longer applies. The package version and both protocol numbers moved with it;
-`[project.dependencies]` remains unaffected — no engine range is assigned by
-either move.
+[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md).
+Second, that commit moved to the `v0.3.0` tag, adopted by
+[CF-08.02 / #10](https://github.com/Sandsy09/create-forge/issues/10) to
+reach the first tagged, production-catalogue release. Both moves were
+development-only: `[project.dependencies]` was unaffected, and no engine
+range was assigned. [#9](https://github.com/Sandsy09/create-forge/issues/9)
+and [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) are
+what finally assigns one, once
+[forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)
+made `0.3.1` -- a packaging-only patch over the same `0.3.0` production
+catalogue -- installable from PyPI.
 
-Any other package version fails closed. Adopting even a nominally compatible
-`0.3.x` development version requires updating the pin, this table, and the
-contract tests together.
+Any package version outside the range fails closed. Since `0.3.1` is
+currently the *only* released version, it is simultaneously the declared
+lower bound and the latest compatible release; the first time a compatible
+`0.3.x` release exists, this contract gains a second test case exercising it
+specifically, per the [engine update policy](engine-updates.md)'s adoption
+rule.
 
 ## What the executable contract proves
 
@@ -49,9 +54,11 @@ contract tests together.
 exercises the installed engine through `src/create_forge/engine.py`. Together
 with the focused adapter and guard suites, it proves that:
 
-- the installed package advertises the exact package and protocol pair above;
+- the installed package falls within the range above and advertises the
+  protocol pair above;
 - package and relevant protocol compatibility are checked before parsing,
-  discovery, validation, or rendering calls reach the engine;
+  discovery, validation, or rendering calls reach the engine, at both edges
+  of the range (below the lower bound, at the excluded upper bound);
 - malformed ProjectSpec and invalid component selections remain structured,
   engine-owned failures;
 - discovery returns the installed production catalogue without registry
@@ -65,29 +72,29 @@ with the focused adapter and guard suites, it proves that:
 The production catalogue ships both `library` and `cli`, since
 [forge-template FT-08.02 / #41](https://github.com/Sandsy09/forge-template/issues/41)
 migrated the Library archetype and FT-08.04 added the CLI Application
-archetype in the same `0.3.0` release. Therefore the current client-side
-rendering assertion is a real public-facade call that now succeeds for
-either archetype and returns real files. `create-forge` still does not
-import `forge-template`'s private fixture-catalogue seam or its own
+archetype in the same `0.3.0` release that `0.3.1` packages for PyPI.
+Therefore the current client-side rendering assertion is a real public-facade
+call that succeeds for either archetype and returns real files.
+`create-forge` still does not import `forge-template`'s private
+fixture-catalogue seam or its own
 [`tests/test_composition_contract.py`](https://github.com/Sandsy09/forge-template/blob/main/tests/test_composition_contract.py)
 goldens; this contract proves the public facade only.
 
-That non-empty catalogue is also what CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) needed to make
-`--engine-preview` generate a real project for the first time. It does not,
-by itself, close
+This installable, range-assigned engine is what closes
 [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51)'s
-[end-to-end suite](end-to-end-tests.md) engine-path gap: that suite still
-covers the Copier path only, since **CF-08.04**, under
-[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), needs a
-*released, range-assigned* engine, not merely a non-empty development
-catalogue — it remains blocked on
-[#9](https://github.com/Sandsy09/create-forge/issues/9).
+[end-to-end suite](end-to-end-tests.md)'s engine-path blocker: CF-08.04, under
+[CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), can now be
+attempted against `create-forge[engine]` rather than remaining blocked on #9.
+That end-to-end coverage is CF-08.04's own work, not this contract's --
+this file proves the public facade compiles and negotiates correctly, not
+that the console script's `--engine-preview` path is exercised end to end in
+CI.
 
 ## Validate a sibling checkout
 
-The normal fast suite uses the immutable Git source in `uv.lock`. To validate
-pending sibling changes, install both working trees into an isolated
+The normal fast suite uses the released PyPI package resolved into
+`uv.lock`. To validate pending sibling changes ahead of a new
+`forge-template` release, install both working trees into an isolated
 environment and run the same focused contract file:
 
 ```bash
@@ -95,8 +102,11 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 ```
 
 Local path builds include current working-tree source, including uncommitted
-changes. The sibling package must still declare version `0.3.0`; a version
-bump is a new development pair and must be adopted explicitly. The broader
+changes, and override the released PyPI resolution for that one run only --
+no `pyproject.toml` or `uv.lock` change is needed or made. The sibling
+package must satisfy `>=0.3.1,<0.4`; a version outside that range is a new
+compatibility line and must be adopted explicitly, following the range-move
+sequence above. The broader
 [cross-repository contributor workflow](cross-repository-workflow.md) defines
 the remaining validation and release order.
 
@@ -106,13 +116,15 @@ since the last time this command ran in the same environment, add
 previously built archive for that path without detecting the source change,
 which silently tests against old sibling code rather than the one intended.
 
-## Cutover boundary
+## Adopting a new compatible release
 
-The atomic cutover -- replacing this exact development assertion with the
-first installable, bounded engine dependency -- happens only after #9
-selects a distribution channel, in whichever future issue does that work.
-That change must test the declared lower bound and a representative latest
-compatible release, update the integration compatibility table, and keep the
-same fail-before-side-effects behavior. Neither Stage 06, CF-07.04, nor
-CF-08.02 pre-assigns those values -- each only moves the development pin
-forward, most recently to the first tagged release.
+A `forge-template` release inside the declared `>=0.3.1,<0.4` range (a patch,
+while `0.3.x` stays the compatibility line) may be adopted once this
+contract passes against it, per the sibling-checkout validation above and the
+[engine update policy](engine-updates.md). A release that would require a
+minor bump -- pre-1.0, that is itself a new compatibility line -- follows
+[ADR 0012](adr/0012-engine-dependency-update-policy.md)'s full sequence:
+widen the range in `pyproject.toml`, this document's table, and
+`docs/integration-contract.md`'s compatibility table together, and prove the
+new range against both its lower bound and the previous one's latest release
+before merging.

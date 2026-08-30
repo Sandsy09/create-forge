@@ -34,9 +34,13 @@
   — unblocked now that CF-08.02 is complete.
 - [**CF-08.04 — Extend end-to-end generation to the public engine**](https://github.com/Sandsy09/create-forge/issues/85)
   — successor to [CF-07.06 / #51](https://github.com/Sandsy09/create-forge/issues/51).
-  Its production-catalogue acceptance criterion is now met by CF-08.02; the
-  remaining one needs a *released, range-assigned* engine, blocked on
-  [#9](https://github.com/Sandsy09/create-forge/issues/9) alone.
+  Its production-catalogue acceptance criterion is met by CF-08.02; its
+  released-range criterion is now also met — standalone
+  [#9](https://github.com/Sandsy09/create-forge/issues/9)
+  ([ADR 0018](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
+  publishes `forge-template>=0.3.1,<0.4` to PyPI as create-forge's `engine`
+  extra. CF-08.04 is unblocked; its own end-to-end coverage is not yet
+  started.
 
 The Library decision records the legacy answer mapping into
 `component_options.library.packaging_mode`; CF-08.02 wires it on the engine

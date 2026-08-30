@@ -9,7 +9,11 @@ analogous to `pnpm create-payload-app`. It is a **thin wrapper**: Copier does th
 rendering and merging, this tool owns the prompt experience and a bundled
 registry of known templates.
 
-Distributed via `uvx create-forge`. Public, MIT, intended for open-source use.
+Distributed via `uvx create-forge`, and since #9
+([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
+published to PyPI as `create-forge` (`pip install create-forge`, or
+`create-forge[engine]` for the hidden `--engine-preview` path). Public, MIT,
+intended for open-source use.
 
 ## Repository relationship
 
@@ -39,6 +43,8 @@ src/create_forge/
 │                   (ADR 0015).
 ├── runner.py       The ONLY module that touches Copier's Python API.
 ├── spec.py         Pure ProjectSpec wire-payload builder. No engine import.
+├── compat.py       Engine range + protocol constants. No engine import;
+│                   shared by cli.py's doctor and engine.py (ADR 0018).
 ├── engine.py       The ONLY module that touches the forge-template engine.
 ├── pipeline.py     Shared discover→build→validate→render→finalise pipeline.
 │                   Reachable only via `new --engine-preview` (hidden,
@@ -85,24 +91,28 @@ and [forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/ma
 select the optionless engine-owned `cli` archetype and derive its command from
 `ProjectSpec.project.repository_name`; FT-08.04 implemented it, and it ships
 alongside `library` in the same `0.3.0` release.
-This repository's exact development pair moved to `forge-template==0.3.0`
+This repository's development pair moved to `forge-template==0.3.0`
 (CF-08.02, [ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
-whose production catalogue is no longer empty. The development boundary can
+whose production catalogue is no longer empty, and then to a real released
+range, `forge-template>=0.3.1,<0.4` ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)),
+declared as the optional `engine` extra (`create-forge[engine]`) rather than
+a `[project.dependencies]` entry or a development-only pin. The boundary can
 construct ProjectSpec, discover, validate, render, and finalise a project to
 disk through the public facade; as of CF-07.01 this is reachable from a real
-command via the hidden `new --engine-preview` flag (ADR 0014), though not
-from the default `new` path, and no released engine range is assigned here
-yet. CF-08.02 also adds a hidden `--archetype` option and a
-discovery-driven interactive prompt, so `--engine-preview` now selects for
-real between `library` and `cli` rather than passing a fixed id through. The
-development `forge-template==0.3.0` / protocol-1 pair is recorded by the
+command via the hidden `new --engine-preview` flag (ADR 0014), though still
+not from the default `new` path — ADR 0018 assigns a released range, it does
+not perform the CLI cutover. CF-08.02 also adds a hidden `--archetype`
+option and a discovery-driven interactive prompt, so `--engine-preview` now
+selects for real between `library` and `cli` rather than passing a fixed id
+through. The `forge-template>=0.3.1,<0.4` / protocol-1 pair is recorded by the
 canonical [cross-repository engine contract tests](docs/engine-contract-tests.md).
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
-the pin once already, within the prior unreleased `0.2.0` contract, to adopt
+the pin once, within the prior unreleased `0.2.0` contract, to adopt
 generated-project validation; CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
-moved it again, to the first tagged release, once a tag existed to move it
-to — `render_project` still calls the public `validate_rendered_project`
-before returning. The canonical
+moved it again, to the first tagged release; ADR 0018 replaced the pin
+entirely with the released range above — `render_project` still calls the
+public `validate_rendered_project` before returning. The canonical
 [component discovery contract](docs/component-discovery.md) records the
 protocol-first, no-fallback adapter semantics, and the canonical
 [filesystem generation contract](docs/filesystem-generation.md) records how
@@ -111,11 +121,12 @@ path cleans up after a failure instead.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
 living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and
-rejected when incompatible. The exact development check is implemented; the
-installable runtime range and CLI integration are not.
+rejected when incompatible. The installable runtime range is now implemented
+(ADR 0018); the CLI cutover that makes it the default path is not.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
-code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against a
-development-only, tag-pinned `forge-template` — see the canonical
+code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
+`forge-template`, now the optional `engine` extra rather than a
+tag-pinned development dependency — see the canonical
 [ProjectSpec construction contract](docs/project-spec-construction.md).
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
@@ -127,9 +138,10 @@ closes Stage 07 with real, CI-enforced coverage of the Copier path — the real
 console script, its `_tasks`, and the generated project's own checks — see
 the canonical [end-to-end tests contract](docs/end-to-end-tests.md). The
 engine path still has no CI-enforced end-to-end coverage, tracked as
-CF-08.04: `--engine-preview` can generate for real since CF-08.02, but the
-engine remains an unranged development dependency, not a released one, which
-is what CF-08.04 still waits on.
+CF-08.04: `--engine-preview` can generate for real since CF-08.02, and #9/
+ADR 0018 cleared its last native blocker by publishing a released,
+range-assigned engine — CF-08.04's own end-to-end coverage is separate,
+not-yet-started work.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -184,12 +196,17 @@ one-module rule for `forge_template`, per
 else in this package may import it. `cli.py` reaches it only through a
 lazy, guarded import inside `--engine-preview`'s branch
 ([ADR 0014](docs/adr/0014-lazy-engine-reachability.md)) — `forge-template`
-stays a development-only dependency, so no module reachable at `cli.py`'s
-own import time may depend on it, directly or through `pipeline.py`.
-`staging.py` is the exception that proves the rule: it is imported
-unconditionally by both `cli.py` and `runner.py` precisely because it is
-engine-free by construction — no `forge_template` import, not even under
-`TYPE_CHECKING` ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)).
+is the optional `engine` extra ([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)),
+not installed by a plain `pip install create-forge`, so no module reachable
+at `cli.py`'s own import time may depend on it, directly or through
+`pipeline.py`. `compat.py` and `staging.py` are the exception that proves
+the rule: both are imported unconditionally by `cli.py` (and `staging.py` by
+`runner.py` too) precisely because they are engine-free by construction — no
+`forge_template` import, not even under `TYPE_CHECKING`
+([ADR 0015](docs/adr/0015-staged-filesystem-generation.md); ADR 0018).
+`compat.py` holds the engine range and protocol constants both `cli.py`'s
+`doctor` and `engine.py` need, so `doctor` can report them without ever
+importing the engine itself.
 
 ### 5. templates.toml must ship in the wheel
 
@@ -258,13 +275,15 @@ Working: all six modules written and wired, registry validates, CLI structure
 complete, `config.py` imported by `cli.py`, a test suite with a `copier.yml`
 drift guard, a `pre-commit` gate mirrored in CI, the repo-hygiene files below
 all present, `docs/adr/` records the decisions this file used to state without
-their reasoning, and `v0.1.0` is tagged and released — `uvx --from
+their reasoning, `v0.1.0` is tagged and released — `uvx --from
 git+https://github.com/Sandsy09/create-forge@v0.1.0 create-forge` verified end
-to end from a clean environment.
+to end from a clean environment — and `create-forge`/`create-forge[engine]`
+are published to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)),
+`forge-template`'s first assigned engine range.
 
 Not yet done:
 - MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))
-- PyPI publishing ([#9](https://github.com/Sandsy09/create-forge/issues/9))
 
 ## Backlog, in order
 

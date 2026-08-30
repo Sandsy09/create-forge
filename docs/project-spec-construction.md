@@ -17,9 +17,12 @@ a hidden, opt-in flag: `create-forge new --engine-preview`. Without that
 flag, `new` keeps its v0.1.x direct-Copier path completely unchanged. [ADR
 0014](adr/0014-lazy-engine-reachability.md) records why a hidden flag with a
 lazy import, rather than a default-path cutover, is what CF-07.01 shipped —
-`forge-template` remains a development-only dependency, so `cli.py` cannot
-import the engine unconditionally without breaking every real `uvx
-create-forge` install. CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
+`forge-template` is the optional `engine` extra (ADR 0018), not installed by
+a plain `pip install create-forge`, so `cli.py` cannot import the engine
+unconditionally without breaking every real `uvx create-forge` install. That
+reasoning is unaffected by the extra now having a real released range rather
+than a development-only pin: it is still optional, still absent by default.
+CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
 completed the flag: it now stages a successful render adjacent to the
 computed destination and finalises it by atomic rename, exactly like the
 Copier path, through `src/create_forge/pipeline.py`'s
@@ -29,7 +32,11 @@ Copier path, through `src/create_forge/pipeline.py`'s
 development pin to `forge-template==0.3.0`, whose production catalogue ships
 both `library` and `cli` — calling this boundary end-to-end now succeeds,
 generating a real project, rather than failing validation as it did against
-the prior empty catalogue; see "Validation" below.
+the prior empty catalogue; see "Validation" below. #9
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) then
+replaced that development pin with a released range,
+`forge-template>=0.3.1,<0.4`, changing nothing about this boundary's
+reachability or behaviour.
 
 ## The map-vs-validate principle
 
@@ -164,39 +171,40 @@ pattern-matching message text.
 
 ## The engine dependency
 
-`forge-template` is a development-only dependency today: an `engine` `uv`
-dependency group constrained to `forge-template==0.3.0`, resolved via a
-`[tool.uv.sources]` git entry pinned to `tag = "v0.3.0"` — moved from a
-commit SHA to a tag by CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)), which also
-adopted the `library`/`cli` production catalogue; CF-07.04
-([ADR 0015](adr/0015-staged-filesystem-generation.md)) had moved the prior
-commit pin once already, within the earlier unreleased `0.2.0` contract, to
-adopt generated-project validation.
-`[project.dependencies]` is unchanged, so
-no engine range is assigned and
-[`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
-existing ADR 0011/0012 guards continue to hold.
+`forge-template` is the optional `engine` extra as of #9
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)):
+`[project.optional-dependencies].engine = ["forge-template>=0.3.1,<0.4"]`,
+resolved from PyPI like any other dependency -- no `[tool.uv.sources]`
+override, no dev-only dependency group. `[project.dependencies]` remains
+unaffected, so `create-forge` itself (`pip install create-forge`, or `uvx
+create-forge`) never resolves it; only `pip install 'create-forge[engine]'`
+or `uv sync --all-extras` does.
+[`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s ADR
+0011/0012 guards continue to hold: the range has a tested lower bound and a
+strict upper bound, and Dependabot is gated from crossing it unattended.
 
-A tag, not a commit pin, unlike the prior `0.2.0` contract: `forge-template`
-had no `v0.2.0` tag, and cutting one was not a side effect available to that
-decision, since released `create-forge` v0.1.x clients resolve
-`forge-template`'s *latest* PEP 440 tag for the Copier template itself — see
-[ADR 0013](adr/0013-projectspec-construction-boundary.md) for that reasoning
-in full. `v0.3.0` is a real, independent release that reasoning does not
-apply to, so ADR 0017 names it directly.
+Before this, the dependency was development-only: `forge-template==0.3.0`
+via an `engine` `uv` dependency group and a `[tool.uv.sources]` git entry
+pinned to `tag = "v0.3.0"` -- moved from a commit SHA to a tag by CF-08.02
+([ADR 0017](adr/0017-cli-application-archetype-exposure.md)), and from a
+commit within the earlier unreleased `0.2.0` contract by CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) before that, to adopt
+generated-project validation. `0.3.1` -- the version now declared -- is a
+packaging-only patch over that same `0.3.0` production catalogue, published
+by
+[forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md).
 
 ## What changes next
 
-- **CF-06.03** proves the exact development package/protocol pair, including
+- **CF-06.03** proved the exact development package/protocol pair, including
   fail-closed public-facade rendering against the (then-empty) production
   catalogue.
-- **CF-07.01** wires this boundary into `create-forge new --engine-preview`
+- **CF-07.01** wired this boundary into `create-forge new --engine-preview`
   (ADR 0014), making ProjectSpec construction,
   [component discovery](component-discovery.md), and exit status `3`
   reachable for the first time — behind a hidden, opt-in flag, not the
   default `new` path.
-- **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) consumes
+- **CF-07.04** ([ADR 0015](adr/0015-staged-filesystem-generation.md)) consumed
   the `GenerationRequest` `src/create_forge/pipeline.py` produces, staging and
   finalising it exactly like the Copier path — see the canonical
   [filesystem generation contract](filesystem-generation.md).
@@ -206,14 +214,16 @@ apply to, so ADR 0017 names it directly.
   [canonical contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
   fixes identity and `repository_name` command derivation.
 - **CF-08.02** ([ADR 0017](adr/0017-cli-application-archetype-exposure.md))
-  moves this repository's exact pin to `0.3.0`, adds discovery-driven
-  archetype selection to `--engine-preview`, and derives the legacy
-  `library` option mapping described above. `--engine-preview` now succeeds
-  end-to-end for both archetypes. The atomic cutover that replaces
-  `--engine-preview` and the exact development-package assertion with a
-  bounded runtime dependency still waits on
-  [#9](https://github.com/Sandsy09/create-forge/issues/9) resolving a
-  distribution channel.
+  moved this repository's exact pin to `0.3.0` and added discovery-driven
+  archetype selection to `--engine-preview` and the legacy `library` option
+  mapping described above. `--engine-preview` succeeds end-to-end for both
+  archetypes.
+- **#9** ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+  replaced the exact development pin above with the first released,
+  installable range. The atomic cutover that replaces `--engine-preview` and
+  `--template-url` with the engine as the default path remains a future,
+  unfiled decision -- it is no longer blocked on a distribution channel, only
+  on that decision being made.
 
 ## Executable examples
 

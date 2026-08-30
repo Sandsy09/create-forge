@@ -2,14 +2,17 @@
 
 Mirrors `runner.py`'s role for Copier's Python API (invariant 4): the engine
 is imported in exactly one place, so it evolves without every module needing
-attention. Importing this module requires the `engine` dependency group
-(`uv sync --all-groups`) -- it is a `[tool.uv.sources]`-pinned development
-dependency, not a runtime one: `forge-template` 0.3.0 is a real tagged
-release, but no engine range is assigned to `[project.dependencies]`
-(docs/engine-resolution.md). No module reachable from create-forge's shipped
-CLI entry point may import this module;
+attention. Importing this module requires the `engine` extra
+(`uv sync --all-extras`, or `pip install 'create-forge[engine]'`) -- since
+[ADR 0018](../../docs/adr/0018-pypi-distribution-and-the-first-engine-range.md),
+`forge-template` is a real, PyPI-installable, range-bounded optional
+dependency rather than a `[tool.uv.sources]`-pinned development-only one. No
+module reachable from create-forge's shipped CLI entry point may import this
+module;
 `tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
-enforces that.
+enforces that. `compat.py` holds the range and protocol constants this
+module checks against -- it is engine-free, so `cli.py`'s `doctor` command
+can report them without importing this module at all.
 
 `spec.py` builds the wire payload this module parses and validates, while this
 module also exposes the discovery adapter `pipeline.py` uses, reachable today
@@ -40,49 +43,24 @@ from forge_template import map_legacy_library_answers as _map_legacy_library_ans
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import render_project as _render_project
 from forge_template import validate_project_spec as _validate_project_spec
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
+from create_forge.compat import (
+    ENGINE_DISTRIBUTION,
+    SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
+    SUPPORTED_ENGINE_RANGE,
+    SUPPORTED_PROJECTSPEC_PROTOCOLS,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-TESTED_ENGINE_PACKAGE_VERSION = "0.3.0"
-"""Exact forge-template package version in the development contract.
-
-This is deliberately not a released compatibility range. The engine remains a
-development-only dependency pinned to an immutable tag until #9 chooses an
-installable distribution channel and a future cutover issue performs the
-atomic cutover. The pinned tag itself has already moved twice, from Stage
-06's original commit to the one CF-07.04 (ADR 0015) adopted, and now to the
-first tagged release CF-08.02 (ADR 0017) adopted -- see
-docs/engine-contract-tests.md.
-"""
-
-SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
-"""ProjectSpec wire protocols this create-forge release has implemented
-against.
-
-Deliberately not read from `forge_template.SUPPORTED_PROJECTSPEC_PROTOCOLS`
--- that constant is what the *installed engine* accepts, and this one is
-what *create-forge* supports; negotiation compares the two rather than
-assuming they agree. No released engine package range is assigned yet:
-`negotiate_protocol` requires the exact development package above, then checks
-the ProjectSpec wire protocol independently.
-"""
-
-SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS: tuple[int, ...] = (1, 2)
-"""Component-manifest protocols this create-forge release understands.
-
-Kept independent from the installed engine's advertised protocols for the
-same reason as :data:`SUPPORTED_PROJECTSPEC_PROTOCOLS`: discovery must compare
-the two sides rather than assume that installing an engine makes every data
-protocol compatible. `2` was added by CF-08.02 (ADR 0017): the `library` and
-`cli` descriptors this release actually consumes are protocol-2 manifests, so
-declaring only `1` would understate what has been validated even though set
-overlap would still let a protocol-1-only engine through.
-"""
+_SUPPORTED_ENGINE_SPECIFIER = SpecifierSet(SUPPORTED_ENGINE_RANGE)
 
 
 class EngineCompatibilityError(Exception):
-    """An installed engine is outside the tested package/protocol contract.
+    """An installed engine is outside the supported package/protocol range.
 
     Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
     ADR 0011 for exactly this failure class. Reachable today only via the
@@ -91,17 +69,18 @@ class EngineCompatibilityError(Exception):
     """
 
 
-def _require_tested_package(info: EngineInfo) -> None:
-    """Reject an engine package outside the exact Stage 06 development pair."""
-    if info.package_version == TESTED_ENGINE_PACKAGE_VERSION:
+def _require_supported_package(info: EngineInfo) -> None:
+    """Reject an engine package outside the declared, released range."""
+    if Version(info.package_version) in _SUPPORTED_ENGINE_SPECIFIER:
         return
 
     msg = (
-        f"Detected forge-template {info.package_version}, but this create-forge "
-        f"development contract is tested only with forge-template "
-        f"{TESTED_ENGINE_PACKAGE_VERSION}. No released engine range is assigned; "
-        "install the pinned development dependency or validate and adopt the new "
-        "pair through the cross-repository contract workflow."
+        f"Detected forge-template {info.package_version}, but this "
+        f"create-forge release supports {ENGINE_DISTRIBUTION}"
+        f"{SUPPORTED_ENGINE_RANGE}. Run "
+        f"`pip install '{ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}'` "
+        "(or the equivalent `uv add`/`uv sync` invocation) to install a "
+        "compatible version."
     )
     raise EngineCompatibilityError(msg)
 
@@ -148,12 +127,12 @@ def _require_component_manifest_protocol(info: EngineInfo) -> None:
 
 
 def negotiate_protocol() -> None:
-    """Confirm the engine matches the tested package/ProjectSpec pair.
+    """Confirm the engine matches the supported package/ProjectSpec range.
 
     Runs before any payload is parsed, validated, or rendered.
     """
     info = get_engine_info()
-    _require_tested_package(info)
+    _require_supported_package(info)
     _require_projectspec_protocol(info)
 
 
@@ -166,7 +145,7 @@ def discover() -> tuple[ComponentDescriptor, ...]:
     relationships, and options remain owned and validated by `forge-template`.
     """
     info = get_engine_info()
-    _require_tested_package(info)
+    _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _discover_components()
@@ -186,11 +165,11 @@ def build_project_spec(payload: Mapping[str, object]) -> ProjectSpec:
 def validate(spec: ProjectSpec) -> ProjectSpec:
     """Validate a parsed ProjectSpec against the installed component catalogue.
 
-    The installed `forge-template` 0.3.0 catalogue is production: `library`
-    and `cli` are both real, validated archetypes as of CF-08.02.
+    The installed `forge-template` catalogue is production: `library` and
+    `cli` are both real, validated archetypes.
     """
     info = get_engine_info()
-    _require_tested_package(info)
+    _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _validate_project_spec(spec)
@@ -199,16 +178,15 @@ def validate(spec: ProjectSpec) -> ProjectSpec:
 def render(spec: ProjectSpec) -> RenderedProject:
     """Render one spec to immutable in-memory files after compatibility checks.
 
-    The public engine owns validation, composition, rendering, and, as of the
-    development pin CF-07.04 adopted, generated-project validation -- the
-    `RenderedProject` returned here has already passed
-    `forge_template.validate_rendered_project`. This adapter deliberately
-    accepts no destination path and performs no filesystem writes;
-    `pipeline.finalise_generation_request` (ADR 0015) owns staging and
+    The public engine owns validation, composition, rendering, and
+    generated-project validation -- the `RenderedProject` returned here has
+    already passed `forge_template.validate_rendered_project`. This adapter
+    deliberately accepts no destination path and performs no filesystem
+    writes; `pipeline.finalise_generation_request` (ADR 0015) owns staging and
     finalisation around the returned files.
     """
     info = get_engine_info()
-    _require_tested_package(info)
+    _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _render_project(spec)
@@ -229,7 +207,7 @@ def map_legacy_library_options(
     `library` archetype (CF-08.02).
     """
     info = get_engine_info()
-    _require_tested_package(info)
+    _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
     return _map_legacy_library_answers(legacy_answers)

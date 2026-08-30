@@ -16,6 +16,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from create_forge.compat import (
+    ENGINE_DISTRIBUTION,
+    SUPPORTED_ENGINE_RANGE,
+    SUPPORTED_PROJECTSPEC_PROTOCOLS,
+)
 from create_forge.config import (
     UserConfig,
     config_path,
@@ -72,6 +77,22 @@ def _dist_version(name: str) -> str:
         return version(name)
     except PackageNotFoundError:  # pragma: no cover - editable installs
         return "unknown"
+
+
+def _optional_dist_version(name: str) -> str | None:
+    """Installed version of an optional distribution, or `None` if absent.
+
+    Distinct from `_dist_version`: `create-forge` always depends on `name`
+    there, so "unknown" signals a broken environment. Here `name` is the
+    `engine` extra's `forge-template` -- not installed is the normal,
+    expected v0.2.x default, and docs/engine-resolution.md's diagnostics
+    contract documents `integration.engine_package` as `null` for it, not
+    the string "unknown".
+    """
+    try:
+        return version(name)
+    except PackageNotFoundError:
+        return None
 
 
 def _version() -> str:
@@ -262,12 +283,12 @@ def _run_engine_preview(
     """The --engine-preview path: discover, select, build, validate, render.
 
     Stages and finalises into `dst` exactly like the Copier path, just
-    through the engine (ADR 0015). `forge-template` stays a development-only
-    dependency (ADR 0014), so the import is lazy and guarded: every other
-    command, and `new` without this flag, must keep working with the
-    dependency absent.
+    through the engine (ADR 0015). `forge-template` is the optional `engine`
+    extra (ADR 0018) -- not installed by a plain `pip install create-forge`
+    -- so the import is lazy and guarded: every other command, and `new`
+    without this flag, must keep working with the dependency absent.
     """
-    err.print("[dim]--engine-preview is a development-only path (ADR 0014).[/dim]")
+    err.print("[dim]--engine-preview is a hidden preview path (ADR 0014).[/dim]")
     try:
         ensure_available(dst)
     except DestinationConflictError as exc:
@@ -275,17 +296,18 @@ def _run_engine_preview(
         raise typer.Exit(1) from exc
 
     try:
-        # Lazy by necessity, not style: forge-template is a development-only
-        # dependency (ADR 0014), so this import must not run unless this
-        # branch is actually reached. `engine` is imported directly here
-        # (rather than accessed as `pipeline.engine`) so mypy's strict
-        # implicit-reexport check has a real, direct import to type against.
+        # Lazy by necessity, not style: forge-template is the optional
+        # `engine` extra (ADR 0018), not installed by default, so this
+        # import must not run unless this branch is actually reached.
+        # `engine` is imported directly here (rather than accessed as
+        # `pipeline.engine`) so mypy's strict implicit-reexport check has a
+        # real, direct import to type against.
         from create_forge import engine, pipeline  # noqa: PLC0415
     except ImportError:
         err.print(
-            "[red]The engine dependency isn't installed.[/red] This is a "
-            "development-only path -- run `uv sync --all-groups` in a "
-            "create-forge checkout to use it."
+            "[red]The engine extra isn't installed.[/red] Run "
+            "`pip install 'create-forge[engine]'` (or `uv sync --all-extras` "
+            "in a create-forge checkout) to use it."
         )
         raise typer.Exit(1) from None
 
@@ -518,8 +540,13 @@ class Check:
 class Integration:
     """The active create-forge/forge-template integration line and its
     versions -- see docs/engine-resolution.md for what each field means and
-    when it is populated. Every engine/ProjectSpec field is `None` under the
-    v0.1.x direct-Copier line; there is no engine package to report yet.
+    when it is populated. Since ADR 0018, `engine_range` and
+    `projectspec_supported` are always populated: a released range and
+    supported protocol are now declared regardless of whether the `engine`
+    extra is installed. `engine_package` is `None` until it is;
+    `projectspec_detected` stays `None` until a command actually imports and
+    negotiates with the engine (`doctor` never does -- see its own
+    docstring).
     """  # noqa: D205
 
     line: str
@@ -564,7 +591,10 @@ def _gather_diagnostics() -> Diagnostics:
 
     `doctor` stays offline: it reports the registry's bundled template source
     but never resolves a ref, since that would mean a network call for what
-    is meant to be a fast local health check.
+    is meant to be a fast local health check. For the same reason, engine
+    presence is read via `importlib.metadata` only -- never imported -- so
+    `projectspec_detected` (which needs a real `get_engine_info()` call) stays
+    `None` here regardless of whether the `engine` extra is installed.
     """
     checks: list[Check] = []
 
@@ -623,22 +653,36 @@ def _gather_diagnostics() -> Diagnostics:
     except ValueError as exc:
         check(False, "config", str(exc).splitlines()[0])
 
+    engine_range = f"{ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}"
+    engine_package = _optional_dist_version(ENGINE_DISTRIBUTION)
+    projectspec_supported = ",".join(str(p) for p in SUPPORTED_PROJECTSPEC_PROTOCOLS)
+
     info("create-forge", _dist_version("create-forge"))
     info("copier", _dist_version("copier"))
     info("template source", source_detail)
-    info("engine", "not installed — v0.1.x direct-Copier line")
-    info("ProjectSpec protocol", "n/a — assigned at Stage 06")
+    info(
+        "engine",
+        f"{ENGINE_DISTRIBUTION} {engine_package} installed (supports {engine_range})"
+        if engine_package is not None
+        else f"not installed (supports {engine_range}) — "
+        "install with pip install 'create-forge[engine]'",
+    )
+    info(
+        "ProjectSpec protocol",
+        f"supported: {projectspec_supported} (detected: requires the "
+        "engine extra and a real negotiation, not performed by doctor)",
+    )
 
     return Diagnostics(
         create_forge=_dist_version("create-forge"),
         python=python_version,
         platform=sys.platform,
         integration=Integration(
-            line="v0.1.x-copier",
+            line="v0.2.x-copier",
             copier=_dist_version("copier"),
-            engine_package=None,
-            engine_range=None,
-            projectspec_supported=None,
+            engine_package=engine_package,
+            engine_range=engine_range,
+            projectspec_supported=projectspec_supported,
             projectspec_detected=None,
             template_source=template_source,
             template_ref=None,

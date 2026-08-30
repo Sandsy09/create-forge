@@ -20,56 +20,60 @@ are implemented by the
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
 `forge-template` ships both Library and the
 [CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-in its `0.3.0` release, and this repository's exact development pin moved to
-match (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)),
-so both are now real, discoverable, and exposed through the hidden
-`--engine-preview` flag's `--archetype` option. The released v0.1.x CLI
-remains a thin Copier
-wrapper with a bundled registry (`src/create_forge/templates.toml`), calling
-Copier directly through `src/create_forge/runner.py`. [CF-06.01](https://github.com/Sandsy09/create-forge/issues/46)
-added a construction boundary — `src/create_forge/spec.py` and
-`src/create_forge/engine.py`, recorded by
-[ADR 0013](adr/0013-projectspec-construction-boundary.md) and the canonical
-[ProjectSpec construction contract](project-spec-construction.md) — ahead of
-any command calling it; `new` is unchanged. Everything in this document
-describes rules that hold once the engine exists, plus what is real today.
+as of its `0.3.0` release, exposed here (CF-08.02,
+[ADR 0017](adr/0017-cli-application-archetype-exposure.md)) through the
+hidden `--engine-preview` flag's `--archetype` option.
+
+[#9](https://github.com/Sandsy09/create-forge/issues/9) and
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) then
+did what "Assigning the first engine range" below used to describe as future
+work: `forge-template` published `0.3.1` to PyPI, and this repository
+declared its first real, installable, range-bounded engine dependency —
+`forge-template>=0.3.1,<0.4` as the optional `engine` extra
+(`create-forge[engine]`). **This is not yet the CLI cutover.** The released
+default `new` command remains a thin Copier wrapper with a bundled registry
+(`src/create_forge/templates.toml`), calling Copier directly through
+`src/create_forge/runner.py`. The engine range assigned below is reachable
+only through `--engine-preview`; nothing about the default path, its
+`--template-url` escape hatch, or `--ref` changed. The full cutover this
+document otherwise describes — the engine replacing direct Copier as the
+default, `--engine-source`/`--engine-ref` replacing `--template-url` — is
+still a future, unfiled decision.
 
 ## Normal installed resolution
 
-At the CLI cutover, `create-forge` will depend on the engine package the same way it
-depends on `copier`, `typer`, or `pydantic` today: a bounded version range in
+`create-forge[engine]` depends on the engine package the same way it depends
+on `copier`, `typer`, or `pydantic`: a bounded version range in
 `pyproject.toml`, resolved by the installer at install time. There is no
 runtime fetch — the CLI never clones or downloads executable content to
-satisfy normal operation.
+satisfy normal operation. Because it is an optional extra rather than a
+`[project.dependencies]` entry, installing plain `create-forge` (the default
+`new` path) never resolves it at all; only `pip install 'create-forge[engine]'`
+or `uv sync --all-extras` does, matching ADR 0014's guarded
+`try/except ImportError` in `cli.py`.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
-| v0.1.x | None; direct Copier integration | None | Current released architecture |
-| First engine line | *Unassigned* | `1` (defined; not yet supported) | Engine API defined; see "Assigning the first engine range" below |
+| v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
+| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Current released architecture (ADR 0018) |
 
-The distribution channel behind that dependency — a package index, a pinned
-VCS revision, or another mechanism — is explicitly out of scope here and is
-tracked by [PyPI publishing / #9](https://github.com/Sandsy09/create-forge/issues/9);
-[ADR 0012](adr/0012-engine-dependency-update-policy.md) explains why that
-question stays with #9 rather than moving to CF-05.02. How a compatible
-update to this dependency is *adopted*, once a range exists, is a separate
-question answered by the canonical [engine update policy](engine-updates.md).
+The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
+repositories' `release.yml` workflows —
+[forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)
+and [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md).
+How a compatible update to this dependency is *adopted* going forward is a
+separate question, answered by the canonical
+[engine update policy](engine-updates.md) — pre-1.0, a `forge-template` minor
+bump is itself a new compatibility line, exactly like a Copier major.
 
-A development-only dependency exists ahead of that runtime one:
-`src/create_forge/engine.py` depends on `forge-template` via a `uv`
-dependency group constrained to exact package version `0.3.0` and pinned to
-`tag = "v0.3.0"`, not a released version range — see
-[ADR 0013](adr/0013-projectspec-construction-boundary.md). This is not the
-range assigned below; it exists so the construction boundary can exercise
-the real engine before `forge-template` publishes anything installable. The
-[cross-repository engine contract tests](engine-contract-tests.md) reject any
-other development package version until it is deliberately adopted. This pin
-has moved twice: CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
-moved it once, within the prior unreleased `0.2.0` contract, to adopt
-generated-project validation; CF-08.02
-([ADR 0017](adr/0017-cli-application-archetype-exposure.md)) moved it again,
-to the first tagged release, adopting a tag over a commit SHA now that one
-exists.
+A separate development-only override still exists ahead of ordinary
+resolution: cross-repository work on an unreleased `forge-template` checkout
+uses `[tool.uv.sources]` locally (never committed) or the sibling-checkout
+command in the
+[cross-repository contributor workflow](cross-repository-workflow.md) — see
+[ADR 0013](adr/0013-projectspec-construction-boundary.md). This is
+workspace-local `uv` configuration, not a `pyproject.toml` dependency
+declaration, and does not change the range in the table above.
 
 ## Local development resolution
 
@@ -115,80 +119,68 @@ compatibility failure, in both its table and its `--json` output
 be added, but existing ones do not change meaning or disappear before a
 major version.
 
-| Field | Reported today (v0.1.x) | Reported after cutover |
+| Field | Reported | Populated by |
 | --- | --- | --- |
-| `create_forge` | CLI version | unchanged |
-| `python`, `platform` | interpreter version and OS | unchanged |
-| `integration.line` | `"v0.1.x-copier"` | the active integration line |
-| `integration.copier` | installed Copier version | present while Copier remains a direct dependency |
-| `integration.engine_package` | `null` | installed engine package version |
-| `integration.engine_range` | `null` | the range this CLI release supports |
-| `integration.projectspec_protocol.supported` / `.detected` | `null` / `null` | supported and detected ProjectSpec protocol |
-| `integration.template_source` | bundled registry URL | resolved engine/template source |
-| `integration.template_ref` | `null` (doctor stays offline; it does not resolve a ref) | resolved template/asset release |
+| `create_forge` | CLI version | always |
+| `python`, `platform` | interpreter version and OS | always |
+| `integration.line` | `"v0.2.x-copier"` | always |
+| `integration.copier` | installed Copier version | always -- Copier remains a direct dependency |
+| `integration.engine_package` | installed `forge-template` version, `null` if the `engine` extra isn't installed | `importlib.metadata`, never an import of the engine itself |
+| `integration.engine_range` | `"forge-template>=0.3.1,<0.4"` | always -- this is what this CLI release declares, independent of what's installed |
+| `integration.projectspec_protocol.supported` | `"1"` | always, from `src/create_forge/compat.py` |
+| `integration.projectspec_protocol.detected` | `null` | never by `doctor` -- see below |
+| `integration.template_source` | bundled registry URL | always |
+| `integration.template_ref` | `null` (doctor stays offline; it does not resolve a ref) | never |
 
-`doctor` performs no network calls. `integration.template_ref` stays `null`
-under v0.1.x rather than resolving Copier's "latest PEP 440 tag" at
-diagnostic time — that resolution belongs to `scaffold`/`update`, not to a
-health check.
+`doctor` performs no network calls and, deliberately, no engine import: it
+reads `engine_package`/`engine_range`/`projectspec_protocol.supported` via
+`importlib.metadata` and `src/create_forge/compat.py` alone, both engine-free
+by construction (`tests/test_engine_contract.py`'s `_SHIPPED_MODULES` guard
+covers `compat.py` for exactly this reason). `projectspec_protocol.detected`
+therefore stays `null` even with the engine installed -- populating it needs
+a real `get_engine_info()` call, which only `--engine-preview` makes.
+`integration.template_ref` stays `null` for the same "no network, no
+cutover-scoped work" reason -- that resolution belongs to `scaffold`/`update`,
+not to a health check.
 
 ## Unsupported combinations
 
-Once an engine dependency exists, an installed or overridden engine package,
-or ProjectSpec protocol, outside the supported range must fail closed
-*before* component discovery, rendering, template task execution, or any
-destination write. The error identifies the detected version, states the
-supported range, and gives one concrete remediation. There is no fallback to
-the bundled registry or direct Copier.
+An installed or overridden engine package, or ProjectSpec protocol, outside
+the supported range fails closed *before* component discovery, rendering,
+template task execution, or any destination write. The error identifies the
+detected version, states the supported range, and gives one concrete
+remediation. There is no fallback to the bundled registry or direct Copier.
 
 This failure class uses exit status **`3`**, reserved exclusively for it
 (see [`docs/cli-conventions.md`](cli-conventions.md)'s exit-status table).
-It does not exist in the v0.1.x line today — nothing in the current
-direct-Copier path can raise it — and is documented here as reserved so its
-absence from `cli.py` is legible as deliberate rather than an oversight.
+It is reachable today only via `--engine-preview` -- the default `new` path
+still cannot raise it, since it never touches the engine at all.
 
-The development-only adapter already applies the same ordering to its exact
-`0.3.0` pair: package and protocol mismatches fail before parsing, discovery,
-validation, or in-memory rendering. This is development-contract evidence,
-not a claim that v0.1.x supports an engine package.
-
-## Assigning the first engine range
-
-`forge-template` FT-06.07 defines the `0.2.x` engine API and CF-06.03 proves
-the exact development pair described above, but neither action assigns a
-released range. After #9 chooses an installable distribution channel, perform
-these steps together in CF-07.01's coordinated CLI adoption:
-
-1. Add the engine as a real dependency in `pyproject.toml` with a tested
-   lower bound.
-2. Apply the upper-bound rule from the
-   [integration contract](integration-contract.md#version-and-protocol-compatibility):
-   `>=0.y.a,<0.(y+1)` pre-1.0, `>=n.a,<n+1` from 1.0.
-3. Fill in the real values in this document's resolution table and in
-   `docs/integration-contract.md`'s compatibility table.
-4. Replace the exact development assertion with contract and end-to-end tests
-   exercising the declared lower bound and a representative latest compatible
-   release, per
-   the [cross-repository contributor workflow](cross-repository-workflow.md),
-   the [engine update policy](engine-updates.md)'s adoption rule, and the
-   [ProjectSpec construction contract](project-spec-construction.md)'s
-   negotiation and validation rules.
-5. Remove `tests/test_engine_contract.py`'s "no runtime engine dependency"
-   branch, since it stops being true.
+`src/create_forge/engine.py` applies this ordering against the range in the
+table above: package and protocol mismatches fail before parsing, discovery,
+validation, or in-memory rendering, checked with
+`packaging.specifiers.SpecifierSet` rather than the exact-equality check the
+Stage 06 development contract used before a real release existed.
 
 ## Executable examples
 
-- [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) —
-  guards that no speculative engine range is reserved ahead of a real
-  dependency, and that this document stays linked from `CLAUDE.md`,
-  `CONTRIBUTING.md`, and the integration contract.
-- [`tests/test_cli.py`](../tests/test_cli.py) —
-  `test_doctor_reports_versions_and_the_unimplemented_engine`,
+- [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) --
+  guards that the engine dependency is declared exactly as the optional
+  `engine` extra, at the range this document's table states, and that this
+  document stays linked from `CLAUDE.md`, `CONTRIBUTING.md`, and the
+  integration contract.
+- [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) --
+  `test_negotiate_protocol_rejects_a_package_outside_the_supported_range`
+  characterizes both edges of the range (below the lower bound, at the
+  excluded upper bound) against the real installed engine.
+- [`tests/test_cli.py`](../tests/test_cli.py) --
+  `test_doctor_reports_versions_and_the_engine_range`,
   `test_doctor_json_emits_the_documented_shape`, and
   `test_doctor_json_exits_1_when_a_check_fails` characterize the diagnostics
-  contract's table and `--json` output, including the engine and
-  ProjectSpec-protocol fields staying `null`/absent under v0.1.x.
-- [`tests/test_config.py`](../tests/test_config.py) —
+  contract's table and `--json` output above, including `engine_package`
+  and `projectspec_protocol.detected` staying `null` when the extra isn't
+  installed or doctor hasn't negotiated, respectively.
+- [`tests/test_config.py`](../tests/test_config.py) --
   `test_config_cannot_redirect_the_template_source` and
   `test_no_config_field_looks_like_a_source_or_version_selector`
   characterize the "ordinary configuration may never do" rule above.

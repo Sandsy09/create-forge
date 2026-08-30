@@ -13,7 +13,9 @@ the same behaviour at the CLI layer without paying for a real clone.
 from __future__ import annotations
 
 import builtins
+import importlib.metadata
 import json
+from importlib.metadata import PackageNotFoundError
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -102,20 +104,66 @@ def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None
     assert "registry" in result.output
 
 
-def test_doctor_reports_versions_and_the_unimplemented_engine(
+def _hide_engine_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Force `importlib.metadata.version("forge-template")` to raise, as it
+    would in a real environment without the `engine` extra installed --
+    deterministic regardless of whether *this* dev checkout happens to have
+    `--all-extras` resolved. Every other distribution resolves normally.
+    """
+
+    def fake(name: str) -> str:
+        if name == "forge-template":
+            raise PackageNotFoundError(name)
+        return importlib.metadata.version(name)
+
+    monkeypatch.setattr(cli_module, "version", fake)
+
+
+def _show_engine_extra(monkeypatch: pytest.MonkeyPatch, installed_version: str) -> None:
+    """The inverse of `_hide_engine_extra`: force a specific installed
+    `forge-template` version, deterministic regardless of the ambient venv.
+    """
+
+    def fake(name: str) -> str:
+        if name == "forge-template":
+            return installed_version
+        return importlib.metadata.version(name)
+
+    monkeypatch.setattr(cli_module, "version", fake)
+
+
+def test_doctor_reports_versions_and_the_engine_range(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """CF-04.01's diagnostics contract (docs/engine-resolution.md): doctor
     must report the create-forge and Copier versions plus an explicit engine
-    row, even though no engine package exists yet under the v0.1.x
-    direct-Copier line."""
+    row -- since ADR 0018, always naming the supported range, and the
+    installed version when the `engine` extra is present."""
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    _hide_engine_extra(monkeypatch)
+
     result = runner.invoke(app, ["doctor"])
+
     assert result.exception is None, result.output
     assert "create-forge" in result.output
     assert "copier" in result.output
     assert "not installed" in result.output
+    assert "forge-template>=0.3.1,<0.4" in result.output
     assert "engine" in result.output
+
+
+def test_doctor_reports_the_installed_engine_package_when_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other half of the row above: when the extra is installed, doctor
+    names the installed version, not "not installed"."""
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    _show_engine_extra(monkeypatch, "0.3.1")
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    payload = json.loads(result.output)
+    assert payload["integration"]["engine_package"] == "0.3.1"
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -125,6 +173,7 @@ def test_doctor_json_emits_the_documented_shape(
     diagnostics contract documents, print no table, and still exit 0 when
     every check passes."""
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    _hide_engine_extra(monkeypatch)
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 0, result.output
 
@@ -132,10 +181,10 @@ def test_doctor_json_emits_the_documented_shape(
     assert payload["create_forge"] == cli_module._version()
     assert payload["ok"] is True
     integration = payload["integration"]
-    assert integration["line"] == "v0.1.x-copier"
+    assert integration["line"] == "v0.2.x-copier"
     assert integration["engine_package"] is None
-    assert integration["engine_range"] is None
-    assert integration["projectspec_protocol"] == {"supported": None, "detected": None}
+    assert integration["engine_range"] == "forge-template>=0.3.1,<0.4"
+    assert integration["projectspec_protocol"] == {"supported": "1", "detected": None}
     assert integration["template_source"] is not None
     assert {"name", "ok", "detail"} <= payload["checks"][0].keys()
     # The table's own column header must not leak into --json output, and
@@ -639,7 +688,7 @@ def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
     )
 
     assert result.exit_code == 1, result.output
-    assert "engine dependency isn't installed" in result.output
+    assert "engine extra isn't installed" in result.output
     assert recorder == []
     assert not (tmp_path / "proj").exists()
 

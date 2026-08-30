@@ -14,21 +14,27 @@ engine cutover approaches.
 
 ## Status
 
-The public engine is implemented by `forge-template`, beginning with its
-documented `0.2.x` compatibility line, but it is not yet integrated here.
-Today, `copier` is the compatibility-line dependency — the one
-[CLAUDE.md](../CLAUDE.md) invariant 4 already singles out. After the engine
-cutover, the `forge-template` engine package takes over that role.
+`forge-template` is now a real, released, installable dependency -- the
+optional `engine` extra (#9, [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+-- but reachable only via the hidden `new --engine-preview` flag, not the
+default `new` path. `copier` remains the compatibility-line dependency for
+that default path; the one [CLAUDE.md](../CLAUDE.md) invariant 4 already
+singles out. **Two** compatibility-line dependencies now exist
+simultaneously, each governing its own path.
 
 ## What the compatibility line is
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.1.x | `copier` | `>=9.4,<10` | Current released architecture |
-| First engine line | `forge-template` engine | *Unassigned* | Rules defined by ADR 0012; range assigned per [`docs/engine-resolution.md`](engine-resolution.md#assigning-the-first-engine-range) |
+| v0.1.x default `new` | `copier` | `>=9.4,<10` | Current released architecture |
+| v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Current released architecture (ADR 0018) |
 
-Only one dependency occupies this role at a time. `typer`, `questionary`,
-`pydantic`, and `rich` are ordinary dependencies: unbounded above, freely
+Unlike the single-dependency framing this document previously used, both
+rows are live at once: `copier` governs the default path, `forge-template`
+governs the hidden engine-preview path, and each has its own Dependabot gate
+below. Neither has replaced the other; the engine cutover that would retire
+the `copier` row remains a future, unfiled decision. `typer`, `questionary`,
+`pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below.
 
 ## Adopting a compatible update
@@ -52,12 +58,14 @@ bound is a line crossing, covered next.
 
 Automated tooling may propose updates *inside* the declared range only.
 `.github/dependabot.yml`'s `uv` entry ignores `version-update:semver-major`
-for `copier`; a pre-1.0 engine dependency's rule additionally ignores
-`version-update:semver-minor`, since a minor version is itself a
-compatibility line before 1.0. Crossing a line is a deliberate,
-human-authored pull request that changes the declared bound, the code
-depending on it (`runner.py` today; the engine adapter after cutover), and
-the documented compatibility table in the same change.
+for `copier`, and, separately, both `version-update:semver-major` and
+`version-update:semver-minor` for `forge-template` -- pre-1.0, a minor
+version is itself a compatibility line, exactly the case ADR 0012 already
+anticipated for whichever dependency occupied this role while still below
+1.0. Crossing either line is a deliberate, human-authored pull request that
+changes the declared bound, the code depending on it (`runner.py` for
+`copier`; `src/create_forge/compat.py` and `engine.py` for `forge-template`),
+and the documented compatibility table in the same change.
 
 Breaking changes then follow the sequence the
 [integration contract](integration-contract.md#release-coordination) already
@@ -73,7 +81,7 @@ step.
 | Surface | Automated by | Compatibility-line gate |
 | --- | --- | --- |
 | `github-actions` | Dependabot | None needed — not a compatibility-line dependency |
-| `uv` (`pyproject.toml` / `uv.lock`) | Dependabot | `ignore` rule blocks a major (and, for a pre-1.0 engine, minor) bump on the compatibility-line dependency |
+| `uv` (`pyproject.toml` / `uv.lock`) | Dependabot | separate `ignore` rules block a major bump on `copier` and a major-or-minor bump on `forge-template` (pre-1.0) |
 | `.pre-commit-config.yaml` pinned hook revisions | Nobody | Known gap, tracked separately — [issue #17](https://github.com/Sandsy09/create-forge/issues/17); out of scope here |
 
 The `.pre-commit-config.yaml` gap is the same one that produced the stale
@@ -104,9 +112,11 @@ source of truth the table can drift from.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) —
   `test_compatibility_line_dependency_keeps_a_strict_upper_bound` and
   `test_automation_cannot_cross_the_copier_compatibility_line` characterize
-  today's `copier` gate; `test_declaring_the_engine_requires_a_matching_automation_gate`
-  guards that declaring the `forge-template` dependency without a matching
-  `.github/dependabot.yml` `ignore` rule fails the fast suite.
+  the `copier` gate; `test_forge_template_compatibility_line_keeps_a_strict_upper_bound`
+  and `test_automation_cannot_cross_the_forge_template_compatibility_line`
+  characterize the `forge-template` gate the same way, now that #9
+  ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) has
+  declared it.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.
