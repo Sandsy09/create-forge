@@ -132,6 +132,11 @@ code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
 `forge-template`, now the optional `engine` extra rather than a
 tag-pinned development dependency — see the canonical
 [ProjectSpec construction contract](docs/project-spec-construction.md).
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+is a downstream-client input resolved before effective ProjectSpec
+construction. The current CLI does not consume it; CF-09.01 must preserve
+whether each selection kind was explicitly supplied when it adds that hook.
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
 command for the first time, via a lazily-imported module `cli.py` otherwise

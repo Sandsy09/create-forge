@@ -114,6 +114,11 @@ and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/
 are now implemented behind the canonical
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 ([ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md)).
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+defines how downstream clients resolve component-selection defaults and
+constraints before constructing that effective ProjectSpec. This repository
+does not consume policy yet; CF-09.01 owns that future client hook.
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the first production component, implemented on `forge-template/main`

@@ -64,6 +64,11 @@ The canonical
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 defines the schema `create-forge` will construct without duplicating its
 validation. The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+defines downstream component-selection defaults and constraints. Policy-aware
+clients resolve it before ProjectSpec construction and retain explicit-versus-
+absent selection inputs; this repository does not consume policy yet. The
+canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 defines the engine-owned identity, display, version, compatibility, content,
 dependency, and conflict metadata that replaces the bundled CLI catalogue at
@@ -74,7 +79,8 @@ failures. Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 checks the immutable rendered result before it is returned, without taking
 over this repository's filesystem staging, finalisation, or command execution.
-No current CLI path consumes these contracts.
+The hidden `--engine-preview` path consumes the engine contracts; no current
+CLI path consumes organisation policy.
 
 ## `forge-template`
 
@@ -117,6 +123,8 @@ It owns:
 - interactive prompts;
 - user-facing validation and error presentation;
 - construction of the canonical ProjectSpec;
+- future organisation-policy input trust, explicit-selection tracking, and
+  user-facing resolution diagnostics;
 - component discovery for CLI choices via the forge-template API;
 - filesystem orchestration and safe target handling;
 - dynamic lockfile creation and atomic client finalisation;
@@ -128,7 +136,8 @@ It does **not** own copies of templates, a second component catalogue, Python
 support or editor-integration defaults, generated runtime configuration
 schemas, environment-variable, structured-logging, path/resource, or exception
 contracts, generated-project GitHub Action pins, compatibility rules, or
-rendering/composition logic.
+rendering/composition logic. It also does not own the organisation-policy
+schema or resolution semantics.
 
 ## Dependency direction
 

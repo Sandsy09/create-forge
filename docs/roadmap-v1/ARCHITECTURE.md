@@ -47,6 +47,10 @@ The boundary lets CLI UX evolve independently from generated-project
 architecture and leaves room for future clients, including Blueprint, to
 consume the same engine directly. Package, protocol, trust and release rules
 live in the [integration contract](../integration-contract.md).
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+is resolved by such a client before effective ProjectSpec construction;
+ProjectSpec carries only resolved selections and applied-policy provenance.
 The engine validates rendered output in memory before returning it;
 `create-forge` retains filesystem staging, dynamic `uv.lock` finalisation,
 atomic placement, and command execution.

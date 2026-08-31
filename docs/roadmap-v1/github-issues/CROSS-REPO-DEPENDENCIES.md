@@ -21,7 +21,7 @@ view.
 | [create-forge#51 / CF-07.06](https://github.com/Sandsy09/create-forge/issues/51) (complete) | [FT-06.07](https://github.com/Sandsy09/forge-template/issues/38) (complete), [FT-07.05](https://github.com/Sandsy09/forge-template/issues/39) (complete) |
 | [create-forge#10 / CF-08.02](https://github.com/Sandsy09/create-forge/issues/10) (complete) | [FT-08.04 / forge-template#4](https://github.com/Sandsy09/forge-template/issues/4) (complete) |
 | [create-forge#85 / CF-08.04](https://github.com/Sandsy09/create-forge/issues/85) (complete) | [FT-08.02](https://github.com/Sandsy09/forge-template/issues/41) (complete) |
-| [create-forge#53 / CF-09.01](https://github.com/Sandsy09/create-forge/issues/53) | [FT-09.01](https://github.com/Sandsy09/forge-template/issues/44) |
+| [create-forge#53 / CF-09.01](https://github.com/Sandsy09/create-forge/issues/53) | [FT-09.01](https://github.com/Sandsy09/forge-template/issues/44) (complete) |
 | [create-forge#54 / CF-09.02](https://github.com/Sandsy09/create-forge/issues/54) | [FT-09.02](https://github.com/Sandsy09/forge-template/issues/45), [FT-09.04](https://github.com/Sandsy09/forge-template/issues/47) |
 | [create-forge#55 / CF-09.03](https://github.com/Sandsy09/create-forge/issues/55) | [FT-09.05](https://github.com/Sandsy09/forge-template/issues/48) |
 
