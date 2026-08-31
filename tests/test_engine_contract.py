@@ -33,6 +33,7 @@ SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
 ENGINE_REQUIREMENT = "forge-template>=0.3.1,<0.4"
+UV_REQUIREMENT = "uv>=0.12,<0.13"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -131,12 +132,16 @@ def test_engine_dependency_stays_out_of_required_dependencies() -> None:
 
 
 def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None:
-    """The first released engine range (#9, ADR 0018), replacing the prior
-    'Unassigned' contract-table row and exact development pin.
+    """The released engine range and its client-finalisation tool stay
+    optional (#9/ADR 0018 and ADR 0021).
     """
     data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
 
-    assert data["project"]["optional-dependencies"]["engine"] == [ENGINE_REQUIREMENT]
+    assert data["project"]["optional-dependencies"]["engine"] == [
+        ENGINE_REQUIREMENT,
+        UV_REQUIREMENT,
+    ]
+    assert "uv" not in _required_dependencies()
     assert "sources" not in data.get("tool", {}).get("uv", {}), (
         "a committed [tool.uv.sources] override must not survive ADR 0018 -- "
         "the engine now resolves from PyPI like any other dependency."

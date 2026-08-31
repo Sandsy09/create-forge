@@ -13,13 +13,17 @@ define the mandatory generated-project outcomes, while the
 defines which concerns may belong in that baseline. The
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the first production archetype, implemented on
-`forge-template/main` and released at `0.3.0`. The
+`forge-template/main`, released at `0.3.0`, and included in the completed
+two-archetype [composition review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
+released at `0.3.2`. The
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
 selects the engine-owned, optionless `cli` archetype and derives its command
 from `ProjectSpec.project.repository_name`; FT-08.04 implemented it, and
 CF-08.02 exposes both archetypes behind `create-forge`'s hidden
 `--engine-preview` flag. Neither contract changes this repository's default
-`new` path or unassigned released engine range. The
+`new` path. `create-forge 0.2.1` keeps the released engine range unchanged and
+adds client-owned lock finalisation under
+[ADR 0021](../adr/0021-client-finalises-engine-lockfiles.md). The
 [Python support policy](https://github.com/Sandsy09/forge-template/blob/main/docs/python-support.md)
 defines the generated-project CPython window, defaults, and release lifecycle.
 The [editor integration strategy](https://github.com/Sandsy09/forge-template/blob/main/docs/editor-integration.md)
@@ -60,12 +64,8 @@ The canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 and [ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md)
 complete the `forge-template` side of Stage 07 by validating rendered output
-in memory. The shared stage remains open for `create-forge` CLI orchestration,
-filesystem safety, and end-to-end coverage.
-`forge-template/main` now contains the Library production catalogue, while
-this repository's exact development pin still sees the earlier empty
-catalogue. CLI Application implementation and coordinated CLI discovery remain
-later work.
+in memory. Stage 07 and Stage 08 are now complete across both repositories;
+the default Copier-to-engine cutover remains separate future work.
 This roadmap links to the canonical sources rather than maintaining second
 definitions.
 

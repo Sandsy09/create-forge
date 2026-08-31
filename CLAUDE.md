@@ -107,6 +107,10 @@ option and a discovery-driven interactive prompt, so `--engine-preview` now
 selects for real between `library` and `cli` rather than passing a fixed id
 through. The `forge-template>=0.3.1,<0.4` / protocol-1 pair is recorded by the
 canonical [cross-repository engine contract tests](docs/engine-contract-tests.md).
+`forge-template 0.3.2` is the current compatible release. `create-forge 0.2.1`
+adds `uv>=0.12,<0.13` to the optional `engine` extra and creates `uv.lock` in
+adjacent staging before the atomic rename (ADR 0021); render plans and the
+public engine facade remain side-effect free.
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
 the pin once, within the prior unreleased `0.2.0` contract, to adopt
 generated-project validation; CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
@@ -154,9 +158,10 @@ CI-enforced end-to-end coverage the Copier path already had — both
 archetypes generated through `--engine-preview` against the real installed
 engine, each project's own checks run, and a real released-install
 compatibility boundary (an out-of-range engine, and no engine extra at all)
-proven to write nothing. This repository's own Stage 08 work is complete;
-`forge-template`'s FT-08.05 composition architecture review remains open
-independently, tracked in that repository.
+proven to write nothing. Forge-template's FT-08.05 review then corrected the
+Foundation boundary in `0.3.2`; create-forge supplies the matching dynamic
+lock finalisation under [ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md).
+The two-repository Stage 08 implementation is complete.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do

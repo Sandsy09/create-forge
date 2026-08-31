@@ -350,6 +350,7 @@ def _run_engine_preview(
 
 def _report_created(project_name: object, dst: Path, *, updatable: bool = True) -> None:
     """Print the success panel once a project has actually been written."""
+    check_command = "uv run poe check" if updatable else "uv run --locked poe check"
     update_line = (
         "[dim]Pull later template changes with: uvx create-forge update[/dim]"
         if updatable
@@ -360,7 +361,7 @@ def _report_created(project_name: object, dst: Path, *, updatable: bool = True) 
         Panel(
             f"[bold]{project_name}[/bold] created at [dim]{dst}[/dim]\n\n"
             f"  cd {dst.name}\n"
-            "  uv run poe check\n\n"
+            f"  {check_command}\n\n"
             f"{update_line}",
             border_style="green",
         )

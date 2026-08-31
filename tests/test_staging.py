@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -17,11 +18,71 @@ import pytest
 from create_forge.staging import (
     DestinationConflictError,
     StagingError,
+    create_uv_lock,
     discard_on_failure,
     ensure_available,
     staged,
     write_files,
 )
+
+
+def test_create_uv_lock_runs_in_the_staged_project(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "staging"
+    root.mkdir()
+    calls: list[list[str]] = []
+
+    def fake_run(
+        command: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        assert kwargs == {"capture_output": True, "text": True, "check": False}
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    create_uv_lock(root)
+
+    assert calls == [["uv", "lock", "--directory", str(root)]]
+
+
+def test_create_uv_lock_reports_a_missing_executable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def missing(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise FileNotFoundError("uv")
+
+    monkeypatch.setattr(subprocess, "run", missing)
+
+    with pytest.raises(StagingError, match=r"install uv>=0\.12,<0\.13"):
+        create_uv_lock(tmp_path)
+
+
+def test_create_uv_lock_reports_a_launch_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise OSError("launch failed")
+
+    monkeypatch.setattr(subprocess, "run", broken)
+
+    with pytest.raises(StagingError, match="could not launch uv"):
+        create_uv_lock(tmp_path)
+
+
+def test_create_uv_lock_reports_resolution_failure_without_raw_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    result = subprocess.CompletedProcess(
+        ["uv", "lock"], 2, "token=secret", "index-password=secret"
+    )
+    monkeypatch.setattr(subprocess, "run", lambda *_a, **_kw: result)
+
+    with pytest.raises(StagingError, match="exit status 2") as caught:
+        create_uv_lock(tmp_path)
+
+    assert "secret" not in str(caught.value)
 
 
 def test_ensure_available_accepts_a_missing_destination(tmp_path: Path) -> None:

@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "create-forge"
-version = "0.2.0"
+version = "0.2.1"
 description = "Scaffold modern Python projects from maintained templates."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -44,7 +44,8 @@ dependencies = [
 # downloads an engine it doesn't call. src/create_forge/engine.py is the
 # only module that imports it; src/create_forge/compat.py holds the range
 # itself so cli.py's `doctor` can report it without importing the engine.
-engine = ["forge-template>=0.3.1,<0.4"]
+# ADR 0021 adds bounded uv to finalise the engine render's dynamic lockfile.
+engine = ["forge-template>=0.3.1,<0.4", "uv>=0.12,<0.13"]
 
 [project.scripts]
 create-forge = "create_forge.cli:app"

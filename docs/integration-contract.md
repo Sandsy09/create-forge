@@ -30,6 +30,12 @@ recorded by
 selects the optionless engine-owned `cli` archetype. Its console command is
 derived from `ProjectSpec.project.repository_name`; FT-08.04 implemented its
 manifest and content, exposed here by CF-08.02.
+The Stage 08
+[composition architecture review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
+and
+[ADR 0037](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0037-two-archetype-composition-review.md)
+were released in `forge-template 0.3.2`. They preserve the public facade and
+protocols while making the client responsible for dynamic lock finalisation.
 
 [#9](https://github.com/Sandsy09/create-forge/issues/9) and
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) assign
@@ -51,15 +57,19 @@ still-unfiled cutover replaces it.
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Current released architecture (ADR 0018) |
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
-catalogue CF-08.02 adopted -- is the first version published to PyPI
+catalogue CF-08.02 adopted -- was the first version published to PyPI
 ([forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)).
-Since it is also the only released version, it is simultaneously the
-declared lower bound and "a representative latest compatible release"; the
-[cross-repository engine contract tests](engine-contract-tests.md) will gain
-a second, higher-version case the first time a compatible `0.3.x` release
-exists to test against. Component-manifest protocol `(1, 2)` is unaffected --
-CF-08.02 already widened it to consume the `library`/`cli` production
-manifests, and `0.3.1` changes no wire protocol.
+`0.3.2` is the current compatible patch release. The declared range still
+starts at `0.3.1`; contract tests resolve and exercise the current compatible
+release without changing ProjectSpec protocol `1` or component-manifest
+protocols `(1, 2)`.
+
+The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
+render is written to adjacent staging, create-forge runs
+`uv lock --directory <staging-directory>` before the atomic rename. The lock
+is a client-finalisation artefact outside the engine's plan/result and follows
+the [filesystem generation contract](filesystem-generation.md) under
+[ADR 0021](adr/0021-client-finalises-engine-lockfiles.md).
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).

@@ -19,7 +19,13 @@
   complete via
   [forge-template PR #84](https://github.com/Sandsy09/forge-template/pull/84),
   released at `forge-template` `0.3.0` alongside Library.
-- **FT-08.05 — Run composition architecture review**
+- ~~**FT-08.05 — Run composition architecture review**~~ — complete via the
+  [canonical review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md),
+  [ADR 0037](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0037-two-archetype-composition-review.md),
+  [forge-template PR #87](https://github.com/Sandsy09/forge-template/pull/87),
+  and `forge-template 0.3.2`. Its client-finalisation finding is implemented
+  by create-forge [ADR 0021](../../../adr/0021-client-finalises-engine-lockfiles.md)
+  for the `0.2.1` release.
 
 ### create-forge
 
@@ -59,19 +65,17 @@ engine-owned ID `cli`, has no component options, and derives its console
 command from `ProjectSpec.project.repository_name`; FT-08.04 implemented it
 and create-forge #10 exposes it, both landing in this stage.
 
-All four `create-forge`-repo-local issues (CF-08.01 through CF-08.04) are
-complete, and CF-EPIC-08 / #39 is closed. This stage's `forge-template`-side
-item, FT-08.05 ("Run composition architecture review"), remains open
-independently in that repository -- Stage 08 as a whole stays open on this
-document until it closes too.
+All repository-local children are complete. The two-archetype review removed
+archetype assumptions from Foundation without adding inheritance or a shared
+runtime layer, while create-forge now creates the dynamic lockfile in adjacent
+staging before atomic placement. Stage 08 is complete across both
+repositories.
 
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred. -- true for
-  `create-forge` (CF-08.01 through CF-08.04); `forge-template`'s FT-08.05 is
-  still open.
+- [x] Repo-local issues are complete or explicitly deferred.
 - [x] Cross-repository blockers are resolved. -- #9/ADR 0018 was the last one.
 - [x] Public contracts changed by this stage are documented/versioned --
-  ADR 0017, ADR 0019, ADR 0020, and the canonical docs they reference.
+  ADR 0017, ADR 0019, ADR 0020, ADR 0021, and forge-template ADR 0037.
 - [x] No implementation concern is duplicated across repositories -- CF-08.03
   (ADR 0019) confirmed this directly.

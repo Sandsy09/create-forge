@@ -12,7 +12,8 @@ uv sync --all-groups --all-extras
 uv run pre-commit install --install-hooks
 ```
 
-`--all-extras` resolves `forge-template>=0.3.1,<0.4` from PyPI as the
+`--all-extras` resolves `forge-template>=0.3.1,<0.4` and `uv>=0.12,<0.13`
+from PyPI as the
 optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
 plain `uv sync` (or `pip install create-forge`) never resolves it. That
@@ -191,10 +192,15 @@ the gap ADR 0016 left open: the engine path now has its own CI-enforced
 `e2e`-marked coverage --
 [`tests/test_e2e_engine_generation.py`](tests/test_e2e_engine_generation.py)
 generates both archetypes through `--engine-preview` against the real
-installed engine, runs each generated project's own checks, and proves the
+installed engine, checks each generated lock, runs
+`uv run --locked poe check`, and proves the
 released-install compatibility boundary (an out-of-range engine, and no
 `engine` extra at all) writes nothing -- closing
 [CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39).
+Forge-template's Stage 08
+[composition review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
+is released at `0.3.2`; [ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md)
+records create-forge's matching lock-finalisation boundary.
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 and the living [engine resolution contract](docs/engine-resolution.md)
 define how that engine is sourced, overridden locally, diagnosed, and

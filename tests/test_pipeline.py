@@ -24,13 +24,14 @@ from forge_template import (
     RenderedProject,
 )
 
+import create_forge.staging as staging_module
 from create_forge import engine, pipeline
 from create_forge.pipeline import (
     GenerationRequest,
     build_generation_request,
     finalise_generation_request,
 )
-from create_forge.staging import DestinationConflictError
+from create_forge.staging import DestinationConflictError, StagingError
 
 _VALID_ANSWERS = {
     "project_name": "Credit Risk Utils",
@@ -413,15 +414,24 @@ def _synthetic_request() -> GenerationRequest:
 
 
 def test_finalise_generation_request_stages_and_moves_into_place(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     request = _synthetic_request()
     dst = tmp_path / "proj"
+
+    def fake_lock(staging_dir: Path) -> None:
+        assert staging_dir != dst
+        assert not dst.exists()
+        assert (staging_dir / "pyproject.toml").is_file()
+        (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
 
     finalise_generation_request(request, dst)
 
     assert (dst / "pyproject.toml").read_bytes() == b"[project]\n"
     assert (dst / "src" / "pkg" / "__init__.py").exists()
+    assert (dst / "uv.lock").read_text(encoding="utf-8") == "version = 1\n"
     # Nothing but the destination itself was left behind next to it.
     assert list(tmp_path.iterdir()) == [dst]
 
@@ -466,6 +476,25 @@ def test_finalise_generation_request_leaves_nothing_on_a_mid_write_failure(
     dst = tmp_path / "proj"
 
     with pytest.raises(Exception, match="refusing to write"):
+        finalise_generation_request(request, dst)
+
+    assert not dst.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_finalise_generation_request_cleans_up_a_lock_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    request = _synthetic_request()
+    dst = tmp_path / "proj"
+
+    def failing_lock(staging_dir: Path) -> None:
+        assert (staging_dir / "pyproject.toml").is_file()
+        raise StagingError("uv lock failed with exit status 2")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", failing_lock)
+
+    with pytest.raises(StagingError, match="uv lock failed"):
         finalise_generation_request(request, dst)
 
     assert not dst.exists()

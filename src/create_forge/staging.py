@@ -6,7 +6,8 @@ test suite with no optional `engine` extra (ADR 0018) installed, and lets it
 serve both `runner.scaffold()` (Copier writes straight to the destination; this
 module only cleans up after a failure) and `pipeline.finalise_generation_request()`
 (the engine path; this module stages and atomically finalises). See
-[ADR 0015](../../docs/adr/0015-staged-filesystem-generation.md) and the
+[ADR 0015](../../docs/adr/0015-staged-filesystem-generation.md),
+[ADR 0021](../../docs/adr/0021-client-finalises-engine-lockfiles.md), and the
 canonical [filesystem generation contract](../../docs/filesystem-generation.md)
 for why the two paths differ and what each guarantees.
 """
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import shutil
+import subprocess
 import tempfile
 import warnings
 from pathlib import Path, PurePosixPath
@@ -88,6 +90,41 @@ def write_files(root: Path, files: Iterable[tuple[str, bytes]]) -> None:
         except OSError as exc:
             msg = f"could not write {path}: {exc}"
             raise StagingError(msg) from exc
+
+
+def create_uv_lock(root: Path) -> None:
+    """Resolve the staged project's committed lockfile before finalisation.
+
+    The engine render is deliberately side-effect free, so ``uv.lock`` is a
+    client-owned finalisation artefact. Run uv without a shell and translate
+    launch or resolution failures into the staging error surface; the
+    surrounding :func:`staged` context then removes the incomplete tree and
+    leaves the destination untouched.
+    """
+    command = ["uv", "lock", "--directory", str(root)]
+    try:
+        result = subprocess.run(  # noqa: S603 - reviewed fixed executable
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        msg = (
+            "could not create uv.lock because the uv executable is unavailable; "
+            "install uv>=0.12,<0.13 and retry"
+        )
+        raise StagingError(msg) from exc
+    except OSError as exc:
+        msg = f"could not launch uv to create uv.lock: {exc}"
+        raise StagingError(msg) from exc
+
+    if result.returncode != 0:
+        msg = (
+            f"uv lock failed with exit status {result.returncode}; check the "
+            "project's declared dependencies and package-index access, then retry"
+        )
+        raise StagingError(msg)
 
 
 def _on_rm_error(func: object, path: str, exc_info: object) -> None:
