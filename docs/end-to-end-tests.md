@@ -12,7 +12,9 @@ released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
 `tests/test_e2e_engine_generation.py` does the same for `--engine-preview`,
 against the real installed `forge-template>=0.3.1,<0.4` engine — the engine
-path (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), which
+path (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
+client-owned lock finalisation from
+[ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
 had no coverage here until this range existed to install
 ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)).
@@ -68,16 +70,17 @@ real installed `forge-template>=0.3.1,<0.4` engine (CF-08.04,
 [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)). It differs from the
 Copier suite in ways worth being explicit about:
 
-- **No `_tasks` run.** The engine path has no equivalent of `copier.yml`'s
-  post-generation hooks — a rendered project has no `.git`, no `uv.lock`, no
-  `pre-commit` install. `uv run poe check` inside it builds that project's
-  own environment from a cold start. The suite asserts this absence
-  explicitly rather than leaving it implicit.
+- **No `_tasks` run.** The engine path creates `uv.lock` as a client
+  finalisation artefact before the atomic rename, then proves it with
+  `uv lock --check` and `uv run --locked poe check`. It still creates no
+  `.git`, `.venv`, hooks, or pre-commit installation. The suite asserts those
+  boundaries explicitly rather than leaving them implicit.
 - **The happy path needs no network.** `forge-template` is an installed
   package resolved once when `uv sync --all-extras` runs, not a template
   cloned per test session — generating through it is as deterministic as any
   other in-process call.
-- **Both archetypes are covered**, each with a full `uv run poe check`:
+- **Both archetypes are covered**, each with a current lock and a full
+  `uv run --locked poe check`:
   `library` and `cli` are equally production since `forge-template 0.3.0`,
   and the suite proves `cli`'s console-script entry point derives from
   `ProjectSpec.project.repository_name` — the end-to-end counterpart to

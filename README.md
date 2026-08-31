@@ -127,13 +127,22 @@ it in the same `0.3.0` release, and
 archetypes behind the hidden `new --engine-preview` flag's `--archetype`
 option. Neither change alters this CLI's default `new` answers, registry, or
 released dependency surface.
+The Stage 08
+[composition architecture review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
+is released in `forge-template 0.3.2`. On the engine-preview path,
+`create-forge 0.2.1` now finalises the validated in-memory render with
+`uv lock --directory <staging-directory>` before the atomic rename. The
+result contains `uv.lock` and uses `uv run --locked poe check`, while the
+default Copier path remains unchanged; see
+[ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md).
 The engine now also defines in-memory
 [generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 ([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
 before rendered output is returned; `render_project` already calls it before
 `--engine-preview` receives a result.
 This repository now depends on a real, released `forge-template` range —
-`>=0.3.1,<0.4`, published to PyPI as the optional `engine` extra
+`>=0.3.1,<0.4`, published to PyPI with `uv>=0.12,<0.13` as the optional
+`engine` extra
 (`pip install 'create-forge[engine]'`; [#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) —
 rather than a development-only pin. That range is reachable only behind

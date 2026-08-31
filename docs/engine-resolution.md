@@ -40,6 +40,11 @@ document otherwise describes — the engine replacing direct Copier as the
 default, `--engine-source`/`--engine-ref` replacing `--template-url` — is
 still a future, unfiled decision.
 
+`forge-template 0.3.2` is the current compatible release inside that range.
+`create-forge 0.2.1` adds `uv>=0.12,<0.13` to the same optional extra so the
+client can create the engine-generated project's lock before finalisation;
+the supported engine range and protocol diagnostics remain unchanged.
+
 ## Normal installed resolution
 
 `create-forge[engine]` depends on the engine package the same way it depends

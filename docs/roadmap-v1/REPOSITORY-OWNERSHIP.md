@@ -5,15 +5,18 @@
 > and strict ProjectSpec plus component manifest protocol v1 and the
 > [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 > are now implemented by `forge-template`. Its `0.3.0` release contains both
-> the production Library archetype and CLI Application, published to PyPI at
-> `0.3.1` ([CF-08.02](https://github.com/Sandsy09/create-forge/issues/10),
+> the production Library archetype and CLI Application, first published to
+> PyPI at `0.3.1` and reviewed at `0.3.2`
+> ([CF-08.02](https://github.com/Sandsy09/create-forge/issues/10),
 > [ADR 0017](../adr/0017-cli-application-archetype-exposure.md); standalone
 > [#9](https://github.com/Sandsy09/create-forge/issues/9),
 > [ADR 0018](../adr/0018-pypi-distribution-and-the-first-engine-range.md)).
 > This repository now declares a real, released engine range,
-> `forge-template>=0.3.1,<0.4`, as the optional `engine` extra, so
+> `forge-template>=0.3.1,<0.4` plus `uv>=0.12,<0.13`, as the optional
+> `engine` extra, so
 > `--engine-preview` can discover, select, and construct a ProjectSpec for
-> either archetype. The v0.1.x Copier/registry ownership remains the
+> either archetype and finalise its lock before atomic placement. The
+> Copier/registry ownership remains the
 > default `new` path's operational implementation until the coordinated
 > cutover — assigning a range is not that cutover.
 
@@ -116,6 +119,7 @@ It owns:
 - construction of the canonical ProjectSpec;
 - component discovery for CLI choices via the forge-template API;
 - filesystem orchestration and safe target handling;
+- dynamic lockfile creation and atomic client finalisation;
 - CLI diagnostics/version reporting;
 - repository-local CI and release workflow dependency policy;
 - end-to-end scaffolding tests.

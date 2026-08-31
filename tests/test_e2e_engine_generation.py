@@ -5,9 +5,9 @@ this module is its engine-path counterpart, kept separate rather than folded
 in because the two paths differ in almost everything but the console script
 they invoke:
 
-- no `copier.yml` `_tasks` run here -- a rendered project has no `.git`, no
-  `uv.lock`, no `pre-commit` hooks installed. `uv run poe check` builds the
-  project's own environment from a cold start.
+- no `copier.yml` `_tasks` run here -- a rendered project has no `.git`,
+  `.venv`, or `pre-commit` hooks installed. Client finalisation creates
+  `uv.lock`; `uv run --locked poe check` restores and checks from that lock.
 - the happy path below needs **no network at all**: `forge-template` is an
   installed package (the optional `engine` extra, ADR 0018), not a cloned
   template, so generating through it is as deterministic as any other
@@ -61,9 +61,8 @@ _PACKAGE_NAMES = {"library": "e2e_engine_library", "cli": "e2e_engine_cli"}
 _REPOSITORY_NAMES = {"library": "e2e-engine-library", "cli": "e2e-engine-cli"}
 
 # A real forge-template release, genuinely below compat.SUPPORTED_ENGINE_RANGE's
-# declared lower bound -- no PyPI release exists outside the range (0.3.1 is
-# the only one published), so this installs the previous git tag directly as
-# a test fixture instead. A range that only ever moves up (ADR 0012) keeps
+# declared lower bound -- this installs the previous git tag directly as a
+# durable test fixture. A range that only ever moves up (ADR 0012) keeps
 # 0.3.0 permanently out of bounds, so this needs no maintenance as the
 # supported range advances -- see ADR 0020 for why this does not weaken
 # ADR 0018's PyPI-only *declared* dependency.
@@ -148,12 +147,30 @@ def test_new_produces_the_expected_project_shape(
     assert (project / f"src/{package}/__init__.py").is_file()
     assert (project / f"src/{package}/py.typed").is_file()
     assert (project / "tests").is_dir()
-    # The engine path runs no copier.yml _tasks -- no VCS init, no lockfile.
-    # That absence is a contract this module records (ADR 0015, ADR 0020),
-    # not an oversight: test_e2e_generation.py's equivalent test asserts the
-    # opposite for the Copier path.
+    # The engine path runs no copier.yml _tasks: create-forge adds only the
+    # client-finalised lockfile before the atomic rename (ADR 0021).
     assert not (project / ".git").exists()
-    assert not (project / "uv.lock").exists()
+    assert not (project / ".venv").exists()
+    assert (project / "uv.lock").is_file()
+
+
+@pytest.mark.parametrize("archetype", ["library", "cli"])
+def test_generated_lockfile_is_current(
+    generated_engine_projects: dict[str, Path],
+    archetype: str,
+    e2e_child_env: dict[str, str],
+) -> None:
+    project = generated_engine_projects[archetype]
+    result = subprocess.run(
+        ["uv", "lock", "--check"],  # noqa: S607
+        cwd=project,
+        env=e2e_child_env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_cli_console_command_is_the_repository_name(
@@ -189,7 +206,7 @@ def test_generated_project_passes_its_own_check(
     project = generated_engine_projects[archetype]
 
     result = subprocess.run(
-        ["uv", "run", "poe", "check"],  # noqa: S607
+        ["uv", "run", "--locked", "poe", "check"],  # noqa: S607
         cwd=project,
         env=e2e_child_env,
         capture_output=True,

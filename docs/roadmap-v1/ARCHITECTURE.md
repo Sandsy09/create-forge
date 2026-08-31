@@ -9,14 +9,17 @@
 > are now implemented by `forge-template`. Its `0.3.0` release contains both
 > the production Library archetype and the optionless
 > [CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md),
-> published to PyPI at `0.3.1`. This repository's development pin moved to
+> first published to PyPI at `0.3.1`; the Stage 08 boundary review is released
+> at `0.3.2`. This repository's development pin moved to
 > match ([CF-08.02](https://github.com/Sandsy09/create-forge/issues/10),
 > [ADR 0017](../adr/0017-cli-application-archetype-exposure.md)) and then to
 > a real released range, `forge-template>=0.3.1,<0.4` as the optional
-> `engine` extra (standalone [#9](https://github.com/Sandsy09/create-forge/issues/9),
+> `engine` extra alongside `uv>=0.12,<0.13` (standalone [#9](https://github.com/Sandsy09/create-forge/issues/9),
 > [ADR 0018](../adr/0018-pypi-distribution-and-the-first-engine-range.md)),
 > so both archetypes are discoverable and selectable behind the hidden
-> `new --engine-preview` flag. The released v0.1.x CLI remains a thin Copier
+> `new --engine-preview` flag. `create-forge 0.2.1` finalises their lockfiles
+> before atomic rename under [ADR 0021](../adr/0021-client-finalises-engine-lockfiles.md).
+> The default CLI remains a thin Copier
 > wrapper with a bundled registry until the coordinated cutover — a range
 > assignment is not that cutover.
 
@@ -45,7 +48,8 @@ architecture and leaves room for future clients, including Blueprint, to
 consume the same engine directly. Package, protocol, trust and release rules
 live in the [integration contract](../integration-contract.md).
 The engine validates rendered output in memory before returning it;
-`create-forge` retains filesystem staging, finalisation, and command execution.
+`create-forge` retains filesystem staging, dynamic `uv.lock` finalisation,
+atomic placement, and command execution.
 
 ## Critical invariant
 

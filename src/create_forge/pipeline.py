@@ -144,19 +144,23 @@ def build_generation_request(
 
 
 def finalise_generation_request(request: GenerationRequest, destination: Path) -> None:
-    """Stage and finalise `request`'s rendered files (ADR 0015).
+    """Stage, lock, and finalise `request`'s rendered files (ADR 0021).
 
     Renders them into a directory adjacent to `destination`, then moves that
-    directory into place atomically.
+    directory into place atomically. ``uv.lock`` is created after the reviewed
+    render is written and before the rename, so lock resolution cannot leave a
+    partial destination.
 
     `create-forge` does not call `forge_template.validate_rendered_project`
     itself -- `engine.render()` already did, as the last step inside
     `build_generation_request`. Reaching this function at all means that
     validation already passed; this function's only job is the filesystem
-    half create-forge owns: staging, target-safety, and an atomic rename.
+    half create-forge owns: staging, target-safety, lock finalisation, and an
+    atomic rename.
     """
     with staging.staged(destination) as staging_dir:
         staging.write_files(
             staging_dir,
             ((file.target, file.content) for file in request.rendered.files),
         )
+        staging.create_uv_lock(staging_dir)

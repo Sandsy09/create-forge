@@ -37,6 +37,7 @@ from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
 import create_forge.runner as runner_module
+import create_forge.staging as staging_module
 from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
 from create_forge.cli import _markers, app
@@ -46,6 +47,7 @@ from create_forge.pipeline import GenerationRequest
 from create_forge.prompts import PromptAbortedError
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest
+from create_forge.staging import StagingError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -694,7 +696,9 @@ def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
 
 
 def test_new_engine_preview_generates_a_real_cli_application(
-    recorder: list[ScaffoldRequest], tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    recorder: list[ScaffoldRequest],
+    tmp_path: Path,
 ) -> None:
     """The real, unmocked engine: `forge-template` 0.3.0's production
     catalogue makes `--engine-preview` generate for real (CF-08.02),
@@ -704,6 +708,11 @@ def test_new_engine_preview_generates_a_real_cli_application(
     for the equivalent pipeline-level proof.
     """
     dest = tmp_path / "proj"
+
+    def fake_lock(staging_dir: Path) -> None:
+        (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
 
     result = runner.invoke(
         app,
@@ -723,6 +732,7 @@ def test_new_engine_preview_generates_a_real_cli_application(
     assert result.exit_code == 0, result.output
     assert recorder == []
     assert (dest / "src" / "engine_preview" / "cli.py").exists()
+    assert (dest / "uv.lock").is_file()
     pyproject = (dest / "pyproject.toml").read_text(encoding="utf-8")
     assert 'engine-preview = "engine_preview.cli:app"' in pyproject
 
@@ -818,6 +828,11 @@ def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
     monkeypatch.setattr(
         pipeline_module, "build_generation_request", lambda *a, **k: fake_request
     )
+    monkeypatch.setattr(
+        staging_module,
+        "create_uv_lock",
+        lambda _root: pytest.fail("dry-run must not create a lockfile"),
+    )
 
     dest = tmp_path / "proj"
 
@@ -863,6 +878,11 @@ def test_new_engine_preview_finalises_a_successful_render(
         pipeline_module, "build_generation_request", lambda *a, **k: fake_request
     )
 
+    def fake_lock(staging_dir: Path) -> None:
+        (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
+
     dest = tmp_path / "proj"
 
     result = runner.invoke(
@@ -881,11 +901,58 @@ def test_new_engine_preview_finalises_a_successful_render(
     assert result.exit_code == 0, result.output
     assert recorder == []
     assert (dest / "pyproject.toml").read_bytes() == b"[project]\n"
+    assert (dest / "uv.lock").is_file()
     assert "created at" in result.output
     # Normalise whitespace: Rich wraps long lines to the console width,
     # which varies by environment (see the destination-conflict test above).
     normalised_output = " ".join(result.output.split())
     assert "create-forge update does not apply" in normalised_output
+    assert "uv run --locked poe check" in normalised_output
+
+
+def test_new_engine_preview_reports_lock_failure_and_writes_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+    recorder: list[ScaffoldRequest],
+    tmp_path: Path,
+) -> None:
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="pyproject.toml", owner=ComponentOwner(id="library")),
+        ),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+    )
+    fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    monkeypatch.setattr(
+        pipeline_module, "build_generation_request", lambda *a, **k: fake_request
+    )
+
+    def failing_lock(_root: Path) -> None:
+        raise StagingError("uv lock failed")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", failing_lock)
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "uv lock failed" in result.output
+    assert recorder == []
+    assert not dest.exists()
 
 
 def test_new_archetype_without_engine_preview_is_rejected(

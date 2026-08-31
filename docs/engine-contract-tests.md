@@ -12,7 +12,7 @@ it is what a released `create-forge[engine]` install actually resolves.
 | Surface | Supported value |
 | --- | --- |
 | `forge-template` distribution | PyPI, `create-forge`'s optional `engine` extra |
-| `forge-template` range | `>=0.3.1,<0.4` |
+| `forge-template` range | `>=0.3.1,<0.4` (current compatible release: `0.3.2`) |
 | ProjectSpec protocol | `1` |
 | Component-manifest protocol | `1, 2` |
 
@@ -41,12 +41,10 @@ what finally assigns one, once
 made `0.3.1` -- a packaging-only patch over the same `0.3.0` production
 catalogue -- installable from PyPI.
 
-Any package version outside the range fails closed. Since `0.3.1` is
-currently the *only* released version, it is simultaneously the declared
-lower bound and the latest compatible release; the first time a compatible
-`0.3.x` release exists, this contract gains a second test case exercising it
-specifically, per the [engine update policy](engine-updates.md)'s adoption
-rule.
+Any package version outside the range fails closed. `0.3.1` remains the
+declared lower bound and `0.3.2` is the current compatible release. The
+[engine update policy](engine-updates.md)'s adoption rule continues to govern
+later compatible patches.
 
 ## What the executable contract proves
 
@@ -121,7 +119,8 @@ which silently tests against old sibling code rather than the one intended.
 
 ## Adopting a new compatible release
 
-A `forge-template` release inside the declared `>=0.3.1,<0.4` range (a patch,
+A `forge-template` release inside the declared `>=0.3.1,<0.4` range (currently
+`0.3.2`; a patch,
 while `0.3.x` stays the compatibility line) may be adopted once this
 contract passes against it, per the sibling-checkout validation above and the
 [engine update policy](engine-updates.md). A release that would require a
