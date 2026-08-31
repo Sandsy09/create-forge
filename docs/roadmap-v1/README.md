@@ -51,8 +51,11 @@ workflows, which remain independently owned and unchanged.
 The canonical
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 defines the strict effective generation request owned by `forge-template`.
-`create-forge` retains construction and user-facing orchestration, which remain
-unimplemented until the supported engine cutover.
+`create-forge` retains construction and user-facing orchestration. The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+defines how downstream clients resolve component-selection policy before
+constructing that effective request. `create-forge` does not consume policy
+yet; CF-09.01 owns the future client hook.
 The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 defines engine-owned bundled component metadata and compatibility. The

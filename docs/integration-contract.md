@@ -220,9 +220,19 @@ migration before the new client is released.
 
 ## Downstream and organisation integrations
 
-Blueprint-style clients consume `forge-template` directly and apply policy as
-validated ProjectSpec inputs. They do not depend on `create-forge` internals,
-and policy does not gain an arbitrary file or code-execution hook.
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+and [ADR 0038](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0038-organisation-policy-selection-model.md)
+define component-selection policy without adding executable content.
+Blueprint-style clients consume `forge-template` directly, resolve policy
+before constructing the effective ProjectSpec, and preserve whether each
+selection kind was explicitly supplied. They do not depend on `create-forge`
+internals, and policy does not gain an arbitrary file or code-execution hook.
+
+`create-forge` does not consume organisation policy today. CF-09.01 owns the
+future hook and its input-source trust, diagnostics, and presentation; the
+canonical policy schema and resolution semantics remain `forge-template`
+contracts.
 
 Organisations may still fork for genuinely custom executable template content.
 That is distinct from the preferred downstream-client path for defaults,

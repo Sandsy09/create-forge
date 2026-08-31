@@ -120,6 +120,12 @@ evolving package/protocol rules live in the
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 is defined by `forge-template`; this repository will construct it only through
 the [supported engine facade](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md).
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+keeps policy resolution upstream of effective ProjectSpec construction.
+Future policy-aware clients must retain which selection kinds were explicitly
+supplied so explicit empty lists remain distinguishable from absent inputs;
+the current CLI does not consume policy.
 That API begins its compatibility contract at `forge-template` `0.2.x`.
 Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)

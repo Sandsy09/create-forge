@@ -54,6 +54,23 @@ module touching Copier's Python API.
 [`tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`](../tests/test_engine_contract.py)
 enforces this by parsing every module reachable from `create_forge.cli:app`.
 
+## Policy-resolution boundary
+
+The canonical
+[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+is resolved by a downstream client before it constructs the effective
+ProjectSpec. Policy documents are not embedded in ProjectSpec: after successful
+resolution, only the effective component selections and the applied policy IDs
+in `SelectionProvenance.policies` cross the engine boundary.
+
+A policy-aware client must retain whether the archetype, capability list, and
+platform list were explicitly supplied. In particular, an explicit empty list
+replaces defaults for that selection kind, while an absent input permits
+defaults. The current `create-forge` adapter does not collect or resolve
+organisation policy and therefore continues to leave provenance empty;
+[CF-09.01](https://github.com/Sandsy09/create-forge/issues/53) owns the future
+consumption hook.
+
 ## Field mapping
 
 | CLI answer | ProjectSpec target | Note |
@@ -69,7 +86,7 @@ enforces this by parsing every module reachable from `create_forge.cli:app`.
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
 | *discovered, then user- or caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. |
 | *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own discovered `ComponentDescriptor.options` declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
-| — | `provenance` | Left empty; Stage 09 (organisation-policy) work. |
+| — | `provenance` | Left empty by the current CLI. A future policy-aware client records successfully applied policy IDs here after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself. |
 
 ## Unmapped answers
 
