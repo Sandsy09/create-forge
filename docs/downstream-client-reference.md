@@ -5,7 +5,10 @@ This is the living contributor contract for
 independent Blueprint-style CLI over the public `forge_template` facade,
 delivered for CF-09.02 / [#54](https://github.com/Sandsy09/create-forge/issues/54).
 [ADR 0023](adr/0023-downstream-client-reference.md) records the decision this
-document keeps current.
+document keeps current. CF-09.03's final
+[reference-client boundary decision](adr/0024-reference-client-not-framework-dependency.md)
+uses this example as executable proof that `create-forge` is one client, not
+a framework dependency for every client.
 
 ## Status
 

@@ -47,11 +47,16 @@ catalogue remains a forge-template test seam, not a client plugin mechanism.
   no dependency on `create-forge` at all (an AST guard proves it). See
   [ADR 0023](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0023-downstream-client-reference.md)
   and the canonical [downstream client reference](https://github.com/Sandsy09/create-forge/blob/main/docs/downstream-client-reference.md).
-- [**CF-09.03 — Validate create-forge is a reference client, not a framework dependency**](https://github.com/Sandsy09/create-forge/issues/55) — unblocked now that #54 is complete; its forge-template prerequisite is complete.
+- [x] [**CF-09.03 — Validate create-forge is a reference client, not a framework dependency**](https://github.com/Sandsy09/create-forge/issues/55)
+  — complete. [ADR 0024](../../../adr/0024-reference-client-not-framework-dependency.md)
+  records the strict one-way dependency, the living
+  [integration contract](../../../integration-contract.md) maps every
+  acceptance criterion to executable evidence, and both production
+  archetypes are checked for Forge-free generated dependencies and locks.
 
 ## Stage completion rule
 
-- [ ] Repo-local issues are complete or explicitly deferred.
-- [ ] Cross-repository blockers are resolved.
-- [ ] Public contracts changed by this stage are documented/versioned.
-- [ ] No implementation concern is duplicated across repositories.
+- [x] Repo-local issues are complete or explicitly deferred.
+- [x] Cross-repository blockers are resolved.
+- [x] Public contracts changed by this stage are documented/versioned.
+- [x] No implementation concern is duplicated across repositories.

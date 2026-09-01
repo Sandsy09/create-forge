@@ -152,6 +152,32 @@ Generated project
 `forge-template` must not depend on `create-forge`. Generated projects must
 remain independent of both packages during normal development and runtime.
 
+### Reference-client validation
+
+[ADR 0024](adr/0024-reference-client-not-framework-dependency.md) completes
+CF-09.03 by accepting `create-forge` as one reference client, not a framework
+layer. A Blueprint-style client consumes the same top-level engine facade
+directly and owns its own CLI and orchestration. Logic that must be identical
+across clients belongs in a supported `forge-template` API; it is neither
+copied between clients nor exported from `create-forge` for reuse.
+
+The Stage 09 acceptance criteria are backed by the following durable evidence:
+
+| Requirement | Evidence |
+| --- | --- |
+| Blueprint may implement its own CLI on the engine contract | The independent [`examples/downstream_cli.py`](../examples/downstream_cli.py) reference and [ADR 0023](adr/0023-downstream-client-reference.md). |
+| `forge-template` has no dependency on `create-forge` | [`tests/test_reference_client_boundary.py`](../tests/test_reference_client_boundary.py) inspects the supported installed distribution's metadata and Python imports. |
+| Shared-client logic stays engine-owned | [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) confines engine access to the top-level facade; forge-template's [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md) proves clients reuse package-bound content and composition. |
+| Policy cannot gain rendering or code-execution authority | [`tests/test_policy_hook.py`](../tests/test_policy_hook.py) restricts the client seam to resolved selections and policy identifiers; forge-template's [extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md) rejects content and override grants. |
+| Generated projects are independent of both packages | [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py) checks both production archetypes' dependency metadata and locks; [`tests/test_downstream_reference.py`](../tests/test_downstream_reference.py) independently scans the second client's real output. |
+| The behavior is documented and automatically validated | This living contract, ADRs 0022–0024, and the linked fast/end-to-end suites are the versioned record and executable proof. |
+| No forge-template responsibility is duplicated here | The public-facade import guards, selection-only field guards, and upstream no-copy ownership proof fail if engine content, private modules, or policy rendering authority cross the boundary. |
+| Stage 06 exposes the reusable contract | The [cross-repository engine contract suite](engine-contract-tests.md) exercises the released engine range and both supported protocols through the public facade. |
+| All Stage 09 children and real blockers are resolved | CF-09.01/#53 and CF-09.02/#54 are complete; CF-09.03/#55 records this final validation; forge-template FT-09.01–09.05 are complete. |
+
+The independent example remains outside the wheel and sdist. It demonstrates
+the contract without adding a second public API surface to this package.
+
 ## Version and protocol compatibility
 
 A `forge-template` release is one installable unit containing its engine,

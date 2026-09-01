@@ -80,7 +80,10 @@ defines supported axes and negotiation facts, and the
 [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
 validates that client-owned policy/orchestration does not require copied
 Foundation or component source. The private forge-template fixture catalogue
-is not a client extension mechanism. Forge-template
+is not a client extension mechanism. Create-forge
+[ADR 0024](../adr/0024-reference-client-not-framework-dependency.md) closes
+Stage 09 by validating this one-way, no-framework dependency boundary.
+Forge-template
 [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record those decisions. The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)

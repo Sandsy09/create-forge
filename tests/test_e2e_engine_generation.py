@@ -26,9 +26,13 @@ rather than failing it, when the `engine` extra is not installed at all --
 from __future__ import annotations
 
 import subprocess
+import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 from create_forge import compat
 
@@ -59,6 +63,10 @@ _ANSWERS: dict[str, dict[str, str]] = {
 }
 _PACKAGE_NAMES = {"library": "e2e_engine_library", "cli": "e2e_engine_cli"}
 _REPOSITORY_NAMES = {"library": "e2e-engine-library", "cli": "e2e-engine-cli"}
+_FORGE_DISTRIBUTIONS = {
+    canonicalize_name("create-forge"),
+    canonicalize_name("forge-template"),
+}
 
 # A real forge-template release, genuinely below compat.SUPPORTED_ENGINE_RANGE's
 # declared lower bound -- this installs the previous git tag directly as a
@@ -171,6 +179,43 @@ def test_generated_lockfile_is_current(
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("archetype", ["library", "cli"])
+def test_generated_project_has_no_forge_dependency(
+    generated_engine_projects: dict[str, Path], archetype: str
+) -> None:
+    """ADR 0024: Forge generates projects; it is not their framework.
+
+    Inspect every dependency-bearing project table and the fully resolved
+    lock. This covers build, normal runtime, optional, development, and test
+    dependencies without treating a harmless provenance mention as a package
+    dependency.
+    """
+    project = generated_engine_projects[archetype]
+    pyproject: dict[str, Any] = tomllib.loads(
+        (project / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    requirements: list[str] = []
+    requirements.extend(pyproject.get("build-system", {}).get("requires", []))
+    requirements.extend(pyproject.get("project", {}).get("dependencies", []))
+    for extra in pyproject.get("project", {}).get("optional-dependencies", {}).values():
+        requirements.extend(item for item in extra if isinstance(item, str))
+    for group in pyproject.get("dependency-groups", {}).values():
+        requirements.extend(item for item in group if isinstance(item, str))
+
+    declared = {
+        canonicalize_name(Requirement(requirement).name) for requirement in requirements
+    }
+    locked = {
+        canonicalize_name(package["name"])
+        for package in tomllib.loads((project / "uv.lock").read_text(encoding="utf-8"))[
+            "package"
+        ]
+    }
+
+    assert declared.isdisjoint(_FORGE_DISTRIBUTIONS)
+    assert locked.isdisjoint(_FORGE_DISTRIBUTIONS)
 
 
 def test_cli_console_command_is_the_repository_name(
