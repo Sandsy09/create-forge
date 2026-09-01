@@ -24,6 +24,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0019 — CLI archetype-parity review](0019-cli-archetype-parity-review.md)
 - [0020 — Test the public engine path end to end](0020-engine-path-end-to-end-tests.md)
 - [0021 — Finalise engine-generated lockfiles in the client](0021-client-finalises-engine-lockfiles.md)
+- [0022 — Downstream organisation-policy consumption hook](0022-downstream-organisation-policy-hook.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

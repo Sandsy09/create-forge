@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0022](0022-downstream-organisation-policy-hook.md)
 
 ## Context
 
