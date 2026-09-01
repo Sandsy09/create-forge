@@ -140,6 +140,13 @@ but may not overlay arbitrary files or treat private catalogue fixtures as a
 plugin mechanism. Forge-template
 [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record those decisions.
+CF-09.02 ([ADR 0023](docs/adr/0023-downstream-client-reference.md)) added
+[`examples/downstream_cli.py`](examples/downstream_cli.py): a second,
+independent Blueprint-style CLI over the public `forge_template` facade,
+with its own compatibility bounds and its own minimal organisation-policy
+resolver -- it imports no `create_forge` module at all, proven by an AST
+guard rather than only stated. See the canonical
+[downstream client reference](docs/downstream-client-reference.md).
 That API begins its compatibility contract at `forge-template` `0.2.x`.
 Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
@@ -232,7 +239,15 @@ carry into `ProjectSpec.provenance` -- without `create-forge` itself parsing,
 merging, or reading any policy document, which stays a deliberate boundary
 per the canonical
 [downstream policy-consumption contract](docs/organisation-policy-consumption.md).
-This unblocks [#54 / CF-09.02](https://github.com/Sandsy09/create-forge/issues/54).
+This unblocked [#54 / CF-09.02](https://github.com/Sandsy09/create-forge/issues/54),
+completed by [ADR 0023](docs/adr/0023-downstream-client-reference.md)'s
+`examples/downstream_cli.py` -- a second, independent client, not a
+`create-forge` usage example, since #54 forbids depending on `create-forge`
+internals; see the canonical
+[downstream client reference](docs/downstream-client-reference.md). This in
+turn unblocks [#55 / CF-09.03](https://github.com/Sandsy09/create-forge/issues/55),
+the last open child of
+[CF-EPIC-09](https://github.com/Sandsy09/create-forge/issues/40).
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 and the living [engine resolution contract](docs/engine-resolution.md)
 define how that engine is sourced, overridden locally, diagnosed, and

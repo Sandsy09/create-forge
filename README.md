@@ -196,6 +196,11 @@ engine, resolving the canonical
 before constructing a ProjectSpec — see the canonical
 [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
 and [ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md).
+[`examples/downstream_cli.py`](examples/downstream_cli.py) is a runnable,
+second, independent client demonstrating exactly this — no dependency on
+`create-forge` at all — see the canonical
+[downstream client reference](docs/downstream-client-reference.md) and
+[ADR 0023](docs/adr/0023-downstream-client-reference.md).
 
 Forking this repository remains appropriate only for genuinely custom
 executable template content that has no equivalent in the reviewed public
