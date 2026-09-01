@@ -502,34 +502,23 @@ def merge_policies(policies: Sequence[Policy]) -> MergedPolicy:
     )
 
 
-def resolve(
+def apply_authority_order(
     merged: MergedPolicy,
     *,
     explicit: ExplicitSelection,
     profile_default_archetype: str | None,
-    catalogue: Iterable[ComponentDescriptor],
-) -> ResolvedSelection:
-    """Apply the full authority order and validate against the catalogue.
+) -> tuple[str | None, frozenset[str], frozenset[str]]:
+    """Resolve archetype/capabilities/platforms by authority order alone.
 
-    Required/forbidden rules only validate the resulting selection -- they
-    never silently add, remove, or replace an explicit choice.
+    Pure selection logic: no validation, no catalogue lookup. Kept separate
+    from `resolve()` so it is directly testable independent of what the
+    installed catalogue happens to contain -- docs/organisation-policy.md is
+    explicit that "policy syntax alone cannot prove that a component
+    exists"; that is a later, separate step.
     """
     archetype = (
         explicit.archetype or merged.default_archetype or profile_default_archetype
     )
-    if archetype is None:
-        raise PolicyError(
-            "organisation-policy-violation",
-            [
-                PolicyErrorDetail(
-                    "no-permitted-archetype",
-                    "components.archetype",
-                    "no explicit choice, policy default, or profile default "
-                    "resolved an archetype",
-                )
-            ],
-        )
-
     capabilities = (
         frozenset(explicit.capabilities)
         if explicit.capabilities is not None
@@ -540,7 +529,22 @@ def resolve(
         if explicit.platforms is not None
         else merged.default_platforms
     )
+    return archetype, capabilities, platforms
 
+
+def _validate_against_policy(
+    merged: MergedPolicy,
+    *,
+    archetype: str,
+    capabilities: frozenset[str],
+    platforms: frozenset[str],
+) -> None:
+    """Required/forbidden rules validate the resolved selection.
+
+    They never silently add, remove, or replace an explicit choice --
+    `apply_authority_order` has already produced the final selection by the
+    time this runs.
+    """
     details: list[PolicyErrorDetail] = []
     if archetype in merged.forbidden_archetypes:
         details.append(
@@ -597,6 +601,21 @@ def resolve(
     if details:
         raise PolicyError("organisation-policy-violation", details)
 
+
+def _validate_against_catalogue(
+    catalogue: Iterable[ComponentDescriptor],
+    *,
+    archetype: str,
+    capabilities: frozenset[str],
+    platforms: frozenset[str],
+) -> None:
+    """Confirm every referenced id exists and the archetype has the right kind.
+
+    Policy syntax alone cannot prove a component exists or has the declared
+    kind (docs/organisation-policy.md) -- this is the one catalogue lookup
+    that genuinely belongs client-side, since the engine never sees policy
+    rules, only the resolved selection.
+    """
     catalogue_by_id = {d.id: d for d in catalogue}
     unknown = [
         c for c in (archetype, *capabilities, *platforms) if c not in catalogue_by_id
@@ -623,6 +642,40 @@ def resolve(
                 )
             ],
         )
+
+
+def resolve(
+    merged: MergedPolicy,
+    *,
+    explicit: ExplicitSelection,
+    profile_default_archetype: str | None,
+    catalogue: Iterable[ComponentDescriptor],
+) -> ResolvedSelection:
+    """Apply the full authority order, then validate against policy and catalogue."""
+    archetype, capabilities, platforms = apply_authority_order(
+        merged,
+        explicit=explicit,
+        profile_default_archetype=profile_default_archetype,
+    )
+    if archetype is None:
+        raise PolicyError(
+            "organisation-policy-violation",
+            [
+                PolicyErrorDetail(
+                    "no-permitted-archetype",
+                    "components.archetype",
+                    "no explicit choice, policy default, or profile default "
+                    "resolved an archetype",
+                )
+            ],
+        )
+
+    _validate_against_policy(
+        merged, archetype=archetype, capabilities=capabilities, platforms=platforms
+    )
+    _validate_against_catalogue(
+        catalogue, archetype=archetype, capabilities=capabilities, platforms=platforms
+    )
 
     return ResolvedSelection(
         archetype=archetype,
