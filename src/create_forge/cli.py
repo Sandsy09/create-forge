@@ -32,6 +32,8 @@ from create_forge.prompts import (
     ArchetypeChoice,
     PromptAbortedError,
     ask_all,
+    ask_component_options,
+    ask_project_answers,
     choose_archetype,
     choose_template,
     slugify,
@@ -239,7 +241,7 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
 
 def _select_archetype(
     archetypes: Sequence[ArchetypeChoice], archetype: str | None, *, yes: bool
-) -> tuple[str, bool]:
+) -> tuple[ArchetypeChoice, bool]:
     """Resolve which archetype to build: explicit, --yes, then a prompt.
 
     CF-08.02. Mirrors `_select_template`'s resolution shape for the Copier
@@ -248,27 +250,29 @@ def _select_archetype(
     default archetype, and `templates.toml`'s `default_template` is a
     Copier-path concept the engine path deliberately does not inherit.
 
-    Returns the chosen id alongside whether the choice was explicit
+    Returns the chosen descriptor alongside whether the choice was explicit
     (CF-09.01, ADR 0022): `--archetype` and an actually-prompted answer both
     are; `choose_archetype`'s own skip-when-only-one-exists shortcut is not,
     since no alternative was ever offered and a policy default could
-    legitimately still apply there.
+    legitimately still apply there. Returning the descriptor itself, not just
+    its id, is what lets the caller prompt for its declared `options` (#91,
+    ADR 0025) without a second discovery lookup.
     """
-    available = {a.id for a in archetypes}
+    by_id = {a.id: a for a in archetypes}
 
     if archetype is not None:
-        if archetype not in available:
+        if archetype not in by_id:
             err.print(
                 f"[red]Unknown archetype {archetype!r}. Available: "
-                f"{', '.join(sorted(available))}[/red]"
+                f"{', '.join(sorted(by_id))}[/red]"
             )
             raise typer.Exit(1)
-        return archetype, True
+        return by_id[archetype], True
 
     if yes:
         err.print(
             "[red]--engine-preview with --yes requires --archetype. "
-            f"Available: {', '.join(sorted(available))}[/red]"
+            f"Available: {', '.join(sorted(by_id))}[/red]"
         )
         raise typer.Exit(1)
 
@@ -280,31 +284,91 @@ def _select_archetype(
     # `choose_archetype` itself skips the prompt when there is exactly one
     # archetype (mirroring `choose_template`) -- no alternative was ever
     # offered, so that case is not an explicit choice.
-    return chosen.id, len(archetypes) > 1
+    return chosen, len(archetypes) > 1
 
 
-def _run_engine_preview(
-    answers: dict[str, object],
+def _collect_engine_answers(
+    descriptor: ArchetypeChoice,
+    preset: dict[str, object],
+    cfg_answers: dict[str, object],
+    *,
+    yes: bool,
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Gather ProjectSpec-identity answers and the archetype's own declared
+    component options (#91, ADR 0025), from --yes/--data, or by prompting for
+    anything missing. Mirrors `_collect_answers`'s shape for the Copier path.
+
+    `preset` is split by `descriptor.options`' own declared names: a key
+    matching one is an option answer, everything else is a project-identity
+    answer (including keys with no ProjectSpec home at all, e.g. `github_org`
+    -- passed through unchanged, exactly as the Copier path already does).
+    This is also what preserves ADR 0019's legacy `build_backend`/
+    `versioning` derivation as a fallback: those keys never match a declared
+    option name, so they land in the project answers `pipeline.
+    _resolved_component_options` inspects when the caller supplies no
+    explicit `component_options`.
+    """  # noqa: D205
+    option_names = {option.name for option in descriptor.options}
+    option_preset = {k: v for k, v in preset.items() if k in option_names}
+    project_preset = {k: v for k, v in preset.items() if k not in option_names}
+
+    if yes:
+        if "project_name" not in project_preset:
+            err.print("[red]--yes requires a project name.[/red]")
+            raise typer.Exit(1)
+        return {**cfg_answers, **project_preset}, dict(option_preset)
+
+    try:
+        project_answers = {
+            **cfg_answers,
+            **ask_project_answers(preset=project_preset, defaults=cfg_answers),
+        }
+        component_answers = ask_component_options(descriptor, preset=option_preset)
+    except PromptAbortedError:
+        err.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(130) from None
+
+    return project_answers, component_answers
+
+
+def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distinct input; see that function's own justification
+    preset: dict[str, object],
+    cfg_answers: dict[str, object],
+    path: Path | None,
     archetype: str | None,
-    dst: Path,
     *,
     dry_run: bool,
     yes: bool,
 ) -> None:
-    """The --engine-preview path: discover, select, build, validate, render.
+    """The --engine-preview path: discover, select, prompt, build, render.
 
-    Stages and finalises into `dst` exactly like the Copier path, just
-    through the engine (ADR 0015). `forge-template` is the optional `engine`
-    extra (ADR 0018) -- not installed by a plain `pip install create-forge`
-    -- so the import is lazy and guarded: every other command, and `new`
-    without this flag, must keep working with the dependency absent.
+    Stages and finalises exactly like the Copier path, just through the
+    engine (ADR 0015). `forge-template` is the optional `engine` extra
+    (ADR 0018) -- not installed by a plain `pip install create-forge` -- so
+    the import is lazy and guarded: every other command, and `new` without
+    this flag, must keep working with the dependency absent.
+
+    #91 / ADR 0025: this path reads no registry data at all. It discovers
+    the archetype catalogue, resolves which one to build, then prompts
+    directly from that archetype's own declared `ComponentDescriptor.options`
+    instead of reusing `templates.toml`'s Library-shaped registry questions
+    -- so `--archetype cli` asks nothing `library`-specific, and the
+    destination is only known once a project name has been collected.
+
+    An explicit `--path` is still checked for a conflict before the engine is
+    imported at all, preserving that guarantee for the common case where the
+    destination is already knowable; the final destination (which may
+    instead be derived from an interactively-collected project name) is
+    checked again immediately before any construction, validation, or render
+    begins -- still before every side effect that writes anything.
     """
     err.print("[dim]--engine-preview is a hidden preview path (ADR 0014).[/dim]")
-    try:
-        ensure_available(dst)
-    except DestinationConflictError as exc:
-        err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
+    if path is not None:
+        try:
+            ensure_available(path)
+        except DestinationConflictError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
 
     try:
         # Lazy by necessity, not style: forge-template is the optional
@@ -331,15 +395,29 @@ def _run_engine_preview(
         err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
-    resolved_archetype, archetype_explicit = _select_archetype(
-        archetypes, archetype, yes=yes
-    )
+    descriptor, archetype_explicit = _select_archetype(archetypes, archetype, yes=yes)
     selection = SelectionRequest.of(
-        archetype=resolved_archetype, archetype_explicit=archetype_explicit
+        archetype=descriptor.id, archetype_explicit=archetype_explicit
     )
 
+    project_answers, component_answers = _collect_engine_answers(
+        descriptor, preset, cfg_answers, yes=yes
+    )
+    component_options = (
+        {descriptor.id: component_answers} if component_answers else None
+    )
+
+    dst = (path or Path.cwd() / slugify(str(project_answers["project_name"]))).resolve()
     try:
-        request = pipeline.build_generation_request(answers, selection=selection)
+        ensure_available(dst)
+    except DestinationConflictError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    try:
+        request = pipeline.build_generation_request(
+            project_answers, selection=selection, component_options=component_options
+        )
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
@@ -359,7 +437,7 @@ def _run_engine_preview(
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
-    _report_created(answers["project_name"], dst, updatable=False)
+    _report_created(project_answers["project_name"], dst, updatable=False)
 
 
 def _report_created(project_name: object, dst: Path, *, updatable: bool = True) -> None:
@@ -444,8 +522,15 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     if archetype is not None and not engine_preview:
         err.print("[red]--archetype requires --engine-preview.[/red]")
         raise typer.Exit(1)
+    if engine_preview and (template_id or template_url or ref):
+        err.print(
+            "[red]--template/--template-url/--ref require the Copier path "
+            "and have no effect with --engine-preview, which selects an "
+            "engine archetype instead of a Copier template (#91, "
+            "ADR 0025).[/red]"
+        )
+        raise typer.Exit(1)
 
-    registry = load_registry()
     preset = _parse_data(data or [])
     if name:
         preset.setdefault("project_name", name)
@@ -453,15 +538,18 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     config = _load_config_or_exit()
     cfg_answers = config.as_answers()
 
+    if engine_preview:
+        _run_engine_preview(
+            preset, cfg_answers, path, archetype, dry_run=dry_run, yes=yes
+        )
+        return
+
+    registry = load_registry()
     template = _select_template(registry, config, template_id, yes=yes)
     answers = _collect_answers(template, preset, cfg_answers, yes=yes)
 
     slug = slugify(str(answers["project_name"]))
     dst = (path or Path.cwd() / slug).resolve()
-
-    if engine_preview:
-        _run_engine_preview(answers, archetype, dst, dry_run=dry_run, yes=yes)
-        return
 
     src = template_url or str(template.url)
 
