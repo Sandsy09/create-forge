@@ -506,14 +506,25 @@ def update_project(
     ref: Annotated[
         str | None, typer.Option("--ref", help="Target version. Defaults to latest.")
     ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Validate the update without changing project files."
+        ),
+    ] = False,
 ) -> None:
     """Pull template changes into an existing project."""
     try:
-        with console.status("Updating…"):
-            update(project.resolve(), vcs_ref=ref)
+        status = "Checking update…" if dry_run else "Updating…"
+        with console.status(status):
+            update(project.resolve(), vcs_ref=ref, dry_run=dry_run)
     except ScaffoldError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
+
+    if dry_run:
+        console.print("[green]Dry run complete.[/green] No project files changed.")
+        return
 
     console.print(
         "[green]Updated.[/green] Review the diff before committing — "

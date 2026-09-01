@@ -77,8 +77,8 @@ def scaffold(request: ScaffoldRequest) -> None:
             raise ScaffoldError(_explain(exc)) from exc
 
 
-def update(project: Path, *, vcs_ref: str | None = None) -> None:
-    """Pull template changes into an existing project."""
+def update(project: Path, *, vcs_ref: str | None = None, dry_run: bool = False) -> None:
+    """Pull template changes into an existing project, or validate them."""
     answers = project / ".copier-answers.yml"
     if not answers.is_file():
         msg = (
@@ -94,6 +94,7 @@ def update(project: Path, *, vcs_ref: str | None = None) -> None:
             defaults=True,
             unsafe=True,
             quiet=True,
+            pretend=dry_run,
             # Only ask about questions that did not exist last time.
             skip_answered=True,
             conflict="inline",

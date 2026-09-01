@@ -84,6 +84,21 @@ def recorder(monkeypatch: pytest.MonkeyPatch) -> list[ScaffoldRequest]:
     return calls
 
 
+@pytest.fixture
+def update_recorder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[Path, str | None, bool]]:
+    calls: list[tuple[Path, str | None, bool]] = []
+
+    def fake_update(
+        project: Path, *, vcs_ref: str | None = None, dry_run: bool = False
+    ) -> None:
+        calls.append((project, vcs_ref, dry_run))
+
+    monkeypatch.setattr(cli_module, "update", fake_update)
+    return calls
+
+
 def _write_config(path: Path, contents: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(contents, encoding="utf-8")
@@ -251,6 +266,55 @@ def test_markers_use_glyphs_when_the_encoding_allows() -> None:
     utf8_console = Console(file=TextIOWrapper(BytesIO(), encoding="utf-8"), width=80)
 
     assert _markers(utf8_console) == ("✓", "✗")
+
+
+def test_update_dry_run_forwards_ref_and_reports_no_changes(
+    update_recorder: list[tuple[Path, str | None, bool]], tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+
+    result = runner.invoke(
+        app, ["update", str(project), "--ref", "v1.1.0", "--dry-run"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert update_recorder == [(project.resolve(), "v1.1.0", True)]
+    assert "Dry run complete." in result.output
+    assert "No project files changed." in result.output
+    assert "Updated." not in result.output
+
+
+def test_update_without_dry_run_preserves_current_behavior(
+    update_recorder: list[tuple[Path, str | None, bool]], tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    assert update_recorder == [(project.resolve(), None, False)]
+    assert "Updated." in result.output
+    assert "Review the diff before committing" in result.output
+    assert "Dry run complete." not in result.output
+
+
+def test_update_failure_exits_1_without_a_success_message(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def fail_update(
+        _project: Path, *, vcs_ref: str | None = None, dry_run: bool = False
+    ) -> None:
+        del vcs_ref, dry_run
+        raise ScaffoldError("update failed")
+
+    monkeypatch.setattr(cli_module, "update", fail_update)
+
+    result = runner.invoke(app, ["update", str(tmp_path / "project"), "--dry-run"])
+
+    assert result.exit_code == 1
+    assert "update failed" in result.output
+    assert "Updated." not in result.output
+    assert "Dry run complete." not in result.output
 
 
 def test_new_dry_run_records_the_request_and_writes_nothing(

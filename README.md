@@ -57,6 +57,9 @@ uvx create-forge new "My Lib" --yes \
   --data build_backend=hatchling \
   --data versioning=vcs \
   --data type_checking=both
+
+# Validate an update without changing project files
+uvx create-forge update --dry-run
 ```
 
 | Command | What it does |
@@ -69,6 +72,9 @@ uvx create-forge new "My Lib" --yes \
 
 Useful flags on `new`: `--template/-t`, `--path/-p`, `--data/-d`, `--yes/-y`,
 `--ref`, `--dry-run`.
+
+Useful flags on `update`: `--ref`, `--dry-run`. An update dry run validates the
+requested template update but does not apply it or produce a file-by-file diff.
 
 ## Configuration
 
