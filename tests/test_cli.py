@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+import questionary
 import typer
 from copier.errors import CopierError
 from forge_template import (
@@ -1107,15 +1108,14 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
     prompt over the real discovered catalogue (CF-08.02) -- mirroring
     `test_new_interactive_resolves_template_and_answers`'s style of
     monkeypatching the prompt functions themselves rather than driving real
-    stdin through questionary. Template selection and answer collection are
-    likewise faked here: only archetype selection is under test.
+    stdin through questionary. Project-answer and component-option
+    collection are likewise faked here (#91, ADR 0025): only archetype
+    selection is under test. No registry template is selected at all on this
+    path any more, so nothing here mentions `choose_template`.
     """
-    registry = load_registry()
-    template = registry.get(registry.default_template)
-    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
     monkeypatch.setattr(
         cli_module,
-        "ask_all",
+        "ask_project_answers",
         lambda *_a, **_kw: {
             "project_name": "Engine Preview",
             "github_org": "test-org",
@@ -1126,6 +1126,7 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
             "python_version": "3.13",
         },
     )
+    monkeypatch.setattr(cli_module, "ask_component_options", lambda *_a, **_kw: {})
 
     seen_archetypes: list[str] = []
 
@@ -1150,26 +1151,10 @@ def test_new_engine_preview_aborting_archetype_choice_exits_130(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """Mirrors `test_new_aborting_the_template_choice_exits_130`'s shape for
-    the new archetype prompt (CF-08.02). Template selection and answer
-    collection are faked, same as the interactive-selection test above, so
-    only the abort itself is under test.
+    the archetype prompt (CF-08.02). Archetype selection now runs before any
+    answer is collected (#91, ADR 0025), so the abort fires before
+    `ask_project_answers` is ever reached -- nothing needs faking there.
     """
-    registry = load_registry()
-    template = registry.get(registry.default_template)
-    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
-    monkeypatch.setattr(
-        cli_module,
-        "ask_all",
-        lambda *_a, **_kw: {
-            "project_name": "Engine Preview",
-            "github_org": "test-org",
-            "license": "mit",
-            "author_name": "Test User",
-            "author_email": "test@example.invalid",
-            "python_min_version": "3.11",
-            "python_version": "3.13",
-        },
-    )
 
     def _abort(*_args: object, **_kwargs: object) -> object:
         raise PromptAbortedError
@@ -1183,6 +1168,290 @@ def test_new_engine_preview_aborting_archetype_choice_exits_130(
     assert result.exit_code == 130, result.output
     assert recorder == []
     assert not dest.exists()
+
+
+# --- engine-native prompting (#91, ADR 0025) ----------------------------------
+
+
+class _Answer:
+    """Stands in for questionary's `Question`, returning a canned value."""
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def ask(self) -> object:
+        return self._value
+
+
+def test_new_engine_preview_cli_archetype_asks_no_library_question(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """#91 / ADR 0025's first acceptance criterion, against the real
+    installed engine: `cli`'s own discovered descriptor declares no options,
+    and the engine path reads no registry data at all, so none of the
+    Library-specific vocabulary (`build_backend`, `versioning`,
+    `type_checking`, `use_docs`, `github_org`) can appear -- only ProjectSpec's
+    own three identity prompts are ever asked.
+    """
+    seen_messages: list[str] = []
+
+    def fake_text(message: str, **_kwargs: object) -> _Answer:
+        seen_messages.append(message)
+        if message == "Project name":
+            return _Answer("Engine Preview")
+        return _Answer("A description")
+
+    def fake_select(message: str, *, choices: object, **_kwargs: object) -> _Answer:
+        seen_messages.append(message)
+        return _Answer("mit")
+
+    def fake_confirm(message: str, **_kwargs: object) -> _Answer:
+        pytest.fail(f"unexpected confirm prompt: {message!r}")
+
+    monkeypatch.setattr(questionary, "text", fake_text)
+    monkeypatch.setattr(questionary, "select", fake_select)
+    monkeypatch.setattr(questionary, "confirm", fake_confirm)
+
+    dest = tmp_path / "proj"
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "--path",
+            str(dest),
+            "--engine-preview",
+            "--archetype",
+            "cli",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert seen_messages == ["Project name", "Short description", "License"]
+    assert recorder == []
+
+
+def test_new_engine_preview_library_archetype_asks_declared_options_only(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """The counterpart to the `cli` case above: `library`'s own discovered
+    descriptor declares exactly `packaging_mode` and `initial_version`, both
+    asked directly, and an answered `packaging_mode` reaches
+    `component_options` -- inspected on the real resolved `GenerationRequest`
+    rather than a render.
+    """
+    seen_messages: list[str] = []
+    captured: dict[str, object] = {}
+    real_build = pipeline_module.build_generation_request
+
+    def fake_text(message: str, **_kwargs: object) -> _Answer:
+        seen_messages.append(message)
+        if message == "Project name":
+            return _Answer("Engine Preview")
+        if message == "Short description":
+            return _Answer("A description")
+        return _Answer("0.1.0")  # initial_version's own description
+
+    def fake_select(message: str, *, choices: object, **_kwargs: object) -> _Answer:
+        seen_messages.append(message)
+        if message == "License":
+            return _Answer("mit")
+        return _Answer("hatchling-vcs")  # packaging_mode's own description
+
+    def fake_confirm(message: str, **_kwargs: object) -> _Answer:
+        pytest.fail(f"unexpected confirm prompt: {message!r}")
+
+    def spy(answers: Mapping[str, object], **kwargs: object) -> GenerationRequest:
+        captured.update(kwargs)
+        return real_build(answers, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(questionary, "text", fake_text)
+    monkeypatch.setattr(questionary, "select", fake_select)
+    monkeypatch.setattr(questionary, "confirm", fake_confirm)
+    monkeypatch.setattr(pipeline_module, "build_generation_request", spy)
+
+    dest = tmp_path / "proj"
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "--path",
+            str(dest),
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    # The first three messages are create-forge's own, stable text; the last
+    # two are `library`'s own engine-owned option descriptions -- matched by
+    # prefix rather than full equality, since their exact wording is not this
+    # repository's to pin down.
+    assert seen_messages[:3] == ["Project name", "Short description", "License"]
+    assert seen_messages[3].startswith("How the package is built and versioned.")
+    assert seen_messages[4].startswith("Initial package version.")
+    assert captured["component_options"] == {
+        "library": {"packaging_mode": "hatchling-vcs", "initial_version": "0.1.0"}
+    }
+    assert recorder == []
+
+
+def test_new_engine_preview_never_loads_the_registry(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """#91 / ADR 0025: the engine path reads no registry data at all -- a
+    broken or absent `templates.toml` must not affect it.
+    """
+
+    def fail_load_registry() -> None:
+        raise AssertionError("the engine path must not load the registry")
+
+    monkeypatch.setattr(cli_module, "load_registry", fail_load_registry)
+
+    def fake_lock(staging_dir: Path) -> None:
+        (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
+
+    dest = tmp_path / "proj"
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_PREVIEW_ANSWERS,
+            "--engine-preview",
+            "--archetype",
+            "cli",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (dest / "src" / "engine_preview" / "cli.py").exists()
+    assert recorder == []
+
+
+def test_new_engine_preview_interactive_asks_what_are_you_building_once(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """#91 / ADR 0025: since the engine path no longer selects a Copier
+    template at all, the old double "What are you building?" prompt (once
+    for the registry template, once for the archetype) collapses to one.
+    """
+    seen_prompts: list[str] = []
+
+    def fake_select(message: str, *, choices: object, **_kwargs: object) -> _Answer:
+        seen_prompts.append(message)
+        if message == "What are you building?":
+            chosen = next(c for c in choices if c.value.id == "cli")  # type: ignore[attr-defined]
+            return _Answer(chosen.value)
+        if message == "License":
+            return _Answer("mit")
+        raise AssertionError(f"unexpected select prompt: {message!r}")
+
+    def fake_text(message: str, **_kwargs: object) -> _Answer:
+        if message == "Project name":
+            return _Answer("Engine Preview")
+        if message == "Short description":
+            return _Answer("A description")
+        raise AssertionError(f"unexpected text prompt: {message!r}")
+
+    def fake_confirm(message: str, **_kwargs: object) -> _Answer:
+        pytest.fail(f"unexpected confirm prompt: {message!r}")
+
+    monkeypatch.setattr(questionary, "select", fake_select)
+    monkeypatch.setattr(questionary, "text", fake_text)
+    monkeypatch.setattr(questionary, "confirm", fake_confirm)
+
+    dest = tmp_path / "proj"
+    result = runner.invoke(
+        app, ["new", "--path", str(dest), "--engine-preview", "--dry-run"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert seen_prompts.count("What are you building?") == 1
+    assert recorder == []
+
+
+@pytest.mark.parametrize(
+    ("flag", "value"),
+    [
+        ("--template", "library"),
+        ("--template-url", "https://example.com/x"),
+        ("--ref", "v1.0.0"),
+    ],
+)
+def test_new_engine_preview_rejects_copier_only_flags(
+    flag: str, value: str, recorder: list[ScaffoldRequest]
+) -> None:
+    """#91 / ADR 0025: `--template`/`--template-url`/`--ref` select a Copier
+    template, source, or ref -- meaningless once the engine path reads no
+    registry data and clones no template. Silently ignoring them would leave
+    a user believing one was in force; reject instead, mirroring the existing
+    `--archetype requires --engine-preview` precedent in reverse.
+    """
+    result = runner.invoke(
+        app,
+        ["new", "Foo", "--yes", "--engine-preview", "--archetype", "cli", flag, value],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "--engine-preview" in result.output
+    assert recorder == []
+
+
+def test_new_engine_preview_yes_legacy_data_still_derives_packaging_mode(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """Q2 (ADR 0025): `--data build_backend=...`/`versioning=...` still reach
+    `packaging_mode` through ADR 0019's legacy derivation, as a `--yes`
+    fallback for keys that never match a declared option name.
+    """
+    captured: dict[str, object] = {}
+    result_holder: dict[str, GenerationRequest] = {}
+    real_build = pipeline_module.build_generation_request
+
+    def spy(answers: Mapping[str, object], **kwargs: object) -> GenerationRequest:
+        captured.update(kwargs)
+        request = real_build(answers, **kwargs)  # type: ignore[arg-type]
+        result_holder["request"] = request
+        return request
+
+    monkeypatch.setattr(pipeline_module, "build_generation_request", spy)
+
+    dest = tmp_path / "proj"
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            "--data",
+            "license=mit",
+            "--data",
+            "build_backend=hatchling",
+            "--data",
+            "versioning=vcs",
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--dry-run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["component_options"] is None
+    request = result_holder["request"]
+    assert request.spec.component_options.get("library", {}).get("packaging_mode") == (
+        "hatchling-vcs"
+    )
 
 
 # --- config wiring (issue #3) ------------------------------------------------
