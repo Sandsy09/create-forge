@@ -89,7 +89,7 @@ boundary, not a gap, recorded in full by the canonical
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
 | *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
-| *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own discovered `ComponentDescriptor.options` declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
+| *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)), `--engine-preview` prompts directly for the selected archetype's own declared `ComponentDescriptor.options` (`prompts.ask_component_options`) and passes an explicit, caller-supplied `component_options` whenever any were answered. When none were — the archetype declares none, or every value came from elsewhere — `pipeline._resolved_component_options` falls back to deriving `packaging_mode` from the legacy `build_backend`/`versioning` `--data` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own descriptor declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
 | *caller-supplied* `SelectionProvenance` | `provenance` | Left empty by `cli.py` today, since it resolves no policy. A policy-aware client passes a `SelectionProvenance` built after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself — see the canonical [downstream policy-consumption contract](organisation-policy-consumption.md). |
 
 ## Unmapped answers
@@ -97,8 +97,14 @@ boundary, not a gap, recorded in full by the canonical
 `templates.toml` collects several answers with no ProjectSpec home:
 `github_org`, `type_checking`, `use_docs`, `codeowners_team` remain
 genuinely unmapped today — no component manifest declares them as options
-yet. `build_backend`/`versioning` are the exception, and CF-08.02 closes
-that gap on the engine path. The canonical
+yet, and since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) the
+engine path does not even read them from a registry; a `--data` value for one
+of them is simply preset data with no declared option name to match, and
+flows through unused. `build_backend`/`versioning` are the one pair with a
+real mapping, and CF-08.02 closes that gap on the engine path — reachable
+today only as a `--data`-only fallback (see "Field mapping" above), since the
+engine path prompts `library`'s `packaging_mode`/`initial_version` options
+directly. The canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 fixes the packaging mapping, and `forge-template`'s public
 `map_legacy_library_answers()` facade implements it:
@@ -270,6 +276,11 @@ by
   `selection`/`provenance` keywords. `create-forge` itself resolves no
   policy — see the canonical
   [downstream policy-consumption contract](organisation-policy-consumption.md).
+- **#91** ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) closed the gap
+  CF-08.03 recorded without fixing: `--engine-preview` now prompts directly
+  from the selected archetype's own discovered `ComponentDescriptor.options`
+  instead of the Copier registry's Library-shaped questions, and reads no
+  registry data at all on this path.
 
 ## Executable examples
 
@@ -311,7 +322,18 @@ by
   (dependency missing, a real generated project, exit `3` on an incompatible
   engine, a pre-existing destination conflict), `--archetype`'s explicit,
   `--yes`-without-one, unknown-id, and interactive-prompt paths, and that
-  omitting `--engine-preview` leaves `new` unchanged.
+  omitting `--engine-preview` leaves `new` unchanged. Its engine-native-
+  prompting block (#91, [ADR 0025](adr/0025-engine-native-prompt-flow.md))
+  covers `cli` asking no Library question, `library` asking exactly its
+  declared options with the answered `packaging_mode` reaching
+  `component_options`, the registry never being loaded, the single "What are
+  you building?" prompt, `--template`/`--template-url`/`--ref` being
+  rejected with `--engine-preview`, and the legacy `--data`
+  `build_backend`/`versioning` fallback.
+- [`tests/test_prompts.py`](../tests/test_prompts.py) — `ask_project_answers`
+  and `ask_component_options` (ADR 0025): preset/defaults/cancellation
+  parity with `ask_all`, one case per declared option `type`, and the
+  empty-return case for a descriptor with no options.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

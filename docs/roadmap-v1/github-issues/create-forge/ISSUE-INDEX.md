@@ -2,7 +2,7 @@
 
 This is the live repository-local index for the Forge Foundation roadmap,
 reconciled against the v0.1.0 baseline, filed on GitHub on 2026-08-23, and
-updated through CF-09.02 (#54) on 2026-09-01. GitHub issue bodies are the source of
+updated through #91 on 2026-09-01. GitHub issue bodies are the source of
 truth for open work; completed baseline items were not backfilled as closed
 issues.
 
@@ -48,7 +48,10 @@ issues.
 
 Issues [#8](https://github.com/Sandsy09/create-forge/issues/8),
 [#9](https://github.com/Sandsy09/create-forge/issues/9),
-[#25](https://github.com/Sandsy09/create-forge/issues/25),
-[#26](https://github.com/Sandsy09/create-forge/issues/26), and
-[#91](https://github.com/Sandsy09/create-forge/issues/91) remain deliberately
+[#25](https://github.com/Sandsy09/create-forge/issues/25), and
+[#26](https://github.com/Sandsy09/create-forge/issues/26) remain deliberately
 outside the roadmap epics.
+[#91](https://github.com/Sandsy09/create-forge/issues/91) was also standalone
+backlog (filed by CF-08.03's review, [ADR 0019](../../../adr/0019-cli-archetype-parity-review.md))
+and is now complete: [ADR 0025](../../../adr/0025-engine-native-prompt-flow.md)
+and the canonical [CLI UX and prompting conventions](../../../cli-conventions.md).

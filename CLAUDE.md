@@ -184,10 +184,21 @@ branch this repository had —
 `pipeline._resolved_component_options`' legacy `library` option
 derivation — is now gated by the selected archetype's own discovered
 descriptor rather than a hardcoded id. That review also found, and left
-unfixed, that `--engine-preview` still prompts from the Copier registry's
+unfixed, that `--engine-preview` still prompted from the Copier registry's
 Library-shaped questions regardless of archetype — tracked by
 [#91](https://github.com/Sandsy09/create-forge/issues/91), since fixing it
-changes documented `--engine-preview` prompt-flow behaviour.
+changed documented `--engine-preview` prompt-flow behaviour.
+[#91](https://github.com/Sandsy09/create-forge/issues/91)
+([ADR 0025](docs/adr/0025-engine-native-prompt-flow.md)) then closed that
+gap: `--engine-preview` prompts directly from the selected archetype's own
+discovered `ComponentDescriptor.options` (`prompts.ask_project_answers`/
+`ask_component_options`), reads no `templates.toml` registry data at all,
+selects the archetype before collecting any answer, and asks "What are you
+building?" exactly once instead of twice. `--template`/`--template-url`/
+`--ref` are now rejected outright in combination with `--engine-preview`
+rather than silently ignored, and the legacy `build_backend`/`versioning` →
+`packaging_mode` mapping (ADR 0019) survives as a `--data`-only fallback for
+whichever option was not answered directly.
 CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
 CF-EPIC-08's last open child issue: the engine path now has the same real,
 CI-enforced end-to-end coverage the Copier path already had — both

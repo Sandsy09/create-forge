@@ -216,8 +216,15 @@ hardcoded archetype id -- see the canonical
 [ProjectSpec construction contract](docs/project-spec-construction.md) for
 the current form. It also recorded, without fixing,
 [#91](https://github.com/Sandsy09/create-forge/issues/91): the engine path's
-prompt set is still the Copier registry's Library-shaped questions
+prompt set was still the Copier registry's Library-shaped questions
 regardless of archetype.
+[#91](https://github.com/Sandsy09/create-forge/issues/91)
+([ADR 0025](docs/adr/0025-engine-native-prompt-flow.md)) closed that gap:
+`--engine-preview` now prompts directly from the selected archetype's own
+discovered `ComponentDescriptor.options`, reads no registry data at all, and
+selects the archetype before collecting any answer -- see the canonical
+[CLI UX and prompting conventions](docs/cli-conventions.md) for the current
+`--engine-preview` flow.
 CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
 the gap ADR 0016 left open: the engine path now has its own CI-enforced
 `e2e`-marked coverage --
