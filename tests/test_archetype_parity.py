@@ -26,7 +26,7 @@ import ast
 from pathlib import Path
 
 from create_forge import engine, pipeline
-from create_forge.spec import build_spec_payload
+from create_forge.spec import SelectionRequest, build_spec_payload
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
@@ -80,7 +80,9 @@ def test_both_archetypes_render_through_the_one_shared_pipeline() -> None:
     archetype-branched -- both calls below run the identical function.
     """
     for archetype in ("library", "cli"):
-        request = pipeline.build_generation_request(_VALID_ANSWERS, archetype=archetype)
+        request = pipeline.build_generation_request(
+            _VALID_ANSWERS, selection=SelectionRequest.of(archetype=archetype)
+        )
         assert request.spec.components.archetype == archetype
         assert any(f.target == "pyproject.toml" for f in request.rendered.files)
 
@@ -93,7 +95,9 @@ def test_cli_archetype_declares_no_options_and_receives_none() -> None:
     descriptors = {d.id: d for d in engine.discover()}
     assert descriptors["cli"].options == ()
 
-    request = pipeline.build_generation_request(_VALID_ANSWERS, archetype="cli")
+    request = pipeline.build_generation_request(
+        _VALID_ANSWERS, selection=SelectionRequest.of(archetype="cli")
+    )
     assert request.spec.component_options == {}
 
 
@@ -116,7 +120,9 @@ def test_cli_console_command_is_exactly_the_repository_name() -> None:
     """Criterion 5, proven against a real render rather than asserted about
     the contract in the abstract.
     """
-    request = pipeline.build_generation_request(_VALID_ANSWERS, archetype="cli")
+    request = pipeline.build_generation_request(
+        _VALID_ANSWERS, selection=SelectionRequest.of(archetype="cli")
+    )
     repository_name = request.spec.project.repository_name
 
     pyproject = next(f for f in request.rendered.files if f.target == "pyproject.toml")

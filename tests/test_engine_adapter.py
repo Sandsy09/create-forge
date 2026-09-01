@@ -23,7 +23,7 @@ from forge_template import (
 )
 
 from create_forge import engine
-from create_forge.spec import build_spec_payload
+from create_forge.spec import SelectionProvenance, build_spec_payload
 
 _VALID_ANSWERS = {
     "project_name": "Credit Risk Utils",
@@ -299,6 +299,25 @@ def test_validate_succeeds_against_the_real_production_catalogue() -> None:
     validated = engine.validate(spec)
 
     assert validated.components.archetype == "library"
+
+
+def test_provenance_survives_parse_and_validate_canonicalised() -> None:
+    """CF-09.01 (ADR 0022): applied policy IDs are the only thing that
+    crosses the engine boundary -- never a policy document itself -- and the
+    real engine, not a mock, is what canonicalises them lexically, matching
+    protocol v1's "canonical collections are sorted after merging" rule.
+    """
+    payload = build_spec_payload(
+        _VALID_ANSWERS,
+        archetype="library",
+        provenance=SelectionProvenance(policies=("org-baseline", "a-first")),
+    )
+
+    spec = engine.build_project_spec(payload)
+    assert spec.provenance.policies == ("a-first", "org-baseline")
+
+    validated = engine.validate(spec)
+    assert validated.provenance.policies == ("a-first", "org-baseline")
 
 
 def test_render_produces_files_without_writing_to_disk(

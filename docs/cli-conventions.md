@@ -125,6 +125,17 @@ and "before any engine call" guarantees, both open questions tracked by
 [#91](https://github.com/Sandsy09/create-forge/issues/91) rather than decided
 here.
 
+No command accepts an organisation-policy document or path. CF-09.01
+([ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) delivered a
+downstream policy-consumption hook at the `pipeline.build_generation_request`
+level, not a CLI-facing one — there is no `--policy` flag, no `config.toml`
+policy section, and no new exit status. `--archetype`'s explicit/`--yes`/
+prompt resolution above is unchanged; it now additionally records, for a
+policy-aware *caller of the pipeline*, whether the chosen archetype was an
+explicit choice, but that fact affects no user-visible behaviour of `new`
+itself. See the canonical
+[downstream policy-consumption contract](organisation-policy-consumption.md).
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.

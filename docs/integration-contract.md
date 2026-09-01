@@ -127,10 +127,13 @@ close forge-template Stage 09. A downstream client applies policy before
 constructing the effective ProjectSpec, uses only selected-component options
 and published extension points, and consumes the top-level engine facade
 without copying Foundation/component source. `create-forge` still owns
-policy-source trust, explicit-choice tracking, resolution until a public
-resolver exists, ProjectSpec construction, compatibility presentation,
-staging, and finalisation. Those responsibilities are client orchestration,
-not a second engine implementation.
+policy-source trust, explicit-choice tracking, ProjectSpec construction,
+compatibility presentation, staging, and finalisation. CF-09.01
+([ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) delivered the
+explicit-choice-tracking seam (`spec.SelectionRequest`/`SelectionProvenance`)
+without adding a resolver — resolution remains a client responsibility by
+design, not a gap awaiting a public resolver. Those responsibilities are
+client orchestration, not a second engine implementation.
 Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record the extension, fixture, compatibility, and no-copy decisions.
 
@@ -246,10 +249,14 @@ before constructing the effective ProjectSpec, and preserve whether each
 selection kind was explicitly supplied. They do not depend on `create-forge`
 internals, and policy does not gain an arbitrary file or code-execution hook.
 
-`create-forge` does not consume organisation policy today. CF-09.01 owns the
-future hook and its input-source trust, diagnostics, and presentation; the
-canonical policy schema and resolution semantics remain `forge-template`
-contracts.
+`create-forge` does not consume organisation policy today. CF-09.01
+([ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) delivered the
+downstream consumption hook a policy-aware client calls into
+(`pipeline.build_generation_request`'s `selection`/`provenance` keywords);
+input-source trust, diagnostics, and presentation remain a client
+responsibility, and the canonical policy schema and resolution semantics
+remain `forge-template` contracts. See the canonical
+[downstream policy-consumption contract](organisation-policy-consumption.md).
 
 Organisations may still fork for genuinely custom executable template content.
 That is distinct from the preferred downstream-client path for defaults,

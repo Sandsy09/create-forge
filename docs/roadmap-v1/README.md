@@ -54,8 +54,9 @@ defines the strict effective generation request owned by `forge-template`.
 `create-forge` retains construction and user-facing orchestration. The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 defines how downstream clients resolve component-selection policy before
-constructing that effective request. `create-forge` does not consume policy
-yet; CF-09.01 owns the future client hook.
+constructing that effective request. CF-09.01
+([ADR 0022](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0022-downstream-organisation-policy-hook.md))
+delivered the client hook; `create-forge` still consumes no policy itself.
 Forge-template Epic 09 is complete through its canonical
 [extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
 [policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),

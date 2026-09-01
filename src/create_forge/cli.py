@@ -38,6 +38,7 @@ from create_forge.prompts import (
 )
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+from create_forge.spec import SelectionRequest
 from create_forge.staging import (
     DestinationConflictError,
     StagingError,
@@ -238,7 +239,7 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
 
 def _select_archetype(
     archetypes: Sequence[ArchetypeChoice], archetype: str | None, *, yes: bool
-) -> str:
+) -> tuple[str, bool]:
     """Resolve which archetype to build: explicit, --yes, then a prompt.
 
     CF-08.02. Mirrors `_select_template`'s resolution shape for the Copier
@@ -246,6 +247,12 @@ def _select_archetype(
     with no config- or registry-supplied default: the engine declares no
     default archetype, and `templates.toml`'s `default_template` is a
     Copier-path concept the engine path deliberately does not inherit.
+
+    Returns the chosen id alongside whether the choice was explicit
+    (CF-09.01, ADR 0022): `--archetype` and an actually-prompted answer both
+    are; `choose_archetype`'s own skip-when-only-one-exists shortcut is not,
+    since no alternative was ever offered and a policy default could
+    legitimately still apply there.
     """
     available = {a.id for a in archetypes}
 
@@ -256,7 +263,7 @@ def _select_archetype(
                 f"{', '.join(sorted(available))}[/red]"
             )
             raise typer.Exit(1)
-        return archetype
+        return archetype, True
 
     if yes:
         err.print(
@@ -266,10 +273,14 @@ def _select_archetype(
         raise typer.Exit(1)
 
     try:
-        return choose_archetype(archetypes).id
+        chosen = choose_archetype(archetypes)
     except PromptAbortedError:
         err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
+    # `choose_archetype` itself skips the prompt when there is exactly one
+    # archetype (mirroring `choose_template`) -- no alternative was ever
+    # offered, so that case is not an explicit choice.
+    return chosen.id, len(archetypes) > 1
 
 
 def _run_engine_preview(
@@ -320,12 +331,15 @@ def _run_engine_preview(
         err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
-    resolved_archetype = _select_archetype(archetypes, archetype, yes=yes)
+    resolved_archetype, archetype_explicit = _select_archetype(
+        archetypes, archetype, yes=yes
+    )
+    selection = SelectionRequest.of(
+        archetype=resolved_archetype, archetype_explicit=archetype_explicit
+    )
 
     try:
-        request = pipeline.build_generation_request(
-            answers, archetype=resolved_archetype
-        )
+        request = pipeline.build_generation_request(answers, selection=selection)
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc

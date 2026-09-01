@@ -31,6 +31,7 @@ from create_forge.pipeline import (
     build_generation_request,
     finalise_generation_request,
 )
+from create_forge.spec import SelectionRequest
 from create_forge.staging import DestinationConflictError, StagingError
 
 _VALID_ANSWERS = {
@@ -112,7 +113,9 @@ def test_build_generation_request_calls_the_pipeline_in_order(
     monkeypatch.setattr(engine, "validate", fake_validate)
     monkeypatch.setattr(engine, "render", fake_render)
 
-    result = build_generation_request(_VALID_ANSWERS, archetype="library")
+    result = build_generation_request(
+        _VALID_ANSWERS, selection=SelectionRequest.of(archetype="library")
+    )
 
     assert calls == ["discover", "build", "validate", "render"]
     assert isinstance(result, GenerationRequest)
@@ -143,9 +146,11 @@ def test_build_generation_request_passes_component_selection_through(
 
     build_generation_request(
         _VALID_ANSWERS,
-        archetype="library",
-        capabilities=["documentation"],
-        platforms=["github"],
+        selection=SelectionRequest.of(
+            archetype="library",
+            capabilities=["documentation"],
+            platforms=["github"],
+        ),
         component_options={"library": {"build_backend": "uv_build"}},
     )
 
@@ -168,7 +173,9 @@ def test_build_generation_request_succeeds_against_the_real_catalogue(
     Stage 06-era empty-catalogue rejection this test's own docstring
     anticipated retiring.
     """
-    request = pipeline.build_generation_request(_VALID_ANSWERS, archetype=archetype)
+    request = pipeline.build_generation_request(
+        _VALID_ANSWERS, selection=SelectionRequest.of(archetype=archetype)
+    )
 
     assert request.spec.components.archetype == archetype
     assert any(file.target == "pyproject.toml" for file in request.rendered.files)
@@ -204,7 +211,9 @@ def test_build_generation_request_derives_legacy_library_options(
     )
 
     answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
-    build_generation_request(answers, archetype="library")
+    build_generation_request(
+        answers, selection=SelectionRequest.of(archetype="library")
+    )
 
     assert seen_payload["component_options"] == {
         "library": {"packaging_mode": "hatchling-vcs"}
@@ -242,7 +251,9 @@ def test_build_generation_request_derives_options_for_a_non_library_id(
     )
 
     answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
-    build_generation_request(answers, archetype="package")
+    build_generation_request(
+        answers, selection=SelectionRequest.of(archetype="package")
+    )
 
     assert seen_payload["component_options"] == {
         "package": {"packaging_mode": "hatchling-vcs"}
@@ -274,7 +285,7 @@ def test_build_generation_request_does_not_derive_options_for_other_archetypes(
     monkeypatch.setattr(engine, "map_legacy_library_options", unexpected_mapping)
 
     answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
-    build_generation_request(answers, archetype="cli")
+    build_generation_request(answers, selection=SelectionRequest.of(archetype="cli"))
 
     assert "component_options" not in seen_payload
 
@@ -313,7 +324,7 @@ def test_build_generation_request_skips_a_mapping_the_descriptor_rejects(
     )
 
     answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
-    build_generation_request(answers, archetype="web")
+    build_generation_request(answers, selection=SelectionRequest.of(archetype="web"))
 
     assert "component_options" not in seen_payload
 
@@ -344,7 +355,7 @@ def test_build_generation_request_leaves_explicit_component_options_untouched(
     answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
     build_generation_request(
         answers,
-        archetype="library",
+        selection=SelectionRequest.of(archetype="library"),
         component_options={"library": {"packaging_mode": "uv-build-static"}},
     )
 
