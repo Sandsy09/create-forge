@@ -71,24 +71,30 @@ version options this CLI accepts; the new names are not yet implemented.
 `forge-template` engine instead of Copier — see
 [ADR 0014](adr/0014-lazy-engine-reachability.md),
 [ADR 0015](adr/0015-staged-filesystem-generation.md),
-[ADR 0017](adr/0017-cli-application-archetype-exposure.md), and the canonical
+[ADR 0017](adr/0017-cli-application-archetype-exposure.md),
+[ADR 0025](adr/0025-engine-native-prompt-flow.md), and the canonical
 [ProjectSpec construction](project-spec-construction.md) and
 [filesystem generation](filesystem-generation.md) contracts. It always
 prints an informational note that it is a hidden preview path, unconditionally
 and regardless of `--yes` — but unlike `--template-url`'s warning, this is
 not a confirmation gate: `forge-template` is a reviewed dependency (the
 optional `engine` extra, ADR 0018), not arbitrary user-supplied code, so
-there is no code-execution trust question to ask. It reuses the same answer
-collection and destination computation as the Copier path (no parallel
-prompt flow), rejects a non-empty destination before any engine call, and
-stages and moves a successful render into place exactly as the Copier path
-does — `--dry-run` lists the planned targets and writes nothing, on both
-paths alike. Since CF-08.02, `forge-template`'s production catalogue ships
-both `library` and `cli`, so `--engine-preview` generates a real project
-when given a valid archetype -- reachable since #9/ADR 0018 with nothing
-more than `pip install 'create-forge[engine]'`, not a source checkout.
-`--engine-source`/`--engine-ref` above remain the names reserved
-for the eventual public override; `--engine-preview` is a distinct,
+there is no code-execution trust question to ask. Since #91
+([ADR 0025](adr/0025-engine-native-prompt-flow.md)), it reads no registry
+data at all: it discovers the archetype catalogue, resolves which archetype
+to build, then prompts directly for that archetype's own ProjectSpec-identity
+answers and declared `ComponentDescriptor.options` — a genuinely separate
+prompt flow from the Copier path's, not a shared one. `--template`,
+`--template-url`, and `--ref` are therefore rejected outright in combination
+with `--engine-preview`, mirroring `--archetype` without `--engine-preview`'s
+existing rejection in reverse. It stages and moves a successful render into
+place exactly as the Copier path does — `--dry-run` lists the planned targets
+and writes nothing, on both paths alike. Since CF-08.02, `forge-template`'s
+production catalogue ships both `library` and `cli`, so `--engine-preview`
+generates a real project when given a valid archetype -- reachable since
+#9/ADR 0018 with nothing more than `pip install 'create-forge[engine]'`, not
+a source checkout. `--engine-source`/`--engine-ref` above remain the names
+reserved for the eventual public override; `--engine-preview` is a distinct,
 temporary flag retired at the coordinated cutover, not renamed into that
 pair. A project it does create is not `create-forge update`-able — it writes
 no `.copier-answers.yml`.
@@ -100,30 +106,40 @@ present in that catalogue is rejected before any engine call. Omitting it
 with `--yes` is rejected outright, naming the available ids: the engine
 declares no default archetype, and `templates.toml`'s `default_template` is
 a Copier-path concept this selection does not inherit. Omitting it
-interactively falls to a prompt (`prompts.choose_archetype`), mirroring
-`choose_template`'s shape including its skip-when-only-one-exists behaviour.
-`--archetype` without `--engine-preview` is rejected rather than silently
-ignored.
+interactively falls to a prompt (`prompts.choose_archetype`), the *only*
+"What are you building?" prompt on this path since #91 — there is no longer
+a separate Copier-template selection ahead of it. `--archetype` without
+`--engine-preview` is rejected rather than silently ignored.
 
-CF-08.03's archetype-parity review ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
-recorded that reusing the Copier registry's answer collection means the
-prompt set stays Library-shaped for every archetype, since `templates.toml`
-has one template:
+Once an archetype is resolved, `prompts.ask_project_answers` asks the three
+CLI-collected answers that reach `ProjectSpec.project`
+(`project_name`/`project_description`/`license`), and
+`prompts.ask_component_options` asks exactly what that archetype's own
+discovered descriptor declares — nothing for `cli` (which declares no
+options), `packaging_mode`/`initial_version` for `library`:
 
 | Registry question | Reaches ProjectSpec for `library`? | for `cli`? |
 | --- | --- | --- |
-| `project_name`, `project_description`, `license` | yes | yes |
-| `build_backend`, `versioning` | yes, via `map_legacy_library_options` | discarded |
+| `project_name`, `project_description`, `license` | asked directly | asked directly |
+| `packaging_mode`, `initial_version` | asked directly, from `library`'s own descriptor | n/a — no options declared |
+| `--data build_backend`/`versioning` | still reaches `packaging_mode` via `map_legacy_library_options`, as a fallback when neither option was answered directly (ADR 0019, ADR 0025) | discarded |
 | `github_org`, `type_checking`, `use_docs` | discarded | discarded |
 
-The archetype is also selected *after* these answers are collected, so a
-user building a CLI Application still answers `build_backend`/`versioning`
-before it is silently dropped. This is accepted as a known limitation of
-reusing the Copier answer flow, not fixed by that review — doing so would
-mean the engine path stops sharing this section's "no parallel prompt flow"
-and "before any engine call" guarantees, both open questions tracked by
-[#91](https://github.com/Sandsy09/create-forge/issues/91) rather than decided
-here.
+CF-08.03's archetype-parity review ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
+recorded the version of this table where the engine path instead reused the
+Copier registry's Library-shaped questions for every archetype, and the
+double "What are you building?" prompt that came with it, as a known
+limitation tracked by [#91](https://github.com/Sandsy09/create-forge/issues/91)
+rather than fixed in that review. [ADR 0025](adr/0025-engine-native-prompt-flow.md)
+closes it: the destination is now only fully known once a project name has
+been collected, so the non-empty-destination check splits in two — an
+explicit `--path` is still checked before the engine is imported at all,
+preserving that guarantee for the common case; the final destination is
+checked again immediately before any ProjectSpec construction, validation, or
+render begins, still before every side effect that writes anything.
+`discover_components()` itself reads the installed catalogue and writes
+nothing, so running it ahead of a not-yet-knowable destination introduces no
+new filesystem risk.
 
 No command accepts an organisation-policy document or path. CF-09.01
 ([ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) delivered a
@@ -243,7 +259,14 @@ The contract is characterized by these tests:
   `test_new_engine_preview_*`/`test_new_without_engine_preview_is_unchanged`
   group covering the `--engine-preview` flag from ADR 0014, its ADR 0015
   finalisation, and its ADR 0017 `--archetype` selection surface (explicit,
-  `--yes`-without-one, unknown-id, and interactive-prompt cases).
+  `--yes`-without-one, unknown-id, and interactive-prompt cases). The
+  "engine-native prompting" block (ADR 0025) covers #91's acceptance criteria
+  directly: `test_new_engine_preview_cli_archetype_asks_no_library_question`,
+  `test_new_engine_preview_library_archetype_asks_declared_options_only`
+  (including the resolved `component_options`), `test_new_engine_preview_never_loads_the_registry`,
+  `test_new_engine_preview_interactive_asks_what_are_you_building_once`,
+  `test_new_engine_preview_rejects_copier_only_flags`, and
+  `test_new_engine_preview_yes_legacy_data_still_derives_packaging_mode`.
 - [`tests/test_staging.py`](../tests/test_staging.py) covers destination
   conflict detection, target-safety refusals, staging placement and atomic
   finalisation, and cleanup after failure — see the canonical
@@ -262,7 +285,11 @@ The contract is characterized by these tests:
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,
   `test_defaults_pre_fill_a_text_prompt_without_suppressing_it`, and their
   neighbouring cases, plus `choose_archetype`'s equivalent skip-when-one,
-  selection, and cancellation cases (ADR 0017).
+  selection, and cancellation cases (ADR 0017). `ask_project_answers` and
+  `ask_component_options` (ADR 0025) have their own preset/defaults/
+  cancellation cases, plus one per declared option `type` (`string` with and
+  without `choices`, `boolean`, `integer`, `string_list`) and the empty-return
+  case for a descriptor that declares none.
 - [`tests/test_drift.py`](../tests/test_drift.py) covers the v0.1.x boundary
   between registry presentation metadata and template-owned questions,
   choices, conditions, and defaults.
