@@ -44,7 +44,11 @@
   (`pipeline._resolved_component_options`) is now gated by a discovered
   descriptor rather than a hardcoded archetype id. The engine path's
   Library-shaped prompt set was recorded, not fixed, and tracked by
-  [create-forge#91](https://github.com/Sandsy09/create-forge/issues/91).
+  [create-forge#91](https://github.com/Sandsy09/create-forge/issues/91) —
+  since closed via
+  [ADR 0025](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0025-engine-native-prompt-flow.md):
+  `--engine-preview` now prompts directly from the selected archetype's own
+  discovered `ComponentDescriptor.options` and reads no registry data at all.
 - ~~**CF-08.04 — Extend end-to-end generation to the public engine**~~ —
   complete via
   [ADR 0020](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0020-engine-path-end-to-end-tests.md)
