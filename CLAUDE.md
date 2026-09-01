@@ -150,7 +150,7 @@ Forge-template Stage 09 is complete under the canonical
 and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
 The last proof keeps Foundation/component source package-bound and private
 catalogue overrides test-only. Do not duplicate engine content or infer a
-plugin mechanism while implementing create-forge #55.
+plugin mechanism.
 Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record those four decisions.
 CF-09.02 / [#54](https://github.com/Sandsy09/create-forge/issues/54)
@@ -162,6 +162,12 @@ resolver. It imports no `create_forge` module — proven by an AST guard in
 `tests/test_downstream_reference.py`, not merely stated — since it exists to
 demonstrate that a downstream client needs nothing from this repository. See
 the canonical [downstream client reference](docs/downstream-client-reference.md).
+CF-09.03 / [#55](https://github.com/Sandsy09/create-forge/issues/55) completes
+Stage 09 under
+[ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md):
+`create-forge` is one reference client rather than a framework dependency,
+the supported engine has no reverse dependency, policy remains
+selection-only, and generated projects depend on neither Forge package.
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
 command for the first time, via a lazily-imported module `cli.py` otherwise
@@ -322,6 +328,9 @@ Run this before any release.
   independent client demonstrating the public `forge_template` facade with no
   `create-forge` dependency, its own compatibility bounds, and its own
   minimal organisation-policy resolver.
+- [ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md)
+  closes the Stage 09 dependency boundary: shared engine logic stays in the
+  supported `forge-template` facade, while clients remain independent.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)

@@ -57,8 +57,10 @@ Forge-template's completed Stage 09
 [compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
 and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
 show that clients neither replace reviewed owner content nor copy package-
-bound Foundation/component source. Create-forge #53–#55 retain policy
-resolution, compatibility presentation, and reference-client validation.
+bound Foundation/component source. Create-forge #53–#55 complete policy
+input integration and reference-client validation under
+[ADR 0024](../adr/0024-reference-client-not-framework-dependency.md), without
+turning this repository into a shared framework layer.
 Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record these decisions.
 The engine validates rendered output in memory before returning it;

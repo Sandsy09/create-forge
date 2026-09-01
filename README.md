@@ -201,6 +201,9 @@ second, independent client demonstrating exactly this — no dependency on
 `create-forge` at all — see the canonical
 [downstream client reference](docs/downstream-client-reference.md) and
 [ADR 0023](docs/adr/0023-downstream-client-reference.md).
+[ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md)
+completes the Stage 09 boundary: `create-forge` is one reference client, not a
+framework dependency for that client, the engine, or generated projects.
 
 Forking this repository remains appropriate only for genuinely custom
 executable template content that has no equivalent in the reviewed public

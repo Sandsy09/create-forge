@@ -64,7 +64,10 @@ Forge-template Epic 09 is complete through its canonical
 and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
 Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record those four decisions.
-Create-forge Epic #40 and #53–#55 remain open for the client-owned half.
+Create-forge Epic #40 and #53–#55 are complete under
+[ADR 0024](../adr/0024-reference-client-not-framework-dependency.md), which
+validates the client-owned half without making `create-forge` a shared
+framework dependency.
 The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 defines engine-owned bundled component metadata and compatibility. The

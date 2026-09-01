@@ -5,10 +5,10 @@
 > contracts are complete, the compatible engine range is released, and
 > forge-template Stage 09 is complete through the canonical
 > [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
-> The completed [forge-template Stage 09 record](roadmap/09-blueprint-compatibility/README.md)
-> links all four contracts and ADRs 0039–0042.
-> Create-forge #53–#55 retain the Stage 09 client integration in dependency
-> order. The current
+> The completed [two-repository Stage 09 record](roadmap/09-blueprint-compatibility/README.md)
+> links forge-template ADRs 0039–0042 and create-forge
+> [ADR 0024](../adr/0024-reference-client-not-framework-dependency.md).
+> Create-forge #53–#55 are complete. The current
 > v0.1.x Copier architecture remains
 > operational until the atomic cutover. The [create-forge live issue index](github-issues/create-forge/ISSUE-INDEX.md)
 > records completed baseline work and the filed dependency graph.
