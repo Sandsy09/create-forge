@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 from copier.errors import CopierError
+from plumbum.commands.processes import ProcessExecutionError
 
 import create_forge.runner as runner_module
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold
@@ -91,3 +92,68 @@ def test_scaffold_leaves_the_destination_on_success(
     scaffold(_request(dst))
 
     assert dst.is_dir()
+
+
+def test_scaffold_explains_a_real_missing_template_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = tmp_path / "copier-settings.yml"
+    settings.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setenv("COPIER_SETTINGS_PATH", str(settings))
+    monkeypatch.setenv("COPIER_CACHE_DIR", str(tmp_path / "copier-cache"))
+    missing_source = tmp_path / "missing-template.git"
+    dst = tmp_path / "proj"
+    request = ScaffoldRequest(src=str(missing_source), dst=dst, data={}, vcs_ref="HEAD")
+
+    with pytest.raises(
+        ScaffoldError, match="Git could not complete the template operation"
+    ) as raised:
+        scaffold(request)
+
+    assert isinstance(raised.value.__cause__, ProcessExecutionError)
+    assert str(missing_source) not in str(raised.value)
+    assert "Unexpected exit code" not in str(raised.value)
+    assert not dst.exists()
+
+
+def test_scaffold_process_failure_hides_credentials_and_process_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dst = tmp_path / "proj"
+    sensitive = "do-not-display"
+    source = f"https://user:{sensitive}@example.invalid/template.git"
+    process_error = ProcessExecutionError(
+        ["git", "clone", source, "v1-secret-ref"],
+        128,
+        f"sensitive stdout: {sensitive}",
+        f"sensitive stderr: {sensitive}",
+    )
+
+    def failing_run_copy(**kwargs: object) -> None:
+        partial = Path(str(kwargs["dst_path"]))
+        partial.mkdir(parents=True)
+        (partial / "partial.txt").write_text("x", encoding="utf-8")
+        raise process_error
+
+    monkeypatch.setattr(runner_module, "run_copy", failing_run_copy)
+
+    with pytest.raises(ScaffoldError) as raised:
+        scaffold(ScaffoldRequest(src=source, dst=dst, data={}, vcs_ref="v1-secret-ref"))
+
+    message = str(raised.value)
+    assert message == (
+        "Git could not complete the template operation.\n"
+        "  Check the template URL and --ref, your network connection, repository "
+        "access, and Git credentials, then retry."
+    )
+    assert raised.value.__cause__ is process_error
+    for hidden in (
+        sensitive,
+        source,
+        "v1-secret-ref",
+        "sensitive stdout",
+        "sensitive stderr",
+        "git clone",
+    ):
+        assert hidden not in message
+    assert not dst.exists()

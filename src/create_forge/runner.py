@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from copier import run_copy, run_update
 from copier.errors import CopierError
+from plumbum.commands.processes import ProcessExecutionError
 
 from create_forge import staging
 
@@ -23,6 +24,13 @@ if TYPE_CHECKING:
 
 class ScaffoldError(Exception):
     """A failure the user can act on, already phrased for display."""
+
+
+_PROCESS_FAILURE_MESSAGE = (
+    "Git could not complete the template operation.\n"
+    "  Check the template URL and --ref, your network connection, repository "
+    "access, and Git credentials, then retry."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +81,7 @@ def scaffold(request: ScaffoldRequest) -> None:
                 quiet=True,
                 pretend=request.dry_run,
             )
-        except CopierError as exc:
+        except (CopierError, ProcessExecutionError) as exc:
             raise ScaffoldError(_explain(exc)) from exc
 
 
@@ -105,16 +113,22 @@ def update(project: Path, *, vcs_ref: str | None = None, dry_run: bool = False) 
             # regardless. Copier's own CLI hardcodes this for `update` too.
             overwrite=True,
         )
-    except CopierError as exc:
+    except (CopierError, ProcessExecutionError) as exc:
         raise ScaffoldError(_explain(exc)) from exc
 
 
-def _explain(exc: CopierError) -> str:
+def _explain(exc: CopierError | ProcessExecutionError) -> str:
     """Translate Copier's internal errors into something actionable.
 
     Copier's messages assume familiarity with its model. Most users of this CLI
     will not have any, so the common failures get rewritten.
     """
+    if isinstance(exc, ProcessExecutionError):
+        # The raw exception contains argv, stdout and stderr. In addition to
+        # being too implementation-specific for users, argv may contain
+        # credentials embedded in a template URL, so none of it is displayed.
+        return _PROCESS_FAILURE_MESSAGE
+
     text = str(exc)
     lowered = text.lower()
 
@@ -141,9 +155,8 @@ def _explain(exc: CopierError) -> str:
             "The template has no released version to use.\n"
             "  The template repository needs a PEP440 git tag, e.g. v0.1.0"
         )
-    if "authentication" in lowered or "permission denied" in lowered:
-        return (
-            "Could not access the template repository.\n"
-            "  Check you have read access and that your git credentials are set up."
-        )
-    return text
+    return (
+        _PROCESS_FAILURE_MESSAGE
+        if "authentication" in lowered or "permission denied" in lowered
+        else text
+    )

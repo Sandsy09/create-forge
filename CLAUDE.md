@@ -264,6 +264,13 @@ the rule: both are imported unconditionally by `cli.py` (and `staging.py` by
 `doctor` and `engine.py` need, so `doctor` can report them without ever
 importing the engine itself.
 
+Copier's Git transport can raise plumbum `ProcessExecutionError` directly
+rather than a `CopierError`. `runner.py` owns that boundary too: translate it
+to sanitized repository/ref/network/access guidance for both scaffold and
+update, retain the original exception as the cause, and never display its raw
+argv, stdout, or stderr because a template URL may contain credentials. Keep
+this catch narrow; unrelated exceptions must not be hidden as user errors.
+
 ### 5. templates.toml must ship in the wheel
 
 Editable installs read from source; wheels do not. A missing registry passes

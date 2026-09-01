@@ -185,6 +185,12 @@ for the full staging, finalisation, and cleanup rules ADR 0015 introduces.
 
 Cancellation must not invoke scaffolding. Expected application failures are
 shown without a traceback and phrased as an action the user can take.
+Git failures while resolving, cloning, refreshing, checking out, or preparing
+a template repository follow that same exit-`1` contract. `runner.py` catches
+Copier's `ProcessExecutionError` boundary and reports checks for the template
+URL, `--ref`, network, repository access, and Git credentials. It never echoes
+the raw Git command, stdout, stderr, source, or ref because those details may
+contain credentials. Unrelated exceptions are not converted into user errors.
 
 `doctor --json` prints the same facts as the table — see
 [docs/engine-resolution.md](engine-resolution.md)'s diagnostics contract for
@@ -242,6 +248,9 @@ The contract is characterized by these tests:
   conflict detection, target-safety refusals, staging placement and atomic
   finalisation, and cleanup after failure — see the canonical
   [filesystem generation contract](filesystem-generation.md).
+- [`tests/test_runner.py`](../tests/test_runner.py) covers the narrow Copier/Git
+  process-failure boundary, including a real missing repository, sanitized
+  credential-bearing diagnostics, exception chaining, and destination cleanup.
 - [`tests/test_e2e_generation.py`](../tests/test_e2e_generation.py) runs the
   real console script against a released template, proving the generated
   tree, its recorded answers, and its own `poe check` — not resolved values,
@@ -259,7 +268,8 @@ The contract is characterized by these tests:
   choices, conditions, and defaults.
 - [`tests/test_update.py`](../tests/test_update.py) exercises a real Copier
   update against a local two-tag template, including the dry-run no-change
-  guarantee followed by a successful real update.
+  guarantee followed by a successful real update, plus a missing-source failure
+  that leaves the project and Git state unchanged.
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.
