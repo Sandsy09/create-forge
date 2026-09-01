@@ -76,7 +76,7 @@ in-progress = { color = "8c959f", description = "Actively being worked on" }
 deferred = { color = "afb8c1", description = "Confirmed out of scope for now, not forgotten" }
 
 [groups.roadmap]
-description = "Which Forge Foundation roadmap stage owns the work."
+description = "Which Forge roadmap stage owns the work."
 family = "orange"
 
 [groups.roadmap.labels]
@@ -90,6 +90,11 @@ family = "orange"
 "07" = { color = "d45d1a", description = "Forge roadmap Stage 07 — Forge CLI Integration" }
 "08" = { color = "bd4914", description = "Forge roadmap Stage 08 — Reference Archetype Validation" }
 "09" = { color = "9f3610", description = "Forge roadmap Stage 09 — Blueprint Compatibility" }
+"10" = { color = "ffe2b7", description = "Forge roadmap Stage 10 — Data Science Architecture Contract" }
+"11" = { color = "ffc680", description = "Forge roadmap Stage 11 — Reusable Data Science Capabilities" }
+"12" = { color = "ffa657", description = "Forge roadmap Stage 12 — Data Science Archetype" }
+"13" = { color = "e67700", description = "Forge roadmap Stage 13 — Data Science CLI Integration" }
+"14" = { color = "b95000", description = "Forge roadmap Stage 14 — Data Science Validation and Rollout" }
 
 # Repository-wide metadata that is clearer without a namespace. GitHub
 # special-cases `good first issue` and `help wanted` in its discovery UI.

@@ -210,6 +210,18 @@ Foundation boundary in `0.3.2`; create-forge supplies the matching dynamic
 lock finalisation under [ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md).
 The two-repository Stage 08 implementation is complete.
 
+## Data Science roadmap
+
+The completed Foundation roadmap remains under `docs/roadmap-v1`. The live
+[Data Science roadmap](docs/roadmap-v2/README.md) continues through Stages
+10–14 with six epics only. forge-template owns the package-backed,
+notebook-oriented third archetype, reusable capabilities, and engine review;
+create-forge owns generic capability selection behind `--engine-preview` and
+the final client E2E rollout. Completed #91 is a native predecessor of
+CF-EPIC-13 because descriptor-driven option prompting is required. Plan and
+attach child issues one epic at a time; do not recreate component metadata or
+make the engine path the default during roadmap work.
+
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
 not partially migrate ownership or weaken the bundled-source trust boundary in

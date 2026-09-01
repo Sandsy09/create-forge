@@ -1,5 +1,9 @@
 # Forge Foundation Roadmap Pack — Two-Repository Edition
 
+> **Completed historical roadmap.** Stages 00–09 are closed. Paths remain
+> stable as decision and issue evidence. New Data Science work continues in
+> the [Stage 10–14 roadmap](../roadmap-v2/README.md).
+
 This revision models Forge as two independent repositories that work together through an explicit contract:
 
 - **`forge-template`** owns generated content, component metadata and the template/composition engine.
