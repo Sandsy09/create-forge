@@ -19,6 +19,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
+from plumbum.commands.processes import ProcessExecutionError
 
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
 
@@ -34,6 +36,7 @@ def _isolated_copier_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     monkeypatch.setenv(
         "COPIER_SETTINGS_PATH", str(tmp_path / "unused-copier-settings.yml")
     )
+    monkeypatch.setenv("COPIER_CACHE_DIR", str(tmp_path / "copier-cache"))
 
 
 def _git(*args: str, cwd: Path) -> str:
@@ -158,6 +161,36 @@ def test_update_dry_run_changes_nothing_before_a_real_update(
     update(project, vcs_ref="v1.1.0")
 
     assert "v2" in (project / "README.md").read_text(encoding="utf-8")
+
+
+def test_update_explains_a_real_missing_template_without_changing_the_project(
+    template: Path, tmp_path: Path
+) -> None:
+    project = _prepare_project(template, tmp_path)
+    answers_path = project / ".copier-answers.yml"
+    answers = yaml.safe_load(answers_path.read_text(encoding="utf-8"))
+    missing_source = tmp_path / "missing-template.git"
+    answers["_src_path"] = str(missing_source)
+    answers_path.write_text(yaml.safe_dump(answers, sort_keys=False), encoding="utf-8")
+    _commit(project, "point at missing template")
+
+    before_files = _visible_files(project)
+    before_head = _git("rev-parse", "HEAD", cwd=project)
+    before_index = _git("write-tree", cwd=project)
+    before_status = _git("status", "--porcelain", cwd=project)
+
+    with pytest.raises(
+        ScaffoldError, match="Git could not complete the template operation"
+    ) as raised:
+        update(project, vcs_ref="HEAD")
+
+    assert isinstance(raised.value.__cause__, ProcessExecutionError)
+    assert str(missing_source) not in str(raised.value)
+    assert "Unexpected exit code" not in str(raised.value)
+    assert _visible_files(project) == before_files
+    assert _git("rev-parse", "HEAD", cwd=project) == before_head
+    assert _git("write-tree", cwd=project) == before_index
+    assert _git("status", "--porcelain", cwd=project) == before_status
 
 
 def test_update_preserves_local_edits(template: Path, tmp_path: Path) -> None:
