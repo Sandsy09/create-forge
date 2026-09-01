@@ -1,0 +1,8 @@
+{
+  "policy_version": 1,
+  "id": "example-restricted",
+  "description": "Requires the cli archetype. Combined with example-baseline, this is the documented irreconcilable pair (default-requirement-conflict).",
+  "required": {
+    "archetype": "cli"
+  }
+}
