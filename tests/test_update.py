@@ -36,15 +36,15 @@ def _isolated_copier_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     )
 
 
-def _git(*args: str, cwd: Path) -> None:
-    subprocess.run(  # noqa: S603
+def _git(*args: str, cwd: Path) -> str:
+    return subprocess.run(  # noqa: S603
         ["git", *args],  # noqa: S607
         cwd=cwd,
         check=True,
         capture_output=True,
         text=True,
         timeout=30,
-    )
+    ).stdout
 
 
 def _init_repo(path: Path) -> None:
@@ -119,11 +119,41 @@ def _prepare_project(template_path: Path, tmp_path: Path) -> Path:
     return dst
 
 
+def _visible_files(project: Path) -> dict[str, bytes]:
+    """Snapshot every project file except Git's internal object database."""
+    return {
+        path.relative_to(project).as_posix(): path.read_bytes()
+        for path in project.rglob("*")
+        if path.is_file() and ".git" not in path.relative_to(project).parts
+    }
+
+
 def test_update_applies_template_changes(template: Path, tmp_path: Path) -> None:
     """This is the test that fails with "Enable overwrite to update a
     subproject." against unmodified runner.py -- the literal bug in #23."""
     project = _prepare_project(template, tmp_path)
     assert "v1" in (project / "README.md").read_text(encoding="utf-8")
+
+    update(project, vcs_ref="v1.1.0")
+
+    assert "v2" in (project / "README.md").read_text(encoding="utf-8")
+
+
+def test_update_dry_run_changes_nothing_before_a_real_update(
+    template: Path, tmp_path: Path
+) -> None:
+    project = _prepare_project(template, tmp_path)
+    before_files = _visible_files(project)
+    before_head = _git("rev-parse", "HEAD", cwd=project)
+    before_index = _git("write-tree", cwd=project)
+    before_status = _git("status", "--porcelain", cwd=project)
+
+    update(project, vcs_ref="v1.1.0", dry_run=True)
+
+    assert _visible_files(project) == before_files
+    assert _git("rev-parse", "HEAD", cwd=project) == before_head
+    assert _git("write-tree", cwd=project) == before_index
+    assert _git("status", "--porcelain", cwd=project) == before_status
 
     update(project, vcs_ref="v1.1.0")
 

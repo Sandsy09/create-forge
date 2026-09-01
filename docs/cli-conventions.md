@@ -136,6 +136,27 @@ explicit choice, but that fact affects no user-visible behaviour of `new`
 itself. See the canonical
 [downstream policy-consumption contract](organisation-policy-consumption.md).
 
+## Update dry runs
+
+`update --dry-run` validates a Copier update without applying it to the target
+project. It performs the same source and `--ref` resolution, safety checks, and
+template rendering as a real update, but calls Copier with `pretend=True`. A
+successful run leaves the project's visible files, `.copier-answers.yml`, Git
+HEAD, index, and working-tree status unchanged and reports `Dry run complete.
+No project files changed.` instead of claiming the project was updated.
+
+Copier's update merge intentionally suppresses per-file status because it
+cannot report those changes reliably, so this is a validation preview rather
+than a file-by-file diff. Template resolution and temporary rendering may still
+occur. Missing answers, a dirty or non-Git project, template resolution errors,
+and other application failures retain exit status `1` and never print the
+success message. Omitting the flag preserves the normal update and its existing
+`Updated`/review-the-diff guidance.
+
+Projects generated through `new --engine-preview` remain ineligible for
+`update` because they do not contain `.copier-answers.yml`; `--dry-run` does not
+change that boundary.
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.
@@ -209,6 +230,7 @@ The contract is characterized by these tests:
   config and `--data` precedence, the third-party warning, and application
   error presentation. In particular, see
   `test_new_dry_run_records_the_request_and_writes_nothing`,
+  the `test_update_*` command cases,
   `test_new_bad_data_format_is_rejected`, the two
   `test_new_aborting_*_exits_130` cases,
   `test_new_template_url_declined_scaffolds_nothing`, and the
@@ -235,6 +257,9 @@ The contract is characterized by these tests:
 - [`tests/test_drift.py`](../tests/test_drift.py) covers the v0.1.x boundary
   between registry presentation metadata and template-owned questions,
   choices, conditions, and defaults.
+- [`tests/test_update.py`](../tests/test_update.py) exercises a real Copier
+  update against a local two-tag template, including the dry-run no-change
+  guarantee followed by a successful real update.
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.
