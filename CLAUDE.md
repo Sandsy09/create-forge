@@ -137,6 +137,16 @@ The canonical
 is a downstream-client input resolved before effective ProjectSpec
 construction. The current CLI does not consume it; CF-09.01 must preserve
 whether each selection kind was explicitly supplied when it adds that hook.
+Forge-template Stage 09 is complete under the canonical
+[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
+The last proof keeps Foundation/component source package-bound and private
+catalogue overrides test-only. Do not duplicate engine content or infer a
+plugin mechanism while implementing create-forge #53–#55.
+Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record those four decisions.
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
 the hidden `new --engine-preview` flag that reaches this boundary from a real
 command for the first time, via a lazily-imported module `cli.py` otherwise

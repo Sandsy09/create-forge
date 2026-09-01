@@ -56,6 +56,14 @@ defines the strict effective generation request owned by `forge-template`.
 defines how downstream clients resolve component-selection policy before
 constructing that effective request. `create-forge` does not consume policy
 yet; CF-09.01 owns the future client hook.
+Forge-template Epic 09 is complete through its canonical
+[extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
+Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record those four decisions.
+Create-forge Epic #40 and #53–#55 remain open for the client-owned half.
 The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 defines engine-owned bundled component metadata and compatibility. The

@@ -119,6 +119,19 @@ The canonical
 defines how downstream clients resolve component-selection defaults and
 constraints before constructing that effective ProjectSpec. This repository
 does not consume policy yet; CF-09.01 owns that future client hook.
+The canonical
+[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
+complete forge-template's Stage 09 boundary. They deny arbitrary file
+replacement and prove that a client can retain policy/orchestration concerns
+without copying engine content or importing private engine modules. The
+decisions are recorded by forge-template
+[ADRs 0039](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0039-deny-policy-file-overrides.md),
+[0040](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0040-organisation-policy-reference-fixture.md),
+[0041](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0041-forge-blueprint-compatibility-policy.md),
+and [0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0042-validate-no-copy-downstream-inheritance.md).
 The accepted
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the first production component, implemented on `forge-template/main`

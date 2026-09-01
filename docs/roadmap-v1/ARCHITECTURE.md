@@ -51,6 +51,16 @@ The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 is resolved by such a client before effective ProjectSpec construction;
 ProjectSpec carries only resolved selections and applied-policy provenance.
+Forge-template's completed Stage 09
+[extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[reference fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
+show that clients neither replace reviewed owner content nor copy package-
+bound Foundation/component source. Create-forge #53–#55 retain policy
+resolution, compatibility presentation, and reference-client validation.
+Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record these decisions.
 The engine validates rendered output in memory before returning it;
 `create-forge` retains filesystem staging, dynamic `uv.lock` finalisation,
 atomic placement, and command execution.

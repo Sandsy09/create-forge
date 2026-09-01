@@ -69,6 +69,18 @@ defines downstream component-selection defaults and constraints. Policy-aware
 clients resolve it before ProjectSpec construction and retain explicit-versus-
 absent selection inputs; this repository does not consume policy yet. The
 canonical
+[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md)
+denies arbitrary file replacement, the
+[policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md)
+proves selection behavior without shipping a resolver, the
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md)
+defines supported axes and negotiation facts, and the
+[no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
+validates that client-owned policy/orchestration does not require copied
+Foundation or component source. The private forge-template fixture catalogue
+is not a client extension mechanism. Forge-template
+[ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record those decisions. The canonical
 [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 defines the engine-owned identity, display, version, compatibility, content,
 dependency, and conflict metadata that replaces the bundled CLI catalogue at
