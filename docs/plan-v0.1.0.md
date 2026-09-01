@@ -1,5 +1,10 @@
 # Roadmap to v0.1.0
 
+> **Completed historical plan.** This document remains at its stable path
+> because agent guidance and the drift-test rationale cite the incident and
+> decisions it records. Current Data Science planning lives in
+> [roadmap-v2](roadmap-v2/README.md).
+
 Written from `forge-template` on 2026-08-21, after that repo's issue #5
 (pytest port) shipped and CI went green. Reproduced here so create-forge work
 happens in this repo's own session, with this repo's own `CLAUDE.md` in

@@ -84,6 +84,11 @@ the canonical [cross-repository contributor workflow](docs/cross-repository-work
 It defines the sibling-checkout commands, local registry/schema drift check,
 trust boundary, validation ladder, and safe merge/release order.
 
+The [Data Science roadmap](docs/roadmap-v2/README.md) continues the completed
+Foundation roadmap through Stages 10–14. create-forge owns its Stage 13
+discovery-driven preview integration and the Stage 14 end-to-end client
+rollout; component contracts and generated content remain in forge-template.
+
 ## What CI runs
 
 `.github/workflows/ci.yml` runs on every push to `main` and every pull

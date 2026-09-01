@@ -217,6 +217,12 @@ engine — point the bundled registry at your own templates and maintain the
 fork internally, as v0.1.x always supported. See the
 [integration contract](docs/integration-contract.md) for the full boundary.
 
+The [Data Science roadmap](docs/roadmap-v2/README.md) plans Stages 10–14: a
+package-backed, notebook-oriented third archetype, reusable optional
+capabilities, discovery-driven preview UX, and cross-repository validation.
+Only epics are filed initially; exact tools and child issues are decided one
+epic at a time. The default Copier path remains unchanged.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
