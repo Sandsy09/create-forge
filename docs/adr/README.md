@@ -25,6 +25,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0020 — Test the public engine path end to end](0020-engine-path-end-to-end-tests.md)
 - [0021 — Finalise engine-generated lockfiles in the client](0021-client-finalises-engine-lockfiles.md)
 - [0022 — Downstream organisation-policy consumption hook](0022-downstream-organisation-policy-hook.md)
+- [0023 — Downstream client reference](0023-downstream-client-reference.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

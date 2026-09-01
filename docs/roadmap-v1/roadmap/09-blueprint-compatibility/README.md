@@ -40,8 +40,14 @@ catalogue remains a forge-template test seam, not a client plugin mechanism.
   `create-forge` ships no resolver and reads no policy document by design.
   See [ADR 0022](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0022-downstream-organisation-policy-hook.md)
   and the canonical [downstream policy-consumption contract](https://github.com/Sandsy09/create-forge/blob/main/docs/organisation-policy-consumption.md).
-- [**CF-09.02 — Create downstream CLI integration reference**](https://github.com/Sandsy09/create-forge/issues/54) — unblocked now that #53 is complete; its forge-template prerequisites are complete.
-- [**CF-09.03 — Validate create-forge is a reference client, not a framework dependency**](https://github.com/Sandsy09/create-forge/issues/55) — blocked only by open #54; its forge-template prerequisite is complete.
+- [x] [**CF-09.02 — Create downstream CLI integration reference**](https://github.com/Sandsy09/create-forge/issues/54)
+  — complete. `examples/downstream_cli.py`: a second, independent
+  Blueprint-style CLI over the public `forge_template` facade, with its own
+  compatibility bounds and its own minimal organisation-policy resolver, and
+  no dependency on `create-forge` at all (an AST guard proves it). See
+  [ADR 0023](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0023-downstream-client-reference.md)
+  and the canonical [downstream client reference](https://github.com/Sandsy09/create-forge/blob/main/docs/downstream-client-reference.md).
+- [**CF-09.03 — Validate create-forge is a reference client, not a framework dependency**](https://github.com/Sandsy09/create-forge/issues/55) — unblocked now that #54 is complete; its forge-template prerequisite is complete.
 
 ## Stage completion rule
 

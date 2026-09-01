@@ -89,7 +89,7 @@ include = ["src/", "tests/", "README.md", "LICENSE", "CHANGELOG.md"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-src = ["src", "tests", "scripts"]
+src = ["src", "tests", "scripts", "examples"]
 
 [tool.ruff.lint]
 select = [
@@ -114,7 +114,7 @@ docstring-code-format = true
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src", "tests", "scripts"]
+files = ["src", "tests", "scripts", "examples"]
 strict = true
 warn_unreachable = true
 
@@ -134,7 +134,10 @@ minversion = "8.0"
 testpaths = ["tests"]
 # Lets tests/test_adr.py `import adr` -- scripts/ is dev-only tooling, never
 # shipped in the wheel, so it isn't a package under src/create_forge.
-pythonpath = ["scripts"]
+# examples/ is the CF-09.02 downstream-client reference (ADR 0023),
+# similarly repo-only -- tests/test_downstream_reference.py imports it as
+# `downstream_cli`.
+pythonpath = ["scripts", "examples"]
 addopts = [
     "-ra",
     "--strict-markers",

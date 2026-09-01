@@ -1,0 +1,11 @@
+{
+  "policy_version": 1,
+  "id": "example-baseline",
+  "description": "A neutral organisation default: prefer library, never cli.",
+  "defaults": {
+    "archetype": "library"
+  },
+  "forbidden": {
+    "archetypes": ["cli"]
+  }
+}

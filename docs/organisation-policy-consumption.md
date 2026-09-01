@@ -141,9 +141,13 @@ shape this repository already relies on for its own trust boundary
   before ProjectSpec construction, rendering, or filesystem work."
 
 `create-forge` implements none of this itself; it is recorded here so a
-downstream client (such as the reference in
-[#54](https://github.com/Sandsy09/create-forge/issues/54)) has a documented
-shape to follow rather than inventing one independently.
+downstream client has a documented shape to follow rather than inventing one
+independently. [`examples/downstream_cli.py`](../examples/downstream_cli.py)
+(CF-09.02, [ADR 0023](adr/0023-downstream-client-reference.md), the canonical
+[downstream client reference](downstream-client-reference.md)) is a worked
+example of this shape — an explicit, local `--policy PATH`, resolved before
+any ProjectSpec is constructed. It is a second, independent client, not a
+`create-forge` usage example: it imports no `create_forge` module at all.
 
 ## The fork path
 
