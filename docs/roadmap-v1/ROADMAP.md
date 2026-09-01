@@ -2,9 +2,13 @@
 
 > **Architecture status:** [ADR 0010](../adr/0010-public-engine-integration-contract.md)
 > accepts the public-engine/ProjectSpec target. Both repositories' Stage 06
-> contracts are complete; `create-forge` proves an exact development pair
-> without assigning a released range. Stages 07–09 continue the integration in
-> dependency order. The current
+> contracts are complete, the compatible engine range is released, and
+> forge-template Stage 09 is complete through the canonical
+> [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
+> The completed [forge-template Stage 09 record](roadmap/09-blueprint-compatibility/README.md)
+> links all four contracts and ADRs 0039–0042.
+> Create-forge #53–#55 retain the Stage 09 client integration in dependency
+> order. The current
 > v0.1.x Copier architecture remains
 > operational until the atomic cutover. The [create-forge live issue index](github-issues/create-forge/ISSUE-INDEX.md)
 > records completed baseline work and the filed dependency graph.

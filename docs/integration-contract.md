@@ -117,6 +117,23 @@ client-side staging, finalisation, and cleanup rules that safe filesystem
 orchestration implies, behind the same hidden `--engine-preview` flag as the
 rest of this boundary.
 
+The canonical
+[organisation-policy protocol](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md),
+[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[policy reference fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
+close forge-template Stage 09. A downstream client applies policy before
+constructing the effective ProjectSpec, uses only selected-component options
+and published extension points, and consumes the top-level engine facade
+without copying Foundation/component source. `create-forge` still owns
+policy-source trust, explicit-choice tracking, resolution until a public
+resolver exists, ProjectSpec construction, compatibility presentation,
+staging, and finalisation. Those responsibilities are client orchestration,
+not a second engine implementation.
+Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record the extension, fixture, compatibility, and no-copy decisions.
+
 The dependency is one-way:
 
 ```text

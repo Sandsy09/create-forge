@@ -126,6 +126,16 @@ keeps policy resolution upstream of effective ProjectSpec construction.
 Future policy-aware clients must retain which selection kinds were explicitly
 supplied so explicit empty lists remain distinguishable from absent inputs;
 the current CLI does not consume policy.
+Forge-template's canonical
+[extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
+[policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
+[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
+and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
+define the remaining Stage 09 boundary: clients may select reviewed content
+but may not overlay arbitrary files or treat private catalogue fixtures as a
+plugin mechanism. Forge-template
+[ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
+record those decisions.
 That API begins its compatibility contract at `forge-template` `0.2.x`.
 Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
