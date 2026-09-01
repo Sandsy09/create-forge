@@ -123,9 +123,13 @@ the [supported engine facade](https://github.com/Sandsy09/forge-template/blob/ma
 The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 keeps policy resolution upstream of effective ProjectSpec construction.
-Future policy-aware clients must retain which selection kinds were explicitly
-supplied so explicit empty lists remain distinguishable from absent inputs;
-the current CLI does not consume policy.
+CF-09.01 ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md))
+delivered the client-side hook that retains which selection kinds were
+explicitly supplied, so explicit empty lists stay distinguishable from
+absent inputs -- `spec.SelectionRequest`/`SelectionProvenance`, accepted by
+`pipeline.build_generation_request` as `selection`/`provenance`. The current
+CLI still consumes no policy itself and ships no resolver; see the canonical
+[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
 Forge-template's canonical
 [extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
 [policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
@@ -217,6 +221,18 @@ Forge-template's Stage 08
 [composition review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
 is released at `0.3.2`; [ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md)
 records create-forge's matching lock-finalisation boundary.
+CF-09.01 / [#53](https://github.com/Sandsy09/create-forge/issues/53)
+([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) opened
+[CF-EPIC-09](https://github.com/Sandsy09/create-forge/issues/40) by delivering
+the downstream policy-consumption hook: `pipeline.build_generation_request`
+accepts a `selection`/`provenance` pair built from
+`spec.SelectionRequest`/`SelectionProvenance`, letting a policy-aware caller
+record which selection kinds were explicit and which applied policy IDs to
+carry into `ProjectSpec.provenance` -- without `create-forge` itself parsing,
+merging, or reading any policy document, which stays a deliberate boundary
+per the canonical
+[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
+This unblocks [#54 / CF-09.02](https://github.com/Sandsy09/create-forge/issues/54).
 [ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 and the living [engine resolution contract](docs/engine-resolution.md)
 define how that engine is sourced, overridden locally, diagnosed, and

@@ -67,8 +67,10 @@ validation. The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 defines downstream component-selection defaults and constraints. Policy-aware
 clients resolve it before ProjectSpec construction and retain explicit-versus-
-absent selection inputs; this repository does not consume policy yet. The
-canonical
+absent selection inputs, through the hook CF-09.01
+([ADR 0022](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0022-downstream-organisation-policy-hook.md))
+delivered; this repository still consumes no policy document itself, by
+design. The canonical
 [safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md)
 denies arbitrary file replacement, the
 [policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md)

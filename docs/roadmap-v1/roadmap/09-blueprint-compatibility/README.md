@@ -34,8 +34,13 @@ catalogue remains a forge-template test seam, not a client plugin mechanism.
 ### create-forge
 
 - Epic: [CF-EPIC-09 / #40](https://github.com/Sandsy09/create-forge/issues/40)
-- [**CF-09.01 — Define downstream policy-consumption hook**](https://github.com/Sandsy09/create-forge/issues/53) — actionable now that its ProjectSpec and policy prerequisites are complete.
-- [**CF-09.02 — Create downstream CLI integration reference**](https://github.com/Sandsy09/create-forge/issues/54) — blocked only by open #53; its forge-template prerequisites are complete.
+- [x] [**CF-09.01 — Define downstream policy-consumption hook**](https://github.com/Sandsy09/create-forge/issues/53)
+  — complete. `pipeline.build_generation_request` accepts a `selection`/
+  `provenance` pair built from `spec.SelectionRequest`/`SelectionProvenance`;
+  `create-forge` ships no resolver and reads no policy document by design.
+  See [ADR 0022](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0022-downstream-organisation-policy-hook.md)
+  and the canonical [downstream policy-consumption contract](https://github.com/Sandsy09/create-forge/blob/main/docs/organisation-policy-consumption.md).
+- [**CF-09.02 — Create downstream CLI integration reference**](https://github.com/Sandsy09/create-forge/issues/54) — unblocked now that #53 is complete; its forge-template prerequisites are complete.
 - [**CF-09.03 — Validate create-forge is a reference client, not a framework dependency**](https://github.com/Sandsy09/create-forge/issues/55) — blocked only by open #54; its forge-template prerequisite is complete.
 
 ## Stage completion rule

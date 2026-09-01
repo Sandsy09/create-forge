@@ -66,10 +66,14 @@ in `SelectionProvenance.policies` cross the engine boundary.
 A policy-aware client must retain whether the archetype, capability list, and
 platform list were explicitly supplied. In particular, an explicit empty list
 replaces defaults for that selection kind, while an absent input permits
-defaults. The current `create-forge` adapter does not collect or resolve
-organisation policy and therefore continues to leave provenance empty;
-[CF-09.01](https://github.com/Sandsy09/create-forge/issues/53) owns the future
-consumption hook.
+defaults. CF-09.01 ([ADR 0022](adr/0022-downstream-organisation-policy-hook.md))
+delivered the consumption hook: `spec.SelectionRequest`/`SelectionProvenance`
+carry that distinction, and `pipeline.build_generation_request` accepts them
+as `selection`/`provenance` keywords immediately upstream of ProjectSpec
+construction. `create-forge` itself still collects or resolves no
+organisation policy and reads no policy document — that is a deliberate
+boundary, not a gap, recorded in full by the canonical
+[downstream policy-consumption contract](organisation-policy-consumption.md).
 
 ## Field mapping
 
@@ -84,9 +88,9 @@ consumption hook.
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
-| *discovered, then user- or caller-selected* | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. |
+| *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
 | *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Copied through unchanged, namespaced by component ID, when the caller supplies it. When it does not, `pipeline._resolved_component_options` derives `packaging_mode` from the legacy `build_backend`/`versioning` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own discovered `ComponentDescriptor.options` declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
-| — | `provenance` | Left empty by the current CLI. A future policy-aware client records successfully applied policy IDs here after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself. |
+| *caller-supplied* `SelectionProvenance` | `provenance` | Left empty by `cli.py` today, since it resolves no policy. A policy-aware client passes a `SelectionProvenance` built after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself — see the canonical [downstream policy-consumption contract](organisation-policy-consumption.md). |
 
 ## Unmapped answers
 
@@ -260,6 +264,12 @@ by
   [#91](https://github.com/Sandsy09/create-forge/issues/91) rather than made
   here, since fixing it changes documented `--engine-preview` contract
   behaviour (see [`docs/cli-conventions.md`](cli-conventions.md)).
+- **CF-09.01** ([ADR 0022](adr/0022-downstream-organisation-policy-hook.md))
+  delivered the downstream policy-consumption hook: `spec.SelectionRequest`/
+  `SelectionProvenance` and `pipeline.build_generation_request`'s
+  `selection`/`provenance` keywords. `create-forge` itself resolves no
+  policy — see the canonical
+  [downstream policy-consumption contract](organisation-policy-consumption.md).
 
 ## Executable examples
 
@@ -267,6 +277,10 @@ by
   overrides, field omission, Python-bound fallback, legacy Library answer
   resolution, and interactive/non-interactive parity, entirely without the
   optional `engine` extra installed.
+- [`tests/test_policy_hook.py`](../tests/test_policy_hook.py) — the
+  `SelectionRequest`/`SelectionProvenance` seam: the absent-vs-explicit-empty
+  distinction, provenance omission and emission, and the containment guard
+  on both types' field sets and shapes.
 - [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) —
   protocol negotiation (including the compatible real engine and a
   monkeypatched incompatible one), parsing, structured error translation, the

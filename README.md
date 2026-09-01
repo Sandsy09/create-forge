@@ -117,8 +117,11 @@ are now implemented behind the canonical
 The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 defines how downstream clients resolve component-selection defaults and
-constraints before constructing that effective ProjectSpec. This repository
-does not consume policy yet; CF-09.01 owns that future client hook.
+constraints before constructing that effective ProjectSpec. CF-09.01
+([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) delivered
+the client-side consumption hook — this repository still resolves no policy
+itself; see the canonical
+[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
 The canonical
 [safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
 [organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
@@ -186,12 +189,19 @@ issue.
 
 ## Using this at work
 
-In v0.1.x, organisations needing custom executable templates can fork this
-repository, point the bundled registry at their own templates, and maintain it
-internally. The accepted target makes a downstream client of the
-`forge-template` public engine the preferred route for organisation defaults
-and constraints. Forks remain appropriate for genuinely custom executable
-template content; see the [integration contract](docs/integration-contract.md).
+The preferred route for organisation defaults, required selections, and
+forbidden selections is a downstream client of the public `forge-template`
+engine, resolving the canonical
+[organisation-policy protocol](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+before constructing a ProjectSpec — see the canonical
+[downstream policy-consumption contract](docs/organisation-policy-consumption.md)
+and [ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md).
+
+Forking this repository remains appropriate only for genuinely custom
+executable template content that has no equivalent in the reviewed public
+engine — point the bundled registry at your own templates and maintain the
+fork internally, as v0.1.x always supported. See the
+[integration contract](docs/integration-contract.md) for the full boundary.
 
 ## Contributing
 

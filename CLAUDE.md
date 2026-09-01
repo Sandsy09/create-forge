@@ -135,8 +135,14 @@ tag-pinned development dependency — see the canonical
 The canonical
 [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
 is a downstream-client input resolved before effective ProjectSpec
-construction. The current CLI does not consume it; CF-09.01 must preserve
-whether each selection kind was explicitly supplied when it adds that hook.
+construction. CF-09.01 / [#53](https://github.com/Sandsy09/create-forge/issues/53)
+([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) delivered
+that hook: `spec.SelectionRequest`/`SelectionProvenance` preserve whether each
+selection kind was explicitly supplied, and
+`pipeline.build_generation_request` accepts them as `selection`/`provenance`
+keywords. The current CLI still consumes no policy itself and ships no
+resolver — that is the decision, not an unfinished step; see the canonical
+[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
 Forge-template Stage 09 is complete under the canonical
 [safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
 [organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
@@ -144,7 +150,7 @@ Forge-template Stage 09 is complete under the canonical
 and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
 The last proof keeps Foundation/component source package-bound and private
 catalogue overrides test-only. Do not duplicate engine content or infer a
-plugin mechanism while implementing create-forge #53–#55.
+plugin mechanism while implementing create-forge #54–#55.
 Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
 record those four decisions.
 [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
@@ -296,6 +302,11 @@ Run this before any release.
   --archetype cli` since CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
   and derives its console name from `ProjectSpec.project.repository_name`; do
   not duplicate those semantics in the registry or CLI models.
+- The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
+  defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
+  ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to
+  `pipeline.build_generation_request`, what may cross the engine boundary,
+  and why `create-forge` deliberately ships no policy parser or resolver.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)
