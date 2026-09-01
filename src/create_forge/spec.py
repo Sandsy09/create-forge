@@ -18,6 +18,8 @@ mapping and its rationale.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from create_forge.prompts import slugify
@@ -42,6 +44,95 @@ path lets fall through to its own default. The engine path has no template
 default to fall through to, so create-forge supplies the same values itself
 here rather than leaving `--engine-preview` unusable without `--data`.
 """
+
+
+class SelectionKind(StrEnum):
+    """Which ProjectSpec `components` field a selection or policy rule names.
+
+    Mirrors the three kinds the canonical
+    [organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
+    defines `defaults`/`required`/`forbidden` rules over -- see
+    docs/organisation-policy-consumption.md (CF-09.01, ADR 0022).
+    """
+
+    ARCHETYPE = "archetype"
+    CAPABILITIES = "capabilities"
+    PLATFORMS = "platforms"
+
+
+@dataclass(frozen=True, slots=True)
+class SelectionRequest:
+    """An effective component selection, plus which kinds were explicit.
+
+    Deliberately not `forge_template.ComponentSelection`, which this is not:
+    that type carries only the resolved result. Protocol v1 states plainly
+    that ProjectSpec "cannot reconstruct" whether a selection kind was
+    explicitly supplied or left to a policy default, so a policy-aware caller
+    needs a place to keep that fact between resolving policy and calling
+    `pipeline.build_generation_request` -- this is that place.
+
+    Construct with `SelectionRequest.of(...)` rather than the constructor
+    directly: it turns `None` (absent) versus `()`/`[]` (explicit and empty)
+    into membership in `explicit`, which is easy to get backwards by hand.
+    """
+
+    archetype: str
+    capabilities: tuple[str, ...] = ()
+    platforms: tuple[str, ...] = ()
+    explicit: frozenset[SelectionKind] = field(default_factory=frozenset)
+
+    @classmethod
+    def of(
+        cls,
+        *,
+        archetype: str,
+        capabilities: Sequence[str] | None = None,
+        platforms: Sequence[str] | None = None,
+        archetype_explicit: bool = True,
+    ) -> SelectionRequest:
+        """Build a request, inferring `explicit` from which args were passed.
+
+        `archetype` has no absent form -- ProjectSpec always selects exactly
+        one -- so its explicitness is a separate keyword rather than an
+        `Optional`. `capabilities`/`platforms` follow protocol v1's rule
+        directly: `None` means "no explicit choice for this kind" (a policy
+        default may still apply); an empty sequence is itself an explicit
+        choice of "none".
+        """
+        explicit = set()
+        if archetype_explicit:
+            explicit.add(SelectionKind.ARCHETYPE)
+        if capabilities is not None:
+            explicit.add(SelectionKind.CAPABILITIES)
+        if platforms is not None:
+            explicit.add(SelectionKind.PLATFORMS)
+        return cls(
+            archetype=archetype,
+            capabilities=tuple(capabilities or ()),
+            platforms=tuple(platforms or ()),
+            explicit=frozenset(explicit),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SelectionProvenance:
+    """Provenance to record in `ProjectSpec.provenance` after policy resolution.
+
+    Mirrors `forge_template.SelectionProvenance`'s field names without
+    importing the engine (`spec.py` must stay importable without the `engine`
+    extra installed). Deliberately holds only identifiers: protocol v1 is
+    explicit that provenance "neither embeds a policy document nor grants
+    rendering authority" -- there is no field here a policy document's
+    content could ever populate.
+    """
+
+    profile: str | None = None
+    policies: tuple[str, ...] = ()
+
+    def is_empty(self) -> bool:
+        """True when there is nothing to record -- the current CLI's case."""
+        return self.profile is None and not self.policies
+
 
 _PACKAGE_NAME_RE = re.compile(r"[^a-z0-9]+")
 
@@ -152,13 +243,14 @@ def legacy_library_answers(answers: Mapping[str, object]) -> dict[str, str] | No
     }
 
 
-def build_spec_payload(
+def build_spec_payload(  # noqa: PLR0913 - each keyword maps to one distinct ProjectSpec field; ~20 existing call sites already rely on archetype/capabilities/platforms staying separate rather than collapsing into one object here
     answers: Mapping[str, object],
     *,
     archetype: str,
     capabilities: Sequence[str] = (),
     platforms: Sequence[str] = (),
     component_options: Mapping[str, Mapping[str, object]] | None = None,
+    provenance: SelectionProvenance | None = None,
 ) -> dict[str, object]:
     """Build a ProjectSpec wire payload from collected CLI answers.
 
@@ -166,6 +258,16 @@ def build_spec_payload(
     caller-supplied: create-forge mints no component identifiers of its own
     (ADR 0013). Until CF-06.02 supplies them from `discover_components`,
     callers are responsible for passing values a real manifest will accept.
+    They are the *effective* selection only -- whether each kind was
+    explicitly chosen or left to a policy default is `SelectionRequest`'s job
+    upstream of this function, not this payload's; ProjectSpec has no field
+    for that distinction (docs/organisation-policy-consumption.md).
+
+    `provenance`, when given and non-empty, is emitted as
+    `ProjectSpec.provenance` -- the applied policy IDs a resolved policy
+    leaves behind, never the policy document itself. Omitted (like
+    `component_options`) when there is nothing to record, so the engine's own
+    empty default applies -- today's only caller.
 
     The same `answers` mapping produces the same payload regardless of
     whether it was collected interactively or via `--data`/config, since both
@@ -187,6 +289,12 @@ def build_spec_payload(
         payload["component_options"] = {
             component_id: dict(options)
             for component_id, options in component_options.items()
+        }
+
+    if provenance is not None and not provenance.is_empty():
+        payload["provenance"] = {
+            "profile": provenance.profile,
+            "policies": list(provenance.policies),
         }
 
     return payload

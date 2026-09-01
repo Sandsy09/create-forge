@@ -22,7 +22,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from create_forge import engine, staging
-from create_forge.spec import build_spec_payload, legacy_library_answers
+from create_forge.spec import (
+    SelectionProvenance,
+    SelectionRequest,
+    build_spec_payload,
+    legacy_library_answers,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -100,10 +105,9 @@ def _resolved_component_options(
 def build_generation_request(
     answers: Mapping[str, object],
     *,
-    archetype: str,
-    capabilities: Sequence[str] = (),
-    platforms: Sequence[str] = (),
+    selection: SelectionRequest,
     component_options: Mapping[str, Mapping[str, object]] | None = None,
+    provenance: SelectionProvenance | None = None,
 ) -> GenerationRequest:
     """Run the shared pipeline: discover -> build -> validate -> render.
 
@@ -111,15 +115,22 @@ def build_generation_request(
     they've collected the same `answers` mapping `cli._collect_answers`
     already produces today -- nothing about answer collection changes.
 
-    `archetype`/`capabilities`/`platforms` stay caller-supplied (ADR 0013):
-    this pipeline mints no component identifiers of its own. An explicit
-    `component_options` is likewise passed through unchanged; when the
-    caller supplies none, `_resolved_component_options` derives the one
-    legacy mapping this repository still owns, gated on the selected
-    archetype's own discovered descriptor rather than a hardcoded id
-    (CF-08.03, ADR 0019). `discover()`'s result is reused for exactly that
-    gate; `discover_archetypes()` is the separate, `kind`-filtered view that
-    actually drives selection, from `cli.py`.
+    This is create-forge's "construct the effective ProjectSpec" step
+    (docs/organisation-policy-consumption.md, CF-09.01, ADR 0022): a
+    policy-aware caller resolves policy immediately before calling this
+    function and passes the result as `selection`/`provenance`. `selection`
+    stays caller-supplied (ADR 0013): this pipeline mints no component
+    identifiers of its own, and today's only caller (`cli.py`) always marks
+    its archetype explicit. `provenance`, when given, is threaded straight
+    through to `build_spec_payload` -- this function resolves no policy and
+    merges nothing itself. An explicit `component_options` is likewise passed
+    through unchanged; when the caller supplies none,
+    `_resolved_component_options` derives the one legacy mapping this
+    repository still owns, gated on the selected archetype's own discovered
+    descriptor rather than a hardcoded id (CF-08.03, ADR 0019). `discover()`'s
+    result is reused for exactly that gate; `discover_archetypes()` is the
+    separate, `kind`-filtered view that actually drives selection, from
+    `cli.py`.
 
     Every downstream call (`build_project_spec`, `validate`, `render`)
     independently re-checks package/protocol compatibility before doing its
@@ -128,14 +139,15 @@ def build_generation_request(
     """
     descriptors = engine.discover()
     resolved_options = _resolved_component_options(
-        answers, archetype, component_options, descriptors
+        answers, selection.archetype, component_options, descriptors
     )
     payload = build_spec_payload(
         answers,
-        archetype=archetype,
-        capabilities=capabilities,
-        platforms=platforms,
+        archetype=selection.archetype,
+        capabilities=selection.capabilities,
+        platforms=selection.platforms,
         component_options=resolved_options,
+        provenance=provenance,
     )
     spec = engine.build_project_spec(payload)
     validated = engine.validate(spec)
