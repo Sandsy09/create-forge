@@ -232,8 +232,12 @@ FT-10.02's canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define optionless `jupyter` and `scientific-python` components. Data Science
 will hard-require Jupyter, while Scientific Python remains independently
-optional. The current engine still discovers neither capability, and this CLI
-must not hard-code their IDs or relationship.
+optional. FT-11.01 published the required Foundation extension points and
+FT-11.02 now implements Jupyter on unreleased `forge-template/main` under
+[ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
+The released `forge-template>=0.3.1,<0.4` range still discovers only Library
+and CLI Application, and this CLI must not hard-code capability IDs or
+relationships. FT-11.03 / #107 is the next Stage 11 implementation.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -362,9 +366,11 @@ Run this before any release.
   not duplicate those semantics in the registry or CLI models.
 - The canonical
   [initial Data Science capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
-  define the future Jupyter hard co-selection and independently optional
-  Scientific Python component; Stage 13 must consume their descriptors and
-  relationships generically.
+  define the Jupyter hard co-selection and independently optional Scientific
+  Python component. Jupyter exists on unreleased `forge-template/main` under
+  [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md);
+  Stage 13 must consume descriptors and relationships generically after a
+  compatible engine release.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
   ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to

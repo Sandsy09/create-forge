@@ -157,7 +157,10 @@ define `jupyter` as Data Science's explicit hard co-selection and
 `scientific-python` as independently optional. A future effective ProjectSpec
 must serialize every selected capability, including requirements, rather than
 rely on the engine to add one. Discovery remains the source of those IDs and
-relationships; the current two-archetype engine exposes neither capability.
+relationships. Jupyter now exists on unreleased `forge-template/main` under
+[ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
+but the current released `forge-template>=0.3.1,<0.4` range exposes neither
+capability and ProjectSpec construction remains unchanged.
 
 ## Derivation rules
 

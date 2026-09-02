@@ -96,6 +96,11 @@ The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 likewise keep Jupyter requirements and Scientific Python selection engine-
 owned until generic capability selection is implemented in Stage 13.
+FT-11.01 and FT-11.02 are complete: the source engine now publishes the
+required Foundation points and Jupyter component under [forge-template ADR
+0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
+The released CLI range still discovers only Library and CLI Application;
+do not hard-code Jupyter while that range remains unchanged.
 
 ## What CI runs
 

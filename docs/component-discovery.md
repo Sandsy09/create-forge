@@ -74,12 +74,19 @@ option rule into its own schema. It builds an explicit ProjectSpec and calls
 `forge_template.validate_project_spec`; that engine result remains
 authoritative.
 
-The future [Data Science capability
+The [Data Science capability
 contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 provide the first production use of this boundary. The `data-science`
 descriptor will require `jupyter>=1,<2`, while `scientific-python` remains an
 independently optional descriptor. Stage 13 must guide users from these public
 relationships without embedding either ID or rule in the CLI.
+
+FT-11.02 implements Jupyter in the unreleased source catalogue under
+[forge-template ADR
+0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
+The current released `forge-template>=0.3.1,<0.4` range still returns only
+`cli` and `library`; create-forge's discovery behaviour and compatibility
+range do not change until the Stage 12 release.
 
 ## Failures and trust boundary
 
