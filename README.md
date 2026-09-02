@@ -218,7 +218,10 @@ fork internally, as v0.1.x always supported. See the
 [integration contract](docs/integration-contract.md) for the full boundary.
 
 The [accepted Data Science shape](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
-is an independent, package-backed, notebook-oriented third archetype. Its
+is an independent, package-backed, notebook-oriented third archetype. The
+[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+define its required reusable Jupyter tooling and independently optional
+Scientific Python stack. Its
 [Data Science roadmap](docs/roadmap-v2/README.md) plans reusable optional
 capabilities, discovery-driven preview UX, and cross-repository validation
 through Stages 10–14.

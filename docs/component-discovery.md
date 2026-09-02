@@ -74,6 +74,13 @@ option rule into its own schema. It builds an explicit ProjectSpec and calls
 `forge_template.validate_project_spec`; that engine result remains
 authoritative.
 
+The future [Data Science capability
+contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+provide the first production use of this boundary. The `data-science`
+descriptor will require `jupyter>=1,<2`, while `scientific-python` remains an
+independently optional descriptor. Stage 13 must guide users from these public
+relationships without embedding either ID or rule in the CLI.
+
 ## Failures and trust boundary
 
 Expected catalogue failures remain structured `ForgeEngineError` values from

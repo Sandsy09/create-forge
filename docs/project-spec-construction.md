@@ -151,6 +151,14 @@ When a later release exposes it, create-forge must discover the descriptor and
 construct its ProjectSpec generically rather than hard-code its ID, paths,
 capability requirements, or generated content.
 
+The canonical
+[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+define `jupyter` as Data Science's explicit hard co-selection and
+`scientific-python` as independently optional. A future effective ProjectSpec
+must serialize every selected capability, including requirements, rather than
+rely on the engine to add one. Discovery remains the source of those IDs and
+relationships; the current two-archetype engine exposes neither capability.
+
 ## Derivation rules
 
 ProjectSpec requires `package_name` and `repository_name`; the engine never
