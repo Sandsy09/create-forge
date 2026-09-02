@@ -214,13 +214,20 @@ The two-repository Stage 08 implementation is complete.
 
 The completed Foundation roadmap remains under `docs/roadmap-v1`. The live
 [Data Science roadmap](docs/roadmap-v2/README.md) continues through Stages
-10–14 with six epics only. forge-template owns the package-backed,
-notebook-oriented third archetype, reusable capabilities, and engine review;
+10–14 with six epics and 24 filed child issues. forge-template owns the
+package-backed, notebook-oriented third archetype, reusable capabilities, and
+engine review;
 create-forge owns generic capability selection behind `--engine-preview` and
 the final client E2E rollout. Completed #91 is a native predecessor of
 CF-EPIC-13 because descriptor-driven option prompting is required. All 24
 child issues are filed and attached; do not recreate component metadata or
 make the engine path the default during roadmap work.
+FT-10.01's canonical
+[Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
+now fixes an optionless package, test, starter-notebook, ignored working-tree,
+and ownership shape. It is not part of the current engine line; create-forge
+must not hard-code its ID, paths, or component rules before discovery exposes
+it.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do

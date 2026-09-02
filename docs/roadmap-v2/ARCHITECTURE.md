@@ -23,11 +23,16 @@ create-forge staging, uv lock, atomic finalisation
 
 ## Accepted direction
 
-- Data Science is a package-backed, notebook-oriented archetype.
+- The canonical
+  [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
+  defines an optionless, package-backed, notebook-oriented archetype with
+  independently owned package, test, notebook, and ignored working-tree paths.
 - Reusable optional concerns become capabilities rather than Foundation
   defaults or duplicated archetype content.
-- Stage 10 decides the minimal useful shape and the exact owner of notebook,
-  scientific, data, and model concerns.
+- FT-10.01 fixes the minimal shape: the archetype owns the starter notebook
+  and working-tree conventions, while reusable capabilities own notebook
+  tooling and the optional scientific stack. Later Stage 10 decisions define
+  those capability contracts, safeguards, and compatibility impact.
 - Capabilities remain bundled, reviewed forge-template components. This
   roadmap does not introduce plugins or remote component registries.
 - create-forge consumes public descriptors and never recreates component

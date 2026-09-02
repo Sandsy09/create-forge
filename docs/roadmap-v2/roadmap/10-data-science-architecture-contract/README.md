@@ -14,6 +14,8 @@ engine and client baseline.
 ## Child sequence
 
 1. [FT-10.01 / #101](https://github.com/Sandsy09/forge-template/issues/101)
+   is complete: the canonical
+   [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
    defines the fixed package-plus-notebooks shape and ownership.
 2. [FT-10.02 / #102](https://github.com/Sandsy09/forge-template/issues/102)
    defines the optionless `jupyter` and `scientific-python` capability
@@ -24,8 +26,8 @@ engine and client baseline.
    fixes compatibility, acceptance, and `forge-template` 0.4.0 release
    requirements.
 
-Each child is blocked by the preceding item. FT-10.01 is the roadmap's only
-initially actionable child.
+Each child is blocked by the preceding item. With FT-10.01 complete, FT-10.02
+is the next actionable decision.
 
 ## Entry criteria
 
