@@ -27,8 +27,8 @@ See the [architecture](ARCHITECTURE.md),
 
 ## Live GitHub work
 
-Only six epics are filed. Child issues are intentionally deferred until each
-epic is planned in turn:
+Six epics and 24 child issues are filed across the two repositories. GitHub
+issue bodies and native parent/dependency relationships are authoritative:
 
 - [forge-template epic index](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v2/github-issues/forge-template/ISSUE-INDEX.md)
 - [create-forge epic index](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v2/github-issues/create-forge/ISSUE-INDEX.md)

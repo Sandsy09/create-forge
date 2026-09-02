@@ -11,6 +11,22 @@ This epic has no open native blocker. The roadmap begins only after completed
 `create-forge#91` and the completed Foundation roadmap provide its accepted
 engine and client baseline.
 
+## Child sequence
+
+1. [FT-10.01 / #101](https://github.com/Sandsy09/forge-template/issues/101)
+   defines the fixed package-plus-notebooks shape and ownership.
+2. [FT-10.02 / #102](https://github.com/Sandsy09/forge-template/issues/102)
+   defines the optionless `jupyter` and `scientific-python` capability
+   contracts and bounded dependency lines.
+3. [FT-10.03 / #103](https://github.com/Sandsy09/forge-template/issues/103)
+   defines notebook, data, model, secret, and generated-artefact safeguards.
+4. [FT-10.04 / #104](https://github.com/Sandsy09/forge-template/issues/104)
+   fixes compatibility, acceptance, and `forge-template` 0.4.0 release
+   requirements.
+
+Each child is blocked by the preceding item. FT-10.01 is the roadmap's only
+initially actionable child.
+
 ## Entry criteria
 
 - Forge Foundation Stages 00–09 are complete.
@@ -32,8 +48,8 @@ engine and client baseline.
 
 ## Exit criteria
 
-A canonical living contract and accepted ADR make the next epic's capability
-boundary decision-complete. Its child issues are then triaged and filed.
+The four accepted decisions make the shape, capability boundaries,
+safeguards, compatibility impact, and acceptance strategy implementation-ready.
 
 ## Non-goals
 

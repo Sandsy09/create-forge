@@ -220,8 +220,9 @@ fork internally, as v0.1.x always supported. See the
 The [Data Science roadmap](docs/roadmap-v2/README.md) plans Stages 10–14: a
 package-backed, notebook-oriented third archetype, reusable optional
 capabilities, discovery-driven preview UX, and cross-repository validation.
-Only epics are filed initially; exact tools and child issues are decided one
-epic at a time. The default Copier path remains unchanged.
+All 24 child issues are filed and attached across both repositories; GitHub
+issue bodies and native relationships are authoritative. The default Copier
+path remains unchanged.
 
 ## Contributing
 

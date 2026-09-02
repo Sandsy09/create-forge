@@ -33,7 +33,9 @@ composition can be presented generically.
 
 ## Delivery rules
 
-- Each epic is planned before its child issues are filed.
+- All 24 child issues are filed and attached to their native epics.
+- Implement children in dependency order without reopening accepted Stage 10
+  decisions in downstream delivery work.
 - Child issues live in the repository that owns their implementation.
 - Native GitHub `blocked by` relationships are authoritative.
 - Provider changes merge and release from forge-template before create-forge
