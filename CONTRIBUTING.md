@@ -88,6 +88,10 @@ The [Data Science roadmap](docs/roadmap-v2/README.md) continues the completed
 Foundation roadmap through Stages 10–14. create-forge owns its Stage 13
 discovery-driven preview integration and the Stage 14 end-to-end client
 rollout; component contracts and generated content remain in forge-template.
+The canonical
+[Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
+fixes the future shape and ownership boundary; create-forge must consume it
+through discovery rather than reproduce its component semantics.
 
 ## What CI runs
 

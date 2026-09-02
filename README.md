@@ -217,9 +217,11 @@ engine — point the bundled registry at your own templates and maintain the
 fork internally, as v0.1.x always supported. See the
 [integration contract](docs/integration-contract.md) for the full boundary.
 
-The [Data Science roadmap](docs/roadmap-v2/README.md) plans Stages 10–14: a
-package-backed, notebook-oriented third archetype, reusable optional
-capabilities, discovery-driven preview UX, and cross-repository validation.
+The [accepted Data Science shape](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
+is an independent, package-backed, notebook-oriented third archetype. Its
+[Data Science roadmap](docs/roadmap-v2/README.md) plans reusable optional
+capabilities, discovery-driven preview UX, and cross-repository validation
+through Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier
 path remains unchanged.

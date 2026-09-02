@@ -142,6 +142,15 @@ a duplicate `command_name` field or recreate CLI component metadata in its own
 models or registry — `--archetype cli` therefore never derives
 `component_options` for it.
 
+The future
+[Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
+assigns the engine-owned ID `data-science`, declares no archetype options, and
+keeps packaging, version, notebook, and working-tree semantics with
+`forge-template`. It is not present in the currently supported engine line.
+When a later release exposes it, create-forge must discover the descriptor and
+construct its ProjectSpec generically rather than hard-code its ID, paths,
+capability requirements, or generated content.
+
 ## Derivation rules
 
 ProjectSpec requires `package_name` and `repository_name`; the engine never

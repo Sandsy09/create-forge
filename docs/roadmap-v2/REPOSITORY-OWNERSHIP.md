@@ -11,7 +11,10 @@ runtime operation.
 
 ## forge-template owns
 
-- the canonical Data Science archetype contract;
+- the canonical
+  [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md),
+  including its independently owned package, test, notebook, metadata, README,
+  and ignored working-tree concerns;
 - Foundation/archetype/capability/platform classification;
 - package-bound capability and archetype manifests and content;
 - component compatibility, dependencies, conflicts, options, and extension
@@ -37,7 +40,7 @@ runtime operation.
 - Foundation does not gain notebook, scientific, data, model, or deployment
   dependencies.
 - create-forge does not gain copied templates, a component catalogue, or
-  archetype-specific rendering logic.
+  archetype-specific rendering logic, paths, or hard-coded component IDs.
 - No client or policy may load private catalogue roots or replace arbitrary
   files.
 - Engine preview remains opt-in; the default Copier cutover is unscheduled.
