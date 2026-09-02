@@ -228,6 +228,12 @@ now fixes an optionless package, test, starter-notebook, ignored working-tree,
 and ownership shape. It is not part of the current engine line; create-forge
 must not hard-code its ID, paths, or component rules before discovery exposes
 it.
+FT-10.02's canonical
+[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+define optionless `jupyter` and `scientific-python` components. Data Science
+will hard-require Jupyter, while Scientific Python remains independently
+optional. The current engine still discovers neither capability, and this CLI
+must not hard-code their IDs or relationship.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -354,6 +360,11 @@ Run this before any release.
   --archetype cli` since CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
   and derives its console name from `ProjectSpec.project.repository_name`; do
   not duplicate those semantics in the registry or CLI models.
+- The canonical
+  [initial Data Science capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+  define the future Jupyter hard co-selection and independently optional
+  Scientific Python component; Stage 13 must consume their descriptors and
+  relationships generically.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
   ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to

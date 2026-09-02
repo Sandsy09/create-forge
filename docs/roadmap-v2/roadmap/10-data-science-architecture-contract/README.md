@@ -18,15 +18,17 @@ engine and client baseline.
    [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
    defines the fixed package-plus-notebooks shape and ownership.
 2. [FT-10.02 / #102](https://github.com/Sandsy09/forge-template/issues/102)
-   defines the optionless `jupyter` and `scientific-python` capability
-   contracts and bounded dependency lines.
+   is complete: the canonical
+   [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+   define optionless `jupyter` and `scientific-python` components and bounded
+   dependency lines.
 3. [FT-10.03 / #103](https://github.com/Sandsy09/forge-template/issues/103)
    defines notebook, data, model, secret, and generated-artefact safeguards.
 4. [FT-10.04 / #104](https://github.com/Sandsy09/forge-template/issues/104)
    fixes compatibility, acceptance, and `forge-template` 0.4.0 release
    requirements.
 
-Each child is blocked by the preceding item. With FT-10.01 complete, FT-10.02
+Each child is blocked by the preceding item. With FT-10.02 complete, FT-10.03
 is the next actionable decision.
 
 ## Entry criteria

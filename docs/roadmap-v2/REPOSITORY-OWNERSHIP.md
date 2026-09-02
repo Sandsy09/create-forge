@@ -15,6 +15,10 @@ runtime operation.
   [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md),
   including its independently owned package, test, notebook, metadata, README,
   and ignored working-tree concerns;
+- the canonical
+  [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md),
+  including Jupyter's development tooling and Scientific Python's optional
+  runtime dependency stack;
 - Foundation/archetype/capability/platform classification;
 - package-bound capability and archetype manifests and content;
 - component compatibility, dependencies, conflicts, options, and extension

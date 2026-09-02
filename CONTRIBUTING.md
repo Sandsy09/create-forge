@@ -92,6 +92,10 @@ The canonical
 [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 fixes the future shape and ownership boundary; create-forge must consume it
 through discovery rather than reproduce its component semantics.
+The canonical
+[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
+likewise keep Jupyter requirements and Scientific Python selection engine-
+owned until generic capability selection is implemented in Stage 13.
 
 ## What CI runs
 
