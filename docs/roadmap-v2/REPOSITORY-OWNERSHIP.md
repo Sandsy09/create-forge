@@ -22,6 +22,9 @@ runtime operation.
 - the production Jupyter manifest, generated validator, development
   dependencies, tasks, and Foundation contributions implemented by FT-11.02
   on unreleased `forge-template/main`;
+- the production Scientific Python manifest, runtime dependencies, generated
+  import test, and guidance implemented by FT-11.03 on unreleased
+  `forge-template/main`;
 - Foundation/archetype/capability/platform classification;
 - package-bound capability and archetype manifests and content;
 - component compatibility, dependencies, conflicts, options, and extension

@@ -232,12 +232,14 @@ FT-10.02's canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define optionless `jupyter` and `scientific-python` components. Data Science
 will hard-require Jupyter, while Scientific Python remains independently
-optional. FT-11.01 published the required Foundation extension points and
-FT-11.02 now implements Jupyter on unreleased `forge-template/main` under
-[ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
+optional. FT-11.01 published the required Foundation extension points,
+FT-11.02 implements Jupyter on unreleased `forge-template/main` under
+[ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
+and FT-11.03 implements Scientific Python under [ADR
+0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
 The released `forge-template>=0.3.1,<0.4` range still discovers only Library
 and CLI Application, and this CLI must not hard-code capability IDs or
-relationships. FT-11.03 / #107 is the next Stage 11 implementation.
+relationships. FT-11.04 / #108 is the final Stage 11 validation issue.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
