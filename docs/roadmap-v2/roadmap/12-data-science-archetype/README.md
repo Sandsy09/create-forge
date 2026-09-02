@@ -9,6 +9,20 @@ adds the third production archetype and publishes a consumable engine release.
 
 FT-EPIC-12 is natively blocked by FT-EPIC-11.
 
+## Child sequence
+
+1. [FT-12.01 / #109](https://github.com/Sandsy09/forge-template/issues/109)
+   implements the independent `data-science` archetype with its hard Jupyter
+   requirement.
+2. [FT-12.02 / #110](https://github.com/Sandsy09/forge-template/issues/110)
+   adds its clean starter notebook and documented data/model/artefact layout.
+3. [FT-12.03 / #111](https://github.com/Sandsy09/forge-template/issues/111)
+   validates supported compositions and all three archetype regressions.
+4. [FT-12.04 / #112](https://github.com/Sandsy09/forge-template/issues/112)
+   publishes and verifies the `forge-template` 0.4.0 compatibility line.
+
+The four children form a strict sequence beginning after FT-11.04.
+
 ## Entry criteria
 
 - Stage 11 capabilities are production-ready.

@@ -12,6 +12,29 @@
 FT-EPIC-14 is natively blocked by CF-EPIC-13. CF-EPIC-14 is natively blocked
 by FT-EPIC-14, enforcing provider review and release before client adoption.
 
+## Child sequence
+
+forge-template completes provider review first:
+
+1. [FT-14.01 / #113](https://github.com/Sandsy09/forge-template/issues/113)
+   reviews and corrects three-archetype composition boundaries after CF-13.05.
+2. [FT-14.02 / #114](https://github.com/Sandsy09/forge-template/issues/114)
+   runs cross-repository compatibility validation against both main branches.
+3. [FT-14.03 / #115](https://github.com/Sandsy09/forge-template/issues/115)
+   publishes and verifies the reviewed `forge-template` 0.4.1 release.
+
+create-forge then completes client rollout:
+
+1. [CF-14.01 / create-forge#111](https://github.com/Sandsy09/create-forge/issues/111)
+   adopts the reviewed 0.4.1 engine release.
+2. [CF-14.02 / create-forge#112](https://github.com/Sandsy09/create-forge/issues/112)
+   runs installed-console Data Science end-to-end validation.
+3. [CF-14.03 / create-forge#113](https://github.com/Sandsy09/create-forge/issues/113)
+   completes existing-path regressions and failure validation in parallel with
+   CF-14.02.
+4. [CF-14.04 / create-forge#114](https://github.com/Sandsy09/create-forge/issues/114)
+   publishes create-forge 0.3.0 and completes roadmap v2.
+
 ## Entry criteria
 
 - create-forge Stage 13 exercises the full Data Science composition.
@@ -32,7 +55,7 @@ by FT-EPIC-14, enforcing provider review and release before client adoption.
 ## Exit criteria
 
 The released client and engine pair supports Data Science behind
-`--engine-preview`, all epics and their later children are complete, and the
+`--engine-preview`, all epics and their children are complete, and the
 cross-repository graph and documentation describe the shipped state.
 
 ## Non-goals

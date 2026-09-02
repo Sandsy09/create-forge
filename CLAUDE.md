@@ -218,8 +218,8 @@ The completed Foundation roadmap remains under `docs/roadmap-v1`. The live
 notebook-oriented third archetype, reusable capabilities, and engine review;
 create-forge owns generic capability selection behind `--engine-preview` and
 the final client E2E rollout. Completed #91 is a native predecessor of
-CF-EPIC-13 because descriptor-driven option prompting is required. Plan and
-attach child issues one epic at a time; do not recreate component metadata or
+CF-EPIC-13 because descriptor-driven option prompting is required. All 24
+child issues are filed and attached; do not recreate component metadata or
 make the engine path the default during roadmap work.
 
 That target does not describe the current v0.1.x code. Until the coordinated
