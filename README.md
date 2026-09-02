@@ -221,7 +221,11 @@ The [accepted Data Science shape](https://github.com/Sandsy09/forge-template/blo
 is an independent, package-backed, notebook-oriented third archetype. The
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define its required reusable Jupyter tooling and independently optional
-Scientific Python stack. Its
+Scientific Python stack. FT-11.02 now implements Jupyter on unreleased
+`forge-template/main` under [ADR
+0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
+without changing create-forge's released `forge-template>=0.3.1,<0.4` range
+or two-archetype discovery. Its
 [Data Science roadmap](docs/roadmap-v2/README.md) plans reusable optional
 capabilities, discovery-driven preview UX, and cross-repository validation
 through Stages 10–14.
