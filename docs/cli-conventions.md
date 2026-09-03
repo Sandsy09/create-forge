@@ -51,6 +51,12 @@ Prompting is omitted only when the answer or decision is already explicit:
   satisfied.
 - Questions intentionally absent from the CLI prompt catalogue are left to
   template defaults.
+- On `--engine-preview`, an explicit `--capability`/`--no-capabilities` (or the
+  platform pair) suppresses that kind's selection prompt, and a
+  `--component-option` preset suppresses that option's prompt — see the
+  canonical [component selection contract](component-selection.md).
+- On `--engine-preview`, a component kind with no discovered descriptors is
+  never prompted.
 
 The current `--template-url` escape hatch always prints its code-execution
 warning. It asks for confirmation unless `--yes` was supplied. This behavior
@@ -152,6 +158,26 @@ explicit choice, but that fact affects no user-visible behaviour of `new`
 itself. See the canonical
 [downstream policy-consumption contract](organisation-policy-consumption.md).
 
+## Component selection
+
+The canonical [component selection contract](component-selection.md) defines
+how `--engine-preview` turns flags and prompts into a ProjectSpec's
+`components` and `component_options`: `--capability`/`--platform` (repeatable),
+`--no-capabilities`/`--no-platforms`, and
+`--component-option ID.OPTION=VALUE`. All five are hidden and
+`--engine-preview`-only, rejected with exit `1` otherwise, exactly as
+`--archetype` is. It is a contract ahead of its implementation — CF-13.03 and
+CF-13.04 build the flags and prompts against it, CF-13.05 proves the pipeline.
+
+For this document's purposes: a malformed `--component-option` (missing `.` or
+`=`) is a `typer.BadParameter` usage rejection, exit `2`, like a malformed
+`--data`. Every other selection failure `create-forge` raises itself — a flag
+without `--engine-preview`, a contradictory `--capability`/`--no-capabilities`
+pair, an unknown or wrong-kind component id, an option for an unselected
+component — is exit `1`. Cancelling a selection prompt is exit `130` with
+nothing written. Missing requirements, conflicts, and invalid option values
+stay engine-owned and are translated through `engine.explain`.
+
 ## Update dry runs
 
 `update --dry-run` validates a Copier update without applying it to the target
@@ -194,8 +220,8 @@ for the full staging, finalisation, and cleanup rules ADR 0015 introduces.
 | Status | Meaning | Examples |
 | --- | --- | --- |
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
-| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, or a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)). |
-| `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, or malformed `--data` without `key=value`. |
+| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)), or an `--engine-preview` selection `create-forge` rejects itself — a selection flag without `--engine-preview`, a contradictory `--capability`/`--no-capabilities` pair, an unknown or wrong-kind component id, or an option for an unselected component ([component selection contract](component-selection.md)). |
+| `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, malformed `--data` without `key=value`, or a malformed `--component-option` without `ID.OPTION=VALUE`. |
 | `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md)) — the default `new` path is still v0.1.x direct-Copier and cannot produce it. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
@@ -297,6 +323,12 @@ The contract is characterized by these tests:
   update against a local two-tag template, including the dry-run no-change
   guarantee followed by a successful real update, plus a missing-source failure
   that leaves the project and Git state unchanged.
+- The `--engine-preview` component-selection surface is its own canonical
+  [component selection contract](component-selection.md), characterized by
+  `tests/test_engine_cross_repository.py`'s
+  `test_selection_model_matches_the_documented_contract` today and by the
+  CF-13.03 / CF-13.04 `tests/test_cli.py` and `tests/test_prompts.py` cases
+  once they land.
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.

@@ -28,6 +28,7 @@ FILESYSTEM_GENERATION = REPO_ROOT / "docs" / "filesystem-generation.md"
 END_TO_END_TESTS = REPO_ROOT / "docs" / "end-to-end-tests.md"
 DOWNSTREAM_CLIENT_REFERENCE = REPO_ROOT / "docs" / "downstream-client-reference.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
+COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
@@ -245,6 +246,22 @@ def test_downstream_client_reference_is_linked_from_canonical_entry_points() -> 
         )
 
     assert DOWNSTREAM_CLIENT_REFERENCE.is_file()
+
+
+def test_component_selection_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-13.02's living component-selection contract (ADR 0027) must remain
+    discoverable wherever contributors enter the CLI and engine integration
+    documentation, mirroring the equivalent guards above. It is a CLI-surface
+    contract, so its third entry point is cli-conventions.md rather than
+    integration-contract.md.
+    """
+    link_re = re.compile(r"\([^)]*component-selection\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link component-selection.md"
+
+    assert COMPONENT_SELECTION.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

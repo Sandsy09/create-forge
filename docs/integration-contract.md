@@ -76,8 +76,12 @@ the public facade and protocol tuples. Its
 was the provider hand-off;
 [CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
 ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted the
-range and reran the executable contract against it. Discovering and selecting
-the Data Science components is CF-13.02–13.04; the pipeline proof is CF-13.05.
+range and reran the executable contract against it. CF-13.02
+([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
+component-selection CLI conventions in the canonical
+[component selection contract](component-selection.md); implementing that
+discovery-driven selection is CF-13.03–13.04, and the pipeline proof is
+CF-13.05.
 
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs

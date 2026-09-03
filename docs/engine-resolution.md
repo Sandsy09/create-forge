@@ -51,8 +51,11 @@ is empty, so the move changed no protocol. `create-forge 0.2.1` adds
 engine-generated project's lock before finalisation.
 
 Adopting the 0.4 line makes the Data Science components discoverable through
-`--engine-preview`. Selecting them — capabilities, platforms, component
-options — is CF-13.02–13.04; the pipeline proof is CF-13.05. Normal
+`--engine-preview`. CF-13.02
+([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
+conventions for selecting them — capabilities, platforms, component options —
+in the canonical [component selection contract](component-selection.md);
+CF-13.03–13.04 implement it and CF-13.05 proves the pipeline. Normal
 resolution now rejects any `0.3.x` engine, and every `0.4.x` release inside
 the range is adopted per the canonical [engine update policy](engine-updates.md).
 

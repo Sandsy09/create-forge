@@ -29,8 +29,11 @@ optionless `cli` archetype; the 0.4 line also adds capability-kind
 descriptors and a catalogue relationship, which discovery returns unchanged.
 `pipeline.discover_archetypes()` filters the result to `kind == "archetype"`
 for `--engine-preview`'s `--archetype` option and interactive prompt
-(`prompts.choose_archetype`); selecting non-archetype descriptors is
-CF-13.02–13.04. This document still covers only the adapter
+(`prompts.choose_archetype`). CF-13.02
+([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
+conventions for selecting non-archetype descriptors in the canonical
+[component selection contract](component-selection.md); CF-13.03–13.04
+implement them. This document still covers only the adapter
 `engine.discover()` itself, not that selection layer.
 
 ## Compatibility before catalogue access
@@ -96,7 +99,10 @@ with its [published validation evidence](https://github.com/Sandsy09/forge-templ
 ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) moved the
 create-forge range to `forge-template>=0.4,<0.5`, so `engine.discover()` now
 returns all five descriptors. This adapter still returns them unchanged;
-grouping them by kind and resolving relationships is CF-13.02–13.04.
+grouping them by kind and resolving relationships follows the canonical
+[component selection contract](component-selection.md) (CF-13.02,
+[ADR 0027](adr/0027-generic-component-selection-conventions.md)) and is
+implemented by CF-13.03–13.04.
 
 ## Failures and trust boundary
 
@@ -143,6 +149,10 @@ engine internals to obtain them.
   moved the range to `forge-template>=0.4,<0.5`, so `engine.discover()`
   returns the 0.4 line's five descriptors; the adapter's pass-through and
   no-fallback trust boundary are unchanged.
+- **CF-13.02** ([ADR 0027](adr/0027-generic-component-selection-conventions.md))
+  fixed how a client turns those descriptors into a selection — the canonical
+  [component selection contract](component-selection.md). Discovery itself is
+  unchanged; the selection layer it feeds is CF-13.03–13.04.
 
 ## Executable examples
 

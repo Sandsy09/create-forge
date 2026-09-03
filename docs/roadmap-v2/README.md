@@ -20,8 +20,9 @@ published as
 on [PyPI](https://pypi.org/project/forge-template/0.4.0/). Stage 13 is
 underway: CF-13.01 (ADR 0026) adopted the `forge-template>=0.4,<0.5`
 compatibility line, so `--engine-preview` discovery now returns all five
-descriptors; CF-13.02–13.05 build selection, option prompting, and pipeline
-validation on top.
+descriptors, and CF-13.02 (ADR 0027) fixed the generic component-selection
+CLI conventions. CF-13.03–13.05 implement selection, option prompting, and
+pipeline validation on top.
 
 ## Repository roles
 

@@ -115,10 +115,10 @@ Deliberately, as of this hook:
 
 This is a considered decision, not an unfinished slice of CF-09.01. A
 resolver living in `create-forge` would duplicate catalogue validation the
-engine already performs, could exercise no real capability/platform rule
-against any component in the current production catalogue (which ships only
-`library` and `cli`), and would compete with the shared validation semantics
-`forge-template` states it intends to own. Building one here is exactly what
+engine already performs — including the archetype-to-capability requirement
+the `>=0.4,<0.5` line's catalogue now declares (ADR 0026) — and would compete
+with the shared validation semantics `forge-template` states it intends to
+own. Building one here is exactly what
 [#53](https://github.com/Sandsy09/create-forge/issues/53)'s own final
 acceptance criterion and
 [#55](https://github.com/Sandsy09/create-forge/issues/55) forbid: "no
