@@ -64,6 +64,15 @@ starts at `0.3.1`; contract tests resolve and exercise the current compatible
 release without changing ProjectSpec protocol `1` or component-manifest
 protocols `(1, 2)`.
 
+The provider has published the next compatibility line as
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/). It adds the
+`data-science`, `jupyter`, and `scientific-python` descriptors while preserving
+the public facade and protocol tuples. Its
+[release validation](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)
+is the provider hand-off, not an implicit client upgrade: create-forge remains
+on `>=0.3.1,<0.4` until CF-13.01 updates the range and executable contract.
+
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs
 `uv lock --directory <staging-directory>` before the atomic rename. The lock

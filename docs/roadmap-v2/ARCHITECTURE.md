@@ -34,10 +34,14 @@ create-forge staging, uv lock, atomic finalisation
   [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
   define reusable Jupyter development tooling and the independently optional
   Scientific Python runtime stack. Stage 10 subsequently fixed safeguards and
-  compatibility. FT-11.01 published the additive Foundation points, FT-11.02
-  implements Jupyter, and FT-11.03 implements Scientific Python on unreleased
-  `forge-template/main`; the released create-forge range remains on the
-  two-archetype `0.3.x` line.
+  compatibility. FT-11.01 published the additive Foundation points; FT-11.02
+  and FT-11.03 implemented Jupyter and Scientific Python; and FT-11.04
+  completed their production composition validation. Stage 12 added and
+  validated the independent Data Science archetype and published the complete
+  catalogue as
+  [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0).
+  The provider line is available, while create-forge deliberately remains on
+  the two-archetype `>=0.3.1,<0.4` line until CF-13.01.
 - Capabilities remain bundled, reviewed forge-template components. This
   roadmap does not introduce plugins or remote component registries.
 - create-forge consumes public descriptors and never recreates component

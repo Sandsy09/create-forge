@@ -21,10 +21,11 @@ runtime operation.
   runtime dependency stack;
 - the production Jupyter manifest, generated validator, development
   dependencies, tasks, and Foundation contributions implemented by FT-11.02
-  on unreleased `forge-template/main`;
+  and published in `forge-template 0.4.0`;
 - the production Scientific Python manifest, runtime dependencies, generated
-  import test, and guidance implemented by FT-11.03 on unreleased
-  `forge-template/main`;
+  import test, and guidance implemented by FT-11.03 and published in `0.4.0`;
+- the production Data Science manifest, package, tests, starter notebook,
+  working-tree guidance, and Foundation contributions published in `0.4.0`;
 - Foundation/archetype/capability/platform classification;
 - package-bound capability and archetype manifests and content;
 - component compatibility, dependencies, conflicts, options, and extension

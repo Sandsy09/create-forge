@@ -45,6 +45,13 @@ still a future, unfiled decision.
 client can create the engine-generated project's lock before finalisation;
 the supported engine range and protocol diagnostics remain unchanged.
 
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+is now available from [PyPI](https://pypi.org/project/forge-template/0.4.0/)
+as the five-component Data Science provider release. It is not selected by the
+current range: CF-13.01 owns the deliberate move to `>=0.4,<0.5`, lock refresh,
+diagnostics, and cross-repository contract validation. Normal resolution must
+continue to reject `0.4.0` until that change merges.
+
 ## Normal installed resolution
 
 `create-forge[engine]` depends on the engine package the same way it depends

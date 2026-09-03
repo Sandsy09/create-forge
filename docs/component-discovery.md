@@ -77,18 +77,21 @@ authoritative.
 The [Data Science capability
 contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 provide the first production use of this boundary. The `data-science`
-descriptor will require `jupyter>=1,<2`, while `scientific-python` remains an
+descriptor requires `jupyter>=1,<2`, while `scientific-python` remains an
 independently optional descriptor. Stage 13 must guide users from these public
 relationships without embedding either ID or rule in the CLI.
 
-FT-11.02 implements Jupyter in the unreleased source catalogue under
+FT-11.02 implements Jupyter under
 [forge-template ADR
 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
 FT-11.03 implements Scientific Python under [forge-template ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-The current released `forge-template>=0.3.1,<0.4` range still returns only
-`cli` and `library`; create-forge's discovery behaviour and compatibility
-range do not change until the Stage 12 release.
+FT-11.04 completed their production composition validation, and Stage 12 added
+and validated the Data Science archetype. The complete catalogue is available
+in [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0),
+with its [published validation evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification).
+The current create-forge range remains `forge-template>=0.3.1,<0.4` and still
+returns only `cli` and `library`; CF-13.01 owns the compatibility-range change.
 
 ## Failures and trust boundary
 
