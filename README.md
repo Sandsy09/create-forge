@@ -167,9 +167,11 @@ The engine now also defines in-memory
 ([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
 before rendered output is returned; `render_project` already calls it before
 `--engine-preview` receives a result.
-This repository now depends on a real, released `forge-template` range —
-`>=0.3.1,<0.4`, published to PyPI with `uv>=0.12,<0.13` as the optional
-`engine` extra
+This repository depends on a real, released `forge-template` range —
+`>=0.4,<0.5`
+([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it
+from the first assigned `>=0.3.1,<0.4`), published to PyPI with
+`uv>=0.12,<0.13` as the optional `engine` extra
 (`pip install 'create-forge[engine]'`; [#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) —
 rather than a development-only pin. That range is reachable only behind
@@ -231,13 +233,14 @@ is published as
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 on [PyPI](https://pypi.org/project/forge-template/0.4.0/); its
 [published acceptance evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)
-is the immutable provider hand-off to Stage 13. Create-forge still supports
-`forge-template>=0.3.1,<0.4`, so its released engine-preview path continues to
-discover only Library and CLI Application until CF-13.01 deliberately adopts
-the `0.4.x` line. Its
-[Data Science roadmap](docs/roadmap-v2/README.md) plans reusable optional
-capabilities, discovery-driven preview UX, and cross-repository validation
-through Stages 10–14.
+was the immutable provider hand-off to Stage 13.
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted
+`forge-template>=0.4,<0.5`, so the engine-preview path now discovers all five
+components; selecting the new capabilities and platforms is the rest of the
+[Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
+optional capabilities, discovery-driven preview UX, and cross-repository
+validation through Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier
 path remains unchanged.

@@ -33,8 +33,9 @@ composition can be presented generically.
 
 Stages 10, 11, and 12 are complete. The published and verified
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-provider release makes CF-EPIC-13 and CF-13.01 actionable. Create-forge's
-supported range remains `>=0.3.1,<0.4` until CF-13.01 performs that adoption.
+provider release made CF-EPIC-13 actionable, and CF-13.01 (ADR 0026) has
+performed the adoption: create-forge's supported range is now `>=0.4,<0.5`.
+CF-13.02–13.05 remain.
 
 ## Delivery rules
 

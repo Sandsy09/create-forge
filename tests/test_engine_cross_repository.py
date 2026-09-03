@@ -1,7 +1,7 @@
 """Executable create-forge/forge-template engine contract (ADR 0018).
 
-The normal suite exercises the released `forge-template>=0.3.1,<0.4` range
-resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
+The normal suite exercises the released `forge-template>=0.4,<0.5` range
+(ADR 0026) resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
 ``docs/cross-repository-workflow.md`` installs both working trees in
 isolation and runs this same file against pending local changes without
 exposing forge-template's private fixture-catalogue seam.
@@ -9,6 +9,7 @@ exposing forge-template's private fixture-catalogue seam.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import pytest
@@ -49,7 +50,7 @@ def _spec() -> ProjectSpec:
 
 def _info(
     *,
-    package_version: str = "0.3.1",
+    package_version: str = "0.4.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -61,9 +62,9 @@ def _info(
 
 
 def test_real_engine_matches_the_supported_range() -> None:
-    """ADR 0018: the installed engine must fall within the declared,
-    released range -- not the exact-pin equality Stage 06's development
-    contract used before a real release existed."""
+    """ADR 0018 assigned the first released range; ADR 0026 moved it to the
+    `forge-template` 0.4 line. The installed engine must fall within the
+    declared range and advertise a compatible protocol pair."""
     info = get_engine_info()
 
     assert Version(info.package_version) in SpecifierSet(compat.SUPPORTED_ENGINE_RANGE)
@@ -72,8 +73,20 @@ def test_real_engine_matches_the_supported_range() -> None:
         compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS
     )
     assert _spec().protocol_version == 1
-    discovered = {component.id for component in engine.discover()}
+
+    descriptors = engine.discover()
+    discovered = {descriptor.id for descriptor in descriptors}
     assert {"library", "cli"} <= discovered
+
+    # The 0.4 line is the first to ship a reusable capability alongside
+    # archetypes, and the first whose catalogue declares a requirement
+    # relationship. Asserted by descriptor kind and relationship shape,
+    # never by component id -- CF-EPIC-13's acceptance forbids a catalogue
+    # copy here, and CF-13.05 owns the Data Science proof itself.
+    kinds = {descriptor.kind for descriptor in descriptors}
+    assert "archetype" in kinds
+    assert "capability" in kinds
+    assert any(descriptor.requires for descriptor in descriptors)
 
 
 def test_untested_package_is_rejected_before_every_public_engine_call(
@@ -92,7 +105,7 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _info(package_version="0.4.0"),
+        lambda: _info(package_version="0.5.0"),
     )
     monkeypatch.setattr(engine, "_parse_project_spec", unexpected("parse"))
     monkeypatch.setattr(engine, "_discover_components", unexpected("discover"))
@@ -105,10 +118,11 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
         lambda: engine.validate(spec),
         lambda: engine.render(spec),
     )
+    supported = re.escape(f"supports forge-template{compat.SUPPORTED_ENGINE_RANGE}")
     for operation in operations:
         with pytest.raises(
             engine.EngineCompatibilityError,
-            match=r"0\.4\.0.*supports forge-template>=0\.3\.1,<0\.4",
+            match=rf"0\.5\.0.*{supported}",
         ):
             operation()
 

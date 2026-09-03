@@ -12,10 +12,12 @@ uv sync --all-groups --all-extras
 uv run pre-commit install --install-hooks
 ```
 
-`--all-extras` resolves `forge-template>=0.3.1,<0.4` and `uv>=0.12,<0.13`
-from PyPI as the
-optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
+`--all-extras` resolves `forge-template>=0.4,<0.5` and `uv>=0.12,<0.13`
+from PyPI as the optional `engine` extra
+([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md);
+range moved to the 0.4 line by
+[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) --
 plain `uv sync` (or `pip install create-forge`) never resolves it. That
 optionality is what lets `src/create_forge/engine.py` — see
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — stay out of
@@ -105,10 +107,12 @@ FT-11.04 completed their production composition validation, and Stage 12
 implemented, validated, and published the `data-science` archetype in
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 ([acceptance evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)).
-That provider release is available, but this repository's supported
-`forge-template>=0.3.1,<0.4` range still discovers only Library and CLI
-Application. CF-13.01 owns deliberate `0.4.x` adoption; do not hard-code a
-capability or Data Science rule while the range remains unchanged.
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted
+`forge-template>=0.4,<0.5`, so `--engine-preview` discovery now returns all
+five components. CF-13.02–13.05 build selection on top; do not hard-code a
+capability or Data Science rule — selection is discovery-driven and semantic
+validation stays engine-owned.
 
 ## What CI runs
 
@@ -200,20 +204,24 @@ This repository's development pair moved through `forge-template==0.3.0`
 (tag `v0.3.0`), whose production catalogue is no longer empty, to a real
 released range: `forge-template>=0.3.1,<0.4`, declared as the optional
 `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
+[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md));
+then, crossing one compatibility line,
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) moved
+that range to `forge-template>=0.4,<0.5`, the 0.4 Data Science line.
 Stage 06 first proved an exact development package/protocol pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), and
 CF-08.02 moved that pair forward to `0.3.0`; ADR 0018 then replaced the
-development pin with the released range above, resolved from PyPI. The
-coordinated CLI cutover -- the engine replacing direct Copier as the default
-`new` path -- remains a separate, still-unfiled decision; ADR 0018 assigns
-the range, it does not perform that cutover.
+development pin with the first released range, resolved from PyPI, and ADR
+0026 moved it to the 0.4 line. The coordinated CLI cutover -- the engine
+replacing direct Copier as the default `new` path -- remains a separate,
+still-unfiled decision; neither ADR 0018 nor ADR 0026 performs it.
 CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
 the development pin forward once, within the prior unreleased `0.2.0`
 contract, to adopt generated-project validation; CF-08.02
 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)) moved it
-again, to the first tagged release; ADR 0018 replaced it a final time with
-the released range.
+again, to the first tagged release; ADR 0018 replaced it with the first
+released range, and ADR 0026 moved that range to the 0.4 line.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md)
 and the living [ProjectSpec construction contract](docs/project-spec-construction.md)
 record that adapter's shape — `spec.py` builds the wire payload, `engine.py`

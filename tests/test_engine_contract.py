@@ -33,7 +33,7 @@ CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-ENGINE_REQUIREMENT = "forge-template>=0.3.1,<0.4"
+ENGINE_REQUIREMENT = "forge-template>=0.4,<0.5"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
 # Every module reachable from create-forge's shipped entry point
@@ -133,8 +133,8 @@ def test_engine_dependency_stays_out_of_required_dependencies() -> None:
 
 
 def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None:
-    """The released engine range and its client-finalisation tool stay
-    optional (#9/ADR 0018 and ADR 0021).
+    """The engine range and its client-finalisation tool stay optional
+    (#9/ADR 0018, ADR 0021, and ADR 0026's move to the 0.4 line).
     """
     data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
 
@@ -153,10 +153,10 @@ def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None
     )
 
     contract_text = INTEGRATION_CONTRACT.read_text(encoding="utf-8")
-    expected = f"| v0.2.x (`engine` extra) | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
+    expected = f"| v0.3.x (`engine` extra) | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
     assert expected in contract_text, (
         "docs/integration-contract.md's compatibility table must record the "
-        "same range this test just verified in pyproject.toml."
+        "same range this test just verified in pyproject.toml (ADR 0026)."
     )
 
 

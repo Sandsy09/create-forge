@@ -3,20 +3,21 @@
 This is the canonical executable contract for the boundary between
 `create-forge` and `forge-template`. It records what Stage 06 proved as a
 development-only pair, what CF-07.04 (ADR 0015) and CF-08.02 (ADR 0017)
-moved that pair to, and what #9 (ADR 0018) then did: assigned the first
-*released* engine range, so this is no longer a development-only boundary --
-it is what a released `create-forge[engine]` install actually resolves.
+moved that pair to, what #9 (ADR 0018) then did -- assign the first
+*released* engine range -- and what CF-13.01 (ADR 0026) did after that:
+move the range to the `forge-template` 0.4 compatibility line. This is what a
+released `create-forge[engine]` install actually resolves.
 
 ## Supported range
 
 | Surface | Supported value |
 | --- | --- |
 | `forge-template` distribution | PyPI, `create-forge`'s optional `engine` extra |
-| `forge-template` range | `>=0.3.1,<0.4` (current compatible release: `0.3.2`) |
+| `forge-template` range | `>=0.4,<0.5` (current compatible release: `0.4.0`) |
 | ProjectSpec protocol | `1` |
 | Component-manifest protocol | `1, 2` |
 
-`pyproject.toml` declares `forge-template>=0.3.1,<0.4` in
+`pyproject.toml` declares `forge-template>=0.4,<0.5` in
 `[project.optional-dependencies].engine` -- an ordinary, index-resolved,
 range-bounded dependency, exactly like `copier`, `typer`, or `pydantic`, not
 a `[tool.uv.sources]`-pinned commit or tag. `src/create_forge/compat.py`
@@ -25,8 +26,8 @@ checks an installed package against it with
 `packaging.specifiers.SpecifierSet` rather than the exact-equality check the
 development-only pair used before a real release existed.
 
-The range has moved twice before becoming a real release. First, Stage 06's
-original development commit moved to a later one, adopted by
+The range has moved several times. First, Stage 06's original development
+commit moved to a later one, adopted by
 [CF-07.04 / #50](https://github.com/Sandsy09/create-forge/issues/50)
 specifically to pick up `forge-template`'s
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md).
@@ -35,24 +36,26 @@ Second, that commit moved to the `v0.3.0` tag, adopted by
 reach the first tagged, production-catalogue release. Both moves were
 development-only: `[project.dependencies]` was unaffected, and no engine
 range was assigned. [#9](https://github.com/Sandsy09/create-forge/issues/9)
-and [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) are
-what finally assigns one, once
+and [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)
+assigned the first one, `>=0.3.1,<0.4`, once
 [forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)
 made `0.3.1` -- a packaging-only patch over the same `0.3.0` production
-catalogue -- installable from PyPI.
+catalogue -- installable from PyPI. Then
+[CF-13.01 / #106](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) crossed one
+compatibility line, moving the range to `>=0.4,<0.5` and rerunning this
+contract against it.
 
-Any package version outside the range fails closed. `0.3.1` remains the
-declared lower bound and `0.3.2` is the current compatible release. The
-[engine update policy](engine-updates.md)'s adoption rule continues to govern
-later compatible patches.
+Any package version outside the range fails closed. `0.4.0` is both the
+declared lower bound and the current compatible release; a `0.3.x` engine is
+rejected. The [engine update policy](engine-updates.md)'s adoption rule
+governs later `0.4.x` patches.
 
-The provider has separately published
-[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-on [PyPI](https://pypi.org/project/forge-template/0.4.0/), containing the
-five-component Data Science catalogue with unchanged public facade and
-protocol tuples. It is intentionally outside this executable contract until
-CF-13.01 changes the declared range and reruns the full contract against the
-new compatibility line; availability is not support.
+`forge-template 0.4.0` is
+[published](https://pypi.org/project/forge-template/0.4.0/) as the
+five-component Data Science catalogue. Its public facade and protocol tuples
+are unchanged from `0.3.2` -- the source diff is empty -- so this contract's
+public-facade coverage carried across the move without a signature change.
 
 ## What the executable contract proves
 
@@ -69,18 +72,25 @@ with the focused adapter and guard suites, it proves that:
   engine-owned failures;
 - discovery returns the installed production catalogue without registry
   fallback;
+- the installed 0.4 line exposes the previous line's `library` and `cli`
+  archetypes *and* the new descriptor shapes it added -- at least one
+  `capability`-kind descriptor and at least one declaring a `requires`
+  relationship -- asserted by descriptor kind and relationship shape, never
+  by a component id this repository must not copy (ADR 0026);
 - rendering returns immutable in-memory files, already validated by
   `forge_template.validate_rendered_project`, and never owns destination
   writes; and
 - the adapter imports only names re-exported by the top-level public
   `forge_template` facade.
 
-The production catalogue ships both `library` and `cli`, since
+The production catalogue ships `library` and `cli`, since
 [forge-template FT-08.02 / #41](https://github.com/Sandsy09/forge-template/issues/41)
 migrated the Library archetype and FT-08.04 added the CLI Application
-archetype in the same `0.3.0` release that `0.3.1` packages for PyPI.
-Therefore the current client-side rendering assertion is a real public-facade
-call that succeeds for either archetype and returns real files.
+archetype in the `0.3.0` release, and adds the `data-science` archetype plus
+the `jupyter` and `scientific-python` capabilities in the `0.4.0` release the
+declared range now resolves. The client-side rendering assertion is a real
+public-facade call that succeeds for either reference archetype and returns
+real files.
 `create-forge` still does not import `forge-template`'s private
 fixture-catalogue seam or its own
 [`tests/test_composition_contract.py`](https://github.com/Sandsy09/forge-template/blob/main/tests/test_composition_contract.py)
@@ -113,7 +123,7 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 Local path builds include current working-tree source, including uncommitted
 changes, and override the released PyPI resolution for that one run only --
 no `pyproject.toml` or `uv.lock` change is needed or made. The sibling
-package must satisfy `>=0.3.1,<0.4`; a version outside that range is a new
+package must satisfy `>=0.4,<0.5`; a version outside that range is a new
 compatibility line and must be adopted explicitly, following the range-move
 sequence above. The broader
 [cross-repository contributor workflow](cross-repository-workflow.md) defines
@@ -127,14 +137,16 @@ which silently tests against old sibling code rather than the one intended.
 
 ## Adopting a new compatible release
 
-A `forge-template` release inside the declared `>=0.3.1,<0.4` range (currently
-`0.3.2`; a patch,
-while `0.3.x` stays the compatibility line) may be adopted once this
-contract passes against it, per the sibling-checkout validation above and the
-[engine update policy](engine-updates.md). A release that would require a
-minor bump -- pre-1.0, that is itself a new compatibility line -- follows
-[ADR 0012](adr/0012-engine-dependency-update-policy.md)'s full sequence:
-widen the range in `pyproject.toml`, this document's table, and
+A `forge-template` release inside the declared `>=0.4,<0.5` range (`0.4.0`
+today; a later `0.4.x` patch while `0.4.x` stays the compatibility line) may
+be adopted once this contract passes against it, per the sibling-checkout
+validation above and the [engine update policy](engine-updates.md). A release
+that would require a minor bump -- pre-1.0, that is itself a new
+compatibility line -- follows
+[ADR 0012](adr/0012-engine-dependency-update-policy.md)'s full sequence,
+worked through once already by
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md): move the
+range in `pyproject.toml`, this document's table, and
 `docs/integration-contract.md`'s compatibility table together, and prove the
-new range against both its lower bound and the previous one's latest release
+new range against both its lower bound and the previous line's latest release
 before merging.

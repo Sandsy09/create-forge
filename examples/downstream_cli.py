@@ -70,7 +70,7 @@ if TYPE_CHECKING:
 # demonstrated. It happens to match create-forge's own range today; nothing
 # requires that to stay true.
 
-SUPPORTED_ENGINE_RANGE = ">=0.3.1,<0.4"
+SUPPORTED_ENGINE_RANGE = ">=0.4,<0.5"
 SUPPORTED_PROJECTSPEC_PROTOCOLS = (1,)
 
 EXIT_OK = 0

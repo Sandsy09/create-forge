@@ -34,9 +34,12 @@ both `library` and `cli` — calling this boundary end-to-end now succeeds,
 generating a real project, rather than failing validation as it did against
 the prior empty catalogue; see "Validation" below. #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) then
-replaced that development pin with a released range,
-`forge-template>=0.3.1,<0.4`, changing nothing about this boundary's
-reachability or behaviour.
+replaced that development pin with a released range, `forge-template>=0.3.1,<0.4`;
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) then moved
+that range to `forge-template>=0.4,<0.5`. Neither move changes this
+boundary's reachability or behaviour — the public facade and ProjectSpec
+protocol are identical across the `0.3.x` and `0.4.x` lines.
 
 ## The map-vs-validate principle
 
@@ -146,11 +149,13 @@ The canonical
 [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 assigns the engine-owned ID `data-science`, declares no archetype options, and
 keeps packaging, version, notebook, and working-tree semantics with
-`forge-template`. The descriptor is published in `forge-template 0.4.0`, but
-it is not present in create-forge's currently supported `>=0.3.1,<0.4` line.
-After CF-13.01 adopts `0.4.x`, create-forge must discover the descriptor and
-construct its ProjectSpec generically rather than hard-code its ID, paths,
-capability requirements, or generated content.
+`forge-template`. Its descriptor became discoverable here once
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted the
+`>=0.4,<0.5` line. `create-forge` must discover the descriptor and construct
+its ProjectSpec generically rather than hard-code its ID, paths, capability
+requirements, or generated content — the discovery-driven selection that does
+so is CF-13.02–13.04.
 
 The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
@@ -162,9 +167,10 @@ relationships. Jupyter is recorded under
 [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md),
-and both are published in `forge-template 0.4.0`. The current supported
-`forge-template>=0.3.1,<0.4` range exposes neither capability and ProjectSpec
-construction remains unchanged until CF-13.01.
+and both are published in `forge-template 0.4.0`. The supported
+`forge-template>=0.4,<0.5` range (ADR 0026) exposes both capability
+descriptors through discovery; serializing a selected capability into an
+effective ProjectSpec is CF-13.02–13.04, not this document's current scope.
 
 ## Derivation rules
 
@@ -200,10 +206,11 @@ everything else there.
 
 Before that protocol comparison, `engine._require_supported_package` checks
 the installed package version against `compat.SUPPORTED_ENGINE_RANGE`
-(`forge-template>=0.3.1,<0.4`) with `packaging.specifiers.SpecifierSet` — a
-real, released, bounded range as of #9
-([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)), not
-the exact-equality development pin `0.3.0` that preceded it; see the
+(`forge-template>=0.4,<0.5` as of
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md); `>=0.3.1,<0.4`
+under ADR 0018 before it) with `packaging.specifiers.SpecifierSet` — a real,
+released, bounded range, not the exact-equality development pin `0.3.0` that
+preceded both; see the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 This is reachable from a real command as of CF-07.01, but only behind
@@ -213,10 +220,10 @@ This is reachable from a real command as of CF-07.01, but only behind
 ## Validation
 
 `engine.validate()` calls `forge_template.validate_project_spec` against the
-installed component catalogue. `forge-template`'s production catalogue
-(released at `0.3.0` and unchanged in substance through the `0.3.1`
-packaging patch #9 assigns as the installable lower bound) ships both
-`library` and `cli`, so validating either archetype selection succeeds.
+installed component catalogue. `forge-template`'s production catalogue ships
+`library` and `cli` (since `0.3.0`), so validating either reference archetype
+selection succeeds; the `>=0.4,<0.5` line (ADR 0026) also carries the
+`data-science` archetype and the `jupyter`/`scientific-python` capabilities.
 [`tests/test_engine_adapter.py::test_validate_succeeds_against_the_real_production_catalogue`](../tests/test_engine_adapter.py)
 characterizes this outcome against the real installed engine, replacing the
 Stage 06-era empty-catalogue characterization its own docstring anticipated
@@ -233,12 +240,13 @@ pattern-matching message text.
 
 `forge-template` is the optional `engine` extra as of #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)):
-`[project.optional-dependencies].engine = ["forge-template>=0.3.1,<0.4"]`,
-resolved from PyPI like any other dependency -- no `[tool.uv.sources]`
-override, no dev-only dependency group. `[project.dependencies]` remains
-unaffected, so `create-forge` itself (`pip install create-forge`, or `uvx
-create-forge`) never resolves it; only `pip install 'create-forge[engine]'`
-or `uv sync --all-extras` does.
+`[project.optional-dependencies].engine = ["forge-template>=0.4,<0.5"]`
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved the
+range from `>=0.3.1,<0.4`), resolved from PyPI like any other dependency --
+no `[tool.uv.sources]` override, no dev-only dependency group.
+`[project.dependencies]` remains unaffected, so `create-forge` itself
+(`pip install create-forge`, or `uvx create-forge`) never resolves it; only
+`pip install 'create-forge[engine]'` or `uv sync --all-extras` does.
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s ADR
 0011/0012 guards continue to hold: the range has a tested lower bound and a
 strict upper bound, and Dependabot is gated from crossing it unattended.
@@ -305,6 +313,10 @@ by
   from the selected archetype's own discovered `ComponentDescriptor.options`
   instead of the Copier registry's Library-shaped questions, and reads no
   registry data at all on this path.
+- **CF-13.01** ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md))
+  moved the engine range to `forge-template>=0.4,<0.5`, making the Data
+  Science archetype and reusable capabilities discoverable. Constructing an
+  effective ProjectSpec that selects a capability is CF-13.02–13.04.
 
 ## Executable examples
 

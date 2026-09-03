@@ -168,10 +168,10 @@ def test_build_generation_request_passes_component_selection_through(
 def test_build_generation_request_succeeds_against_the_real_catalogue(
     archetype: str,
 ) -> None:
-    """The real, unmocked engine: `forge-template` 0.3.0's production
-    catalogue ships both reference archetypes (CF-08.02), replacing the
-    Stage 06-era empty-catalogue rejection this test's own docstring
-    anticipated retiring.
+    """The real, unmocked engine: the installed `forge-template` production
+    catalogue (since 0.3.0, CF-08.02) ships both reference archetypes,
+    replacing the Stage 06-era empty-catalogue rejection this test's own
+    docstring anticipated retiring.
     """
     request = pipeline.build_generation_request(
         _VALID_ANSWERS, selection=SelectionRequest.of(archetype=archetype)
