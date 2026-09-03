@@ -33,11 +33,11 @@ from create_forge.prompts import (
     ArchetypeChoice,
     PromptAbortedError,
     ask_all,
-    ask_component_options,
     ask_project_answers,
     choose_archetype,
     choose_components,
     choose_template,
+    resolve_component_options,
     slugify,
 )
 from create_forge.registry import load_registry
@@ -55,7 +55,7 @@ from create_forge.staging import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from create_forge.models import Registry, Template
     from create_forge.pipeline import Catalogue
@@ -123,6 +123,28 @@ def _parse_data(pairs: list[str]) -> dict[str, object]:
             parsed[key] = lowered == "true"
         else:
             parsed[key] = value
+    return parsed
+
+
+def _parse_component_options(pairs: list[str]) -> dict[str, dict[str, str]]:
+    """Turn `--component-option ID.OPTION=VALUE` into an owner-namespaced map.
+
+    Split on the first `.` for the owner id, then the first `=` in the
+    remainder for the option name; the value keeps any further `.`/`=`. The
+    two identifier alphabets (a component id never contains `.`, an option
+    name never contains `.` or `-`) make this unambiguous by construction. A
+    repeated `ID.OPTION` takes the last value, exactly as a repeated `--data`
+    key does (CF-13.04, ADR 0029). Malformed input -- no `.` or no `=` -- is a
+    usage error, exit `2`, like malformed `--data`.
+    """
+    parsed: dict[str, dict[str, str]] = {}
+    for pair in pairs:
+        owner, dot, rest = pair.partition(".")
+        name, sep, value = rest.partition("=")
+        if not dot or not sep or not owner or not name:
+            msg = f"--component-option expects ID.OPTION=VALUE, got {pair!r}"
+            raise typer.BadParameter(msg)
+        parsed.setdefault(owner, {})[name] = value
     return parsed
 
 
@@ -249,18 +271,23 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class ComponentFlags:
-    """The `--engine-preview` capability/platform selection flags, normalised.
+    """The `--engine-preview` component-selection flags, normalised.
 
-    Each field is the *effective* flag value for one selectable kind:
-    `tuple[str, ...]` from one or more `--capability`/`--platform`, `()` from
-    `--no-capabilities`/`--no-platforms` (an explicit empty choice), and
+    `capabilities`/`platforms` are the *effective* value for one selectable
+    kind: `tuple[str, ...]` from one or more `--capability`/`--platform`, `()`
+    from `--no-capabilities`/`--no-platforms` (an explicit empty choice), and
     `None` when neither was given (absent -- resolve interactively or leave to
     a policy default). `new()` rejects a `--capability` + `--no-capabilities`
     contradiction before building this (CF-13.03, ADR 0028).
+
+    `options` is the owner-namespaced `--component-option ID.OPTION=VALUE` map
+    (CF-13.04, ADR 0029), empty when the flag was not given. A repeated
+    `ID.OPTION` has already collapsed to its last value in `_parse_component_options`.
     """
 
     capabilities: tuple[str, ...] | None
     platforms: tuple[str, ...] | None
+    options: Mapping[str, Mapping[str, str]]
 
     def for_kind(self, kind: SelectionKind) -> tuple[str, ...] | None:
         """The normalised flag value for one selectable kind."""
@@ -434,6 +461,39 @@ def _missing_requirement_hint(
     return " ".join(hints)
 
 
+def _validate_component_option_owners(
+    catalogue: Catalogue,
+    selection: SelectionRequest,
+    options: Mapping[str, Mapping[str, str]],
+) -> None:
+    """Reject a `--component-option` owner that is unknown or unselected.
+
+    Both checks are answerable from the discovered catalogue and the resolved
+    selection alone (ADR 0027), and both exit `1` before any prompt or write.
+    An option *name* the owner does not declare, a value outside `choices`, a
+    wrong type, a missing `required` one -- all stay engine verdicts.
+    """
+    selected = {
+        component_id
+        for kind in DESCRIPTOR_KIND
+        for component_id in selection.ids_for(kind)
+    }
+    for owner in options:
+        if catalogue.kind_of(owner) is None:
+            available = ", ".join(sorted(d.id for d in catalogue.descriptors))
+            err.print(
+                f"[red]Unknown --component-option component {owner!r}. "
+                f"Available: {available}[/red]"
+            )
+            raise typer.Exit(1)
+        if owner not in selected:
+            err.print(
+                f"[red]--component-option component {owner!r} is not selected. "
+                f"Selected: {', '.join(sorted(selected))}[/red]"
+            )
+            raise typer.Exit(1)
+
+
 def _select_archetype(
     archetypes: Sequence[ArchetypeChoice], archetype: str | None, *, yes: bool
 ) -> tuple[ArchetypeChoice, bool]:
@@ -482,48 +542,71 @@ def _select_archetype(
     return chosen, len(archetypes) > 1
 
 
-def _collect_engine_answers(
+def _collect_engine_answers(  # noqa: PLR0913 - project answers plus per-component options need the archetype, the full selected set, both preset sources, config, and the yes switch
     descriptor: ArchetypeChoice,
+    selected: Sequence[ArchetypeChoice],
     preset: dict[str, object],
     cfg_answers: dict[str, object],
+    option_flags: Mapping[str, Mapping[str, str]],
     *,
     yes: bool,
-) -> tuple[dict[str, object], dict[str, object]]:
-    """Gather ProjectSpec-identity answers and the archetype's own declared
-    component options (#91, ADR 0025), from --yes/--data, or by prompting for
-    anything missing. Mirrors `_collect_answers`'s shape for the Copier path.
+) -> tuple[dict[str, object], dict[str, dict[str, object]]]:
+    """Gather identity answers and every selected component's declared options.
 
-    `preset` is split by `descriptor.options`' own declared names: a key
-    matching one is an option answer, everything else is a project-identity
-    answer (including keys with no ProjectSpec home at all, e.g. `github_org`
-    -- passed through unchanged, exactly as the Copier path already does).
-    This is also what preserves ADR 0019's legacy `build_backend`/
-    `versioning` derivation as a fallback: those keys never match a declared
-    option name, so they land in the project answers `pipeline.
-    _resolved_component_options` inspects when the caller supplies no
-    explicit `component_options`.
-    """  # noqa: D205
-    option_names = {option.name for option in descriptor.options}
-    option_preset = {k: v for k, v in preset.items() if k in option_names}
-    project_preset = {k: v for k, v in preset.items() if k not in option_names}
+    Collected from --yes/--data/--component-option, or by prompting (#91,
+    ADR 0025; CF-13.04, ADR 0029). Mirrors `_collect_answers`'s shape.
+
+    `preset` (from `--data`) is split by the *archetype's* own declared option
+    names: a match is an archetype-option answer (precedence rule 2 -- an
+    unqualified `--data` name never targets a capability), everything else is a
+    project-identity answer, including keys with no ProjectSpec home at all
+    (`github_org`) and the legacy `build_backend`/`versioning` pair
+    `pipeline._resolved_component_options` still inspects.
+
+    `option_flags` is the owner-qualified `--component-option` map (rule 1),
+    layered over the archetype `--data` presets. `resolve_component_options`
+    then walks `selected` in composition-tier order, collecting each declared
+    option the namespace did not already supply -- prompting only when not
+    `--yes`, and omitting a component whose namespace stays empty.
+    """
+    archetype_option_names = {option.name for option in descriptor.options}
+    archetype_preset = {k: v for k, v in preset.items() if k in archetype_option_names}
+    project_preset = {
+        k: v for k, v in preset.items() if k not in archetype_option_names
+    }
+
+    presets: dict[str, Mapping[str, object]] = {}
+    for owner, values in option_flags.items():
+        presets[owner] = dict(values)
+    if archetype_preset:
+        presets[descriptor.id] = {
+            **archetype_preset,
+            **presets.get(descriptor.id, {}),
+        }
 
     if yes:
         if "project_name" not in project_preset:
             err.print("[red]--yes requires a project name.[/red]")
             raise typer.Exit(1)
-        return {**cfg_answers, **project_preset}, dict(option_preset)
+        project_answers = {**cfg_answers, **project_preset}
+        component_options = resolve_component_options(
+            selected, presets=presets, prompt=False
+        )
+        return project_answers, component_options
 
     try:
         project_answers = {
             **cfg_answers,
             **ask_project_answers(preset=project_preset, defaults=cfg_answers),
         }
-        component_answers = ask_component_options(descriptor, preset=option_preset)
+        component_options = resolve_component_options(
+            selected, presets=presets, prompt=True
+        )
     except PromptAbortedError:
         err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
 
-    return project_answers, component_answers
+    return project_answers, component_options
 
 
 def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own distinct input, and a linear discover->select->collect->build->finalise orchestration; see new()'s own justification
@@ -547,12 +630,15 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
     #91 / ADR 0025: this path reads no registry data at all. It discovers
     the component catalogue once, resolves which archetype to build and which
     capabilities/platforms to select alongside it (CF-13.03, ADR 0028), then
-    prompts directly from that archetype's own declared
-    `ComponentDescriptor.options` instead of reusing `templates.toml`'s
-    Library-shaped registry questions -- so `--archetype cli` asks nothing
-    `library`-specific, and the destination is only known once a project name
-    has been collected. The one discovered `Catalogue` is threaded into
-    `build_generation_request` so `engine.discover()` runs exactly once.
+    prompts directly from every *selected* component's own declared
+    `ComponentDescriptor.options` (CF-13.04, ADR 0029) instead of reusing
+    `templates.toml`'s Library-shaped registry questions -- so `--archetype
+    cli` asks nothing `library`-specific, and the destination is only known
+    once a project name has been collected. Owner-qualified `--component-option`
+    values are validated against the resolved selection first (an unknown or
+    unselected owner exits `1` before any prompt). The one discovered
+    `Catalogue` is threaded into `build_generation_request` so
+    `engine.discover()` runs exactly once.
 
     An explicit `--path` is still checked for a conflict before the engine is
     imported at all, preserving that guarantee for the common case where the
@@ -598,12 +684,13 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
         catalogue, archetype, flags, yes=yes
     )
 
-    project_answers, component_answers = _collect_engine_answers(
-        descriptor, preset, cfg_answers, yes=yes
+    _validate_component_option_owners(catalogue, selection, flags.options)
+    selected = catalogue.selected(selection)
+
+    project_answers, collected_options = _collect_engine_answers(
+        descriptor, selected, preset, cfg_answers, flags.options, yes=yes
     )
-    component_options = (
-        {descriptor.id: component_answers} if component_answers else None
-    )
+    component_options = collected_options or None
 
     dst = (path or Path.cwd() / slugify(str(project_answers["project_name"]))).resolve()
     try:
@@ -759,18 +846,27 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
             "Requires --engine-preview.",
         ),
     ] = False,
+    component_option: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--component-option",
+            hidden=True,
+            help="Development-only: set a selected component's option, "
+            "ID.OPTION=VALUE. Repeatable. Requires --engine-preview.",
+        ),
+    ] = None,
 ) -> None:
     """Create a new project."""
     if archetype is not None and not engine_preview:
         err.print("[red]--archetype requires --engine-preview.[/red]")
         raise typer.Exit(1)
     _any_component_flag = bool(
-        capability or no_capabilities or platform or no_platforms
+        capability or no_capabilities or platform or no_platforms or component_option
     )
     if _any_component_flag and not engine_preview:
         err.print(
-            "[red]--capability/--no-capabilities/--platform/--no-platforms "
-            "require --engine-preview.[/red]"
+            "[red]--capability/--no-capabilities/--platform/--no-platforms/"
+            "--component-option require --engine-preview.[/red]"
         )
         raise typer.Exit(1)
     if capability and no_capabilities:
@@ -799,6 +895,7 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
         flags = ComponentFlags(
             capabilities=_normalise_kind_flag(capability, none_flag=no_capabilities),
             platforms=_normalise_kind_flag(platform, none_flag=no_platforms),
+            options=_parse_component_options(component_option or []),
         )
         _run_engine_preview(
             preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes

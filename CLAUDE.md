@@ -263,10 +263,15 @@ capability and platform selection: `pipeline.Catalogue` (one discovery,
 grouped by kind), the four `--capability`/`--no-capabilities`/`--platform`/
 `--no-platforms` flags, interactive multi-selects with required entries
 pre-locked, and the absent-versus-explicit-empty encoding through
-`SelectionRequest`. Per-component option prompting is CF-13.04, and validating
-the Data Science pipeline is CF-13.05. This CLI must not hard-code capability
-IDs or relationships — selection stays discovery-driven, semantic validation
-stays engine-owned.
+`SelectionRequest`. CF-13.04
+([ADR 0029](docs/adr/0029-per-component-option-collection.md)) implemented
+per-component option collection: the owner-qualified `--component-option`
+flag, `prompts.resolve_component_options` over `Catalogue.selected()` for
+*every* selected component, `prompts.coerce_option_value` CLI-string typing,
+and the legacy Library fallback merged per option name. Validating the Data
+Science pipeline is CF-13.05. This CLI must not hard-code capability IDs or
+relationships — selection stays discovery-driven, semantic validation stays
+engine-owned.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -380,9 +385,11 @@ Run this before any release.
   client-owned versus engine-owned. CF-13.03
   ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md))
   implemented the capability/platform half (`pipeline.Catalogue`, the four
-  flags, the multi-selects); `--component-option` and option typing are
-  CF-13.04, the pipeline proof CF-13.05. No shipped module or test may name a
-  production component id.
+  flags, the multi-selects); CF-13.04
+  ([ADR 0029](docs/adr/0029-per-component-option-collection.md)) implemented
+  `--component-option`, per-component option collection over
+  `Catalogue.selected()`, and CLI-string typing; the pipeline proof is
+  CF-13.05. No shipped module or test may name a production component id.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the supported package/protocol range, public-facade coverage,
   production-catalogue rendering boundary, and sibling-checkout command.
@@ -413,7 +420,7 @@ Run this before any release.
   ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)).
   Jupyter is recorded under
   [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md);
-  Stage 13's remaining children (CF-13.04–13.05) must consume descriptors and
+  Stage 13's remaining child (CF-13.05) must consume descriptors and
   relationships generically — no hard-coded capability IDs or rules.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01

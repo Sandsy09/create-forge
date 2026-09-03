@@ -23,17 +23,18 @@ resulting selection is mapped onto the wire payload), and it extends
 
 Accepted as a contract under [ADR 0027](adr/0027-generic-component-selection-conventions.md).
 CF-13.03 ([#108](https://github.com/Sandsy09/create-forge/issues/108),
-[ADR 0028](adr/0028-discovery-driven-component-selection.md)) has implemented
-the capability and platform half: `--capability`, `--no-capabilities`,
+[ADR 0028](adr/0028-discovery-driven-component-selection.md)) implemented the
+capability and platform half: `--capability`, `--no-capabilities`,
 `--platform`, `--no-platforms`, the interactive multi-selects, the
-absent-versus-empty encoding, required pre-locking, and the shape-only
-client-side checks below are live behind `--engine-preview`. Still to come:
-CF-13.04 ([#109](https://github.com/Sandsy09/create-forge/issues/109))
-implements `--component-option` and per-component option collection and
-typing, and CF-13.05
+absent-versus-empty encoding, and required pre-locking. CF-13.04
+([#109](https://github.com/Sandsy09/create-forge/issues/109),
+[ADR 0029](adr/0029-per-component-option-collection.md)) implemented the rest:
+`--component-option`, per-component option collection and typing for every
+*selected* component (not just the archetype), the owner-qualified parsing,
+and the shape-only client-side checks below — all live behind
+`--engine-preview`. Still to come: CF-13.05
 ([#110](https://github.com/Sandsy09/create-forge/issues/110)) proves the whole
-path against the released engine. The `--component-option` rules below
-therefore still describe a target, not current behaviour.
+path against the released engine.
 
 This is **not** the CLI cutover. Every flag below is hidden and reachable only
 via `new --engine-preview`; the default `new` path stays direct-Copier with a
@@ -124,13 +125,13 @@ engine-native flow. All component selection precedes all answer collection, so
 the destination-deriving project name is still collected last:
 
 ```
-1. archetype          prompts.choose_archetype       "What are you building?"; skipped when exactly one
-2. capabilities       prompts.choose_components       "Which capabilities?"; skipped if --capability/
-                                                        --no-capabilities given, zero capability
-                                                        descriptors, or every one required
-3. platforms          prompts.choose_components       "Which platforms?"; same skip rules
-4. project answers    prompts.ask_project_answers     unchanged: project_name, project_description, license
-5. component options  prompts.ask_component_options   per selected component, in the order below (CF-13.04)
+1. archetype          prompts.choose_archetype          "What are you building?"; skipped when exactly one
+2. capabilities       prompts.choose_components         "Which capabilities?"; skipped if --capability/
+                                                          --no-capabilities given, zero capability
+                                                          descriptors, or every one required
+3. platforms          prompts.choose_components         "Which platforms?"; same skip rules
+4. project answers    prompts.ask_project_answers       unchanged: project_name, project_description, license
+5. component options  prompts.resolve_component_options  per selected component, in the order below
 ```
 
 Component options are prompted, and serialised into `component_options`, in
@@ -151,9 +152,12 @@ construction — a component id matches `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$` (never
 a `.` or `_`) and an option name matches `^[a-z][a-z0-9_]*$` (never a `.` or
 `-`).
 
-Only the owner-qualified form is accepted. An unqualified `OPTION=VALUE` is a
-usage error (exit `2`), reported with the owning component it needs:
-`--component-option needs an owning component id, e.g. library.OPTION=VALUE`.
+Only the owner-qualified form is accepted. A value with no `.` or no `=` is a
+usage error (exit `2`, `typer.BadParameter`, exactly as malformed `--data`),
+reported as `--component-option expects ID.OPTION=VALUE, got '<value>'`. The
+message names no component id — production ids appear only in
+[`## Worked examples`](#worked-examples) below
+([ADR 0029](adr/0029-per-component-option-collection.md)).
 
 ### Precedence for a component option's value
 
@@ -179,18 +183,20 @@ prompted value and a `--component-option` value never both apply, because a
 ### Option value typing
 
 Every `forge-template` model is `strict=True`, so it will not coerce `"3"` to
-`3` or `"true"` to `True`. A value collected as a CLI string must be converted
-to the declaring `ComponentOption.type` before it is serialised:
+`3` or `"true"` to `True`. `prompts.coerce_option_value` converts a CLI string
+to the declaring `ComponentOption.type` before it is serialised — applied to
+values from `--component-option` and archetype-name `--data` alike:
 
 | Declared type | Conversion |
 | --- | --- |
 | `string` | verbatim |
 | `boolean` | case-insensitive `true` / `false`, as `--data` already parses |
 | `integer` | `int(value)` |
-| `string_list` | comma-split, each item trimmed, empties dropped — the same rule `ask_component_options`'s own `string_list` prompt uses |
+| `string_list` | comma-split, each item trimmed, empties dropped — the same rule `_ask_component_option`'s own `string_list` prompt uses |
 
-A value that will not convert is **passed through unchanged**, so the engine
-produces the authoritative
+A non-string value (a `--data` bool) is already typed and passes straight
+through. A string that will not convert is **passed through unchanged** too,
+so the engine produces the authoritative
 `option '<name>' value '<v>' does not match its declared type` message rather
 than `create-forge` inventing a parallel one.
 
@@ -262,7 +268,7 @@ create-forge new "Credit Risk Utils" --engine-preview --archetype library \
 
 ## Executable examples
 
-The contract will be characterised by:
+The contract is characterised by:
 
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — `test_selection_model_matches_the_documented_contract` pins the engine
@@ -274,14 +280,22 @@ The contract will be characterised by:
   `test_component_selection_doc_is_linked_from_canonical_entry_points` keeps
   this document discoverable.
 - [`tests/test_component_selection.py`](../tests/test_component_selection.py)
-  (CF-13.03) — the flag surface, the absent-versus-empty table, required
-  pre-locking and the toggle-all reinstatement, the deterministic prompt
-  order, the zero-descriptor and all-required kinds, the `--yes`
-  missing-requirement hint, and single discovery per invocation.
+  — CF-13.03's flag surface, absent-versus-empty table, required pre-locking
+  and toggle-all reinstatement, prompt order, zero-descriptor and all-required
+  kinds, the `--yes` missing-requirement hint, and single discovery; plus
+  CF-13.04's `--component-option` section — owner-qualified values reaching
+  ProjectSpec under the declaring id, colliding option names routed through a
+  synthetic archetype/capability pair, unknown and unselected owners, the
+  exit-`2` malformed cases, an undeclared option name reaching the engine, the
+  last-value-wins repeat, and a selected optionless component serialising no
+  namespace.
+- [`tests/test_prompts.py`](../tests/test_prompts.py) — `coerce_option_value`
+  per declared type plus its pass-through-on-failure case, and
+  `resolve_component_options`' multi-descriptor ordering, empty-namespace
+  omission, and undeclared-key pass-through.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) —
-  `test_build_generation_request_reuses_a_supplied_catalogue`.
-- **CF-13.04** adds the owner-qualified parsing, per-type coercion, and
-  colliding-option-name fixture cases.
+  `test_build_generation_request_reuses_a_supplied_catalogue`, and the
+  per-option-name legacy-fallback merge.
 - **CF-13.05** adds the end-to-end preview-pipeline proof against the released
   engine.
 

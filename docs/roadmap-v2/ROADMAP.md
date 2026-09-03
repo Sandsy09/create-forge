@@ -36,8 +36,8 @@ Stages 10, 11, and 12 are complete. The published and verified
 provider release made CF-EPIC-13 actionable. CF-13.01 (ADR 0026) performed
 the range adoption — create-forge's supported range is now `>=0.4,<0.5` — and
 CF-13.02 (ADR 0027) fixed the component-selection CLI conventions, and
-CF-13.03 (ADR 0028) implemented capability and platform selection.
-CF-13.04–13.05 remain.
+CF-13.03 (ADR 0028) implemented capability and platform selection, and
+CF-13.04 (ADR 0029) per-component option collection. CF-13.05 remains.
 
 ## Delivery rules
 

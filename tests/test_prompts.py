@@ -21,6 +21,8 @@ from create_forge.prompts import (
     ask_project_answers,
     choose_archetype,
     choose_template,
+    coerce_option_value,
+    resolve_component_options,
     slugify,
 )
 
@@ -400,3 +402,96 @@ def test_ask_component_options_raises_on_cancellation(
 
     with pytest.raises(PromptAbortedError):
         ask_component_options(archetype)
+
+
+# --- coerce_option_value (CF-13.04, ADR 0029) ------------------------------
+
+
+@pytest.mark.parametrize(
+    ("option_type", "raw", "expected"),
+    [
+        ("string", "hatchling-vcs", "hatchling-vcs"),
+        ("boolean", "true", True),
+        ("boolean", "FALSE", False),
+        ("integer", "42", 42),
+        ("string_list", "a, b ,c", ["a", "b", "c"]),
+        ("string_list", "", []),
+    ],
+)
+def test_coerce_option_value_converts_a_cli_string_to_its_declared_type(
+    option_type: str, raw: str, expected: object
+) -> None:
+    option = _ComponentOption(name="x", type=option_type)
+    assert coerce_option_value(option, raw) == expected
+
+
+def test_coerce_option_value_passes_an_unconvertible_string_through() -> None:
+    """A value the engine will reject is left verbatim so *it* produces the
+    authoritative `does not match its declared type` message.
+    """
+    option = _ComponentOption(name="x", type="integer")
+    assert coerce_option_value(option, "not-a-number") == "not-a-number"
+
+
+def test_coerce_option_value_leaves_a_non_string_untouched() -> None:
+    """A `--data` bool is already typed -- coercion must not re-parse it."""
+    option = _ComponentOption(name="x", type="boolean")
+    assert coerce_option_value(option, value=True) is True
+
+
+# --- resolve_component_options (CF-13.04, ADR 0029) ------------------------
+
+
+def test_resolve_component_options_walks_descriptors_and_owner_namespaces(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each descriptor's options land under its own id; a preset value whose
+    option the descriptor declares is coerced; a declared option the preset
+    omits is prompted.
+    """
+    monkeypatch.setattr(questionary, "text", lambda *_a, **_kw: _FakeAnswer("7"))
+    archetype = _Archetype(
+        id="arch",
+        name="Arch",
+        description="d",
+        options=(_ComponentOption(name="retries", type="integer", default=3),),
+    )
+    capability = _Archetype(
+        id="cap",
+        name="Cap",
+        description="d",
+        options=(_ComponentOption(name="mode", type="string"),),
+    )
+
+    resolved = resolve_component_options(
+        [archetype, capability], presets={"cap": {"mode": "fast"}}
+    )
+
+    assert resolved == {"arch": {"retries": 7}, "cap": {"mode": "fast"}}
+
+
+def test_resolve_component_options_omits_an_empty_namespace() -> None:
+    """A selected optionless component produces no key at all -- not `{}`."""
+    optionless = _Archetype(id="cli", name="CLI", description="d")
+
+    assert resolve_component_options([optionless], prompt=False) == {}
+
+
+def test_resolve_component_options_keeps_an_undeclared_preset_key_verbatim() -> None:
+    """An unknown option name is the engine's rejection to make, so the
+    client forwards it rather than dropping it.
+    """
+    archetype = _Archetype(
+        id="arch",
+        name="Arch",
+        description="d",
+        options=(_ComponentOption(name="known", type="string"),),
+    )
+
+    resolved = resolve_component_options(
+        [archetype],
+        presets={"arch": {"known": "a", "mystery": "b"}},
+        prompt=False,
+    )
+
+    assert resolved == {"arch": {"known": "a", "mystery": "b"}}

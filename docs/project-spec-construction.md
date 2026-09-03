@@ -92,7 +92,7 @@ boundary, not a gap, recorded in full by the canonical
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
 | *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` drives archetype selection from discovery today, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). The `>=0.4,<0.5` line (ADR 0026) ships two capability descriptors and zero platform descriptors; CF-13.03 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) added the `--capability`/`--no-capabilities`/`--platform`/`--no-platforms` flags and interactive multi-selects, resolved through `pipeline.Catalogue`, per the canonical [component selection contract](component-selection.md). `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
-| *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)), `--engine-preview` prompts directly for the selected archetype's own declared `ComponentDescriptor.options` (`prompts.ask_component_options`) and passes an explicit, caller-supplied `component_options` whenever any were answered. When none were — the archetype declares none, or every value came from elsewhere — `pipeline._resolved_component_options` falls back to deriving `packaging_mode` from the legacy `build_backend`/`versioning` `--data` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own descriptor declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
+| *caller-supplied, for every selected component* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) `--engine-preview` prompts directly for declared `ComponentDescriptor.options`; CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)) does so for *every* selected component (not just the archetype), owner-namespaced, via `prompts.resolve_component_options` over `pipeline.Catalogue.selected()`, plus the owner-qualified `--component-option ID.OPTION=VALUE` flag and `prompts.coerce_option_value` typing. A component whose namespace stays empty is omitted. `pipeline._resolved_component_options` then fills a *declared archetype option the caller left unset* from the legacy `build_backend`/`versioning` `--data` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02) — per option name (ADR 0029), and only when the selected archetype's own descriptor declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
 | *caller-supplied* `SelectionProvenance` | `provenance` | Left empty by `cli.py` today, since it resolves no policy. A policy-aware client passes a `SelectionProvenance` built after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself — see the canonical [downstream policy-consumption contract](organisation-policy-consumption.md). |
 
 ## Unmapped answers
@@ -123,10 +123,13 @@ value `copier.yml` itself computes (`static` when `build_backend ==
 "uv_build"`, else `versioning`, defaulting to `static`), and
 `engine.map_legacy_library_options()` is a thin, compatibility-checked
 wrapper over the facade. `pipeline._resolved_component_options` calls both,
-but only when the caller supplied no explicit `component_options` *and* the
-selected archetype's own discovered `ComponentDescriptor.options` declares
-`packaging_mode` — `library`'s manifest does, so it applies there; `cli`
-declares no options at all, so the derivation is skipped before
+but only for a *declared archetype option the caller left unset* — per option
+name since CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)),
+so a selected capability contributing its own `component_options` namespace no
+longer defeats the archetype's `--data build_backend=…` fallback — and only
+when the selected archetype's own discovered `ComponentDescriptor.options`
+declares `packaging_mode`. `library`'s manifest does, so it applies there;
+`cli` declares no options at all, so the derivation is skipped before
 `map_legacy_library_options` is even called. CF-08.03's archetype-parity
 review ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) generalised this
 from an earlier `archetype != "library"` check to this descriptor-gated form,
@@ -158,8 +161,9 @@ requirements, or generated content. CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 selection conventions; CF-13.03
 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) implemented
-discovery-driven capability and platform selection, and CF-13.04 implements
-per-component options.
+discovery-driven capability and platform selection, and CF-13.04
+([ADR 0029](adr/0029-per-component-option-collection.md)) per-component option
+collection and typing.
 
 The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
@@ -178,9 +182,10 @@ descriptors through discovery; the canonical
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixes how a
 selected capability reaches an effective ProjectSpec; CF-13.03
 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) implements the
-selection itself and CF-13.04 the option collection — the effective-spec
-mapping is `build_spec_payload`'s existing `capabilities`/`platforms`
-parameters, unchanged.
+selection itself and CF-13.04
+([ADR 0029](adr/0029-per-component-option-collection.md)) the option
+collection — the effective-spec mapping is `build_spec_payload`'s existing
+`capabilities`/`platforms`/`component_options` parameters, unchanged.
 
 ## Derivation rules
 
@@ -333,8 +338,11 @@ by
 - **CF-13.03** ([ADR 0028](adr/0028-discovery-driven-component-selection.md))
   implemented capability and platform selection: `pipeline.Catalogue`,
   the four flags, the interactive multi-selects, and the absent-versus-empty
-  encoding through `SelectionRequest`. Per-component option collection and
-  typing is CF-13.04.
+  encoding through `SelectionRequest`.
+- **CF-13.04** ([ADR 0029](adr/0029-per-component-option-collection.md))
+  implemented per-component option collection: `--component-option`,
+  `resolve_component_options` over `Catalogue.selected()`, CLI-string typing,
+  and the per-name legacy-fallback merge.
 
 ## Executable examples
 
@@ -363,13 +371,17 @@ by
   pipeline's discover → build → validate → render orchestration order, the
   real, unmocked end-to-end success against the production catalogue for
   both archetypes, the legacy `library` option derivation gated by
-  discovered descriptor (CF-08.03), `discover_archetypes()`'s `kind` filter,
-  `Catalogue` reuse so `engine.discover()` runs once (CF-13.03), and
+  discovered descriptor (CF-08.03) and merged per option name (CF-13.04),
+  `discover_archetypes()`'s `kind` filter, `Catalogue` reuse so
+  `engine.discover()` runs once (CF-13.03), and
   `finalise_generation_request`'s staging/rename behaviour — see also the
   canonical [filesystem generation contract](filesystem-generation.md).
 - [`tests/test_component_selection.py`](../tests/test_component_selection.py)
   — CF-13.03's flag surface, absent-versus-empty table, required pre-locking,
-  prompt order, and the `--yes` missing-requirement hint.
+  prompt order, and the `--yes` missing-requirement hint; CF-13.04's
+  `--component-option` section — owner-namespaced values, colliding option
+  names, unknown/unselected owners, exit-`2` malformed cases, and an empty
+  namespace serialising no key.
 - [`tests/test_archetype_parity.py`](../tests/test_archetype_parity.py) — the
   CF-08.03 review's executable record: shared payload shape, shared pipeline,
   `cli`'s empty-options descriptor driving empty `component_options`, no
@@ -391,7 +403,10 @@ by
 - [`tests/test_prompts.py`](../tests/test_prompts.py) — `ask_project_answers`
   and `ask_component_options` (ADR 0025): preset/defaults/cancellation
   parity with `ask_all`, one case per declared option `type`, and the
-  empty-return case for a descriptor with no options.
+  empty-return case for a descriptor with no options; plus
+  `coerce_option_value` per type and `resolve_component_options`'
+  multi-descriptor ordering, empty-namespace omission, and undeclared-key
+  pass-through (CF-13.04, ADR 0029).
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

@@ -242,9 +242,10 @@ components, and CF-13.02
 how they are selected in the canonical
 [component selection contract](docs/component-selection.md). CF-13.03
 ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
-capability and platform selection behind `--engine-preview`; per-component
-options and the pipeline proof are the rest of the
-[Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
+capability and platform selection behind `--engine-preview`, and CF-13.04
+([ADR 0029](docs/adr/0029-per-component-option-collection.md)) per-component
+option collection and `--component-option`; the pipeline proof is the rest of
+the [Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
 optional capabilities, discovery-driven preview UX, and cross-repository
 validation through Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub

@@ -110,6 +110,25 @@ class Catalogue:
             if self.kind_of(relation.id) == kind
         )
 
+    def selected(self, selection: SelectionRequest) -> tuple[ComponentDescriptor, ...]:
+        """Every selected descriptor, in composition-tier then lexical order.
+
+        Tier order is `DESCRIPTOR_KIND`'s declaration order -- archetype,
+        capability, platform -- mirroring
+        `forge_template.composition.COMPOSITION_TIER_ORDER`; within a tier,
+        ids are sorted lexically. This is the order per-component options are
+        prompted and serialised in (CF-13.04, ADR 0029). A selected id the
+        catalogue does not contain is skipped -- the engine rejects it
+        authoritatively.
+        """
+        result: list[ComponentDescriptor] = []
+        for kind in DESCRIPTOR_KIND:
+            for component_id in sorted(selection.ids_for(kind)):
+                descriptor = self.get(component_id)
+                if descriptor is not None:
+                    result.append(descriptor)
+        return tuple(result)
+
 
 def discover_catalogue() -> Catalogue:
     """The full discovered catalogue, after protocol negotiation (ADR 0028).
@@ -132,36 +151,23 @@ def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
     return discover_catalogue().archetypes
 
 
-def _resolved_component_options(
-    answers: Mapping[str, object],
-    archetype: str,
-    component_options: Mapping[str, Mapping[str, object]] | None,
-    descriptors: Sequence[ComponentDescriptor],
-) -> Mapping[str, Mapping[str, object]] | None:
-    """Derive `component_options` when the caller supplied none.
+def _legacy_archetype_options(
+    answers: Mapping[str, object], descriptor: ComponentDescriptor | None
+) -> Mapping[str, object] | None:
+    """The legacy `build_backend`/`versioning` -> `packaging_mode` mapping,
+    or `None` when it does not apply.
 
-    `library` predates the engine, so its legacy `build_backend`/`versioning`
-    answers need translating into the production `packaging_mode` option or a
-    user's choice silently reverts to the engine's own default. CF-08.03's
-    archetype-parity review (ADR 0019) found this derivation keyed on a
-    hardcoded `archetype != "library"` check -- the one archetype-specific
-    branch in this codebase -- and generalised it: `engine.map_legacy_library_options`
-    already names the option it produces (`packaging_mode`), and the
-    selected archetype's own discovered `ComponentDescriptor.options` already
-    declares whether it accepts that name. Applying the mapping only when the
-    descriptor declares it needs no archetype id anywhere in this function,
-    so a future archetype that also wants the legacy mapping (or `library`
-    itself being renamed) needs no change here -- only in the engine's own
-    manifest.
-
-    The descriptor lookup runs before the mapping call, not after: an
-    archetype that declares no options at all (`cli`) never needs
-    `engine.map_legacy_library_options` invoked on its behalf, matching the
-    old code's behaviour of never calling it for a non-`library` archetype.
-    """
-    if component_options is not None:
-        return component_options
-    descriptor = next((d for d in descriptors if d.id == archetype), None)
+    `library` predates the engine, so its legacy answers need translating into
+    the production `packaging_mode` option or a user's choice silently reverts
+    to the engine's own default. CF-08.03's archetype-parity review
+    (ADR 0019) generalised the gate off a hardcoded `archetype == "library"`
+    check: `engine.map_legacy_library_options` names the option it produces,
+    and the selected archetype's own discovered `ComponentDescriptor.options`
+    declares whether it accepts that name -- so no archetype id appears here,
+    and a future archetype that wants the mapping (or `library` renamed) needs
+    no change. An archetype that declares no options at all (`cli`) never
+    reaches `map_legacy_library_options`.
+    """  # noqa: D205
     if descriptor is None or not descriptor.options:
         return None
     legacy = legacy_library_answers(answers)
@@ -173,7 +179,51 @@ def _resolved_component_options(
     declared = {option.name for option in descriptor.options}
     if not set(mapped) <= declared:
         return None
-    return {archetype: mapped}
+    return mapped
+
+
+def _resolved_component_options(
+    answers: Mapping[str, object],
+    archetype: str,
+    component_options: Mapping[str, Mapping[str, object]] | None,
+    descriptors: Sequence[ComponentDescriptor],
+) -> Mapping[str, Mapping[str, object]] | None:
+    """Merge the legacy archetype-option fallback beneath the caller's map.
+
+    CF-13.04 (ADR 0029) makes the legacy derivation *per option name* rather
+    than all-or-nothing: it fills a declared archetype option the caller left
+    unset, and never overrides one they did supply -- rule 3 of
+    docs/component-selection.md's precedence (`--component-option` > `--data` >
+    legacy > default). Before CF-13.04 the whole derivation was skipped the
+    moment `component_options` was non-`None`, which a selected capability's
+    namespace alone would trigger -- silently defeating the archetype's own
+    `--data build_backend=...` fallback.
+
+    `map_legacy_library_options` is only consulted when the archetype declares
+    an option name the caller has not filled, so the caller-supplies-everything
+    and no-options (`cli`) cases still never call it.
+    """
+    supplied = component_options or {}
+    supplied_archetype = dict(supplied.get(archetype, {}))
+    descriptor = next((d for d in descriptors if d.id == archetype), None)
+    declared = {option.name for option in descriptor.options} if descriptor else set()
+
+    unset = declared - supplied_archetype.keys()
+    if not unset:
+        return component_options
+
+    legacy = _legacy_archetype_options(answers, descriptor)
+    if legacy is None:
+        return component_options
+    additions = {name: value for name, value in legacy.items() if name in unset}
+    if not additions:
+        return component_options
+
+    result: dict[str, Mapping[str, object]] = {
+        component_id: dict(options) for component_id, options in supplied.items()
+    }
+    result[archetype] = {**additions, **supplied_archetype}
+    return result
 
 
 def build_generation_request(
@@ -198,11 +248,12 @@ def build_generation_request(
     identifiers of its own, and today's only caller (`cli.py`) always marks
     its archetype explicit. `provenance`, when given, is threaded straight
     through to `build_spec_payload` -- this function resolves no policy and
-    merges nothing itself. An explicit `component_options` is likewise passed
-    through unchanged; when the caller supplies none,
-    `_resolved_component_options` derives the one legacy mapping this
-    repository still owns, gated on the selected archetype's own discovered
-    descriptor rather than a hardcoded id (CF-08.03, ADR 0019).
+    merges no policy itself. `component_options` the caller supplies is kept
+    as given; `_resolved_component_options` only fills a declared archetype
+    option the caller left unset, from the legacy `build_backend`/`versioning`
+    fallback this repository still owns -- per option name since CF-13.04
+    (ADR 0029), gated on the selected archetype's own discovered descriptor
+    rather than a hardcoded id (CF-08.03, ADR 0019).
 
     `catalogue`, when supplied, is the already-discovered `Catalogue` the
     caller holds (`cli.py`'s `--engine-preview` flow discovers once for

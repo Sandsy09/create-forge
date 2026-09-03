@@ -22,7 +22,8 @@ underway: CF-13.01 (ADR 0026) adopted the `forge-template>=0.4,<0.5`
 compatibility line, so `--engine-preview` discovery now returns all five
 descriptors, and CF-13.02 (ADR 0027) fixed the generic component-selection
 CLI conventions, which CF-13.03 (ADR 0028) implemented for capabilities and
-platforms. CF-13.04–13.05 add option prompting and pipeline validation.
+platforms and CF-13.04 (ADR 0029) for per-component options. CF-13.05 adds
+pipeline validation.
 
 ## Repository roles
 
