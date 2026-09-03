@@ -127,15 +127,18 @@ descriptor of it is required by the archetype. All of that precedes any
 project answer. Then `prompts.ask_project_answers` asks the three
 CLI-collected answers that reach `ProjectSpec.project`
 (`project_name`/`project_description`/`license`), and
-`prompts.ask_component_options` asks exactly what that archetype's own
-discovered descriptor declares — nothing for `cli` (which declares no
-options), `packaging_mode`/`initial_version` for `library`:
+`prompts.resolve_component_options` asks exactly what every *selected*
+component's own discovered descriptor declares (CF-13.04,
+[ADR 0029](adr/0029-per-component-option-collection.md)) — in composition-tier
+then lexical order, and omitting a component whose namespace stays empty.
+Against `0.4.0` only the archetype ever has options: nothing for `cli`,
+`packaging_mode`/`initial_version` for `library`:
 
 | Registry question | Reaches ProjectSpec for `library`? | for `cli`? |
 | --- | --- | --- |
 | `project_name`, `project_description`, `license` | asked directly | asked directly |
 | `packaging_mode`, `initial_version` | asked directly, from `library`'s own descriptor | n/a — no options declared |
-| `--data build_backend`/`versioning` | still reaches `packaging_mode` via `map_legacy_library_options`, as a fallback when neither option was answered directly (ADR 0019, ADR 0025) | discarded |
+| `--data build_backend`/`versioning` | still reaches `packaging_mode` via `map_legacy_library_options`, per option name, as a fallback when that option was not answered directly (ADR 0019, ADR 0025, ADR 0029) | discarded |
 | `github_org`, `type_checking`, `use_docs` | discarded | discarded |
 
 CF-08.03's archetype-parity review ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
@@ -174,10 +177,12 @@ how `--engine-preview` turns flags and prompts into a ProjectSpec's
 `--component-option ID.OPTION=VALUE`. All five are hidden and
 `--engine-preview`-only, rejected with exit `1` otherwise, exactly as
 `--archetype` is. CF-13.03
-([ADR 0028](adr/0028-discovery-driven-component-selection.md)) has implemented
-the four capability/platform flags and their interactive multi-selects;
-`--component-option` and per-component option typing are CF-13.04, and
-CF-13.05 proves the pipeline.
+([ADR 0028](adr/0028-discovery-driven-component-selection.md)) implemented the
+four capability/platform flags and their interactive multi-selects; CF-13.04
+([ADR 0029](adr/0029-per-component-option-collection.md)) implemented
+`--component-option`, per-component option collection for every selected
+component, and CLI-string-to-declared-type coercion. CF-13.05 proves the
+whole pipeline against the released engine.
 
 For this document's purposes: a malformed `--component-option` (missing `.` or
 `=`) is a `typer.BadParameter` usage rejection, exit `2`, like a malformed
@@ -321,11 +326,14 @@ The contract is characterized by these tests:
   single-template selection through `test_ask_all_does_not_reprompt_a_preset_key`,
   `test_defaults_pre_fill_a_text_prompt_without_suppressing_it`, and their
   neighbouring cases, plus `choose_archetype`'s equivalent skip-when-one,
-  selection, and cancellation cases (ADR 0017). `ask_project_answers` and
-  `ask_component_options` (ADR 0025) have their own preset/defaults/
+  selection, and cancellation cases (ADR 0017). `ask_project_answers`,
+  `ask_component_options` (ADR 0025), `resolve_component_options` and
+  `coerce_option_value` (ADR 0029) have their own preset/defaults/
   cancellation cases, plus one per declared option `type` (`string` with and
-  without `choices`, `boolean`, `integer`, `string_list`) and the empty-return
-  case for a descriptor that declares none.
+  without `choices`, `boolean`, `integer`, `string_list`), the empty-return
+  case for a descriptor that declares none, and — for
+  `resolve_component_options` — multi-descriptor ordering and undeclared-key
+  pass-through.
 - [`tests/test_drift.py`](../tests/test_drift.py) covers the v0.1.x boundary
   between registry presentation metadata and template-owned questions,
   choices, conditions, and defaults.
@@ -336,9 +344,9 @@ The contract is characterized by these tests:
 - The `--engine-preview` component-selection surface is its own canonical
   [component selection contract](component-selection.md), characterized by
   `tests/test_engine_cross_repository.py`'s
-  `test_selection_model_matches_the_documented_contract` today and by the
-  CF-13.03 / CF-13.04 `tests/test_cli.py` and `tests/test_prompts.py` cases
-  once they land.
+  `test_selection_model_matches_the_documented_contract`, and by
+  `tests/test_component_selection.py`, `tests/test_prompts.py`, and
+  `tests/test_pipeline.py` (CF-13.03, CF-13.04).
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.

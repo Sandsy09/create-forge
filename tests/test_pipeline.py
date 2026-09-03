@@ -364,6 +364,85 @@ def test_build_generation_request_leaves_explicit_component_options_untouched(
     }
 
 
+def test_legacy_fallback_fills_an_archetype_option_a_capability_namespace_left_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CF-13.04 (ADR 0029): the legacy derivation is per option name, not
+    all-or-nothing. A capability contributing its own `component_options`
+    namespace must not defeat the archetype's `--data build_backend=...`
+    fallback for a name the caller never supplied.
+    """
+    seen_payload: dict[str, object] = {}
+
+    def fake_build_project_spec(payload: dict[str, object]) -> str:
+        seen_payload.update(payload)
+        return "spec"
+
+    monkeypatch.setattr(
+        engine,
+        "discover",
+        lambda: (_descriptor("library", options=(_PACKAGING_MODE_OPTION,)),),
+    )
+    monkeypatch.setattr(engine, "build_project_spec", fake_build_project_spec)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+    monkeypatch.setattr(
+        engine,
+        "map_legacy_library_options",
+        lambda legacy: {"packaging_mode": "hatchling-vcs"},
+    )
+
+    answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
+    build_generation_request(
+        answers,
+        selection=SelectionRequest.of(archetype="library", capabilities=["docs"]),
+        component_options={"docs": {"theme": "furo"}},
+    )
+
+    assert seen_payload["component_options"] == {
+        "docs": {"theme": "furo"},
+        "library": {"packaging_mode": "hatchling-vcs"},
+    }
+
+
+def test_legacy_fallback_never_overrides_a_caller_supplied_archetype_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The caller's own `packaging_mode` wins -- the legacy value only fills a
+    name they left unset.
+    """
+    seen_payload: dict[str, object] = {}
+
+    def fake_build_project_spec(payload: dict[str, object]) -> str:
+        seen_payload.update(payload)
+        return "spec"
+
+    monkeypatch.setattr(
+        engine,
+        "discover",
+        lambda: (_descriptor("library", options=(_PACKAGING_MODE_OPTION,)),),
+    )
+    monkeypatch.setattr(engine, "build_project_spec", fake_build_project_spec)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+    monkeypatch.setattr(
+        engine,
+        "map_legacy_library_options",
+        lambda legacy: {"packaging_mode": "hatchling-vcs"},
+    )
+
+    answers = {**_VALID_ANSWERS, "build_backend": "hatchling", "versioning": "vcs"}
+    build_generation_request(
+        answers,
+        selection=SelectionRequest.of(archetype="library"),
+        component_options={"library": {"packaging_mode": "uv-build-static"}},
+    )
+
+    assert seen_payload["component_options"] == {
+        "library": {"packaging_mode": "uv-build-static"}
+    }
+
+
 def test_discover_archetypes_filters_to_archetype_kind(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

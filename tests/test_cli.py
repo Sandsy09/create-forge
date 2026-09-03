@@ -1126,7 +1126,7 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
             "python_version": "3.13",
         },
     )
-    monkeypatch.setattr(cli_module, "ask_component_options", lambda *_a, **_kw: {})
+    monkeypatch.setattr(cli_module, "resolve_component_options", lambda *_a, **_kw: {})
     # CF-13.03: the real 0.4 catalogue has capability descriptors, so an
     # interactive run now reaches a capability multi-select; this test is
     # about archetype selection only, so short-circuit it.

@@ -13,7 +13,7 @@ registry data at all.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 import questionary
@@ -337,37 +337,116 @@ def _ask_prompts(
     return answers
 
 
+def coerce_option_value(option: ComponentOptionSpec, value: object) -> object:
+    """Convert a CLI-string option value to its declared type.
+
+    Mirrors `_ask_component_option`'s own per-type parsing for values that
+    arrive as strings from `--component-option` or `--data` rather than a
+    prompt (CF-13.04, [ADR 0029](adr/0029-per-component-option-collection.md)):
+
+    * `boolean` -- case-insensitive `true`/`false`, as `--data` already parses;
+    * `integer` -- `int(value)`;
+    * `string_list` -- comma-split, each item trimmed, empties dropped;
+    * `string` -- verbatim.
+
+    A non-`str` `value` is already typed (a `--data` bool, say) and passes
+    straight through. A string that will not convert also passes through
+    unchanged, so the strict engine produces the authoritative
+    `does not match its declared type` message rather than create-forge
+    inventing a parallel one.
+    """
+    if not isinstance(value, str):
+        return value
+    if option.type == "boolean":
+        lowered = value.strip().lower()
+        return lowered == "true" if lowered in {"true", "false"} else value
+    if option.type == "integer":
+        try:
+            return int(value)
+        except ValueError:
+            return value
+    if option.type == "string_list":
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return value
+
+
+def resolve_component_options(
+    descriptors: Sequence[ArchetypeChoice],
+    *,
+    presets: Mapping[str, Mapping[str, object]] | None = None,
+    prompt: bool = True,
+) -> dict[str, dict[str, object]]:
+    """Collect every selected component's declared options, owner-namespaced.
+
+    Walks `descriptors` in the caller's order -- `cli` passes them in the
+    engine's composition-tier order, then lexically by id (CF-13.04,
+    [ADR 0029](adr/0029-per-component-option-collection.md)). For each
+    descriptor:
+
+    * start from its own namespace in `presets`;
+    * coerce each preset value whose option name the descriptor *declares* to
+      that option's type (`coerce_option_value`); a preset key it does not
+      declare is kept verbatim and never prompted -- an unknown option name is
+      the engine's rejection to make;
+    * when `prompt`, ask for each declared option the namespace did not supply,
+      exactly as `_ask_component_option` renders it;
+    * omit the component from the result entirely when its namespace ends up
+      empty, so a selected optionless component produces no `component_options`
+      key at all.
+
+    Cancelling a prompt raises `PromptAbortedError`.
+    """
+    presets = presets or {}
+    resolved: dict[str, dict[str, object]] = {}
+
+    for descriptor in descriptors:
+        by_name = {option.name: option for option in descriptor.options}
+        preset = presets.get(descriptor.id, {})
+        namespace: dict[str, object] = {
+            name: coerce_option_value(by_name[name], value)
+            if name in by_name
+            else value
+            for name, value in preset.items()
+        }
+
+        if prompt:
+            for option in descriptor.options:
+                if option.name in namespace:
+                    continue
+                value = _ask_component_option(option)
+                if value is None:
+                    raise PromptAbortedError
+                namespace[option.name] = value
+
+        if namespace:
+            resolved[descriptor.id] = namespace
+
+    return resolved
+
+
 def ask_component_options(
-    descriptor: ArchetypeChoice, *, preset: dict[str, object] | None = None
+    descriptor: ArchetypeChoice, *, preset: Mapping[str, object] | None = None
 ) -> dict[str, object]:
-    """Prompt for `descriptor.options` directly, returning real-typed answers.
+    """Prompt for one descriptor's declared options, returning real-typed
+    answers. The single-descriptor form of `resolve_component_options`, kept
+    as a named entry point because ADR 0025 and the living docs refer to it.
 
     Renders each `ComponentOptionSpec` natively rather than coercing it
     through `PromptSpec` -- `Choice.value`/`PromptSpec.default` are
     `str | bool`, which would be lossy for `integer`/`string_list` options.
-    Returns `{}` immediately for a descriptor with no declared options
-    (`cli`'s today) -- that empty return is itself #91's first acceptance
-    criterion: no Library-specific question is ever reached for an archetype
-    that declares none.
+    Returns `{}` for a descriptor with no declared options (`cli`'s today) --
+    that empty return is itself #91's first acceptance criterion.
 
     A `preset` key with the option's own name suppresses that prompt, mirror-
     ing `ask_all`'s preset semantics -- an explicit `--data packaging_mode=...`
     is honoured without being re-asked.
-    """
-    answers: dict[str, object] = {}
-    preset = preset or {}
-
-    for option in descriptor.options:
-        if option.name in preset:
-            answers[option.name] = preset[option.name]
-            continue
-
-        value = _ask_component_option(option)
-        if value is None:
-            raise PromptAbortedError
-        answers[option.name] = value
-
-    return answers
+    """  # noqa: D205
+    resolved = resolve_component_options(
+        [descriptor],
+        presets={descriptor.id: dict(preset)} if preset else None,
+        prompt=True,
+    )
+    return resolved.get(descriptor.id, {})
 
 
 def _ask_component_option(option: ComponentOptionSpec) -> object | None:

@@ -119,9 +119,12 @@ and client-versus-engine validation ownership. CF-13.03
 ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
 capability and platform selection — `pipeline.Catalogue`, the four
 `--capability`/`--no-capabilities`/`--platform`/`--no-platforms` flags, and
-the interactive multi-selects; CF-13.04–13.05 add per-component options and
-the pipeline proof. Do not hard-code a capability or Data Science rule —
-selection is discovery-driven and semantic validation stays engine-owned.
+the interactive multi-selects; CF-13.04
+([ADR 0029](docs/adr/0029-per-component-option-collection.md)) added
+`--component-option` and per-component option collection and typing for every
+selected component; CF-13.05 proves the pipeline. Do not hard-code a
+capability or Data Science rule — selection is discovery-driven and semantic
+validation stays engine-owned.
 
 ## What CI runs
 

@@ -159,6 +159,20 @@ class SelectionRequest:
             explicit=frozenset(explicit),
         )
 
+    def ids_for(self, kind: SelectionKind) -> tuple[str, ...]:
+        """The selected component ids of one kind.
+
+        `ARCHETYPE` yields a one-tuple -- ProjectSpec always selects exactly
+        one. Lets a caller walk a whole selection by
+        `DESCRIPTOR_KIND`/`SELECTABLE_KINDS` order without three branches
+        (CF-13.04).
+        """
+        if kind is SelectionKind.ARCHETYPE:
+            return (self.archetype,)
+        if kind is SelectionKind.CAPABILITIES:
+            return self.capabilities
+        return self.platforms
+
 
 @dataclass(frozen=True, slots=True)
 class SelectionProvenance:

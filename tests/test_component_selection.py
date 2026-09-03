@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import questionary
-from forge_template import ComponentDescriptor, ComponentRelation
+from forge_template import ComponentDescriptor, ComponentOption, ComponentRelation
 from typer.testing import CliRunner
 
 import create_forge.pipeline as pipeline_module
@@ -60,6 +60,7 @@ def _descriptor(
     kind: str,
     *,
     requires: tuple[ComponentRelation, ...] = (),
+    options: tuple[ComponentOption, ...] = (),
 ) -> ComponentDescriptor:
     return ComponentDescriptor(
         id=component_id,
@@ -71,7 +72,19 @@ def _descriptor(
         requires_python=">=3.11",
         requires=requires,
         conflicts=(),
-        options=(),
+        options=options,
+    )
+
+
+def _option(name: str, option_type: str = "string") -> ComponentOption:
+    return ComponentOption(
+        name=name,
+        type=option_type,  # type: ignore[arg-type]
+        required=False,
+        default=None,
+        choices=(),
+        description=f"The {name} option.",
+        format=None,
     )
 
 
@@ -672,3 +685,280 @@ def test_library_and_cli_archetypes_need_no_new_flag(
             ],
         )
         assert result.exit_code == 0, result.output
+
+
+# --------------------------------------------------------------------------
+# CLI: --component-option (CF-13.04, ADR 0029)
+# --------------------------------------------------------------------------
+
+
+def test_component_option_without_engine_preview_is_rejected() -> None:
+    result = runner.invoke(app, ["new", "X", *_YES_DATA, "--component-option", "a.b=c"])
+
+    assert result.exit_code == 1, result.output
+    assert "require --engine-preview" in " ".join(result.output.split())
+
+
+@pytest.mark.parametrize(
+    "value", ["packaging_mode=hatchling-vcs", "library.packaging_mode"]
+)
+def test_malformed_component_option_is_a_usage_error(
+    value: str, tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--component-option",
+            value,
+        ],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert captured_selection == {}
+    assert not (tmp_path / "p").exists()
+
+
+def test_component_option_value_reaches_projectspec_under_the_declaring_id(
+    tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--component-option",
+            "library.packaging_mode=hatchling-vcs",
+        ],
+    )
+
+    assert captured_selection["component_options"] == {
+        "library": {"packaging_mode": "hatchling-vcs"}
+    }
+
+
+def test_repeated_component_option_takes_the_last_value(
+    tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--component-option",
+            "library.packaging_mode=uv-build-static",
+            "--component-option",
+            "library.packaging_mode=hatchling-vcs",
+        ],
+    )
+
+    assert captured_selection["component_options"] == {
+        "library": {"packaging_mode": "hatchling-vcs"}
+    }
+
+
+def test_unknown_component_option_owner_is_rejected_before_any_effect(
+    tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "cli",
+            "--component-option",
+            "not-a-component.x=1",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "Unknown --component-option component 'not-a-component'" in result.output
+    assert captured_selection == {}
+    assert not (tmp_path / "p").exists()
+
+
+def test_component_option_for_an_unselected_owner_is_rejected(
+    tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "cli",
+            "--component-option",
+            "library.packaging_mode=hatchling-vcs",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "is not selected" in result.output
+    assert captured_selection == {}
+
+
+def test_undeclared_option_name_reaches_the_engine(tmp_path: Path) -> None:
+    """An option name no descriptor declares is the engine's verdict, not a
+    client-side check -- it must produce the engine's own message.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Risk Models",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "library",
+            "--component-option",
+            "library.not_a_real_option=1",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "not_a_real_option" in result.output
+    assert not (tmp_path / "p").exists()
+
+
+def test_a_selected_optionless_component_serialises_no_namespace(
+    tmp_path: Path, captured_selection: dict[str, object]
+) -> None:
+    """`data-science` and `jupiter` both declare no options -- the pipeline
+    must receive `None`, not `{}` and not `{"jupyter": {}}`.
+    """
+    runner.invoke(
+        app,
+        [
+            "new",
+            "Risk Models",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "data-science",
+            "--capability",
+            "jupyter",
+        ],
+    )
+
+    assert captured_selection["component_options"] is None
+
+
+def test_colliding_option_names_stay_unambiguous(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    captured_selection: dict[str, object],
+) -> None:
+    """An archetype and a capability that both declare an option called
+    `shared` each receive their own value, routed by the owner id.
+    """
+    descriptors = (
+        _descriptor("arch-x", "archetype", options=(_option("shared"),)),
+        _descriptor("cap-x", "capability", options=(_option("shared"),)),
+    )
+    _install_synthetic_catalogue(monkeypatch, descriptors)
+
+    runner.invoke(
+        app,
+        [
+            "new",
+            "X",
+            "--path",
+            str(tmp_path / "p"),
+            *_YES_DATA,
+            "--engine-preview",
+            "--archetype",
+            "arch-x",
+            "--capability",
+            "cap-x",
+            "--component-option",
+            "arch-x.shared=archetype-value",
+            "--component-option",
+            "cap-x.shared=capability-value",
+        ],
+    )
+
+    assert captured_selection["component_options"] == {
+        "arch-x": {"shared": "archetype-value"},
+        "cap-x": {"shared": "capability-value"},
+    }
+
+
+def test_component_options_are_collected_after_all_other_prompts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    captured_selection: dict[str, object],
+) -> None:
+    """Prompt order: capabilities -> project answers -> the archetype's own
+    options, last (CF-13.04, ADR 0029). `library` declares two.
+    """
+    order: list[str] = []
+
+    def fake_checkbox(message: str, **_kw: object) -> _Reply:
+        order.append(message)
+        return _Reply([])
+
+    def fake_text(message: str, **_kw: object) -> _Reply:
+        order.append(message)
+        return _Reply("Engine Preview" if message == "Project name" else "0.1.0")
+
+    def fake_select(message: str, **_kw: object) -> _Reply:
+        order.append(message)
+        return _Reply("mit" if message == "License" else "hatchling-vcs")
+
+    monkeypatch.setattr(questionary, "checkbox", fake_checkbox)
+    monkeypatch.setattr(questionary, "text", fake_text)
+    monkeypatch.setattr(questionary, "select", fake_select)
+
+    runner.invoke(
+        app,
+        [
+            "new",
+            "--path",
+            str(tmp_path / "p"),
+            "--engine-preview",
+            "--archetype",
+            "library",
+        ],
+    )
+
+    assert order[:4] == [
+        "Which capabilities?",
+        "Project name",
+        "Short description",
+        "License",
+    ]
+    # `library`'s own two declared options are prompted last, after everything.
+    assert len(order) == 6
+    assert "component_options" in captured_selection

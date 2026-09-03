@@ -38,9 +38,11 @@ interactive prompt (`prompts.choose_archetype`). CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting non-archetype descriptors in the canonical
 [component selection contract](component-selection.md); CF-13.03 (ADR 0028)
-implemented the capability and platform half, CF-13.04 implements
-per-component options. This document still covers only the adapter
-`engine.discover()` itself, not that selection layer.
+implemented the capability and platform half, and CF-13.04
+([ADR 0029](adr/0029-per-component-option-collection.md)) the per-component
+options — `Catalogue.selected()` orders the selected descriptors for option
+collection. This document still covers only the adapter `engine.discover()`
+itself, not that selection layer.
 
 ## Compatibility before catalogue access
 
@@ -110,7 +112,9 @@ grouping them by kind and resolving relationships follows the canonical
 [ADR 0027](adr/0027-generic-component-selection-conventions.md)) — the
 capability and platform half is implemented by CF-13.03
 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) in
-`pipeline.Catalogue`, per-component options by CF-13.04.
+`pipeline.Catalogue`, and per-component options by CF-13.04
+([ADR 0029](adr/0029-per-component-option-collection.md)) via
+`Catalogue.selected()`.
 
 ## Failures and trust boundary
 
@@ -163,8 +167,11 @@ engine internals to obtain them.
 - **CF-13.03** ([ADR 0028](adr/0028-discovery-driven-component-selection.md))
   added `pipeline.discover_catalogue()` / `Catalogue`: one discovery grouped
   by kind, feeding archetype *and* capability/platform selection. Discovery
-  itself — the `engine.discover()` adapter — is unchanged. Per-component
-  option collection is CF-13.04.
+  itself — the `engine.discover()` adapter — is unchanged.
+- **CF-13.04** ([ADR 0029](adr/0029-per-component-option-collection.md))
+  added `Catalogue.selected()`: the selected descriptors in composition-tier
+  then lexical order, for per-component option collection. Still no change to
+  the adapter.
 
 ## Executable examples
 

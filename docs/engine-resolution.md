@@ -55,7 +55,9 @@ Adopting the 0.4 line makes the Data Science components discoverable through
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting them — capabilities, platforms, component options —
 in the canonical [component selection contract](component-selection.md);
-CF-13.03–13.04 implement it and CF-13.05 proves the pipeline. Normal
+CF-13.03 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) and
+CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)) implement
+it and CF-13.05 proves the pipeline. Normal
 resolution now rejects any `0.3.x` engine, and every `0.4.x` release inside
 the range is adopted per the canonical [engine update policy](engine-updates.md).
 
