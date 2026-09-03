@@ -8,7 +8,7 @@ exposes the released Data Science composition through `new --engine-preview`.
 ## Dependencies
 
 CF-EPIC-13's native predecessors `create-forge#91` and FT-EPIC-12 are both
-complete. CF-13.01 and CF-13.02 are complete; CF-13.03 is unblocked.
+complete. CF-13.01, CF-13.02, and CF-13.03 are complete; CF-13.04 is unblocked.
 
 ## Child sequence
 
@@ -32,13 +32,21 @@ complete. CF-13.01 and CF-13.02 are complete; CF-13.03 is unblocked.
    shipped module or test.
 3. [CF-13.03 / create-forge#108](https://github.com/Sandsy09/create-forge/issues/108)
    implements discovery-driven capability and platform selection.
+   **Complete** under
+   [ADR 0028](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0028-discovery-driven-component-selection.md):
+   `pipeline.Catalogue` (one discovery, grouped by kind), the four
+   `--capability`/`--no-capabilities`/`--platform`/`--no-platforms` flags,
+   interactive multi-selects with required entries pre-locked and reinstated,
+   the absent-versus-explicit-empty encoding through `SelectionRequest`, and
+   shape-only client-side checks — no production component id in any shipped
+   module or test.
 4. [CF-13.04 / create-forge#109](https://github.com/Sandsy09/create-forge/issues/109)
    prompts and serialises options for every selected component.
 5. [CF-13.05 / create-forge#110](https://github.com/Sandsy09/create-forge/issues/110)
    validates the Data Science preview pipeline against the released engine.
 
-CF-13.01 and CF-13.02 are done; the sequence proceeds linearly from CF-13.03
-through preview-pipeline validation.
+CF-13.01, CF-13.02, and CF-13.03 are done; the sequence proceeds linearly
+from CF-13.04 through preview-pipeline validation.
 
 ## Entry criteria
 

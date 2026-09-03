@@ -60,6 +60,41 @@ class SelectionKind(StrEnum):
     PLATFORMS = "platforms"
 
 
+DESCRIPTOR_KIND: dict[SelectionKind, str] = {
+    SelectionKind.ARCHETYPE: "archetype",
+    SelectionKind.CAPABILITIES: "capability",
+    SelectionKind.PLATFORMS: "platform",
+}
+"""The singular `ComponentDescriptor.kind` string each (plural) selection kind
+maps to.
+
+Declared in the engine's own `forge_template.composition.COMPOSITION_TIER_ORDER`
+order — archetype, then capability, then platform — mirrored here rather than
+imported, since that submodule is not part of the public facade. `spec.py`
+stays engine-free (ADR 0013); this is a vocabulary map, not engine behaviour.
+"""
+
+SELECTABLE_KINDS: tuple[SelectionKind, ...] = (
+    SelectionKind.CAPABILITIES,
+    SelectionKind.PLATFORMS,
+)
+"""The kinds `--engine-preview` selects *alongside* the single archetype —
+`components.capabilities` and `components.platforms`. Same tier order as
+`DESCRIPTOR_KIND`.
+"""
+
+
+def _is_explicit(override: bool | None, value: Sequence[str] | None) -> bool:
+    """Whether a selection kind counts as an explicit choice.
+
+    `override` wins when set; otherwise a non-`None` `value` (including an
+    empty sequence) is explicit and `None` is absent.
+    """
+    if override is not None:
+        return override
+    return value is not None
+
+
 @dataclass(frozen=True, slots=True)
 class SelectionRequest:
     """An effective component selection, plus which kinds were explicit.
@@ -82,13 +117,15 @@ class SelectionRequest:
     explicit: frozenset[SelectionKind] = field(default_factory=frozenset)
 
     @classmethod
-    def of(
+    def of(  # noqa: PLR0913 - one keyword per selection kind plus its explicitness override; collapsing them loses the absent-vs-empty distinction this method exists for
         cls,
         *,
         archetype: str,
         capabilities: Sequence[str] | None = None,
         platforms: Sequence[str] | None = None,
         archetype_explicit: bool = True,
+        capabilities_explicit: bool | None = None,
+        platforms_explicit: bool | None = None,
     ) -> SelectionRequest:
         """Build a request, inferring `explicit` from which args were passed.
 
@@ -98,13 +135,22 @@ class SelectionRequest:
         directly: `None` means "no explicit choice for this kind" (a policy
         default may still apply); an empty sequence is itself an explicit
         choice of "none".
+
+        `capabilities_explicit`/`platforms_explicit` override that inference
+        for the one case it cannot express: a kind whose every discovered
+        descriptor is required by the chosen archetype, so `create-forge`
+        selects those ids without ever offering a choice (CF-13.03,
+        [ADR 0028](adr/0028-discovery-driven-component-selection.md)). The ids
+        are non-empty, but the kind was not an explicit user choice -- exactly
+        `archetype_explicit=False`'s "a policy default could still have
+        applied" reasoning, one tier down.
         """
         explicit = set()
         if archetype_explicit:
             explicit.add(SelectionKind.ARCHETYPE)
-        if capabilities is not None:
+        if _is_explicit(capabilities_explicit, capabilities):
             explicit.add(SelectionKind.CAPABILITIES)
-        if platforms is not None:
+        if _is_explicit(platforms_explicit, platforms):
             explicit.add(SelectionKind.PLATFORMS)
         return cls(
             archetype=archetype,

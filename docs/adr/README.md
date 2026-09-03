@@ -30,6 +30,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0025 — Prompt the engine path from discovery, not the Copier registry](0025-engine-native-prompt-flow.md)
 - [0026 — Adopt the forge-template 0.4 compatibility line](0026-adopt-the-0-4-engine-compatibility-line.md)
 - [0027 — Select components from discovery, with owner-qualified options](0027-generic-component-selection-conventions.md)
+- [0028 — Select capabilities and platforms from one discovered catalogue](0028-discovery-driven-component-selection.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

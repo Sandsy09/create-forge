@@ -27,13 +27,19 @@ is range-bound to `>=0.4,<0.5`
 production catalogue ships five descriptors, including `library` and the
 optionless `cli` archetype; the 0.4 line also adds capability-kind
 descriptors and a catalogue relationship, which discovery returns unchanged.
-`pipeline.discover_archetypes()` filters the result to `kind == "archetype"`
-for `--engine-preview`'s `--archetype` option and interactive prompt
-(`prompts.choose_archetype`). CF-13.02
+`pipeline.discover_catalogue()` wraps one `engine.discover()` call in a frozen
+`Catalogue` with kind-grouped access (`archetypes`, `of_kind`, `get`,
+`kind_of`, `required_ids`), so `cli.py` selects every component kind from a
+single discovery and never inspects `ComponentDescriptor.kind` or `.requires`
+itself (CF-13.03, [ADR 0028](adr/0028-discovery-driven-component-selection.md)).
+`pipeline.discover_archetypes()` is the `kind == "archetype"` view of the same
+result, still named for `--engine-preview`'s `--archetype` option and
+interactive prompt (`prompts.choose_archetype`). CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting non-archetype descriptors in the canonical
-[component selection contract](component-selection.md); CF-13.03–13.04
-implement them. This document still covers only the adapter
+[component selection contract](component-selection.md); CF-13.03 (ADR 0028)
+implemented the capability and platform half, CF-13.04 implements
+per-component options. This document still covers only the adapter
 `engine.discover()` itself, not that selection layer.
 
 ## Compatibility before catalogue access
@@ -101,8 +107,10 @@ create-forge range to `forge-template>=0.4,<0.5`, so `engine.discover()` now
 returns all five descriptors. This adapter still returns them unchanged;
 grouping them by kind and resolving relationships follows the canonical
 [component selection contract](component-selection.md) (CF-13.02,
-[ADR 0027](adr/0027-generic-component-selection-conventions.md)) and is
-implemented by CF-13.03–13.04.
+[ADR 0027](adr/0027-generic-component-selection-conventions.md)) — the
+capability and platform half is implemented by CF-13.03
+([ADR 0028](adr/0028-discovery-driven-component-selection.md)) in
+`pipeline.Catalogue`, per-component options by CF-13.04.
 
 ## Failures and trust boundary
 
@@ -151,8 +159,12 @@ engine internals to obtain them.
   no-fallback trust boundary are unchanged.
 - **CF-13.02** ([ADR 0027](adr/0027-generic-component-selection-conventions.md))
   fixed how a client turns those descriptors into a selection — the canonical
-  [component selection contract](component-selection.md). Discovery itself is
-  unchanged; the selection layer it feeds is CF-13.03–13.04.
+  [component selection contract](component-selection.md).
+- **CF-13.03** ([ADR 0028](adr/0028-discovery-driven-component-selection.md))
+  added `pipeline.discover_catalogue()` / `Catalogue`: one discovery grouped
+  by kind, feeding archetype *and* capability/platform selection. Discovery
+  itself — the `engine.discover()` adapter — is unchanged. Per-component
+  option collection is CF-13.04.
 
 ## Executable examples
 
@@ -163,10 +175,11 @@ discovery failure propagation. The engine import boundary remains enforced by
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py).
 The exact installed/sibling pair and public rendering boundary are covered by
 [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py).
-`pipeline.discover_archetypes()`'s `kind`-filtering and the `--archetype`
-selection surface are covered by
-[`tests/test_pipeline.py`](../tests/test_pipeline.py) and
-[`tests/test_cli.py`](../tests/test_cli.py).
+`pipeline.discover_archetypes()`'s `kind`-filtering, `pipeline.Catalogue`'s
+grouping and direct-only `required_ids`, and the single-discovery guarantee
+are covered by [`tests/test_pipeline.py`](../tests/test_pipeline.py),
+[`tests/test_component_selection.py`](../tests/test_component_selection.py),
+and [`tests/test_cli.py`](../tests/test_cli.py).
 
 When discovery behaviour changes, update this contract and its executable
 examples in the same pull request.

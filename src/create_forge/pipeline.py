@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING
 
 from create_forge import engine, staging
 from create_forge.spec import (
+    DESCRIPTOR_KIND,
+    SelectionKind,
     SelectionProvenance,
     SelectionRequest,
     build_spec_payload,
@@ -34,6 +36,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from forge_template import ComponentDescriptor, ProjectSpec, RenderedProject
+
+_KIND_BY_DESCRIPTOR: Mapping[str, SelectionKind] = {
+    descriptor_kind: selection_kind
+    for selection_kind, descriptor_kind in DESCRIPTOR_KIND.items()
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,14 +55,81 @@ class GenerationRequest:
     rendered: RenderedProject
 
 
+@dataclass(frozen=True, slots=True)
+class Catalogue:
+    """One `engine.discover()` result, grouped and queried by kind.
+
+    The single place descriptor *shape* is interpreted (CF-08.02's rule):
+    `cli.py` reads component ids and human text off descriptors but never
+    inspects `ComponentDescriptor.kind` or `.requires` itself -- it asks a
+    `Catalogue` instead. `build_generation_request` accepts a `Catalogue` so a
+    caller that has already discovered (the `--engine-preview` flow) does not
+    scan the installed catalogue a second time (ADR 0028).
+    """
+
+    descriptors: tuple[ComponentDescriptor, ...]
+
+    @property
+    def archetypes(self) -> tuple[ComponentDescriptor, ...]:
+        """The `kind == "archetype"` descriptors, in discovery order."""
+        return self.of_kind(SelectionKind.ARCHETYPE)
+
+    def of_kind(self, kind: SelectionKind) -> tuple[ComponentDescriptor, ...]:
+        """Every descriptor of one selection kind, in discovery order."""
+        wanted = DESCRIPTOR_KIND[kind]
+        return tuple(d for d in self.descriptors if d.kind == wanted)
+
+    def get(self, component_id: str) -> ComponentDescriptor | None:
+        """The descriptor with this id, or `None` if the catalogue has none."""
+        return next((d for d in self.descriptors if d.id == component_id), None)
+
+    def kind_of(self, component_id: str) -> SelectionKind | None:
+        """The selection kind of a discovered id, or `None` if unknown."""
+        descriptor = self.get(component_id)
+        if descriptor is None:
+            return None
+        return _KIND_BY_DESCRIPTOR.get(descriptor.kind)
+
+    def required_ids(self, component_id: str, kind: SelectionKind) -> tuple[str, ...]:
+        """Direct requirements of one component that are themselves of `kind`.
+
+        No transitive closure: only the descriptor's own `requires` tuple. A
+        `ComponentRelation` carries only an `id`, so its kind is resolved by
+        looking that id up here; a relation naming an id this catalogue does
+        not contain is dropped -- the engine rejects it authoritatively, and
+        `create-forge` computes no requirement closure of its own
+        ([ADR 0028](../../docs/adr/0028-discovery-driven-component-selection.md)).
+        `()` when `component_id` is not in the catalogue.
+        """
+        descriptor = self.get(component_id)
+        if descriptor is None:
+            return ()
+        return tuple(
+            relation.id
+            for relation in descriptor.requires
+            if self.kind_of(relation.id) == kind
+        )
+
+
+def discover_catalogue() -> Catalogue:
+    """The full discovered catalogue, after protocol negotiation (ADR 0028).
+
+    `engine.discover()` -- the one call per `--engine-preview` invocation --
+    wrapped for kind-grouped access. `discover_archetypes()` is the
+    archetype-only view of the same result.
+    """
+    return Catalogue(engine.discover())
+
+
 def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
     """Engine-owned archetype descriptors, for `--engine-preview` selection.
 
-    Filters `engine.discover()` to `kind == "archetype"` so `cli.py` never
-    branches on engine-defined `kind` values itself (CF-08.02) -- discovery
-    stays the one place that interprets descriptor shape.
+    The `kind == "archetype"` view of `discover_catalogue()`, kept as a named
+    entry point because ADR 0017 and ADR 0019 refer to it. `cli.py` now
+    discovers a whole `Catalogue` once and reads `.archetypes` off it, so the
+    two never run back to back.
     """
-    return tuple(d for d in engine.discover() if d.kind == "archetype")
+    return discover_catalogue().archetypes
 
 
 def _resolved_component_options(
@@ -108,6 +182,7 @@ def build_generation_request(
     selection: SelectionRequest,
     component_options: Mapping[str, Mapping[str, object]] | None = None,
     provenance: SelectionProvenance | None = None,
+    catalogue: Catalogue | None = None,
 ) -> GenerationRequest:
     """Run the shared pipeline: discover -> build -> validate -> render.
 
@@ -127,19 +202,25 @@ def build_generation_request(
     through unchanged; when the caller supplies none,
     `_resolved_component_options` derives the one legacy mapping this
     repository still owns, gated on the selected archetype's own discovered
-    descriptor rather than a hardcoded id (CF-08.03, ADR 0019). `discover()`'s
-    result is reused for exactly that gate; `discover_archetypes()` is the
-    separate, `kind`-filtered view that actually drives selection, from
-    `cli.py`.
+    descriptor rather than a hardcoded id (CF-08.03, ADR 0019).
+
+    `catalogue`, when supplied, is the already-discovered `Catalogue` the
+    caller holds (`cli.py`'s `--engine-preview` flow discovers once for
+    archetype and capability/platform selection, then hands it straight
+    here); omitted, this function discovers its own. Either way
+    `engine.discover()` runs exactly once per invocation (ADR 0028). The
+    catalogue is used only for the legacy-option gate above -- selection
+    itself is already resolved into `selection` upstream.
 
     Every downstream call (`build_project_spec`, `validate`, `render`)
     independently re-checks package/protocol compatibility before doing its
     own work, so there is no side effect -- in-memory or otherwise -- before
     every check has passed.
     """
-    descriptors = engine.discover()
+    if catalogue is None:
+        catalogue = discover_catalogue()
     resolved_options = _resolved_component_options(
-        answers, selection.archetype, component_options, descriptors
+        answers, selection.archetype, component_options, catalogue.descriptors
     )
     payload = build_spec_payload(
         answers,

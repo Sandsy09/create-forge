@@ -35,8 +35,9 @@ Stages 10, 11, and 12 are complete. The published and verified
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 provider release made CF-EPIC-13 actionable. CF-13.01 (ADR 0026) performed
 the range adoption — create-forge's supported range is now `>=0.4,<0.5` — and
-CF-13.02 (ADR 0027) fixed the component-selection CLI conventions.
-CF-13.03–13.05 remain.
+CF-13.02 (ADR 0027) fixed the component-selection CLI conventions, and
+CF-13.03 (ADR 0028) implemented capability and platform selection.
+CF-13.04–13.05 remain.
 
 ## Delivery rules
 

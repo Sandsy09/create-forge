@@ -79,11 +79,13 @@ class ComponentOptionSpec(Protocol):
 class ArchetypeChoice(Protocol):
     """The engine's `ComponentDescriptor` shape this module actually needs.
 
-    Structural, not imported: see `ComponentOptionSpec` above for why.
-    `ComponentDescriptor` satisfies this without either module knowing about
-    the other (CF-08.02). Read-only properties, not plain attributes:
-    `ComponentDescriptor`'s fields are frozen, and a read-write Protocol
-    attribute would reject it as non-conforming.
+    Named for its first use (archetype selection, CF-08.02) but it describes
+    any component descriptor: `choose_components` renders capability and
+    platform descriptors through the same Protocol. Structural, not imported:
+    see `ComponentOptionSpec` above for why. `ComponentDescriptor` satisfies
+    this without either module knowing about the other. Read-only properties,
+    not plain attributes: `ComponentDescriptor`'s fields are frozen, and a
+    read-write Protocol attribute would reject it as non-conforming.
     """
 
     @property
@@ -185,6 +187,65 @@ def choose_archetype(archetypes: Sequence[ArchetypeChoice]) -> ArchetypeChoice:
     if answer is None:
         raise PromptAbortedError
     return answer
+
+
+COMPONENT_PROMPTS: dict[str, str] = {
+    "capabilities": "Which capabilities?",
+    "platforms": "Which platforms?",
+}
+"""The multi-select prompt message for each selectable component kind
+(`--engine-preview`, CF-13.03). Keyed by `spec.SelectionKind`'s value string,
+not the enum -- `prompts.py` cannot import `spec` (`spec` imports
+`prompts.slugify`).
+"""
+
+_COMPONENT_INSTRUCTION = "space to toggle, enter to confirm"
+
+
+def choose_components(
+    prompt: str,
+    descriptors: Sequence[ArchetypeChoice],
+    *,
+    required: Sequence[str] = (),
+    required_by: str,
+) -> tuple[str, ...]:
+    """Multi-select over `descriptors`, returning the chosen component ids.
+
+    A `required` id renders pre-checked and locked, annotated
+    `(required by <required_by>)`, and is re-added to the result after the
+    prompt returns: `questionary`'s checkbox lets its select-all key clear a
+    `disabled` entry, so `disabled=` is display only, not enforcement
+    (CF-13.03, [ADR 0028](adr/0028-discovery-driven-component-selection.md)).
+    The returned ids keep `descriptors`' own (discovery) order.
+
+    An empty result is a legitimate answer -- an explicit "no capabilities".
+    Cancelling (Ctrl-C / Ctrl-D) raises `PromptAbortedError`. Callers skip
+    this entirely when there is nothing to choose (every descriptor required,
+    or none discovered) -- see `cli._resolve_selection`.
+    """
+    required_set = set(required)
+    choices = [
+        QChoice(
+            title=f"{d.name}  —  {d.description}",
+            value=d.id,
+            checked=d.id in required_set,
+            disabled=f"required by {required_by}" if d.id in required_set else None,
+        )
+        for d in descriptors
+    ]
+
+    picked: list[str] | None = questionary.checkbox(
+        prompt,
+        choices=choices,
+        instruction=_COMPONENT_INSTRUCTION,
+        style=_STYLE,
+    ).ask()
+
+    if picked is None:
+        raise PromptAbortedError
+
+    chosen = required_set | set(picked)
+    return tuple(d.id for d in descriptors if d.id in chosen)
 
 
 def ask_all(
