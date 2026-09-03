@@ -46,8 +46,9 @@ src/create_forge/
 ├── compat.py       Engine range + protocol constants. No engine import;
 │                   shared by cli.py's doctor and engine.py (ADR 0018).
 ├── engine.py       The ONLY module that touches the forge-template engine.
-├── pipeline.py     Shared discover→build→validate→render→finalise pipeline.
-│                   Reachable only via `new --engine-preview` (hidden,
+├── pipeline.py     Shared discover→build→validate→render→finalise pipeline,
+│                   plus `Catalogue` (one discovery, grouped by kind; ADR
+│                   0028). Reachable only via `new --engine-preview` (hidden,
 │                   dev-only; ADR 0014, ADR 0015).
 └── cli.py          Typer app: new, list, update, doctor.
 ```
@@ -256,9 +257,14 @@ five descriptors. CF-13.02
 ([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
 the generic component-selection CLI conventions — `--capability`/`--platform`/
 `--component-option`, precedence, absent-vs-empty, prompt order — in the
-canonical [component selection contract](docs/component-selection.md).
-Implementing that selection and option prompting, and validating the Data
-Science pipeline, are CF-13.03–13.05. This CLI must not hard-code capability
+canonical [component selection contract](docs/component-selection.md). CF-13.03
+([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
+capability and platform selection: `pipeline.Catalogue` (one discovery,
+grouped by kind), the four `--capability`/`--no-capabilities`/`--platform`/
+`--no-platforms` flags, interactive multi-selects with required entries
+pre-locked, and the absent-versus-explicit-empty encoding through
+`SelectionRequest`. Per-component option prompting is CF-13.04, and validating
+the Data Science pipeline is CF-13.05. This CLI must not hard-code capability
 IDs or relationships — selection stays discovery-driven, semantic validation
 stays engine-owned.
 
@@ -371,8 +377,11 @@ Run this before any release.
   defines the `--capability`/`--platform`/`--component-option` flag surface,
   the absent-versus-explicit-empty rule, owner-qualified option syntax and
   precedence, deterministic prompt order, and which selection failures are
-  client-owned versus engine-owned. It is a contract ahead of its
-  implementation (CF-13.03–13.05); no shipped module or test may name a
+  client-owned versus engine-owned. CF-13.03
+  ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md))
+  implemented the capability/platform half (`pipeline.Catalogue`, the four
+  flags, the multi-selects); `--component-option` and option typing are
+  CF-13.04, the pipeline proof CF-13.05. No shipped module or test may name a
   production component id.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the supported package/protocol range, public-facade coverage,
@@ -404,7 +413,7 @@ Run this before any release.
   ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)).
   Jupyter is recorded under
   [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md);
-  Stage 13's remaining children (CF-13.02–13.05) must consume descriptors and
+  Stage 13's remaining children (CF-13.04–13.05) must consume descriptors and
   relationships generically — no hard-coded capability IDs or rules.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01

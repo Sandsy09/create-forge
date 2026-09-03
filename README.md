@@ -240,8 +240,10 @@ was the immutable provider hand-off to Stage 13.
 components, and CF-13.02
 ([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
 how they are selected in the canonical
-[component selection contract](docs/component-selection.md). Implementing that
-selection is the rest of the
+[component selection contract](docs/component-selection.md). CF-13.03
+([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
+capability and platform selection behind `--engine-preview`; per-component
+options and the pipeline proof are the rest of the
 [Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
 optional capabilities, discovery-driven preview UX, and cross-repository
 validation through Stages 10–14.

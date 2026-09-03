@@ -117,7 +117,14 @@ interactively falls to a prompt (`prompts.choose_archetype`), the *only*
 a separate Copier-template selection ahead of it. `--archetype` without
 `--engine-preview` is rejected rather than silently ignored.
 
-Once an archetype is resolved, `prompts.ask_project_answers` asks the three
+Once an archetype is resolved, CF-13.03
+([ADR 0028](adr/0028-discovery-driven-component-selection.md)) resolves the
+capabilities and platforms to select alongside it — from `--capability` /
+`--no-capabilities` / `--platform` / `--no-platforms`, or an interactive
+multi-select per kind ("Which capabilities?", "Which platforms?"), skipped
+when the flag was given, the kind has no discovered descriptors, or every
+descriptor of it is required by the archetype. All of that precedes any
+project answer. Then `prompts.ask_project_answers` asks the three
 CLI-collected answers that reach `ProjectSpec.project`
 (`project_name`/`project_description`/`license`), and
 `prompts.ask_component_options` asks exactly what that archetype's own
@@ -166,8 +173,11 @@ how `--engine-preview` turns flags and prompts into a ProjectSpec's
 `--no-capabilities`/`--no-platforms`, and
 `--component-option ID.OPTION=VALUE`. All five are hidden and
 `--engine-preview`-only, rejected with exit `1` otherwise, exactly as
-`--archetype` is. It is a contract ahead of its implementation — CF-13.03 and
-CF-13.04 build the flags and prompts against it, CF-13.05 proves the pipeline.
+`--archetype` is. CF-13.03
+([ADR 0028](adr/0028-discovery-driven-component-selection.md)) has implemented
+the four capability/platform flags and their interactive multi-selects;
+`--component-option` and per-component option typing are CF-13.04, and
+CF-13.05 proves the pipeline.
 
 For this document's purposes: a malformed `--component-option` (missing `.` or
 `=`) is a `typer.BadParameter` usage rejection, exit `2`, like a malformed

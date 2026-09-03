@@ -1127,6 +1127,10 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
         },
     )
     monkeypatch.setattr(cli_module, "ask_component_options", lambda *_a, **_kw: {})
+    # CF-13.03: the real 0.4 catalogue has capability descriptors, so an
+    # interactive run now reaches a capability multi-select; this test is
+    # about archetype selection only, so short-circuit it.
+    monkeypatch.setattr(cli_module, "choose_components", lambda *_a, **_kw: ())
 
     seen_archetypes: list[str] = []
 
@@ -1208,9 +1212,16 @@ def test_new_engine_preview_cli_archetype_asks_no_library_question(
     def fake_confirm(message: str, **_kwargs: object) -> _Answer:
         pytest.fail(f"unexpected confirm prompt: {message!r}")
 
+    checkbox_messages: list[str] = []
+
+    def fake_checkbox(message: str, **_kwargs: object) -> _Answer:
+        checkbox_messages.append(message)
+        return _Answer([])
+
     monkeypatch.setattr(questionary, "text", fake_text)
     monkeypatch.setattr(questionary, "select", fake_select)
     monkeypatch.setattr(questionary, "confirm", fake_confirm)
+    monkeypatch.setattr(questionary, "checkbox", fake_checkbox)
 
     dest = tmp_path / "proj"
     result = runner.invoke(
@@ -1228,6 +1239,10 @@ def test_new_engine_preview_cli_archetype_asks_no_library_question(
 
     assert result.exit_code == 0, result.output
     assert seen_messages == ["Project name", "Short description", "License"]
+    # CF-13.03: `cli` requires no capability, but the 0.4 catalogue has
+    # capability descriptors, so the multi-select is still offered -- with
+    # the engine's own kind vocabulary, never a Library-specific question.
+    assert checkbox_messages == ["Which capabilities?"]
     assert recorder == []
 
 
@@ -1261,6 +1276,9 @@ def test_new_engine_preview_library_archetype_asks_declared_options_only(
     def fake_confirm(message: str, **_kwargs: object) -> _Answer:
         pytest.fail(f"unexpected confirm prompt: {message!r}")
 
+    def fake_checkbox(message: str, **_kwargs: object) -> _Answer:
+        return _Answer([])
+
     def spy(answers: Mapping[str, object], **kwargs: object) -> GenerationRequest:
         captured.update(kwargs)
         return real_build(answers, **kwargs)  # type: ignore[arg-type]
@@ -1268,6 +1286,7 @@ def test_new_engine_preview_library_archetype_asks_declared_options_only(
     monkeypatch.setattr(questionary, "text", fake_text)
     monkeypatch.setattr(questionary, "select", fake_select)
     monkeypatch.setattr(questionary, "confirm", fake_confirm)
+    monkeypatch.setattr(questionary, "checkbox", fake_checkbox)
     monkeypatch.setattr(pipeline_module, "build_generation_request", spy)
 
     dest = tmp_path / "proj"
@@ -1364,9 +1383,14 @@ def test_new_engine_preview_interactive_asks_what_are_you_building_once(
     def fake_confirm(message: str, **_kwargs: object) -> _Answer:
         pytest.fail(f"unexpected confirm prompt: {message!r}")
 
+    def fake_checkbox(message: str, **_kwargs: object) -> _Answer:
+        seen_prompts.append(message)
+        return _Answer([])
+
     monkeypatch.setattr(questionary, "select", fake_select)
     monkeypatch.setattr(questionary, "text", fake_text)
     monkeypatch.setattr(questionary, "confirm", fake_confirm)
+    monkeypatch.setattr(questionary, "checkbox", fake_checkbox)
 
     dest = tmp_path / "proj"
     result = runner.invoke(

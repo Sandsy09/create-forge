@@ -29,18 +29,25 @@ from create_forge.config import (
     write_example,
 )
 from create_forge.prompts import (
+    COMPONENT_PROMPTS,
     ArchetypeChoice,
     PromptAbortedError,
     ask_all,
     ask_component_options,
     ask_project_answers,
     choose_archetype,
+    choose_components,
     choose_template,
     slugify,
 )
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
-from create_forge.spec import SelectionRequest
+from create_forge.spec import (
+    DESCRIPTOR_KIND,
+    SELECTABLE_KINDS,
+    SelectionKind,
+    SelectionRequest,
+)
 from create_forge.staging import (
     DestinationConflictError,
     StagingError,
@@ -51,6 +58,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from create_forge.models import Registry, Template
+    from create_forge.pipeline import Catalogue
 
 app = typer.Typer(
     name="create-forge",
@@ -239,6 +247,193 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
         raise typer.Exit(1) from exc
 
 
+@dataclass(frozen=True, slots=True)
+class ComponentFlags:
+    """The `--engine-preview` capability/platform selection flags, normalised.
+
+    Each field is the *effective* flag value for one selectable kind:
+    `tuple[str, ...]` from one or more `--capability`/`--platform`, `()` from
+    `--no-capabilities`/`--no-platforms` (an explicit empty choice), and
+    `None` when neither was given (absent -- resolve interactively or leave to
+    a policy default). `new()` rejects a `--capability` + `--no-capabilities`
+    contradiction before building this (CF-13.03, ADR 0028).
+    """
+
+    capabilities: tuple[str, ...] | None
+    platforms: tuple[str, ...] | None
+
+    def for_kind(self, kind: SelectionKind) -> tuple[str, ...] | None:
+        """The normalised flag value for one selectable kind."""
+        if kind is SelectionKind.CAPABILITIES:
+            return self.capabilities
+        return self.platforms
+
+
+def _normalise_kind_flag(
+    values: list[str] | None, *, none_flag: bool
+) -> tuple[str, ...] | None:
+    """One `--capability`/`--platform` list + its `--no-*` bool → effective value."""
+    if values:
+        return tuple(values)
+    return () if none_flag else None
+
+
+def _flag_name(kind: SelectionKind) -> str:
+    """The user-facing flag that selects one kind: `--capability` etc."""
+    return f"--{DESCRIPTOR_KIND[kind]}"
+
+
+def _validate_flag_ids(
+    catalogue: Catalogue, kind: SelectionKind, ids: Sequence[str]
+) -> tuple[str, ...]:
+    """De-duplicate flag-supplied ids and reject unknown or wrong-kind ones.
+
+    Shape-only, answerable from the descriptor list alone (ADR 0027): an id
+    the catalogue does not contain, or one whose discovered kind is not
+    `kind`. Everything semantic -- requirements, conflicts, option domains --
+    stays engine-owned. Exits `1`, phrased like `_select_archetype`'s own
+    unknown-archetype message.
+    """
+    seen: list[str] = []
+    for component_id in ids:
+        if component_id in seen:
+            continue
+        actual = catalogue.kind_of(component_id)
+        if actual is None:
+            valid = ", ".join(sorted(d.id for d in catalogue.of_kind(kind)))
+            err.print(
+                f"[red]Unknown {_flag_name(kind)} {component_id!r}. "
+                f"Available: {valid or 'none'}[/red]"
+            )
+            raise typer.Exit(1)
+        if actual is not kind:
+            err.print(
+                f"[red]{_flag_name(kind)} {component_id!r} is not a "
+                f"{DESCRIPTOR_KIND[kind]} (it is the {DESCRIPTOR_KIND[actual]} "
+                f"{component_id!r}).[/red]"
+            )
+            raise typer.Exit(1)
+        seen.append(component_id)
+    return tuple(seen)
+
+
+def _resolve_kind(
+    catalogue: Catalogue,
+    descriptor: ArchetypeChoice,
+    kind: SelectionKind,
+    flag_value: tuple[str, ...] | None,
+    *,
+    yes: bool,
+) -> tuple[tuple[str, ...], bool]:
+    """Resolve one selectable kind to `(ids, explicit)` (CF-13.03, ADR 0028).
+
+    Flag given → validated ids, explicit. No descriptors of this kind, or
+    `--yes` with no flag → `((), False)` (absent; never prompted). Every
+    descriptor required by the archetype → those ids, *not* explicit (no
+    choice was offered, mirroring `_select_archetype`'s skip-when-one).
+    Otherwise a multi-select with the required entries pre-locked → explicit,
+    even when nothing extra is ticked.
+    """
+    if flag_value is not None:
+        return _validate_flag_ids(catalogue, kind, flag_value), True
+
+    available = catalogue.of_kind(kind)
+    if not available:
+        return (), False
+
+    required = catalogue.required_ids(descriptor.id, kind)
+    if all(d.id in set(required) for d in available):
+        return required, False
+
+    if yes:
+        return (), False
+
+    picked = choose_components(
+        COMPONENT_PROMPTS[kind.value],
+        available,
+        required=required,
+        required_by=descriptor.id,
+    )
+    return picked, True
+
+
+def _resolve_selection(
+    catalogue: Catalogue,
+    descriptor: ArchetypeChoice,
+    flags: ComponentFlags,
+    *,
+    archetype_explicit: bool,
+    yes: bool,
+) -> SelectionRequest:
+    """Build the full `SelectionRequest` for a `--engine-preview` archetype.
+
+    Runs `_resolve_kind` for each selectable kind in tier order and threads
+    each kind's own explicitness into `SelectionRequest.of` -- so a kind whose
+    ids were selected without a choice being offered stays non-explicit
+    (CF-13.03, ADR 0028).
+    """
+    resolved = {
+        kind: _resolve_kind(catalogue, descriptor, kind, flags.for_kind(kind), yes=yes)
+        for kind in SELECTABLE_KINDS
+    }
+    caps, caps_explicit = resolved[SelectionKind.CAPABILITIES]
+    platforms, platforms_explicit = resolved[SelectionKind.PLATFORMS]
+    return SelectionRequest.of(
+        archetype=descriptor.id,
+        archetype_explicit=archetype_explicit,
+        capabilities=caps,
+        platforms=platforms,
+        capabilities_explicit=caps_explicit,
+        platforms_explicit=platforms_explicit,
+    )
+
+
+def _resolve_engine_selection(
+    catalogue: Catalogue,
+    archetype: str | None,
+    flags: ComponentFlags,
+    *,
+    yes: bool,
+) -> tuple[ArchetypeChoice, SelectionRequest]:
+    """Pick the archetype, then resolve capabilities and platforms around it.
+
+    All component selection happens here, before any project answer is
+    collected (ADR 0025's ordering, extended by ADR 0028). A cancelled
+    multi-select exits `130` with nothing written.
+    """
+    descriptor, archetype_explicit = _select_archetype(
+        catalogue.archetypes, archetype, yes=yes
+    )
+    try:
+        selection = _resolve_selection(
+            catalogue, descriptor, flags, archetype_explicit=archetype_explicit, yes=yes
+        )
+    except PromptAbortedError:
+        err.print("\n[dim]Cancelled.[/dim]")
+        raise typer.Exit(130) from None
+    return descriptor, selection
+
+
+def _missing_requirement_hint(
+    catalogue: Catalogue, descriptor: ArchetypeChoice, selection: SelectionRequest
+) -> str:
+    """Flag hints for direct requirements the selection still omits.
+
+    The `--yes` half of ADR 0027's asymmetric required-component rule:
+    `create-forge` adds nothing, but when the engine is about to reject a
+    missing hard requirement, it says which flag supplies it. Empty when the
+    selection is complete.
+    """
+    chosen = {*selection.capabilities, *selection.platforms}
+    hints = [
+        f"Add {_flag_name(kind)} {req_id}."
+        for kind in SELECTABLE_KINDS
+        for req_id in catalogue.required_ids(descriptor.id, kind)
+        if req_id not in chosen
+    ]
+    return " ".join(hints)
+
+
 def _select_archetype(
     archetypes: Sequence[ArchetypeChoice], archetype: str | None, *, yes: bool
 ) -> tuple[ArchetypeChoice, bool]:
@@ -331,11 +526,12 @@ def _collect_engine_answers(
     return project_answers, component_answers
 
 
-def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distinct input; see that function's own justification
+def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own distinct input, and a linear discover->select->collect->build->finalise orchestration; see new()'s own justification
     preset: dict[str, object],
     cfg_answers: dict[str, object],
     path: Path | None,
     archetype: str | None,
+    flags: ComponentFlags,
     *,
     dry_run: bool,
     yes: bool,
@@ -349,11 +545,14 @@ def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distin
     this flag, must keep working with the dependency absent.
 
     #91 / ADR 0025: this path reads no registry data at all. It discovers
-    the archetype catalogue, resolves which one to build, then prompts
-    directly from that archetype's own declared `ComponentDescriptor.options`
-    instead of reusing `templates.toml`'s Library-shaped registry questions
-    -- so `--archetype cli` asks nothing `library`-specific, and the
-    destination is only known once a project name has been collected.
+    the component catalogue once, resolves which archetype to build and which
+    capabilities/platforms to select alongside it (CF-13.03, ADR 0028), then
+    prompts directly from that archetype's own declared
+    `ComponentDescriptor.options` instead of reusing `templates.toml`'s
+    Library-shaped registry questions -- so `--archetype cli` asks nothing
+    `library`-specific, and the destination is only known once a project name
+    has been collected. The one discovered `Catalogue` is threaded into
+    `build_generation_request` so `engine.discover()` runs exactly once.
 
     An explicit `--path` is still checked for a conflict before the engine is
     imported at all, preserving that guarantee for the common case where the
@@ -387,7 +586,7 @@ def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distin
         raise typer.Exit(1) from None
 
     try:
-        archetypes = pipeline.discover_archetypes()
+        catalogue = pipeline.discover_catalogue()
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
@@ -395,9 +594,8 @@ def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distin
         err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
-    descriptor, archetype_explicit = _select_archetype(archetypes, archetype, yes=yes)
-    selection = SelectionRequest.of(
-        archetype=descriptor.id, archetype_explicit=archetype_explicit
+    descriptor, selection = _resolve_engine_selection(
+        catalogue, archetype, flags, yes=yes
     )
 
     project_answers, component_answers = _collect_engine_answers(
@@ -416,13 +614,21 @@ def _run_engine_preview(  # noqa: PLR0913 - one parameter per new()'s own distin
 
     try:
         request = pipeline.build_generation_request(
-            project_answers, selection=selection, component_options=component_options
+            project_answers,
+            selection=selection,
+            component_options=component_options,
+            catalogue=catalogue,
         )
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
-        err.print(f"[red]{engine.explain(exc)}[/red]")
+        lines = [engine.explain(exc)]
+        hint = _missing_requirement_hint(catalogue, descriptor, selection)
+        if hint:
+            lines.append(hint)
+        message = "\n".join(lines)
+        err.print(f"[red]{message}[/red]")
         raise typer.Exit(1) from exc
 
     if dry_run:
@@ -517,10 +723,61 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
             "--engine-preview.",
         ),
     ] = None,
+    capability: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--capability",
+            hidden=True,
+            help="Development-only: a discovered capability to select. "
+            "Repeatable. Requires --engine-preview.",
+        ),
+    ] = None,
+    no_capabilities: Annotated[
+        bool,
+        typer.Option(
+            "--no-capabilities",
+            hidden=True,
+            help="Development-only: select no capabilities, explicitly. "
+            "Requires --engine-preview.",
+        ),
+    ] = False,
+    platform: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--platform",
+            hidden=True,
+            help="Development-only: a discovered platform to select. "
+            "Repeatable. Requires --engine-preview.",
+        ),
+    ] = None,
+    no_platforms: Annotated[
+        bool,
+        typer.Option(
+            "--no-platforms",
+            hidden=True,
+            help="Development-only: select no platforms, explicitly. "
+            "Requires --engine-preview.",
+        ),
+    ] = False,
 ) -> None:
     """Create a new project."""
     if archetype is not None and not engine_preview:
         err.print("[red]--archetype requires --engine-preview.[/red]")
+        raise typer.Exit(1)
+    _any_component_flag = bool(
+        capability or no_capabilities or platform or no_platforms
+    )
+    if _any_component_flag and not engine_preview:
+        err.print(
+            "[red]--capability/--no-capabilities/--platform/--no-platforms "
+            "require --engine-preview.[/red]"
+        )
+        raise typer.Exit(1)
+    if capability and no_capabilities:
+        err.print("[red]--capability and --no-capabilities are contradictory.[/red]")
+        raise typer.Exit(1)
+    if platform and no_platforms:
+        err.print("[red]--platform and --no-platforms are contradictory.[/red]")
         raise typer.Exit(1)
     if engine_preview and (template_id or template_url or ref):
         err.print(
@@ -539,8 +796,12 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     cfg_answers = config.as_answers()
 
     if engine_preview:
+        flags = ComponentFlags(
+            capabilities=_normalise_kind_flag(capability, none_flag=no_capabilities),
+            platforms=_normalise_kind_flag(platform, none_flag=no_platforms),
+        )
         _run_engine_preview(
-            preset, cfg_answers, path, archetype, dry_run=dry_run, yes=yes
+            preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes
         )
         return
 

@@ -398,6 +398,37 @@ def test_discover_archetypes_filters_to_archetype_kind(
     assert pipeline.discover_archetypes() == (archetype_descriptor,)
 
 
+def test_build_generation_request_reuses_a_supplied_catalogue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CF-13.03 / ADR 0028: `cli.py` discovers a `Catalogue` once for
+    selection and hands it straight to `build_generation_request`, so
+    `engine.discover()` is not called a second time.
+    """
+    calls = 0
+
+    def counting_discover() -> tuple[ComponentDescriptor, ...]:
+        nonlocal calls
+        calls += 1
+        return (_descriptor("library", options=(_PACKAGING_MODE_OPTION,)),)
+
+    monkeypatch.setattr(engine, "discover", counting_discover)
+    monkeypatch.setattr(engine, "build_project_spec", lambda payload: payload)
+    monkeypatch.setattr(engine, "validate", lambda spec: spec)
+    monkeypatch.setattr(engine, "render", lambda spec: "rendered")
+
+    catalogue = pipeline.discover_catalogue()
+    assert calls == 1
+
+    build_generation_request(
+        _VALID_ANSWERS,
+        selection=SelectionRequest.of(archetype="library"),
+        catalogue=catalogue,
+    )
+
+    assert calls == 1  # not re-discovered inside build_generation_request
+
+
 def _synthetic_request() -> GenerationRequest:
     """A `GenerationRequest` built from the real public models, entirely
     without a component catalogue -- `finalise_generation_request` only

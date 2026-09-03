@@ -22,15 +22,18 @@ resulting selection is mapped onto the wire payload), and it extends
 ## Status
 
 Accepted as a contract under [ADR 0027](adr/0027-generic-component-selection-conventions.md).
-This document is the design; the code that satisfies it is filed separately.
-CF-13.03 ([#108](https://github.com/Sandsy09/create-forge/issues/108))
-implements capability and platform selection, CF-13.04
-([#109](https://github.com/Sandsy09/create-forge/issues/109)) implements
-per-component option collection, and CF-13.05
+CF-13.03 ([#108](https://github.com/Sandsy09/create-forge/issues/108),
+[ADR 0028](adr/0028-discovery-driven-component-selection.md)) has implemented
+the capability and platform half: `--capability`, `--no-capabilities`,
+`--platform`, `--no-platforms`, the interactive multi-selects, the
+absent-versus-empty encoding, required pre-locking, and the shape-only
+client-side checks below are live behind `--engine-preview`. Still to come:
+CF-13.04 ([#109](https://github.com/Sandsy09/create-forge/issues/109))
+implements `--component-option` and per-component option collection and
+typing, and CF-13.05
 ([#110](https://github.com/Sandsy09/create-forge/issues/110)) proves the whole
-path against the released engine. Until those land, `--engine-preview` selects
-an archetype and nothing else — the rules here describe the target the three
-issues build toward, not current behaviour.
+path against the released engine. The `--component-option` rules below
+therefore still describe a target, not current behaviour.
 
 This is **not** the CLI cutover. Every flag below is hidden and reachable only
 via `new --engine-preview`; the default `new` path stays direct-Copier with a
@@ -76,6 +79,7 @@ CF-13.03 must encode it exactly:
 | `--no-capabilities` | `()` | yes — explicit "none" |
 | `--capability x` (with or without `--yes`) | `("x",)` | yes |
 | kind has zero discovered descriptors | `()` | no — never prompted |
+| every descriptor of the kind is required by the archetype | those ids | no — no choice was offered ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) |
 | `--capability x` **and** `--no-capabilities` | — | rejected, exit `1` |
 
 `explicit` is consumption-side bookkeeping only; it never becomes a field of
@@ -91,9 +95,14 @@ that `id` up in the discovered catalogue. `create-forge` surfaces the
 requirement; it never satisfies it silently:
 
 - **Interactively**, a required component appears in its kind's multi-select
-  pre-checked, annotated `(required by <archetype-id>)`, and cannot be
-  unticked. It is part of the submitted selection because the user saw and
-  confirmed it.
+  pre-checked, annotated `(required by <archetype-id>)`, and disabled. It is
+  part of the submitted selection because the user saw and confirmed it —
+  `prompts.choose_components` re-adds the required ids to its result after the
+  prompt returns, since `questionary`'s select-all key can otherwise clear a
+  disabled entry ([ADR 0028](adr/0028-discovery-driven-component-selection.md)).
+  When *every* descriptor of a kind is required, there is nothing to choose:
+  the prompt is skipped and the ids are recorded non-explicitly (see the
+  table above).
 - **Under `--yes`**, nothing is added. A missing requirement reaches the
   engine, which rejects it with
   `component '<archetype>' requires selected component(s): <id>`;
@@ -115,13 +124,13 @@ engine-native flow. All component selection precedes all answer collection, so
 the destination-deriving project name is still collected last:
 
 ```
-1. archetype        prompts.choose_archetype             unchanged; skipped when exactly one
-2. capabilities     multi-select, required pre-locked     skipped if --capability/--no-capabilities given,
-                                                            or zero capability descriptors discovered
-3. platforms        multi-select, required pre-locked     skipped if --platform/--no-platforms given,
-                                                            or zero platform descriptors discovered
-4. project answers  prompts.ask_project_answers           unchanged: project_name, project_description, license
-5. component options  prompts.ask_component_options       per selected component, in the order below
+1. archetype          prompts.choose_archetype       "What are you building?"; skipped when exactly one
+2. capabilities       prompts.choose_components       "Which capabilities?"; skipped if --capability/
+                                                        --no-capabilities given, zero capability
+                                                        descriptors, or every one required
+3. platforms          prompts.choose_components       "Which platforms?"; same skip rules
+4. project answers    prompts.ask_project_answers     unchanged: project_name, project_description, license
+5. component options  prompts.ask_component_options   per selected component, in the order below (CF-13.04)
 ```
 
 Component options are prompted, and serialised into `component_options`, in
@@ -264,9 +273,13 @@ The contract will be characterised by:
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) —
   `test_component_selection_doc_is_linked_from_canonical_entry_points` keeps
   this document discoverable.
-- **CF-13.03** adds `tests/test_cli.py` / `tests/test_prompts.py` cases for
-  the flag surface, the absent-versus-empty table, required pre-locking, and
-  the deterministic prompt order.
+- [`tests/test_component_selection.py`](../tests/test_component_selection.py)
+  (CF-13.03) — the flag surface, the absent-versus-empty table, required
+  pre-locking and the toggle-all reinstatement, the deterministic prompt
+  order, the zero-descriptor and all-required kinds, the `--yes`
+  missing-requirement hint, and single discovery per invocation.
+- [`tests/test_pipeline.py`](../tests/test_pipeline.py) —
+  `test_build_generation_request_reuses_a_supplied_catalogue`.
 - **CF-13.04** adds the owner-qualified parsing, per-type coercion, and
   colliding-option-name fixture cases.
 - **CF-13.05** adds the end-to-end preview-pipeline proof against the released
