@@ -8,12 +8,17 @@ exposes the released Data Science composition through `new --engine-preview`.
 ## Dependencies
 
 CF-EPIC-13's native predecessors `create-forge#91` and FT-EPIC-12 are both
-complete. Stage 13 and its first child are actionable.
+complete. CF-13.01 is complete; CF-13.02 is unblocked.
 
 ## Child sequence
 
 1. [CF-13.01 / create-forge#106](https://github.com/Sandsy09/create-forge/issues/106)
    adopts the released `forge-template` 0.4 compatibility line.
+   **Complete** under
+   [ADR 0026](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md):
+   the supported range moved to `forge-template>=0.4,<0.5` with the lock,
+   diagnostics, compatibility tables, and cross-repository contract tests
+   moved with it, and no component identifier or catalogue copy added.
 2. [CF-13.02 / create-forge#107](https://github.com/Sandsy09/create-forge/issues/107)
    defines generic component-selection CLI conventions.
 3. [CF-13.03 / create-forge#108](https://github.com/Sandsy09/create-forge/issues/108)
@@ -23,8 +28,8 @@ complete. Stage 13 and its first child are actionable.
 5. [CF-13.05 / create-forge#110](https://github.com/Sandsy09/create-forge/issues/110)
    validates the Data Science preview pipeline against the released engine.
 
-The sequence begins with CF-13.01, now that create-forge #91 and FT-12.04 are
-complete, then proceeds linearly through preview-pipeline validation.
+CF-13.01 is done; the sequence proceeds linearly from CF-13.02 through
+preview-pipeline validation.
 
 ## Entry criteria
 

@@ -166,7 +166,7 @@ def test_doctor_reports_versions_and_the_engine_range(
     assert "create-forge" in result.output
     assert "copier" in result.output
     assert "not installed" in result.output
-    assert "forge-template>=0.3.1,<0.4" in result.output
+    assert "forge-template>=0.4,<0.5" in result.output
     assert "engine" in result.output
 
 
@@ -176,12 +176,12 @@ def test_doctor_reports_the_installed_engine_package_when_present(
     """The other half of the row above: when the extra is installed, doctor
     names the installed version, not "not installed"."""
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
-    _show_engine_extra(monkeypatch, "0.3.1")
+    _show_engine_extra(monkeypatch, "0.4.0")
 
     result = runner.invoke(app, ["doctor", "--json"])
 
     payload = json.loads(result.output)
-    assert payload["integration"]["engine_package"] == "0.3.1"
+    assert payload["integration"]["engine_package"] == "0.4.0"
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -201,7 +201,7 @@ def test_doctor_json_emits_the_documented_shape(
     integration = payload["integration"]
     assert integration["line"] == "v0.2.x-copier"
     assert integration["engine_package"] is None
-    assert integration["engine_range"] == "forge-template>=0.3.1,<0.4"
+    assert integration["engine_range"] == "forge-template>=0.4,<0.5"
     assert integration["projectspec_protocol"] == {"supported": "1", "detected": None}
     assert integration["template_source"] is not None
     assert {"name", "ok", "detail"} <= payload["checks"][0].keys()
@@ -765,9 +765,9 @@ def test_new_engine_preview_generates_a_real_cli_application(
     recorder: list[ScaffoldRequest],
     tmp_path: Path,
 ) -> None:
-    """The real, unmocked engine: `forge-template` 0.3.0's production
-    catalogue makes `--engine-preview` generate for real (CF-08.02),
-    superseding the Stage 06-era empty-catalogue rejection this test
+    """The real, unmocked engine: the installed `forge-template` production
+    catalogue (since 0.3.0, CF-08.02) makes `--engine-preview` generate for
+    real, superseding the Stage 06-era empty-catalogue rejection this test
     replaces -- see
     `tests/test_pipeline.py::test_build_generation_request_succeeds_against_the_real_catalogue`
     for the equivalent pipeline-level proof.

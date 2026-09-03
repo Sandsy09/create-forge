@@ -22,7 +22,7 @@ from forge_template import (
     ForgeEngineError,
 )
 
-from create_forge import engine
+from create_forge import compat, engine
 from create_forge.spec import SelectionProvenance, build_spec_payload
 
 _VALID_ANSWERS = {
@@ -38,7 +38,7 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
-    package_version: str = "0.3.1",
+    package_version: str = "0.4.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -51,8 +51,8 @@ def _engine_info(
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
     """No exception -- the installed engine falls within the supported
-    `forge-template>=0.3.1,<0.4` range and both sides speak ProjectSpec
-    protocol 1.
+    `forge-template>=0.4,<0.5` range (ADR 0026) and both sides speak
+    ProjectSpec protocol 1.
     """
     engine.negotiate_protocol()
 
@@ -60,8 +60,8 @@ def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
 @pytest.mark.parametrize(
     "package_version",
     [
-        "0.3.0",  # below the lower bound
-        "0.4.0",  # at the excluded upper bound
+        "0.3.2",  # below the lower bound -- the previous line's latest release
+        "0.5.0",  # at the excluded upper bound
     ],
 )
 def test_negotiate_protocol_rejects_a_package_outside_the_supported_range(
@@ -74,9 +74,10 @@ def test_negotiate_protocol_rejects_a_package_outside_the_supported_range(
         lambda: _engine_info(package_version=package_version),
     )
 
+    supported = re.escape(f"supports forge-template{compat.SUPPORTED_ENGINE_RANGE}")
     with pytest.raises(
         engine.EngineCompatibilityError,
-        match=rf"{re.escape(package_version)}.*supports forge-template>=0\.3\.1,<0\.4",
+        match=rf"{re.escape(package_version)}.*{supported}",
     ):
         engine.negotiate_protocol()
 
@@ -88,7 +89,7 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.3.1",
+            package_version="0.4.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -217,7 +218,7 @@ def test_discover_rejects_incompatible_protocols_before_catalogue_access(
         engine.discover()
 
     assert discovered is False
-    assert "forge-template 0.3.1" in str(excinfo.value)
+    assert "forge-template 0.4.0" in str(excinfo.value)
 
 
 def test_discover_propagates_structured_engine_failure_without_fallback(
@@ -262,7 +263,7 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.3.1",
+            package_version="0.4.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
         ),
@@ -289,9 +290,9 @@ def test_build_project_spec_translates_a_malformed_payload() -> None:
 
 
 def test_validate_succeeds_against_the_real_production_catalogue() -> None:
-    """`forge-template` 0.3.0 ships `library` as a real, validated archetype
-    (CF-08.02) -- this replaces the Stage 06-era empty-catalogue rejection
-    its own docstring anticipated retiring.
+    """The installed engine ships `library` as a real, validated archetype
+    (since `forge-template` 0.3.0, CF-08.02) -- this replaces the Stage
+    06-era empty-catalogue rejection its own docstring anticipated retiring.
     """
     payload = build_spec_payload(_VALID_ANSWERS, archetype="library")
     spec = engine.build_project_spec(payload)
@@ -354,7 +355,7 @@ def test_map_legacy_library_options_negotiates_first(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _engine_info(package_version="0.4.0"),
+        lambda: _engine_info(package_version="0.5.0"),
     )
 
     with pytest.raises(engine.EngineCompatibilityError):

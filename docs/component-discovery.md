@@ -22,13 +22,15 @@ has resolved the narrower question of an installable engine range.
 
 The `forge-template` dependency -- the optional `engine` extra since #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
-is range-bound to `>=0.3.1,<0.4` (CF-08.02,
-[ADR 0017](adr/0017-cli-application-archetype-exposure.md); ADR 0018), whose
-production catalogue ships both `library` and the optionless `cli` archetype
--- real discovery now returns both descriptors. `pipeline.discover_archetypes()`
-filters the result to `kind == "archetype"` for
-`--engine-preview`'s `--archetype` option and interactive prompt
-(`prompts.choose_archetype`); this document still covers only the adapter
+is range-bound to `>=0.4,<0.5`
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)). That
+production catalogue ships five descriptors, including `library` and the
+optionless `cli` archetype; the 0.4 line also adds capability-kind
+descriptors and a catalogue relationship, which discovery returns unchanged.
+`pipeline.discover_archetypes()` filters the result to `kind == "archetype"`
+for `--engine-preview`'s `--archetype` option and interactive prompt
+(`prompts.choose_archetype`); selecting non-archetype descriptors is
+CF-13.02–13.04. This document still covers only the adapter
 `engine.discover()` itself, not that selection layer.
 
 ## Compatibility before catalogue access
@@ -37,7 +39,7 @@ filters the result to `kind == "archetype"` for
 
 1. call the public `forge_template.get_engine_info()` facade once;
 2. require the installed package version to fall within
-   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.3.1,<0.4`);
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.4,<0.5`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and
@@ -90,8 +92,11 @@ FT-11.04 completed their production composition validation, and Stage 12 added
 and validated the Data Science archetype. The complete catalogue is available
 in [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0),
 with its [published validation evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification).
-The current create-forge range remains `forge-template>=0.3.1,<0.4` and still
-returns only `cli` and `library`; CF-13.01 owns the compatibility-range change.
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) moved the
+create-forge range to `forge-template>=0.4,<0.5`, so `engine.discover()` now
+returns all five descriptors. This adapter still returns them unchanged;
+grouping them by kind and resolving relationships is CF-13.02–13.04.
 
 ## Failures and trust boundary
 
@@ -134,6 +139,10 @@ engine internals to obtain them.
   `pipeline._resolved_component_options` now gates its one derivation on a
   discovered descriptor's declared options rather than a hardcoded archetype
   id.
+- **CF-13.01** ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md))
+  moved the range to `forge-template>=0.4,<0.5`, so `engine.discover()`
+  returns the 0.4 line's five descriptors; the adapter's pass-through and
+  no-fallback trust boundary are unchanged.
 
 ## Executable examples
 

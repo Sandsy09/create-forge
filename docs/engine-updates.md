@@ -14,20 +14,25 @@ engine cutover approaches.
 
 ## Status
 
-`forge-template` is now a real, released, installable dependency -- the
-optional `engine` extra (#9, [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
+`forge-template` is a real, released, installable dependency -- the optional
+`engine` extra (#9, [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
 -- but reachable only via the hidden `new --engine-preview` flag, not the
-default `new` path. `copier` remains the compatibility-line dependency for
-that default path; the one [CLAUDE.md](../CLAUDE.md) invariant 4 already
-singles out. **Two** compatibility-line dependencies now exist
-simultaneously, each governing its own path.
+default `new` path. Its range has crossed one compatibility line since it was
+assigned:
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it from
+`>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below. `copier`
+remains the compatibility-line dependency for the default path; the one
+[CLAUDE.md](../CLAUDE.md) invariant 4 already singles out. **Two**
+compatibility-line dependencies now exist simultaneously, each governing its
+own path.
 
 ## What the compatibility line is
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
 | v0.1.x default `new` | `copier` | `>=9.4,<10` | Current released architecture |
-| v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Current released architecture (ADR 0018) |
+| v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
+| v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4,<0.5` | Current architecture (ADR 0026) |
 
 Unlike the single-dependency framing this document previously used, both
 rows are live at once: `copier` governs the default path, `forge-template`
@@ -64,8 +69,13 @@ version is itself a compatibility line, exactly the case ADR 0012 already
 anticipated for whichever dependency occupied this role while still below
 1.0. Crossing either line is a deliberate, human-authored pull request that
 changes the declared bound, the code depending on it (`runner.py` for
-`copier`; `src/create_forge/compat.py` and `engine.py` for `forge-template`),
-and the documented compatibility table in the same change.
+`copier`; `src/create_forge/compat.py` for `forge-template`, and `engine.py`
+only if the negotiation logic itself changes), and the documented
+compatibility table in the same change.
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) is the
+worked example: it moved `forge-template` from `>=0.3.1,<0.4` to
+`>=0.4,<0.5` with no `engine.py` edit, because `0.4.0` preserved both
+protocol tuples and every public signature.
 
 Breaking changes then follow the sequence the
 [integration contract](integration-contract.md#release-coordination) already
@@ -99,6 +109,14 @@ standing evidence for that path today: it scaffolds at `forge-template`'s
 first tag and updates to its second, against the real registry. Dropping the
 update path without a tested migration is not an acceptable adoption,
 whether proposed by a human or by automation.
+
+This rule binds the default `new` path, whose generated projects track a
+`forge-template` Copier tag. The `--engine-preview` path has no equivalent
+obligation yet: it is a hidden, dev-only flag that has never been the
+default and writes no engine answers file, so there are no released
+engine-generated projects to migrate. ADR 0026's move to the 0.4 line was
+therefore vacuously compliant here; a future engine-first cutover is what
+gives the engine path its own update contract.
 
 ## Where the supported range is recorded
 

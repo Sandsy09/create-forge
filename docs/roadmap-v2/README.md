@@ -17,10 +17,11 @@ default direct-Copier path is a separate future initiative.
 Stages 10–12 are complete. The package-bound five-component catalogue is
 published as
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-on [PyPI](https://pypi.org/project/forge-template/0.4.0/). Stage 13 is now
-actionable and begins with a deliberate create-forge compatibility-range
-adoption; the currently released CLI still supports only
-`forge-template>=0.3.1,<0.4`.
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/). Stage 13 is
+underway: CF-13.01 (ADR 0026) adopted the `forge-template>=0.4,<0.5`
+compatibility line, so `--engine-preview` discovery now returns all five
+descriptors; CF-13.02–13.05 build selection, option prompting, and pipeline
+validation on top.
 
 ## Repository roles
 

@@ -11,7 +11,7 @@ runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
 `tests/test_e2e_engine_generation.py` does the same for `--engine-preview`,
-against the real installed `forge-template>=0.3.1,<0.4` engine — the engine
+against the real installed `forge-template>=0.4,<0.5` engine — the engine
 path (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
 client-owned lock finalisation from
 [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
@@ -66,9 +66,10 @@ running the full e2e suite there is a manual step before a PR touching
 ## The engine path
 
 `tests/test_e2e_engine_generation.py` covers `--engine-preview` against the
-real installed `forge-template>=0.3.1,<0.4` engine (CF-08.04,
-[ADR 0020](adr/0020-engine-path-end-to-end-tests.md)). It differs from the
-Copier suite in ways worth being explicit about:
+real installed `forge-template>=0.4,<0.5` engine (CF-08.04,
+[ADR 0020](adr/0020-engine-path-end-to-end-tests.md); range moved by
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)). It differs
+from the Copier suite in ways worth being explicit about:
 
 - **No `_tasks` run.** The engine path creates `uv.lock` as a client
   finalisation artefact before the atomic rename, then proves it with
@@ -79,21 +80,25 @@ Copier suite in ways worth being explicit about:
   package resolved once when `uv sync --all-extras` runs, not a template
   cloned per test session — generating through it is as deterministic as any
   other in-process call.
-- **Both archetypes are covered**, each with a current lock and a full
-  `uv run --locked poe check`:
+- **Both reference archetypes are covered**, each with a current lock and a
+  full `uv run --locked poe check`:
   `library` and `cli` are equally production since `forge-template 0.3.0`,
   and the suite proves `cli`'s console-script entry point derives from
   `ProjectSpec.project.repository_name` — the end-to-end counterpart to
   CF-08.03's in-memory proof
-  ([ADR 0019](adr/0019-cli-archetype-parity-review.md)).
+  ([ADR 0019](adr/0019-cli-archetype-parity-review.md)). The Data Science
+  archetype the `>=0.4,<0.5` line also carries is CF-13.05's coverage, not
+  this suite's yet.
 - **The "unsupported combination" proof uses two real isolated installs, not
   a monkeypatched `EngineInfo`.** One installs `forge-template` from git tag
   `v0.3.0` — a real release genuinely below
-  `compat.SUPPORTED_ENGINE_RANGE`'s lower bound, since `0.3.1` is currently
-  the only PyPI release — and asserts exit status `3` with nothing written.
-  The other installs `create-forge` with no `engine` extra at all and asserts
-  exit status `1` with nothing written. Both need GitHub reachable to build
-  the isolated environment, so both skip (not fail) when it is not.
+  `compat.SUPPORTED_ENGINE_RANGE`'s lower bound, and one that stays out of
+  bounds however far that bound is raised ([ADR 0020](adr/0020-engine-path-end-to-end-tests.md)
+  pre-authorised this; ADR 0026's move to `>=0.4,<0.5` is the first time it
+  applied) — and asserts exit status `3` with nothing written. The other
+  installs `create-forge` with no `engine` extra at all and asserts exit
+  status `1` with nothing written. Both need GitHub reachable to build the
+  isolated environment, so both skip (not fail) when it is not.
 
 ## Running it
 

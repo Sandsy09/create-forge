@@ -28,29 +28,33 @@ hidden `--engine-preview` flag's `--archetype` option.
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) then
 did what "Assigning the first engine range" below used to describe as future
 work: `forge-template` published `0.3.1` to PyPI, and this repository
-declared its first real, installable, range-bounded engine dependency —
+declared its first real, installable, range-bounded engine dependency,
 `forge-template>=0.3.1,<0.4` as the optional `engine` extra
-(`create-forge[engine]`). **This is not yet the CLI cutover.** The released
-default `new` command remains a thin Copier wrapper with a bundled registry
+(`create-forge[engine]`).
+[CF-13.01 / ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)
+then moved that range to `forge-template>=0.4,<0.5` — the 0.4 line whose
+lower bound `0.4.0` first ships the Data Science archetype and reusable
+capabilities. **This is not yet the CLI cutover.** The released default `new`
+command remains a thin Copier wrapper with a bundled registry
 (`src/create_forge/templates.toml`), calling Copier directly through
-`src/create_forge/runner.py`. The engine range assigned below is reachable
-only through `--engine-preview`; nothing about the default path, its
+`src/create_forge/runner.py`. The engine range below is reachable only
+through `--engine-preview`; nothing about the default path, its
 `--template-url` escape hatch, or `--ref` changed. The full cutover this
 document otherwise describes — the engine replacing direct Copier as the
 default, `--engine-source`/`--engine-ref` replacing `--template-url` — is
 still a future, unfiled decision.
 
-`forge-template 0.3.2` is the current compatible release inside that range.
-`create-forge 0.2.1` adds `uv>=0.12,<0.13` to the same optional extra so the
-client can create the engine-generated project's lock before finalisation;
-the supported engine range and protocol diagnostics remain unchanged.
+`forge-template 0.4.0` is the lower bound of the current line and its current
+compatible release; the public facade diff from the previous line's `0.3.2`
+is empty, so the move changed no protocol. `create-forge 0.2.1` adds
+`uv>=0.12,<0.13` to the same optional extra so the client can create the
+engine-generated project's lock before finalisation.
 
-[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-is now available from [PyPI](https://pypi.org/project/forge-template/0.4.0/)
-as the five-component Data Science provider release. It is not selected by the
-current range: CF-13.01 owns the deliberate move to `>=0.4,<0.5`, lock refresh,
-diagnostics, and cross-repository contract validation. Normal resolution must
-continue to reject `0.4.0` until that change merges.
+Adopting the 0.4 line makes the Data Science components discoverable through
+`--engine-preview`. Selecting them — capabilities, platforms, component
+options — is CF-13.02–13.04; the pipeline proof is CF-13.05. Normal
+resolution now rejects any `0.3.x` engine, and every `0.4.x` release inside
+the range is adopted per the canonical [engine update policy](engine-updates.md).
 
 ## Normal installed resolution
 
@@ -67,7 +71,8 @@ or `uv sync --all-extras` does, matching ADR 0014's guarded
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
-| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Current released architecture (ADR 0018) |
+| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4,<0.5` | `1` (supported) | Current architecture (ADR 0026) |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —
@@ -138,7 +143,7 @@ major version.
 | `integration.line` | `"v0.2.x-copier"` | always |
 | `integration.copier` | installed Copier version | always -- Copier remains a direct dependency |
 | `integration.engine_package` | installed `forge-template` version, `null` if the `engine` extra isn't installed | `importlib.metadata`, never an import of the engine itself |
-| `integration.engine_range` | `"forge-template>=0.3.1,<0.4"` | always -- this is what this CLI release declares, independent of what's installed |
+| `integration.engine_range` | `"forge-template>=0.4,<0.5"` | always -- this is what this CLI release declares, independent of what's installed |
 | `integration.projectspec_protocol.supported` | `"1"` | always, from `src/create_forge/compat.py` |
 | `integration.projectspec_protocol.detected` | `null` | never by `doctor` -- see below |
 | `integration.template_source` | bundled registry URL | always |

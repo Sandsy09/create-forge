@@ -38,40 +38,46 @@ were released in `forge-template 0.3.2`. They preserve the public facade and
 protocols while making the client responsible for dynamic lock finalisation.
 
 [#9](https://github.com/Sandsy09/create-forge/issues/9) and
-[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) assign
-this repository's **first released engine range**:
-`forge-template>=0.3.1,<0.4`, declared as the optional `engine` extra
-(`create-forge[engine]`) rather than a `[project.dependencies]` entry or a
-development-only pin. ProjectSpec construction, component-discovery,
-validation, and rendering adapters are tested against that real, installed
-range, and are reachable — behind the hidden `new --engine-preview` flag,
-with a discovery-driven `--archetype` selection — for both production
-archetypes. **This is not the CLI cutover.** The released default `new`
-command remains a thin Copier wrapper with a bundled registry, and its
-current security and update invariants remain authoritative until a future,
-still-unfiled cutover replaces it.
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) assigned
+this repository's **first released engine range**, `forge-template>=0.3.1,<0.4`;
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) then moved it
+to `forge-template>=0.4,<0.5`, the 0.4 line whose lower bound `0.4.0` first
+ships the Data Science archetype and reusable capabilities. It is declared as
+the optional `engine` extra (`create-forge[engine]`) rather than a
+`[project.dependencies]` entry or a development-only pin. ProjectSpec
+construction, component-discovery, validation, and rendering adapters are
+tested against that real, installed range, and are reachable — behind the
+hidden `new --engine-preview` flag, with a discovery-driven `--archetype`
+selection — for the production archetypes. **This is not the CLI cutover.**
+The released default `new` command remains a thin Copier wrapper with a
+bundled registry, and its current security and update invariants remain
+authoritative until a future, still-unfiled cutover replaces it.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
-| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Current released architecture (ADR 0018) |
+| v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4,<0.5` | 1 (supported) | Current architecture (ADR 0026) |
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI
 ([forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)).
-`0.3.2` is the current compatible patch release. The declared range still
-starts at `0.3.1`; contract tests resolve and exercise the current compatible
-release without changing ProjectSpec protocol `1` or component-manifest
-protocols `(1, 2)`.
+`0.4.0` is the lower bound of the current line and its current compatible
+release. The public facade diff from `0.3.2` is empty, so ProjectSpec
+protocol `1` and component-manifest protocols `(1, 2)` are unchanged across
+the move -- a range crossing, not a protocol migration.
 
-The provider has published the next compatibility line as
+The provider first published this compatibility line as
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 on [PyPI](https://pypi.org/project/forge-template/0.4.0/). It adds the
 `data-science`, `jupyter`, and `scientific-python` descriptors while preserving
 the public facade and protocol tuples. Its
 [release validation](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)
-is the provider hand-off, not an implicit client upgrade: create-forge remains
-on `>=0.3.1,<0.4` until CF-13.01 updates the range and executable contract.
+was the provider hand-off;
+[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
+([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted the
+range and reran the executable contract against it. Discovering and selecting
+the Data Science components is CF-13.02–13.04; the pipeline proof is CF-13.05.
 
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs
@@ -82,20 +88,21 @@ the [filesystem generation contract](filesystem-generation.md) under
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
-It is now the protocol the current released `create-forge` line (v0.2.x)
-supports, reachable through the `engine` extra.
+It is the protocol every released `create-forge` line supports through the
+`engine` extra — unchanged across the `0.3.x` and `0.4.x` engine lines.
 
 [Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
 assigns component manifest protocol `1`; forge-template ADR 0031 later added
-protocol `2` for the production `library`/`cli` manifests this release
-consumes. Component discovery is now available behind `--engine-preview`,
-not yet from the default `new` path.
+protocol `2` for the production manifests this range consumes. Component
+discovery is available behind `--engine-preview`, not yet from the default
+`new` path.
 
-[ADR 0011](adr/0011-engine-source-and-version-resolution.md), ADR 0018, and
-the canonical [engine resolution contract](engine-resolution.md) define how
-the range in the table above is resolved -- a bounded, install-time
-dependency -- and how cross-repository development still overrides it
-locally without a committed pin.
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md), ADR 0018,
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), and the
+canonical [engine resolution contract](engine-resolution.md) define how the
+range in the table above is resolved -- a bounded, install-time dependency --
+and how cross-repository development still overrides it locally without a
+committed pin.
 
 [ADR 0013](adr/0013-projectspec-construction-boundary.md) added the
 ProjectSpec-building boundary (`src/create_forge/spec.py` and

@@ -40,8 +40,9 @@ create-forge staging, uv lock, atomic finalisation
   validated the independent Data Science archetype and published the complete
   catalogue as
   [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0).
-  The provider line is available, while create-forge deliberately remains on
-  the two-archetype `>=0.3.1,<0.4` line until CF-13.01.
+  CF-13.01 (ADR 0026) adopted that provider line: create-forge's supported
+  range is now `forge-template>=0.4,<0.5`, so all five descriptors are
+  discoverable.
 - Capabilities remain bundled, reviewed forge-template components. This
   roadmap does not introduce plugins or remote component registries.
 - create-forge consumes public descriptors and never recreates component

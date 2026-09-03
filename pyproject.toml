@@ -38,14 +38,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# ADR 0018: the first assigned, released engine range -- an optional extra
-# rather than a hard dependency, so ADR 0014's guarded `try/except
-# ImportError` in cli.py stays meaningful and the default Copier path never
-# downloads an engine it doesn't call. src/create_forge/engine.py is the
-# only module that imports it; src/create_forge/compat.py holds the range
-# itself so cli.py's `doctor` can report it without importing the engine.
-# ADR 0021 adds bounded uv to finalise the engine render's dynamic lockfile.
-engine = ["forge-template>=0.3.1,<0.4", "uv>=0.12,<0.13"]
+# ADR 0018 assigned the first released engine range; ADR 0026 moves it to the
+# `forge-template` 0.4 compatibility line (the first to ship the Data Science
+# archetype and reusable capabilities). Still an optional extra rather than a
+# hard dependency, so ADR 0014's guarded `try/except ImportError` in cli.py
+# stays meaningful and the default Copier path never downloads an engine it
+# doesn't call. src/create_forge/engine.py is the only module that imports
+# it; src/create_forge/compat.py holds the range itself so cli.py's `doctor`
+# can report it without importing the engine. ADR 0021 adds bounded uv to
+# finalise the engine render's dynamic lockfile.
+engine = ["forge-template>=0.4,<0.5", "uv>=0.12,<0.13"]
 
 [project.scripts]
 create-forge = "create_forge.cli:app"
