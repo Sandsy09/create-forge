@@ -10,11 +10,16 @@ exposing forge-template's private fixture-catalogue seam.
 from __future__ import annotations
 
 import re
+import typing
 from collections.abc import Callable
 
 import pytest
 from forge_template import (
+    ComponentDescriptor,
+    ComponentOption,
     ComponentOwner,
+    ComponentRelation,
+    ComponentSelection,
     EngineInfo,
     ForgeEngineError,
     GenerationPlan,
@@ -87,6 +92,65 @@ def test_real_engine_matches_the_supported_range() -> None:
     assert "archetype" in kinds
     assert "capability" in kinds
     assert any(descriptor.requires for descriptor in descriptors)
+
+
+def _string_constraint_pattern(annotated: object) -> str:
+    """Pull the regex `pattern` off an `Annotated[str, StringConstraints(...)]`."""
+    base, *metadata = typing.get_args(annotated)
+    assert base is str
+    for item in metadata:
+        pattern = getattr(item, "pattern", None)
+        if isinstance(pattern, str) and pattern:
+            return pattern
+    raise AssertionError(f"no StringConstraints pattern on {annotated!r}")
+
+
+def test_selection_model_matches_the_documented_contract() -> None:
+    """CF-13.02 / ADR 0027: the canonical `docs/component-selection.md`
+    contract is built on a handful of engine facts. Pin them here -- from the
+    public models, never by naming a component -- so a future engine change
+    that invalidates the contract fails loudly rather than silently.
+    """
+    # Exactly three descriptor kinds -- `--capability` and `--platform` are
+    # not speculative, and there is no fourth flag to design.
+    kinds = set(typing.get_args(ComponentDescriptor.model_fields["kind"].annotation))
+    assert kinds == {"archetype", "capability", "platform"}
+
+    # `ComponentSelection` carries exactly the three fields the flags map onto.
+    assert set(ComponentSelection.model_fields) == {
+        "archetype",
+        "capabilities",
+        "platforms",
+    }
+
+    # A requirement edge names only an id -- its kind must be resolved back
+    # through discovery, which is why the contract forbids a client-side kind
+    # assumption.
+    assert set(ComponentRelation.model_fields) == {"id", "version"}
+
+    # Exactly four option value types. No `enum`, no `multi`: the client owns
+    # coercing a CLI string to one of these before the strict engine sees it.
+    option_types = set(typing.get_args(ComponentOption.model_fields["type"].annotation))
+    assert option_types == {"string", "integer", "boolean", "string_list"}
+
+    # `component_options` is a two-level mapping: component id -> option name
+    # -> value. Owner namespacing already exists on the wire.
+    outer = ProjectSpec.model_fields["component_options"].annotation
+    owner_key, inner = typing.get_args(outer)
+    option_key, _value = typing.get_args(inner)
+    owner_pattern = _string_constraint_pattern(owner_key)
+    option_pattern = _string_constraint_pattern(option_key)
+
+    # The two identifier alphabets differ -- this is what makes `ID.OPTION`
+    # unambiguous by construction, and the contract's split-on-first-dot rule
+    # depends on it. Neither admits a dot; ids take `-`, option names take `_`.
+    assert owner_pattern != option_pattern
+    assert re.match(owner_pattern, "a.b") is None
+    assert re.match(option_pattern, "a.b") is None
+    assert re.match(owner_pattern, "a-b") is not None
+    assert re.match(owner_pattern, "a_b") is None
+    assert re.match(option_pattern, "a_b") is not None
+    assert re.match(option_pattern, "a-b") is None
 
 
 def test_untested_package_is_rejected_before_every_public_engine_call(

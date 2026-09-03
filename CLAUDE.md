@@ -252,10 +252,15 @@ on [PyPI](https://pypi.org/project/forge-template/0.4.0/), with
 [release evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification).
 CF-13.01 ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md))
 adopted `forge-template>=0.4,<0.5`, so `engine.discover()` now returns all
-five descriptors; grouping them by kind, resolving relationships, prompting
-selections and options, and validating the Data Science pipeline are
-CF-13.02–13.05. This CLI must not hard-code capability IDs or relationships —
-selection stays discovery-driven, semantic validation stays engine-owned.
+five descriptors. CF-13.02
+([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
+the generic component-selection CLI conventions — `--capability`/`--platform`/
+`--component-option`, precedence, absent-vs-empty, prompt order — in the
+canonical [component selection contract](docs/component-selection.md).
+Implementing that selection and option prompting, and validating the Data
+Science pipeline, are CF-13.03–13.05. This CLI must not hard-code capability
+IDs or relationships — selection stays discovery-driven, semantic validation
+stays engine-owned.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -361,6 +366,14 @@ Run this before any release.
 - The canonical [component discovery contract](docs/component-discovery.md)
   defines protocol negotiation before catalogue access, descriptor ownership,
   and the no-fallback trust boundary implemented by `engine.py`.
+- The canonical [component selection contract](docs/component-selection.md)
+  (CF-13.02, [ADR 0027](docs/adr/0027-generic-component-selection-conventions.md))
+  defines the `--capability`/`--platform`/`--component-option` flag surface,
+  the absent-versus-explicit-empty rule, owner-qualified option syntax and
+  precedence, deterministic prompt order, and which selection failures are
+  client-owned versus engine-owned. It is a contract ahead of its
+  implementation (CF-13.03–13.05); no shipped module or test may name a
+  production component id.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the supported package/protocol range, public-facade coverage,
   production-catalogue rendering boundary, and sibling-checkout command.

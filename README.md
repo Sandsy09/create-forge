@@ -237,7 +237,11 @@ was the immutable provider hand-off to Stage 13.
 [CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
 ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted
 `forge-template>=0.4,<0.5`, so the engine-preview path now discovers all five
-components; selecting the new capabilities and platforms is the rest of the
+components, and CF-13.02
+([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
+how they are selected in the canonical
+[component selection contract](docs/component-selection.md). Implementing that
+selection is the rest of the
 [Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
 optional capabilities, discovery-driven preview UX, and cross-repository
 validation through Stages 10–14.

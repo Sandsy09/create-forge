@@ -110,9 +110,14 @@ implemented, validated, and published the `data-science` archetype in
 [CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
 ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted
 `forge-template>=0.4,<0.5`, so `--engine-preview` discovery now returns all
-five components. CF-13.02–13.05 build selection on top; do not hard-code a
-capability or Data Science rule — selection is discovery-driven and semantic
-validation stays engine-owned.
+five components. CF-13.02
+([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
+the generic component-selection CLI conventions in the canonical
+[component selection contract](docs/component-selection.md) —
+`--capability`/`--platform`/`--component-option`, precedence, prompt order,
+and client-versus-engine validation ownership. CF-13.03–13.05 implement and
+prove selection on top; do not hard-code a capability or Data Science rule —
+selection is discovery-driven and semantic validation stays engine-owned.
 
 ## What CI runs
 

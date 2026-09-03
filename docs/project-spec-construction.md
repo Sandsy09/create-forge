@@ -91,7 +91,7 @@ boundary, not a gap, recorded in full by the canonical
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
-| *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` now drives selection from discovery for real, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). `capabilities`/`platforms` remain unselected — no discovered descriptor of either kind exists yet. `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
+| *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` drives archetype selection from discovery today, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). The `>=0.4,<0.5` line (ADR 0026) ships two capability descriptors and zero platform descriptors; `capabilities`/`platforms` stay unselected until CF-13.03 adds the `--capability`/`--platform` flags and prompts defined by the canonical [component selection contract](component-selection.md). `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
 | *caller-supplied, or derived when the selected archetype declares it* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)), `--engine-preview` prompts directly for the selected archetype's own declared `ComponentDescriptor.options` (`prompts.ask_component_options`) and passes an explicit, caller-supplied `component_options` whenever any were answered. When none were — the archetype declares none, or every value came from elsewhere — `pipeline._resolved_component_options` falls back to deriving `packaging_mode` from the legacy `build_backend`/`versioning` `--data` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02), applied only when the selected archetype's own descriptor declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
 | *caller-supplied* `SelectionProvenance` | `provenance` | Left empty by `cli.py` today, since it resolves no policy. A policy-aware client passes a `SelectionProvenance` built after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself — see the canonical [downstream policy-consumption contract](organisation-policy-consumption.md). |
 
@@ -154,8 +154,10 @@ keeps packaging, version, notebook, and working-tree semantics with
 ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted the
 `>=0.4,<0.5` line. `create-forge` must discover the descriptor and construct
 its ProjectSpec generically rather than hard-code its ID, paths, capability
-requirements, or generated content — the discovery-driven selection that does
-so is CF-13.02–13.04.
+requirements, or generated content. CF-13.02
+([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
+selection conventions; implementing the discovery-driven selection that uses
+them is CF-13.03–13.04.
 
 The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
@@ -169,8 +171,11 @@ and Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md),
 and both are published in `forge-template 0.4.0`. The supported
 `forge-template>=0.4,<0.5` range (ADR 0026) exposes both capability
-descriptors through discovery; serializing a selected capability into an
-effective ProjectSpec is CF-13.02–13.04, not this document's current scope.
+descriptors through discovery; the canonical
+[component selection contract](component-selection.md)
+([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixes how a
+selected capability reaches an effective ProjectSpec, and CF-13.03–13.04
+implement it — not this document's current scope.
 
 ## Derivation rules
 
@@ -315,8 +320,13 @@ by
   registry data at all on this path.
 - **CF-13.01** ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md))
   moved the engine range to `forge-template>=0.4,<0.5`, making the Data
-  Science archetype and reusable capabilities discoverable. Constructing an
-  effective ProjectSpec that selects a capability is CF-13.02–13.04.
+  Science archetype and reusable capabilities discoverable.
+- **CF-13.02** ([ADR 0027](adr/0027-generic-component-selection-conventions.md))
+  fixed the component-selection CLI conventions — the `--capability`/
+  `--platform`/`--component-option` surface and its precedence — in the
+  canonical [component selection contract](component-selection.md).
+  Constructing an effective ProjectSpec that selects a capability against
+  those conventions is CF-13.03–13.04.
 
 ## Executable examples
 
