@@ -96,13 +96,19 @@ The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 likewise keep Jupyter requirements and Scientific Python selection engine-
 owned until generic capability selection is implemented in Stage 13.
-FT-11.01 through FT-11.03 are complete: the source engine now publishes the
+FT-11.01 through FT-11.03 are complete: the engine publishes the
 required Foundation points, Jupyter component under [forge-template ADR
 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and Scientific Python component under [forge-template ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-The released CLI range still discovers only Library and CLI Application;
-do not hard-code either capability while that range remains unchanged.
+FT-11.04 completed their production composition validation, and Stage 12
+implemented, validated, and published the `data-science` archetype in
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+([acceptance evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)).
+That provider release is available, but this repository's supported
+`forge-template>=0.3.1,<0.4` range still discovers only Library and CLI
+Application. CF-13.01 owns deliberate `0.4.x` adoption; do not hard-code a
+capability or Data Science rule while the range remains unchanged.
 
 ## What CI runs
 

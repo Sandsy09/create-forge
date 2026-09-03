@@ -142,12 +142,13 @@ a duplicate `command_name` field or recreate CLI component metadata in its own
 models or registry — `--archetype cli` therefore never derives
 `component_options` for it.
 
-The future
+The canonical
 [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 assigns the engine-owned ID `data-science`, declares no archetype options, and
 keeps packaging, version, notebook, and working-tree semantics with
-`forge-template`. It is not present in the currently supported engine line.
-When a later release exposes it, create-forge must discover the descriptor and
+`forge-template`. The descriptor is published in `forge-template 0.4.0`, but
+it is not present in create-forge's currently supported `>=0.3.1,<0.4` line.
+After CF-13.01 adopts `0.4.x`, create-forge must discover the descriptor and
 construct its ProjectSpec generically rather than hard-code its ID, paths,
 capability requirements, or generated content.
 
@@ -157,12 +158,13 @@ define `jupyter` as Data Science's explicit hard co-selection and
 `scientific-python` as independently optional. A future effective ProjectSpec
 must serialize every selected capability, including requirements, rather than
 rely on the engine to add one. Discovery remains the source of those IDs and
-relationships. Jupyter exists on unreleased `forge-template/main` under
+relationships. Jupyter is recorded under
 [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md),
-but the current released `forge-template>=0.3.1,<0.4` range exposes neither
-capability and ProjectSpec construction remains unchanged.
+and both are published in `forge-template 0.4.0`. The current supported
+`forge-template>=0.3.1,<0.4` range exposes neither capability and ProjectSpec
+construction remains unchanged until CF-13.01.
 
 ## Derivation rules
 

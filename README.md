@@ -221,13 +221,20 @@ The [accepted Data Science shape](https://github.com/Sandsy09/forge-template/blo
 is an independent, package-backed, notebook-oriented third archetype. The
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define its required reusable Jupyter tooling and independently optional
-Scientific Python stack. FT-11.02 implements Jupyter on unreleased
-`forge-template/main` under [ADR
+Scientific Python stack. FT-11.02 implements Jupyter under [ADR
 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and FT-11.03 implements Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-Neither changes create-forge's released `forge-template>=0.3.1,<0.4` range or
-two-archetype discovery. Its
+Stage 11 then validated their production composition, and Stage 12 added and
+validated the `data-science` archetype. The complete five-component catalogue
+is published as
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/); its
+[published acceptance evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)
+is the immutable provider hand-off to Stage 13. Create-forge still supports
+`forge-template>=0.3.1,<0.4`, so its released engine-preview path continues to
+discover only Library and CLI Application until CF-13.01 deliberately adopts
+the `0.4.x` line. Its
 [Data Science roadmap](docs/roadmap-v2/README.md) plans reusable optional
 capabilities, discovery-driven preview UX, and cross-repository validation
 through Stages 10–14.

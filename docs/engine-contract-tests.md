@@ -46,6 +46,14 @@ declared lower bound and `0.3.2` is the current compatible release. The
 [engine update policy](engine-updates.md)'s adoption rule continues to govern
 later compatible patches.
 
+The provider has separately published
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/), containing the
+five-component Data Science catalogue with unchanged public facade and
+protocol tuples. It is intentionally outside this executable contract until
+CF-13.01 changes the declared range and reruns the full contract against the
+new compatibility line; availability is not support.
+
 ## What the executable contract proves
 
 [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)

@@ -225,21 +225,26 @@ make the engine path the default during roadmap work.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,
-and ownership shape. It is not part of the current engine line; create-forge
-must not hard-code its ID, paths, or component rules before discovery exposes
-it.
+and ownership shape. It is published in the provider's `0.4.0` engine line;
+create-forge must still not hard-code its ID, paths, or component rules.
 FT-10.02's canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define optionless `jupyter` and `scientific-python` components. Data Science
-will hard-require Jupyter, while Scientific Python remains independently
+requires Jupyter, while Scientific Python remains independently
 optional. FT-11.01 published the required Foundation extension points,
-FT-11.02 implements Jupyter on unreleased `forge-template/main` under
+FT-11.02 implements Jupyter under
 [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and FT-11.03 implements Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-The released `forge-template>=0.3.1,<0.4` range still discovers only Library
-and CLI Application, and this CLI must not hard-code capability IDs or
-relationships. FT-11.04 / #108 is the final Stage 11 validation issue.
+FT-11.04 completed their composition validation. Stage 12 then implemented and
+validated Data Science and published the five-component catalogue as
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/), with
+[release evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification).
+The provider release is available, but this repository's supported
+`forge-template>=0.3.1,<0.4` range still discovers only Library and CLI
+Application. CF-13.01 owns deliberate adoption; this CLI must not hard-code
+capability IDs or relationships.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -369,10 +374,12 @@ Run this before any release.
 - The canonical
   [initial Data Science capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
   define the Jupyter hard co-selection and independently optional Scientific
-  Python component. Jupyter exists on unreleased `forge-template/main` under
+  Python component. Both capabilities and the `data-science` archetype are
+  published in `forge-template 0.4.0`; this repository deliberately remains on
+  its supported `>=0.3.1,<0.4` line until CF-13.01. Jupyter is recorded under
   [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md);
-  Stage 13 must consume descriptors and relationships generically after a
-  compatible engine release.
+  Stage 13 must consume descriptors and relationships generically after
+  adopting the compatible `0.4.x` line.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
   ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to

@@ -14,6 +14,14 @@ not selected here; Stage 10 owns those decisions.
 Delivery remains behind `create-forge new --engine-preview`. Retiring the
 default direct-Copier path is a separate future initiative.
 
+Stages 10–12 are complete. The package-bound five-component catalogue is
+published as
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+on [PyPI](https://pypi.org/project/forge-template/0.4.0/). Stage 13 is now
+actionable and begins with a deliberate create-forge compatibility-range
+adoption; the currently released CLI still supports only
+`forge-template>=0.3.1,<0.4`.
+
 ## Repository roles
 
 - **forge-template** owns the Data Science contract, capabilities, archetype,

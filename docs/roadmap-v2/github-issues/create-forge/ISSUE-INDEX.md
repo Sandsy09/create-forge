@@ -5,8 +5,8 @@ index records every create-forge roadmap-v2 epic and child.
 
 | ID | GitHub issue | Status | Parent | Blocked by | Milestone |
 | --- | --- | --- | --- | --- | --- |
-| CF-EPIC-13 | [#103](https://github.com/Sandsy09/create-forge/issues/103) | Blocked | — | [#91](https://github.com/Sandsy09/create-forge/issues/91) (complete), [forge-template#98](https://github.com/Sandsy09/forge-template/issues/98) | Data Science CLI Integration — Stage 13 |
-| CF-13.01 | [#106](https://github.com/Sandsy09/create-forge/issues/106) | Blocked | [#103](https://github.com/Sandsy09/create-forge/issues/103) | [#91](https://github.com/Sandsy09/create-forge/issues/91) (complete), [forge-template#112](https://github.com/Sandsy09/forge-template/issues/112) | Data Science CLI Integration — Stage 13 |
+| CF-EPIC-13 | [#103](https://github.com/Sandsy09/create-forge/issues/103) | Open | — | [#91](https://github.com/Sandsy09/create-forge/issues/91) (complete), [forge-template#98](https://github.com/Sandsy09/forge-template/issues/98) (complete) | Data Science CLI Integration — Stage 13 |
+| CF-13.01 | [#106](https://github.com/Sandsy09/create-forge/issues/106) | Open | [#103](https://github.com/Sandsy09/create-forge/issues/103) | [#91](https://github.com/Sandsy09/create-forge/issues/91) (complete), [forge-template#112](https://github.com/Sandsy09/forge-template/issues/112) (complete) | Data Science CLI Integration — Stage 13 |
 | CF-13.02 | [#107](https://github.com/Sandsy09/create-forge/issues/107) | Blocked | [#103](https://github.com/Sandsy09/create-forge/issues/103) | [#106](https://github.com/Sandsy09/create-forge/issues/106) | Data Science CLI Integration — Stage 13 |
 | CF-13.03 | [#108](https://github.com/Sandsy09/create-forge/issues/108) | Blocked | [#103](https://github.com/Sandsy09/create-forge/issues/103) | [#107](https://github.com/Sandsy09/create-forge/issues/107) | Data Science CLI Integration — Stage 13 |
 | CF-13.04 | [#109](https://github.com/Sandsy09/create-forge/issues/109) | Blocked | [#103](https://github.com/Sandsy09/create-forge/issues/103) | [#108](https://github.com/Sandsy09/create-forge/issues/108) | Data Science CLI Integration — Stage 13 |
@@ -22,8 +22,9 @@ index records every create-forge roadmap-v2 epic and child.
 - [FT-EPIC-10 / forge-template#96](https://github.com/Sandsy09/forge-template/issues/96)
   defines the architecture contract.
 - [FT-EPIC-11 / forge-template#97](https://github.com/Sandsy09/forge-template/issues/97)
-  delivers reusable capabilities.
+  delivered reusable capabilities (complete).
 - [FT-EPIC-12 / forge-template#98](https://github.com/Sandsy09/forge-template/issues/98)
-  publishes the Data Science engine release consumed by CF-EPIC-13.
+  published the verified `forge-template 0.4.0` Data Science engine release
+  consumed by CF-EPIC-13 (complete).
 - [FT-EPIC-14 / forge-template#99](https://github.com/Sandsy09/forge-template/issues/99)
   reviews and releases the final provider line consumed by CF-EPIC-14.

@@ -31,6 +31,11 @@ Completed `create-forge#91` is retained as a native predecessor because its
 engine-native option prompting is required before an option-bearing component
 composition can be presented generically.
 
+Stages 10, 11, and 12 are complete. The published and verified
+[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
+provider release makes CF-EPIC-13 and CF-13.01 actionable. Create-forge's
+supported range remains `>=0.3.1,<0.4` until CF-13.01 performs that adoption.
+
 ## Delivery rules
 
 - All 24 child issues are filed and attached to their native epics.
