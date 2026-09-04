@@ -8,7 +8,7 @@ exposes the released Data Science composition through `new --engine-preview`.
 ## Dependencies
 
 CF-EPIC-13's native predecessors `create-forge#91` and FT-EPIC-12 are both
-complete. CF-13.01–13.04 are complete; CF-13.05 is unblocked.
+complete. CF-13.01–13.05 are all complete; CF-EPIC-13 is closed.
 
 ## Child sequence
 
@@ -52,9 +52,23 @@ complete. CF-13.01–13.04 are complete; CF-13.05 is unblocked.
    component id as logic in any shipped module or test.
 5. [CF-13.05 / create-forge#110](https://github.com/Sandsy09/create-forge/issues/110)
    validates the Data Science preview pipeline against the released engine.
+   **Complete** under
+   [ADR 0030](https://github.com/Sandsy09/create-forge/blob/main/docs/adr/0030-data-science-preview-pipeline-validation.md):
+   `tests/test_data_science_pipeline.py` proves the full composition
+   (`data-science` + `jupyter` + `scientific-python`) constructs, validates,
+   renders, dry-runs, stages, locks, and finalises through the shared
+   pipeline, with every selection/option/compatibility/destination/lock
+   failure leaving no partial project; the `["library", "cli"]` parity and
+   pipeline parametrisations were generalised to every discovered archetype
+   with its own discovered required capabilities; the AST guard widened to
+   reject a discovered component id used as any string literal in a shipped
+   module; `tests/test_e2e_engine_generation.py` generates Data Science
+   through the real console script; and the canonical
+   [Data Science preview-pipeline validation](https://github.com/Sandsy09/create-forge/blob/main/docs/data-science-preview-validation.md)
+   record maps CF-EPIC-13's acceptance checklist to the named tests. No
+   production component id as logic in any shipped module.
 
-CF-13.01 through CF-13.04 are done; the sequence proceeds linearly to
-preview-pipeline validation.
+CF-13.01 through CF-13.05 are all done; CF-EPIC-13 is closed.
 
 ## Entry criteria
 

@@ -168,10 +168,13 @@ collection and typing.
 The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 define `jupyter` as Data Science's explicit hard co-selection and
-`scientific-python` as independently optional. A future effective ProjectSpec
-must serialize every selected capability, including requirements, rather than
-rely on the engine to add one. Discovery remains the source of those IDs and
-relationships. Jupyter is recorded under
+`scientific-python` as independently optional. The effective ProjectSpec
+serializes every selected capability, including requirements, rather than
+relying on the engine to add one — CF-13.05
+([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md))'s
+`test_selected_capabilities_round_trip_into_the_projectspec` proves the
+round-trip against the real engine. Discovery remains the source of those IDs
+and relationships. Jupyter is recorded under
 [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md),
@@ -343,6 +346,13 @@ by
   implemented per-component option collection: `--component-option`,
   `resolve_component_options` over `Catalogue.selected()`, CLI-string typing,
   and the per-name legacy-fallback merge.
+- **CF-13.05** ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md))
+  proved the Data Science composition constructs, validates, renders,
+  dry-runs, stages, locks, and finalises through the shared pipeline with no
+  archetype-specific branch, and generalised the parity/pipeline
+  parametrisations from `["library", "cli"]` to every discovered archetype.
+  No field-mapping change; CF-EPIC-13 is closed. See the canonical
+  [Data Science preview-pipeline validation](data-science-preview-validation.md).
 
 ## Executable examples
 
@@ -370,7 +380,8 @@ by
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) — the shared
   pipeline's discover → build → validate → render orchestration order, the
   real, unmocked end-to-end success against the production catalogue for
-  both archetypes, the legacy `library` option derivation gated by
+  every discovered archetype with its own required capabilities (CF-13.05),
+  the legacy `library` option derivation gated by
   discovered descriptor (CF-08.03) and merged per option name (CF-13.04),
   `discover_archetypes()`'s `kind` filter, `Catalogue` reuse so
   `engine.discover()` runs once (CF-13.03), and

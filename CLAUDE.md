@@ -231,7 +231,9 @@ create-forge owns generic capability selection behind `--engine-preview` and
 the final client E2E rollout. Completed #91 is a native predecessor of
 CF-EPIC-13 because descriptor-driven option prompting is required. All 24
 child issues are filed and attached; do not recreate component metadata or
-make the engine path the default during roadmap work.
+make the engine path the default during roadmap work. **CF-EPIC-13 is
+complete** — CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+validated the Data Science preview pipeline; Stage 14 (CF-EPIC-14) is next.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,
@@ -268,10 +270,16 @@ pre-locked, and the absent-versus-explicit-empty encoding through
 per-component option collection: the owner-qualified `--component-option`
 flag, `prompts.resolve_component_options` over `Catalogue.selected()` for
 *every* selected component, `prompts.coerce_option_value` CLI-string typing,
-and the legacy Library fallback merged per option name. Validating the Data
-Science pipeline is CF-13.05. This CLI must not hard-code capability IDs or
-relationships — selection stays discovery-driven, semantic validation stays
-engine-owned.
+and the legacy Library fallback merged per option name. CF-13.05
+([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md)) then
+validated the whole Data Science composition through that pipeline against the
+released engine — `tests/test_data_science_pipeline.py`, the discovery-driven
+generalisation of the `["library", "cli"]` parity/pipeline parametrisations,
+the widened AST guard, and the canonical
+[Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
+acceptance record — closing CF-EPIC-13. This CLI must not hard-code capability
+IDs or relationships — selection stays discovery-driven, semantic validation
+stays engine-owned.
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -388,8 +396,12 @@ Run this before any release.
   flags, the multi-selects); CF-13.04
   ([ADR 0029](docs/adr/0029-per-component-option-collection.md)) implemented
   `--component-option`, per-component option collection over
-  `Catalogue.selected()`, and CLI-string typing; the pipeline proof is
-  CF-13.05. No shipped module or test may name a production component id.
+  `Catalogue.selected()`, and CLI-string typing; CF-13.05
+  ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+  proved the whole path for the Data Science composition — canonical
+  [Data Science preview-pipeline validation](docs/data-science-preview-validation.md).
+  No shipped module may name a production component id (the widened AST guard
+  enforces it); test fixtures feeding the real engine still may.
 - The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
   define the supported package/protocol range, public-facade coverage,
   production-catalogue rendering boundary, and sibling-checkout command.
@@ -400,7 +412,12 @@ Run this before any release.
 - The canonical [end-to-end tests contract](docs/end-to-end-tests.md) defines
   the fast/`network`/`e2e` test-tier split and what the real console script
   is proven to do, against a released template on the Copier path and the
-  real installed engine on the engine path (CF-08.04, ADR 0020).
+  real installed engine on the engine path (CF-08.04, ADR 0020; every
+  discovered archetype including Data Science since CF-13.05, ADR 0030).
+- The canonical
+  [Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
+  (CF-13.05, [ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+  maps CF-EPIC-13's acceptance checklist to the named tests proving it.
 - The canonical
   [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
   defines engine-owned Library semantics; this CLI owns only selection,
@@ -419,9 +436,11 @@ Run this before any release.
   `>=0.4,<0.5` line resolves since CF-13.01
   ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)).
   Jupyter is recorded under
-  [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md);
-  Stage 13's remaining child (CF-13.05) must consume descriptors and
-  relationships generically — no hard-coded capability IDs or rules.
+  [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
+  CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+  closed Stage 13 by consuming those descriptors and relationships
+  generically — deriving each archetype's requirements from
+  `Catalogue.required_ids`, with no hard-coded capability ID or rule.
 - The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
   defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
   ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to

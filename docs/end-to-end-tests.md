@@ -17,7 +17,11 @@ client-owned lock finalisation from
 [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
 had no coverage here until this range existed to install
 ([#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)).
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)). It
+covers every archetype the catalogue discovers; CF-13.05
+([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) added the
+Data Science composition — `data-science` with its `jupyter` and
+`scientific-python` capabilities — alongside `library` and `cli`.
 See [the engine path](#the-engine-path) below for how it differs from the
 Copier suite.
 
@@ -27,7 +31,7 @@ Copier suite.
 | --- | --- | --- | --- |
 | Fast | *(none)* | Resolved values and in-memory behaviour — `ScaffoldRequest` construction, staging/finalisation bytes, prompt flow, registry validation. No network, no subprocess beyond what a test fakes. | Seconds; runs on every `poe check`. |
 | Network | `network` | `forge-template`'s `copier.yml` matches `templates.toml` (the drift guard, invariant 1 in `CLAUDE.md`); a real `update()` between two released tags. Clones a repository or drives Copier's Python API in-process. | Seconds to low tens of seconds. |
-| End-to-end | `e2e` | The real console script for both generation paths, and each generated project's own checks. | Well under two minutes locally for both modules together — dramatically more expensive than `network` and must stay separable from it, but not the "over a minute per module" cost the Copier suite alone once implied; the engine path's happy tests need no network at all. |
+| End-to-end | `e2e` | The real console script for both generation paths, and each generated project's own checks. | A few minutes locally for both modules together — dramatically more expensive than `network` and must stay separable from it. The engine path's happy tests need no network at all; the Data Science project CF-13.05 added carries a scientific-Python and Jupyter dependency tree and runs its own `notebook:check`, which is why the CI `e2e` job's budget is `timeout-minutes: 45`. |
 
 `poe test` (the fast suite `uv run poe check` runs) excludes both `network`
 and `e2e`: `pytest -m 'not network and not e2e'`. `uv run pytest -m network`
@@ -80,15 +84,22 @@ from the Copier suite in ways worth being explicit about:
   package resolved once when `uv sync --all-extras` runs, not a template
   cloned per test session — generating through it is as deterministic as any
   other in-process call.
-- **Both reference archetypes are covered**, each with a current lock and a
-  full `uv run --locked poe check`:
-  `library` and `cli` are equally production since `forge-template 0.3.0`,
-  and the suite proves `cli`'s console-script entry point derives from
-  `ProjectSpec.project.repository_name` — the end-to-end counterpart to
-  CF-08.03's in-memory proof
-  ([ADR 0019](adr/0019-cli-archetype-parity-review.md)). The Data Science
-  archetype the `>=0.4,<0.5` line also carries is CF-13.05's coverage, not
-  this suite's yet.
+- **Every discovered archetype is covered**, each with a current lock and a
+  full `uv run --locked poe check`, parametrised over an `_ARCHETYPES` module
+  constant. `library` and `cli` are equally production since
+  `forge-template 0.3.0`, and the suite proves `cli`'s console-script entry
+  point derives from `ProjectSpec.project.repository_name` — the end-to-end
+  counterpart to CF-08.03's in-memory proof
+  ([ADR 0019](adr/0019-cli-archetype-parity-review.md)). CF-13.05
+  ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) added
+  `data-science`, generated with its `jupyter` and `scientific-python`
+  capabilities (an `_EXTRA_ARGS` entry supplies the flags), so its own
+  `notebook:check` runs as part of the generated project's `poe check`. The
+  fast-suite composition proofs live in
+  [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
+  and are mapped to the epic acceptance checklist by the canonical
+  [Data Science preview-pipeline validation](data-science-preview-validation.md)
+  record.
 - **The "unsupported combination" proof uses two real isolated installs, not
   a monkeypatched `EngineInfo`.** One installs `forge-template` from git tag
   `v0.3.0` — a real release genuinely below
@@ -122,7 +133,13 @@ repository.
 - [`tests/test_e2e_generation.py`](../tests/test_e2e_generation.py) — the
   Copier-path suite.
 - [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py) —
-  the engine-path suite.
+  the engine-path suite, parametrised over every discovered archetype.
+- [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py) —
+  CF-13.05's fast-suite composition proofs against the real installed engine:
+  component-owner attribution, the optional-capability render differential,
+  the `spec.components` round-trip, staging/lock/finalisation, five
+  no-partial-project failure cases, dry-run, and interactive
+  required-capability pre-locking.
 - [`tests/conftest.py`](../tests/conftest.py) — the `create_forge_command`
   and `e2e_child_env` fixtures both suites share.
 - [`tests/test_cli.py`](../tests/test_cli.py) —

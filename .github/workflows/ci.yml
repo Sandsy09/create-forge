@@ -166,15 +166,17 @@ jobs:
   # path -- forge-template's latest released tag, its post-generation
   # `_tasks` (git init, uv sync, pre-commit install). `test_e2e_engine_generation.py`
   # (CF-08.04, ADR 0020) is the public-engine path via `--engine-preview` --
-  # both archetypes, plus a real released-install compatibility boundary
-  # (an out-of-range engine, and no engine extra at all), each rejected with
-  # nothing written.
+  # every discovered archetype, plus a real released-install compatibility
+  # boundary (an out-of-range engine, and no engine extra at all), each
+  # rejected with nothing written. CF-13.05 (ADR 0030) added the Data Science
+  # composition there -- a scientific-Python and Jupyter dependency tree plus
+  # its own `notebook:check` -- hence the 45-minute budget.
   # ---------------------------------------------------------------------------
   e2e:
     name: End-to-end generation
     runs-on: ubuntu-latest
     needs: lint
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 

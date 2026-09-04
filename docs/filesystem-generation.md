@@ -129,6 +129,13 @@ by the time either can occur.
   exits `1` and writes nothing; the existing
   `test_new_engine_preview_*` characterized-failure cases assert no
   destination and no leftover staging directory.
+- [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
+  (CF-13.05) — the same guarantees for the multi-component Data Science
+  composition: a full staged/locked/finalised project on disk, dry-run
+  listing exactly the engine's own planned targets and writing nothing, and
+  five failure modes (missing requirement, invalid option, incompatible
+  engine, destination conflict, lock failure) each leaving no partial
+  project and no staging sibling.
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — the adopted `validate_rendered_project` contract against the real pinned
   engine, proving what `finalise_generation_request` relies on already

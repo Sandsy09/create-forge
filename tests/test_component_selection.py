@@ -657,11 +657,15 @@ def test_engine_discovery_runs_exactly_once_per_invocation(
     assert calls == 1
 
 
-def test_library_and_cli_archetypes_need_no_new_flag(
+def test_every_discovered_archetype_generates_with_its_required_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """ADR 0027 compatibility clause: the shipped archetypes still generate
-    from `--engine-preview --archetype <id> --yes` with no capability flag.
+    """ADR 0027 compatibility clause, generalised by CF-13.05: every
+    discovered archetype still generates from
+    `--engine-preview --archetype <id> --yes` once its own discovered
+    required capabilities are supplied -- no capability flag for `library`
+    and `cli`, `--capability jupyter` for Data Science, all derived from the
+    catalogue rather than named here.
     """
     monkeypatch.setattr(questionary, "checkbox", lambda *_a, **_kw: _Reply([]))
 
@@ -670,18 +674,24 @@ def test_library_and_cli_archetypes_need_no_new_flag(
 
     monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
 
-    for archetype in ("library", "cli"):
+    catalogue = Catalogue(tuple(engine_module.discover()))
+    for descriptor in catalogue.archetypes:
+        required = catalogue.required_ids(descriptor.id, SelectionKind.CAPABILITIES)
+        capability_flags = [
+            arg for capability in required for arg in ("--capability", capability)
+        ]
         result = runner.invoke(
             app,
             [
                 "new",
                 "Thing",
                 "--path",
-                str(tmp_path / archetype),
+                str(tmp_path / descriptor.id),
                 *_YES_DATA,
                 "--engine-preview",
                 "--archetype",
-                archetype,
+                descriptor.id,
+                *capability_flags,
             ],
         )
         assert result.exit_code == 0, result.output

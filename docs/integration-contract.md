@@ -79,9 +79,12 @@ was the provider hand-off;
 range and reran the executable contract against it. CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 component-selection CLI conventions in the canonical
-[component selection contract](component-selection.md); implementing that
-discovery-driven selection is CF-13.03–13.04, and the pipeline proof is
-CF-13.05.
+[component selection contract](component-selection.md); CF-13.03–13.04
+implemented that discovery-driven selection, and CF-13.05
+([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) proved the
+Data Science composition traverses the shared pipeline against the released
+engine, closing CF-EPIC-13 — see the canonical
+[Data Science preview-pipeline validation](data-science-preview-validation.md).
 
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs

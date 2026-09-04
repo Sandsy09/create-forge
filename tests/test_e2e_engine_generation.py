@@ -14,8 +14,12 @@ they invoke:
   in-process call. Only the two negative tests at the bottom, which install a
   *different* engine version to prove a compatibility boundary, touch GitHub
   -- and they skip, rather than fail, when it is unreachable.
-- `--engine-preview` selects an archetype (`library` or `cli`); both are
-  covered here, matching CF-08.03's archetype-parity review (ADR 0019).
+- `--engine-preview` selects an archetype; every one this catalogue
+  discovers is covered here -- `library` and `cli` (CF-08.03's
+  archetype-parity review, ADR 0019) and, since CF-13.05 (ADR 0030), Data
+  Science with its `jupyter` and `scientific-python` capabilities. Adding an
+  archetype is a one-line change to `_ARCHETYPES` plus, if it has hard
+  requirements, an `_EXTRA_ARGS` entry.
 
 Marked `e2e`, sharing `create_forge_command`/`e2e_child_env` with
 `test_e2e_generation.py` via `tests/conftest.py`. Skips the whole module,
@@ -45,6 +49,11 @@ pytest.importorskip(
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# Every archetype the installed catalogue ships. Kept as fixture data feeding
+# the real console script, never selection logic -- see this module's
+# docstring and `tests/test_archetype_parity.py`'s AST guard.
+_ARCHETYPES = ("library", "cli", "data-science")
+
 _ANSWERS: dict[str, dict[str, str]] = {
     "library": {
         "project_name": "E2E Engine Library",
@@ -60,9 +69,36 @@ _ANSWERS: dict[str, dict[str, str]] = {
         "author_name": "create-forge e2e",
         "author_email": "create-forge-e2e@example.invalid",
     },
+    "data-science": {
+        "project_name": "E2E Engine Data Science",
+        "project_description": "create-forge engine e2e smoke test (data science).",
+        "license": "mit",
+        "author_name": "create-forge e2e",
+        "author_email": "create-forge-e2e@example.invalid",
+    },
 }
-_PACKAGE_NAMES = {"library": "e2e_engine_library", "cli": "e2e_engine_cli"}
-_REPOSITORY_NAMES = {"library": "e2e-engine-library", "cli": "e2e-engine-cli"}
+_PACKAGE_NAMES = {
+    "library": "e2e_engine_library",
+    "cli": "e2e_engine_cli",
+    "data-science": "e2e_engine_data_science",
+}
+_REPOSITORY_NAMES = {
+    "library": "e2e-engine-library",
+    "cli": "e2e-engine-cli",
+    "data-science": "e2e-engine-data-science",
+}
+# Hard requirements an archetype needs supplied as `--capability` flags, plus
+# the optional capabilities this suite deliberately exercises alongside them.
+# Data Science requires `jupyter`; `scientific-python` is independently
+# optional and included here so the released project covers both.
+_EXTRA_ARGS: dict[str, list[str]] = {
+    "data-science": [
+        "--capability",
+        "jupyter",
+        "--capability",
+        "scientific-python",
+    ],
+}
 _FORGE_DISTRIBUTIONS = {
     canonicalize_name("create-forge"),
     canonicalize_name("forge-template"),
@@ -98,6 +134,7 @@ def _run_engine_new(
         if key == "project_name":
             continue
         args += ["--data", f"{key}={value}"]
+    args += _EXTRA_ARGS.get(archetype, [])
 
     return subprocess.run(  # noqa: S603
         args,
@@ -116,12 +153,12 @@ def generated_engine_projects(
     create_forge_command: str,
     e2e_child_env: dict[str, str],
 ) -> dict[str, Path]:
-    """Scaffold both archetypes exactly once per session through the real
-    engine path; every test below asserts against these two real projects
-    rather than each paying for its own render.
+    """Scaffold every discovered archetype exactly once per session through
+    the real engine path; every test below asserts against these real
+    projects rather than each paying for its own render.
     """
     projects: dict[str, Path] = {}
-    for archetype in ("library", "cli"):
+    for archetype in _ARCHETYPES:
         dest = (
             tmp_path_factory.mktemp(f"e2e-engine-{archetype}")
             / _REPOSITORY_NAMES[archetype]
@@ -137,14 +174,14 @@ def generated_engine_projects(
     return projects
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+@pytest.mark.parametrize("archetype", _ARCHETYPES)
 def test_new_creates_a_real_project(
     generated_engine_projects: dict[str, Path], archetype: str
 ) -> None:
     assert generated_engine_projects[archetype].is_dir()
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+@pytest.mark.parametrize("archetype", _ARCHETYPES)
 def test_new_produces_the_expected_project_shape(
     generated_engine_projects: dict[str, Path], archetype: str
 ) -> None:
@@ -162,7 +199,7 @@ def test_new_produces_the_expected_project_shape(
     assert (project / "uv.lock").is_file()
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+@pytest.mark.parametrize("archetype", _ARCHETYPES)
 def test_generated_lockfile_is_current(
     generated_engine_projects: dict[str, Path],
     archetype: str,
@@ -181,7 +218,7 @@ def test_generated_lockfile_is_current(
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+@pytest.mark.parametrize("archetype", _ARCHETYPES)
 def test_generated_project_has_no_forge_dependency(
     generated_engine_projects: dict[str, Path], archetype: str
 ) -> None:
@@ -235,7 +272,7 @@ def test_cli_console_command_is_the_repository_name(
     assert f'{repository_name} = "{package}.cli:app"' in pyproject
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+@pytest.mark.parametrize("archetype", _ARCHETYPES)
 def test_generated_project_passes_its_own_check(
     generated_engine_projects: dict[str, Path],
     archetype: str,

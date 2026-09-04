@@ -29,6 +29,9 @@ END_TO_END_TESTS = REPO_ROOT / "docs" / "end-to-end-tests.md"
 DOWNSTREAM_CLIENT_REFERENCE = REPO_ROOT / "docs" / "downstream-client-reference.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
+DATA_SCIENCE_PREVIEW_VALIDATION = (
+    REPO_ROOT / "docs" / "data-science-preview-validation.md"
+)
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
@@ -262,6 +265,22 @@ def test_component_selection_doc_is_linked_from_canonical_entry_points() -> None
         assert link_re.search(text), f"{path.name} does not link component-selection.md"
 
     assert COMPONENT_SELECTION.is_file()
+
+
+def test_data_science_preview_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-13.05's living acceptance-evidence contract (ADR 0030) must remain
+    discoverable wherever contributors enter the engine integration
+    documentation, mirroring end-to-end-tests.md's equivalent guard.
+    """
+    link_re = re.compile(r"\([^)]*data-science-preview-validation\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link data-science-preview-validation.md"
+        )
+
+    assert DATA_SCIENCE_PREVIEW_VALIDATION.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

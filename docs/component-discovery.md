@@ -91,8 +91,11 @@ The [Data Science capability
 contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
 provide the first production use of this boundary. The `data-science`
 descriptor requires `jupyter>=1,<2`, while `scientific-python` remains an
-independently optional descriptor. Stage 13 must guide users from these public
-relationships without embedding either ID or rule in the CLI.
+independently optional descriptor. Stage 13 guides users from these public
+relationships without embedding either ID or rule in the CLI — CF-13.05
+([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) proved that
+end to end, deriving each archetype's requirements from
+`Catalogue.required_ids` rather than naming them.
 
 FT-11.02 implements Jupyter under
 [forge-template ADR
@@ -172,6 +175,11 @@ engine internals to obtain them.
   added `Catalogue.selected()`: the selected descriptors in composition-tier
   then lexical order, for per-component option collection. Still no change to
   the adapter.
+- **CF-13.05** ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md))
+  proved the Data Science composition traverses this adapter and the shared
+  pipeline end to end, and widened `test_archetype_parity.py`'s guard to
+  reject a discovered component id used as *any* string literal in a shipped
+  module. Still no change to the adapter; CF-EPIC-13 is closed.
 
 ## Executable examples
 
@@ -187,6 +195,11 @@ grouping and direct-only `required_ids`, and the single-discovery guarantee
 are covered by [`tests/test_pipeline.py`](../tests/test_pipeline.py),
 [`tests/test_component_selection.py`](../tests/test_component_selection.py),
 and [`tests/test_cli.py`](../tests/test_cli.py).
+[`tests/test_archetype_parity.py`](../tests/test_archetype_parity.py) and
+[`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
+(CF-13.05) parametrise over `Catalogue(engine.discover()).archetypes`, each
+with its own discovered `required_ids`, so the parity and pipeline proofs
+cover every discovered archetype with no id written down.
 
 When discovery behaviour changes, update this contract and its executable
 examples in the same pull request.

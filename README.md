@@ -244,10 +244,12 @@ how they are selected in the canonical
 ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
 capability and platform selection behind `--engine-preview`, and CF-13.04
 ([ADR 0029](docs/adr/0029-per-component-option-collection.md)) per-component
-option collection and `--component-option`; the pipeline proof is the rest of
-the [Data Science roadmap](docs/roadmap-v2/README.md), which plans reusable
-optional capabilities, discovery-driven preview UX, and cross-repository
-validation through Stages 10–14.
+option collection and `--component-option`. CF-13.05
+([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+validated the Data Science composition through the shared pipeline against the
+released engine, closing **Stage 13**; Stage 14 then takes the released client
+and engine pair through installed-console validation and rollout. The
+[Data Science roadmap](docs/roadmap-v2/README.md) runs Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier
 path remains unchanged.

@@ -122,9 +122,13 @@ capability and platform selection — `pipeline.Catalogue`, the four
 the interactive multi-selects; CF-13.04
 ([ADR 0029](docs/adr/0029-per-component-option-collection.md)) added
 `--component-option` and per-component option collection and typing for every
-selected component; CF-13.05 proves the pipeline. Do not hard-code a
-capability or Data Science rule — selection is discovery-driven and semantic
-validation stays engine-owned.
+selected component; CF-13.05
+([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
+validated the Data Science composition through the shared pipeline against the
+released engine, closing CF-EPIC-13 — see the canonical
+[Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
+record. Do not hard-code a capability or Data Science rule — selection is
+discovery-driven and semantic validation stays engine-owned.
 
 ## What CI runs
 
@@ -275,8 +279,10 @@ CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
 the gap ADR 0016 left open: the engine path now has its own CI-enforced
 `e2e`-marked coverage --
 [`tests/test_e2e_engine_generation.py`](tests/test_e2e_engine_generation.py)
-generates both archetypes through `--engine-preview` against the real
-installed engine, checks each generated lock, runs
+generates every discovered archetype through `--engine-preview` against the
+real installed engine (Data Science with its capabilities since CF-13.05,
+[ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md)),
+checks each generated lock, runs
 `uv run --locked poe check`, and proves the
 released-install compatibility boundary (an out-of-range engine, and no
 `engine` extra at all) writes nothing -- closing
