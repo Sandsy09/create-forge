@@ -1,7 +1,7 @@
 # Cross-Repository Dependency Matrix
 
 This matrix reconciles all 30 cross-repository GitHub `blocked by` edges on
-2026-09-03. The first 24 are completed Foundation-roadmap edges; three
+2026-09-04. The first 24 are completed Foundation-roadmap edges; three
 sequence the Data Science epics and three sequence their child delivery. A row
 also shows any local blocker
 attached to the same endpoint for context, but local edges are not included in
@@ -30,7 +30,7 @@ the cross-repository count. GitHub is authoritative.
 | [FT-EPIC-14 / forge-template#99](https://github.com/Sandsy09/forge-template/issues/99) | [CF-EPIC-13 / create-forge#103](https://github.com/Sandsy09/create-forge/issues/103) |
 | [CF-EPIC-14 / create-forge#104](https://github.com/Sandsy09/create-forge/issues/104) | [FT-EPIC-14 / forge-template#99](https://github.com/Sandsy09/forge-template/issues/99) |
 | [CF-13.01 / create-forge#106](https://github.com/Sandsy09/create-forge/issues/106) (complete) | [FT-12.04 / forge-template#112](https://github.com/Sandsy09/forge-template/issues/112) (complete), [create-forge#91](https://github.com/Sandsy09/create-forge/issues/91) (complete) |
-| [FT-14.01 / forge-template#113](https://github.com/Sandsy09/forge-template/issues/113) | [CF-13.05 / create-forge#110](https://github.com/Sandsy09/create-forge/issues/110) |
+| [FT-14.01 / forge-template#113](https://github.com/Sandsy09/forge-template/issues/113) | [CF-13.05 / create-forge#110](https://github.com/Sandsy09/create-forge/issues/110) (complete) |
 | [CF-14.01 / create-forge#111](https://github.com/Sandsy09/create-forge/issues/111) | [FT-14.03 / forge-template#115](https://github.com/Sandsy09/forge-template/issues/115) |
 
 Local sequencing also records FT-EPIC-11 blocked by FT-EPIC-10,

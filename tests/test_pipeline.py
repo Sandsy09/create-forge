@@ -27,11 +27,12 @@ from forge_template import (
 import create_forge.staging as staging_module
 from create_forge import engine, pipeline
 from create_forge.pipeline import (
+    Catalogue,
     GenerationRequest,
     build_generation_request,
     finalise_generation_request,
 )
-from create_forge.spec import SelectionRequest
+from create_forge.spec import SelectionKind, SelectionRequest
 from create_forge.staging import DestinationConflictError, StagingError
 
 _VALID_ANSWERS = {
@@ -164,20 +165,40 @@ def test_build_generation_request_passes_component_selection_through(
     }
 
 
-@pytest.mark.parametrize("archetype", ["library", "cli"])
+def _real_archetype_selections() -> list[tuple[str, tuple[str, ...]]]:
+    """Every discovered archetype with its own discovered required
+    capabilities -- CF-13.05 generalised the parametrisation below from a
+    hardcoded `("library", "cli")` pair so Data Science (which requires
+    `jupyter`) traverses the real pipeline too, with no requirement id named
+    here.
+    """
+    catalogue = Catalogue(tuple(engine.discover()))
+    return [
+        (d.id, catalogue.required_ids(d.id, SelectionKind.CAPABILITIES))
+        for d in catalogue.archetypes
+    ]
+
+
+@pytest.mark.parametrize(
+    ("archetype", "required_capabilities"), _real_archetype_selections()
+)
 def test_build_generation_request_succeeds_against_the_real_catalogue(
-    archetype: str,
+    archetype: str, required_capabilities: tuple[str, ...]
 ) -> None:
     """The real, unmocked engine: the installed `forge-template` production
-    catalogue (since 0.3.0, CF-08.02) ships both reference archetypes,
-    replacing the Stage 06-era empty-catalogue rejection this test's own
-    docstring anticipated retiring.
+    catalogue (since 0.3.0, CF-08.02; five components since 0.4.0, CF-13.01)
+    ships every archetype this parametrisation discovers, each generated with
+    its own discovered requirements satisfied.
     """
     request = pipeline.build_generation_request(
-        _VALID_ANSWERS, selection=SelectionRequest.of(archetype=archetype)
+        _VALID_ANSWERS,
+        selection=SelectionRequest.of(
+            archetype=archetype, capabilities=required_capabilities
+        ),
     )
 
     assert request.spec.components.archetype == archetype
+    assert tuple(request.spec.components.capabilities) == required_capabilities
     assert any(file.target == "pyproject.toml" for file in request.rendered.files)
 
 

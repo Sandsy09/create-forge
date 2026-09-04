@@ -31,13 +31,15 @@ Completed `create-forge#91` is retained as a native predecessor because its
 engine-native option prompting is required before an option-bearing component
 composition can be presented generically.
 
-Stages 10, 11, and 12 are complete. The published and verified
+Stages 10, 11, 12, and 13 are complete. The published and verified
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 provider release made CF-EPIC-13 actionable. CF-13.01 (ADR 0026) performed
 the range adoption — create-forge's supported range is now `>=0.4,<0.5` — and
 CF-13.02 (ADR 0027) fixed the component-selection CLI conventions, and
 CF-13.03 (ADR 0028) implemented capability and platform selection, and
-CF-13.04 (ADR 0029) per-component option collection. CF-13.05 remains.
+CF-13.04 (ADR 0029) per-component option collection, and CF-13.05 (ADR 0030)
+validated the Data Science composition through the shared pipeline against the
+released engine, closing CF-EPIC-13. Stage 14 is next.
 
 ## Delivery rules
 

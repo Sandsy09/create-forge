@@ -32,9 +32,13 @@ absent-versus-empty encoding, and required pre-locking. CF-13.04
 `--component-option`, per-component option collection and typing for every
 *selected* component (not just the archetype), the owner-qualified parsing,
 and the shape-only client-side checks below — all live behind
-`--engine-preview`. Still to come: CF-13.05
-([#110](https://github.com/Sandsy09/create-forge/issues/110)) proves the whole
-path against the released engine.
+`--engine-preview`. CF-13.05
+([#110](https://github.com/Sandsy09/create-forge/issues/110),
+[ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) then proved
+the whole path against the released engine for the Data Science composition —
+see the canonical
+[Data Science preview-pipeline validation](data-science-preview-validation.md)
+record — closing CF-EPIC-13.
 
 This is **not** the CLI cutover. Every flag below is hidden and reachable only
 via `new --engine-preview`; the default `new` path stays direct-Copier with a
@@ -71,7 +75,7 @@ organisation policy, so the two currently produce the same wire payload, but
 the distinction is preserved through `spec.SelectionRequest.explicit` for a
 policy-aware caller of `pipeline.build_generation_request` — see the
 [downstream policy-consumption contract](organisation-policy-consumption.md).
-CF-13.03 must encode it exactly:
+The encoding is exactly:
 
 | Input | `capabilities` | Recorded in `explicit`? |
 | --- | --- | --- |
@@ -239,11 +243,15 @@ and the contract treats it as the ordinary zero case, not a special one.
 
 ## Compatibility with the shipped archetypes
 
-`--engine-preview --archetype library` and `--archetype cli` must behave
-identically before and after CF-13.03 / CF-13.04: no new required flag, and no
-new prompt for `cli` (which declares no options) or beyond `packaging_mode` /
-`initial_version` for `library`. The Copier default `new` path and a
-`create-forge` install without the `engine` extra are untouched.
+`--engine-preview --archetype library` and `--archetype cli` behave
+identically before and after CF-13.03 / CF-13.04 / CF-13.05: no new required
+flag, and no new prompt for `cli` (which declares no options) or beyond
+`packaging_mode` / `initial_version` for `library`.
+`tests/test_component_selection.py::test_every_discovered_archetype_generates_with_its_required_flags`
+proves it — every discovered archetype still generates from
+`--engine-preview --archetype <id> --yes` once its own discovered
+requirements are supplied. The Copier default `new` path and a `create-forge`
+install without the `engine` extra are untouched.
 
 ## Worked examples
 
@@ -294,10 +302,19 @@ The contract is characterised by:
   `resolve_component_options`' multi-descriptor ordering, empty-namespace
   omission, and undeclared-key pass-through.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) —
-  `test_build_generation_request_reuses_a_supplied_catalogue`, and the
-  per-option-name legacy-fallback merge.
-- **CF-13.05** adds the end-to-end preview-pipeline proof against the released
-  engine.
+  `test_build_generation_request_reuses_a_supplied_catalogue`, the
+  per-option-name legacy-fallback merge, and
+  `test_build_generation_request_succeeds_against_the_real_catalogue`
+  parametrised over every discovered archetype with its own discovered
+  required capabilities (CF-13.05).
+- [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
+  — CF-13.05's proof that the Data Science composition traverses this
+  selection surface end to end: interactive required-capability pre-locking,
+  the explicit-empty rejection, `--component-option` against the engine's
+  optionless verdict, and every selection/option/compatibility/destination/lock
+  failure leaving nothing written. Mapped to the epic checklist by the
+  canonical
+  [Data Science preview-pipeline validation](data-science-preview-validation.md).
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

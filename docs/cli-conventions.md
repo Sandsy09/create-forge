@@ -131,10 +131,12 @@ CLI-collected answers that reach `ProjectSpec.project`
 component's own discovered descriptor declares (CF-13.04,
 [ADR 0029](adr/0029-per-component-option-collection.md)) — in composition-tier
 then lexical order, and omitting a component whose namespace stays empty.
-Against `0.4.0` only the archetype ever has options: nothing for `cli`,
-`packaging_mode`/`initial_version` for `library`:
+Against `0.4.0` only `library` declares options
+(`packaging_mode`/`initial_version`); `cli`, `data-science`, `jupyter`, and
+`scientific-python` declare none, so a selected optionless component is never
+prompted and serialises no namespace:
 
-| Registry question | Reaches ProjectSpec for `library`? | for `cli`? |
+| Registry question | Reaches ProjectSpec for `library`? | for `cli` / `data-science` (+ capabilities)? |
 | --- | --- | --- |
 | `project_name`, `project_description`, `license` | asked directly | asked directly |
 | `packaging_mode`, `initial_version` | asked directly, from `library`'s own descriptor | n/a — no options declared |
@@ -181,8 +183,11 @@ how `--engine-preview` turns flags and prompts into a ProjectSpec's
 four capability/platform flags and their interactive multi-selects; CF-13.04
 ([ADR 0029](adr/0029-per-component-option-collection.md)) implemented
 `--component-option`, per-component option collection for every selected
-component, and CLI-string-to-declared-type coercion. CF-13.05 proves the
-whole pipeline against the released engine.
+component, and CLI-string-to-declared-type coercion. CF-13.05
+([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) then proved
+the whole pipeline against the released engine for the Data Science
+composition — see the canonical
+[Data Science preview-pipeline validation](data-science-preview-validation.md).
 
 For this document's purposes: a malformed `--component-option` (missing `.` or
 `=`) is a `typer.BadParameter` usage rejection, exit `2`, like a malformed
@@ -346,7 +351,10 @@ The contract is characterized by these tests:
   `tests/test_engine_cross_repository.py`'s
   `test_selection_model_matches_the_documented_contract`, and by
   `tests/test_component_selection.py`, `tests/test_prompts.py`, and
-  `tests/test_pipeline.py` (CF-13.03, CF-13.04).
+  `tests/test_pipeline.py` (CF-13.03, CF-13.04). The Data Science composition
+  through that surface is proven by `tests/test_data_science_pipeline.py`
+  (CF-13.05), mapped to the epic checklist by the canonical
+  [Data Science preview-pipeline validation](data-science-preview-validation.md).
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.

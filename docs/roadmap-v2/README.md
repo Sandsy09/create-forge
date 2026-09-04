@@ -18,12 +18,14 @@ Stages 10–12 are complete. The package-bound five-component catalogue is
 published as
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
 on [PyPI](https://pypi.org/project/forge-template/0.4.0/). Stage 13 is
-underway: CF-13.01 (ADR 0026) adopted the `forge-template>=0.4,<0.5`
+complete: CF-13.01 (ADR 0026) adopted the `forge-template>=0.4,<0.5`
 compatibility line, so `--engine-preview` discovery now returns all five
 descriptors, and CF-13.02 (ADR 0027) fixed the generic component-selection
 CLI conventions, which CF-13.03 (ADR 0028) implemented for capabilities and
-platforms and CF-13.04 (ADR 0029) for per-component options. CF-13.05 adds
-pipeline validation.
+platforms and CF-13.04 (ADR 0029) for per-component options, and CF-13.05
+(ADR 0030) validated the Data Science composition through the shared pipeline
+against the released engine, closing CF-EPIC-13. Stage 14 takes the released
+client and engine pair through installed-console validation and rollout.
 
 ## Repository roles
 
