@@ -12,12 +12,14 @@ uv sync --all-groups --all-extras
 uv run pre-commit install --install-hooks
 ```
 
-`--all-extras` resolves `forge-template>=0.4,<0.5` and `uv>=0.12,<0.13`
+`--all-extras` resolves `forge-template>=0.4.1,<0.5` and `uv>=0.12,<0.13`
 from PyPI as the optional `engine` extra
 ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md);
 range moved to the 0.4 line by
-[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) --
+[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md), with the
+reviewed `0.4.1` release adopted by
+[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)) --
 plain `uv sync` (or `pip install create-forge`) never resolves it. That
 optionality is what lets `src/create_forge/engine.py` — see
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — stay out of
@@ -127,7 +129,11 @@ selected component; CF-13.05
 validated the Data Science composition through the shared pipeline against the
 released engine, closing CF-EPIC-13 — see the canonical
 [Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
-record. Do not hard-code a capability or Data Science rule — selection is
+record. CF-14.01
+([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+then adopts the reviewed `0.4.1` release as the `>=0.4.1,<0.5` lower bound and
+prepares create-forge `0.3.0`; CF-14.04 owns the complete changelog and
+publication. Do not hard-code a capability or Data Science rule — selection is
 discovery-driven and semantic validation stays engine-owned.
 
 ## What CI runs
@@ -225,6 +231,8 @@ then, crossing one compatibility line,
 [CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
 ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) moved
 that range to `forge-template>=0.4,<0.5`, the 0.4 Data Science line.
+CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+then raises its lower bound to the reviewed `forge-template 0.4.1` release.
 Stage 06 first proved an exact development package/protocol pair through the
 [cross-repository engine contract tests](docs/engine-contract-tests.md), and
 CF-08.02 moved that pair forward to `0.3.0`; ADR 0018 then replaced the

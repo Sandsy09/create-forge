@@ -37,7 +37,7 @@ CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-ENGINE_REQUIREMENT = "forge-template>=0.4,<0.5"
+ENGINE_REQUIREMENT = "forge-template>=0.4.1,<0.5"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
 # Every module reachable from create-forge's shipped entry point

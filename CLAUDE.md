@@ -101,7 +101,10 @@ then, crossing one compatibility line, to
 `forge-template>=0.4,<0.5` (CF-13.01,
 [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) — the
 0.4 line whose lower bound `0.4.0` first ships the Data Science archetype and
-reusable capabilities. It is declared as the optional `engine` extra
+reusable capabilities; then within that line to the reviewed
+`forge-template>=0.4.1,<0.5` release (CF-14.01,
+[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
+It is declared as the optional `engine` extra
 (`create-forge[engine]`) rather than a `[project.dependencies]` entry or a
 development-only pin. The boundary can construct ProjectSpec, discover,
 validate, render, and finalise a project to disk through the public facade;
@@ -111,11 +114,11 @@ as of CF-07.01 this is reachable from a real command via the hidden
 CF-08.02 also adds a hidden `--archetype` option and a discovery-driven
 interactive prompt, so `--engine-preview` selects for real between the
 discovered archetypes rather than passing a fixed id through. The
-`forge-template>=0.4,<0.5` / protocol-1 pair is recorded by the canonical
+`forge-template>=0.4.1,<0.5` / protocol-1 pair is recorded by the canonical
 [cross-repository engine contract tests](docs/engine-contract-tests.md).
-`forge-template 0.4.0` is the current compatible release; its public facade
-and protocol tuples are unchanged from the `0.3.x` line, which is what made
-ADR 0026 a range move rather than a protocol migration. `create-forge 0.2.1`
+`forge-template 0.4.1` is the current compatible release; it republishes the
+reviewed `0.4.0` catalogue without a public-facade, protocol, component, or
+rendered-byte change. `create-forge 0.2.1`
 adds `uv>=0.12,<0.13` to the optional `engine` extra and creates `uv.lock` in
 adjacent staging before the atomic rename (ADR 0021); render plans and the
 public engine facade remain side-effect free.
@@ -233,7 +236,10 @@ CF-EPIC-13 because descriptor-driven option prompting is required. All 24
 child issues are filed and attached; do not recreate component metadata or
 make the engine path the default during roadmap work. **CF-EPIC-13 is
 complete** — CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-validated the Data Science preview pipeline; Stage 14 (CF-EPIC-14) is next.
+validated the Data Science preview pipeline, closing Stage 13.
+CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+has now adopted the reviewed `forge-template 0.4.1` release and prepared
+create-forge `0.3.0`; CF-14.02 and CF-14.03 are the next validation issues.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,
@@ -432,9 +438,10 @@ Run this before any release.
   [initial Data Science capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
   define the Jupyter hard co-selection and independently optional Scientific
   Python component. Both capabilities and the `data-science` archetype are
-  published in `forge-template 0.4.0`, which this repository's supported
-  `>=0.4,<0.5` line resolves since CF-13.01
-  ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)).
+  published in `forge-template 0.4.0` and unchanged in the reviewed `0.4.1`
+  release, which this repository's supported `>=0.4.1,<0.5` range resolves
+  since CF-14.01
+  ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
   Jupyter is recorded under
   [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
   CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
@@ -474,11 +481,13 @@ git+https://github.com/Sandsy09/create-forge@v0.1.0 create-forge` verified end
 to end from a clean environment — and `create-forge`/`create-forge[engine]`
 are published to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
-The declared engine range has since moved once, from the first assigned
+The declared engine range moved from the first assigned
 `forge-template>=0.3.1,<0.4` to `>=0.4,<0.5` (CF-13.01,
 [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)), the
-0.4 Data Science line; `main` is at `pyproject.toml` version `0.2.1`, so the
-released `0.2.1` wheel still declares the older range until the next release.
+0.4 Data Science line, then to the reviewed `>=0.4.1,<0.5` lower bound
+(CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
+`main` is prepared at `pyproject.toml` version `0.3.0`; CF-14.04 owns its
+changelog, tag, publication, and release verification.
 
 Not yet done:
 - MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))

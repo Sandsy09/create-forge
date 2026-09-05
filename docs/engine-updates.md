@@ -20,7 +20,10 @@ engine cutover approaches.
 default `new` path. Its range has crossed one compatibility line since it was
 assigned:
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it from
-`>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below. `copier`
+`>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below. CF-14.01
+([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+then adopted the reviewed `0.4.1` patch by raising the lower bound to
+`>=0.4.1,<0.5`. `copier`
 remains the compatibility-line dependency for the default path; the one
 [CLAUDE.md](../CLAUDE.md) invariant 4 already singles out. **Two**
 compatibility-line dependencies now exist simultaneously, each governing its
@@ -32,7 +35,7 @@ own path.
 | --- | --- | --- | --- |
 | v0.1.x default `new` | `copier` | `>=9.4,<10` | Current released architecture |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4,<0.5` | Current architecture (ADR 0026) |
+| v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Current architecture (ADR 0031) |
 
 Unlike the single-dependency framing this document previously used, both
 rows are live at once: `copier` governs the default path, `forge-template`
@@ -58,6 +61,11 @@ fast unit suite alone.
 
 Adopting a compatible update never widens the declared bound. Widening the
 bound is a line crossing, covered next.
+
+CF-14.01 is the worked compatible-adoption example: provider review published
+`0.4.1` without changing production source or protocols, so ADR 0031 raises
+the lower bound from `>=0.4,<0.5` to `>=0.4.1,<0.5` while retaining the same
+compatibility line and strict upper bound.
 
 ## Crossing a compatibility line
 

@@ -11,7 +11,7 @@ runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
 `tests/test_e2e_engine_generation.py` does the same for `--engine-preview`,
-against the real installed `forge-template>=0.4,<0.5` engine — the engine
+against the real installed `forge-template>=0.4.1,<0.5` engine — the engine
 path (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
 client-owned lock finalisation from
 [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
@@ -70,9 +70,11 @@ running the full e2e suite there is a manual step before a PR touching
 ## The engine path
 
 `tests/test_e2e_engine_generation.py` covers `--engine-preview` against the
-real installed `forge-template>=0.4,<0.5` engine (CF-08.04,
+real installed `forge-template>=0.4.1,<0.5` engine (CF-08.04,
 [ADR 0020](adr/0020-engine-path-end-to-end-tests.md); range moved by
-[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)). It differs
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), reviewed
+release adopted by
+[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)). It differs
 from the Copier suite in ways worth being explicit about:
 
 - **No `_tasks` run.** The engine path creates `uv.lock` as a client

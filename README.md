@@ -168,9 +168,11 @@ The engine now also defines in-memory
 before rendered output is returned; `render_project` already calls it before
 `--engine-preview` receives a result.
 This repository depends on a real, released `forge-template` range —
-`>=0.4,<0.5`
-([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it
-from the first assigned `>=0.3.1,<0.4`), published to PyPI with
+`>=0.4.1,<0.5`. [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)
+moved it from the first assigned `>=0.3.1,<0.4`, and
+[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
+adopted the reviewed `0.4.1` release as its lower bound. It is published to
+PyPI with
 `uv>=0.12,<0.13` as the optional `engine` extra
 (`pip install 'create-forge[engine]'`; [#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) —
@@ -248,7 +250,11 @@ option collection and `--component-option`. CF-13.05
 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
 validated the Data Science composition through the shared pipeline against the
 released engine, closing **Stage 13**; Stage 14 then takes the released client
-and engine pair through installed-console validation and rollout. The
+and engine pair through installed-console validation and rollout. CF-14.01
+([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+adopts the reviewed `forge-template 0.4.1` release as the new
+`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; installed-console
+validation and publication remain later Stage 14 issues. The
 [Data Science roadmap](docs/roadmap-v2/README.md) runs Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier

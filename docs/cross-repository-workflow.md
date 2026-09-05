@@ -86,10 +86,10 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 This builds current local source, including uncommitted changes, overriding
 create-forge's normal PyPI resolution for that one run only. It exercises
 only the top-level public `forge_template` facade. The sibling must still
-satisfy the declared range (`>=0.4,<0.5` since
-[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)); a version
-outside it is a new compatibility line and fails until the range, contract,
-and tests are deliberately moved together. See the canonical
+satisfy the declared range (`>=0.4.1,<0.5` since
+[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)); a
+version outside it fails until the range, contract, and tests are deliberately
+moved together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
 
 When `copier.yml` and `templates.toml` change together, point the drift suite

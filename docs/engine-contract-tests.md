@@ -4,8 +4,9 @@ This is the canonical executable contract for the boundary between
 `create-forge` and `forge-template`. It records what Stage 06 proved as a
 development-only pair, what CF-07.04 (ADR 0015) and CF-08.02 (ADR 0017)
 moved that pair to, what #9 (ADR 0018) then did -- assign the first
-*released* engine range -- and what CF-13.01 (ADR 0026) did after that:
-move the range to the `forge-template` 0.4 compatibility line. This is what a
+*released* engine range -- what CF-13.01 (ADR 0026) did after that by moving
+the range to the `forge-template` 0.4 compatibility line, and what CF-14.01
+(ADR 0031) did by adopting its reviewed `0.4.1` release. This is what a
 released `create-forge[engine]` install actually resolves.
 
 ## Supported range
@@ -13,11 +14,11 @@ released `create-forge[engine]` install actually resolves.
 | Surface | Supported value |
 | --- | --- |
 | `forge-template` distribution | PyPI, `create-forge`'s optional `engine` extra |
-| `forge-template` range | `>=0.4,<0.5` (current compatible release: `0.4.0`) |
+| `forge-template` range | `>=0.4.1,<0.5` (current compatible release: `0.4.1`) |
 | ProjectSpec protocol | `1` |
 | Component-manifest protocol | `1, 2` |
 
-`pyproject.toml` declares `forge-template>=0.4,<0.5` in
+`pyproject.toml` declares `forge-template>=0.4.1,<0.5` in
 `[project.optional-dependencies].engine` -- an ordinary, index-resolved,
 range-bounded dependency, exactly like `copier`, `typer`, or `pydantic`, not
 a `[tool.uv.sources]`-pinned commit or tag. `src/create_forge/compat.py`
@@ -46,16 +47,25 @@ catalogue -- installable from PyPI. Then
 compatibility line, moving the range to `>=0.4,<0.5` and rerunning this
 contract against it.
 
-Any package version outside the range fails closed. `0.4.0` is both the
-declared lower bound and the current compatible release; a `0.3.x` engine is
-rejected. The [engine update policy](engine-updates.md)'s adoption rule
-governs later `0.4.x` patches.
+[CF-14.01 / #111](https://github.com/Sandsy09/create-forge/issues/111)
+([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+then raises the lower bound within that line to the provider-reviewed `0.4.1`
+release and reruns this same contract against the PyPI artefact.
+
+Any package version outside the range fails closed. `0.4.1` is both the
+declared lower bound and the current compatible release; `0.4.0` is rejected.
+The [engine update policy](engine-updates.md)'s adoption rule governs later
+`0.4.x` patches.
 
 `forge-template 0.4.0` is
 [published](https://pypi.org/project/forge-template/0.4.0/) as the
 five-component Data Science catalogue. Its public facade and protocol tuples
 are unchanged from `0.3.2` -- the source diff is empty -- so this contract's
 public-facade coverage carried across the move without a signature change.
+The reviewed `0.4.1` package republishes that production catalogue, public
+facade, protocols, and rendered bytes unchanged; the provider's canonical
+[reviewed-release record](https://github.com/Sandsy09/forge-template/blob/main/docs/reviewed-engine-release.md)
+is the release evidence.
 
 ## What the executable contract proves
 
@@ -123,9 +133,9 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 Local path builds include current working-tree source, including uncommitted
 changes, and override the released PyPI resolution for that one run only --
 no `pyproject.toml` or `uv.lock` change is needed or made. The sibling
-package must satisfy `>=0.4,<0.5`; a version outside that range is a new
-compatibility line and must be adopted explicitly, following the range-move
-sequence above. The broader
+package must satisfy `>=0.4.1,<0.5`; a version outside that range is
+unsupported and fails until the declared range, contract, and tests are moved
+together. The broader
 [cross-repository contributor workflow](cross-repository-workflow.md) defines
 the remaining validation and release order.
 
@@ -137,7 +147,7 @@ which silently tests against old sibling code rather than the one intended.
 
 ## Adopting a new compatible release
 
-A `forge-template` release inside the declared `>=0.4,<0.5` range (`0.4.0`
+A `forge-template` release inside the declared `>=0.4.1,<0.5` range (`0.4.1`
 today; a later `0.4.x` patch while `0.4.x` stays the compatibility line) may
 be adopted once this contract passes against it, per the sibling-checkout
 validation above and the [engine update policy](engine-updates.md). A release

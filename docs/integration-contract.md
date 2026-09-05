@@ -42,7 +42,10 @@ protocols while making the client responsible for dynamic lock finalisation.
 this repository's **first released engine range**, `forge-template>=0.3.1,<0.4`;
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) then moved it
 to `forge-template>=0.4,<0.5`, the 0.4 line whose lower bound `0.4.0` first
-ships the Data Science archetype and reusable capabilities. It is declared as
+ships the Data Science archetype and reusable capabilities. CF-14.01
+([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+then adopted the reviewed `forge-template>=0.4.1,<0.5` release as the minimum
+for create-forge `0.3.x`. It is declared as
 the optional `engine` extra (`create-forge[engine]`) rather than a
 `[project.dependencies]` entry or a development-only pin. ProjectSpec
 construction, component-discovery, validation, and rendering adapters are
@@ -57,15 +60,14 @@ authoritative until a future, still-unfiled cutover replaces it.
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x (`engine` extra) | `forge-template>=0.4,<0.5` | 1 (supported) | Current architecture (ADR 0026) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Current architecture (ADR 0031) |
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI
 ([forge-template ADR 0036](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0036-publish-the-engine-to-pypi.md)).
-`0.4.0` is the lower bound of the current line and its current compatible
-release. The public facade diff from `0.3.2` is empty, so ProjectSpec
-protocol `1` and component-manifest protocols `(1, 2)` are unchanged across
-the move -- a range crossing, not a protocol migration.
+`0.4.1` is the current lower bound and compatible release. Its production
+source and rendered bytes are unchanged from `0.4.0`, so ProjectSpec protocol
+`1` and component-manifest protocols `(1, 2)` remain unchanged.
 
 The provider first published this compatibility line as
 [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
@@ -85,6 +87,14 @@ implemented that discovery-driven selection, and CF-13.05
 Data Science composition traverses the shared pipeline against the released
 engine, closing CF-EPIC-13 — see the canonical
 [Data Science preview-pipeline validation](data-science-preview-validation.md).
+Provider Stage 14 then reviewed that catalogue and published the unchanged
+production result as
+[`forge-template 0.4.1`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.1),
+with its canonical
+[reviewed-release evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/reviewed-engine-release.md).
+CF-14.01 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+raises the client lower bound to that reviewed release without copying any
+provider-owned component rule.
 
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs
