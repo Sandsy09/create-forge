@@ -14,7 +14,10 @@ by FT-EPIC-14, enforcing provider review and release before client adoption.
 Both provider blockers are complete. CF-14.01 adopts the resulting
 `forge-template 0.4.1` release under
 [ADR 0031](../../../adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md),
-so CF-14.02 and CF-14.03 are the next open client-validation steps.
+and CF-14.02 validates both accepted Data Science compositions through the
+installed create-forge candidate under
+[ADR 0032](../../../adr/0032-validate-installed-data-science-generation.md).
+CF-14.03 is the remaining open validation step; CF-14.04 stays blocked on it.
 
 ## Child sequence
 
@@ -32,12 +35,18 @@ create-forge then completes client rollout:
 1. [CF-14.01 / create-forge#111](https://github.com/Sandsy09/create-forge/issues/111)
    adopts the reviewed 0.4.1 engine release (complete; ADR 0031).
 2. [CF-14.02 / create-forge#112](https://github.com/Sandsy09/create-forge/issues/112)
-   runs installed-console Data Science end-to-end validation.
+   runs installed-console Data Science end-to-end validation. **Complete**
+   under
+   [ADR 0032](../../../adr/0032-validate-installed-data-science-generation.md):
+   the `0.3.0` candidate wheel and published `forge-template 0.4.1` pair
+   generate both accepted compositions deterministically, pass locked checks
+   and notebooks across the Python handoff matrix, build clean distributions,
+   and install without Forge runtime dependencies.
 3. [CF-14.03 / create-forge#113](https://github.com/Sandsy09/create-forge/issues/113)
-   completes existing-path regressions and failure validation in parallel with
-   CF-14.02.
+   completes existing-path regressions and failure validation.
 4. [CF-14.04 / create-forge#114](https://github.com/Sandsy09/create-forge/issues/114)
-   publishes create-forge 0.3.0 and completes roadmap v2.
+   publishes create-forge 0.3.0 and completes roadmap v2; it remains blocked
+   only by CF-14.03.
 
 ## Entry criteria
 

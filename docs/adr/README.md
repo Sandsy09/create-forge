@@ -34,6 +34,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0029 — Collect and serialise options for every selected component](0029-per-component-option-collection.md)
 - [0030 — Validate the Data Science preview pipeline against the released engine](0030-data-science-preview-pipeline-validation.md)
 - [0031 — Adopt the reviewed forge-template 0.4.1 release](0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
+- [0032 — Validate Data Science through the installed create-forge candidate](0032-validate-installed-data-science-generation.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

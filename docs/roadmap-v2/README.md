@@ -28,8 +28,9 @@ against the released engine, closing CF-EPIC-13. Stage 14 takes the released
 client and engine pair through installed-console validation and rollout.
 Provider Stage 14 is complete and published the reviewed
 `forge-template 0.4.1` release. CF-14.01 (ADR 0031) adopts it as create-forge's
-`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; CF-14.02 and
-CF-14.03 now own installed-console and regression validation before release.
+`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; CF-14.02
+(ADR 0032) completes installed-console Data Science validation. CF-14.03 owns
+the remaining regression matrix before CF-14.04 publishes the client.
 
 ## Repository roles
 

@@ -32,6 +32,9 @@ COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
 DATA_SCIENCE_PREVIEW_VALIDATION = (
     REPO_ROOT / "docs" / "data-science-preview-validation.md"
 )
+INSTALLED_DATA_SCIENCE_VALIDATION = (
+    REPO_ROOT / "docs" / "installed-data-science-validation.md"
+)
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
@@ -281,6 +284,19 @@ def test_data_science_preview_validation_doc_is_linked_from_entry_points() -> No
         )
 
     assert DATA_SCIENCE_PREVIEW_VALIDATION.is_file()
+
+
+def test_installed_data_science_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-14.02's installed-candidate evidence must stay discoverable."""
+    link_re = re.compile(r"\([^)]*installed-data-science-validation\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link installed-data-science-validation.md"
+        )
+
+    assert INSTALLED_DATA_SCIENCE_VALIDATION.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

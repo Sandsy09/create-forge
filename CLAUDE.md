@@ -239,7 +239,11 @@ complete** — CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-
 validated the Data Science preview pipeline, closing Stage 13.
 CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 has now adopted the reviewed `forge-template 0.4.1` release and prepared
-create-forge `0.3.0`; CF-14.02 and CF-14.03 are the next validation issues.
+create-forge `0.3.0`. CF-14.02
+([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md)) now
+proves both accepted Data Science compositions through that candidate wheel's
+installed console script; CF-14.03 is the remaining validation issue before
+CF-14.04 publishes the client.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,
@@ -285,7 +289,14 @@ the widened AST guard, and the canonical
 [Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
 acceptance record — closing CF-EPIC-13. This CLI must not hard-code capability
 IDs or relationships — selection stays discovery-driven, semantic validation
-stays engine-owned.
+stays engine-owned. CF-14.02 then adds the candidate-wheel E2E boundary in
+`tests/test_e2e_installed_data_science.py`: both accepted compositions,
+byte-identical rendered output and locks, Foundation/component ownership,
+locked checks and notebooks, built distributions, isolated installs, and the
+Python 3.11/3.13/3.14 handoff matrix. The canonical
+[installed Data Science validation](docs/installed-data-science-validation.md)
+record maps that evidence under
+[ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md).
 
 That target does not describe the current v0.1.x code. Until the coordinated
 cutover lands, the architecture and invariants below remain authoritative. Do
@@ -424,6 +435,11 @@ Run this before any release.
   [Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
   (CF-13.05, [ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
   maps CF-EPIC-13's acceptance checklist to the named tests proving it.
+- The canonical
+  [installed Data Science validation](docs/installed-data-science-validation.md)
+  (CF-14.02, [ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
+  maps the candidate-wheel console, deterministic lock, generated-project,
+  package, isolation, and Python handoff evidence.
 - The canonical
   [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
   defines engine-owned Library semantics; this CLI owns only selection,
