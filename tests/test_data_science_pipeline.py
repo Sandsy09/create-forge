@@ -304,8 +304,11 @@ def test_an_undeclared_component_option_writes_nothing(
     assert not dest.exists()
 
 
+@pytest.mark.parametrize("package_version", ["0.4.0", "0.5.0"])
 def test_an_incompatible_engine_writes_nothing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    package_version: str,
 ) -> None:
     """An installed engine outside `compat.SUPPORTED_ENGINE_RANGE` is rejected
     at exit 3 before discovery returns -- the fast counterpart to the e2e
@@ -315,8 +318,8 @@ def test_an_incompatible_engine_writes_nothing(
         engine_module,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="9.0.0",
-            projectspec_protocols=(99,),
+            package_version=package_version,
+            projectspec_protocols=(1,),
             component_manifest_protocols=(1,),
         ),
     )

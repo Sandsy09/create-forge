@@ -41,8 +41,10 @@ create-forge staging, uv lock, atomic finalisation
   catalogue as
   [`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0).
   CF-13.01 (ADR 0026) adopted that provider line: create-forge's supported
-  range is now `forge-template>=0.4,<0.5`, so all five descriptors are
-  discoverable.
+  range became `forge-template>=0.4,<0.5`, so all five descriptors became
+  discoverable. Provider Stage 14 then republished the reviewed, unchanged
+  production catalogue as `forge-template 0.4.1`; CF-14.01 (ADR 0031) adopts
+  it as the current `forge-template>=0.4.1,<0.5` lower bound.
 - Capabilities remain bundled, reviewed forge-template components. This
   roadmap does not introduce plugins or remote component registries.
 - create-forge consumes public descriptors and never recreates component

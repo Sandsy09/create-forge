@@ -37,7 +37,10 @@ the prior empty catalogue; see "Validation" below. #9
 replaced that development pin with a released range, `forge-template>=0.3.1,<0.4`;
 [CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
 ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)) then moved
-that range to `forge-template>=0.4,<0.5`. Neither move changes this
+that range to `forge-template>=0.4,<0.5`; CF-14.01
+([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
+adopts the reviewed lower bound `forge-template>=0.4.1,<0.5`. None of these
+moves changes this
 boundary's reachability or behaviour — the public facade and ProjectSpec
 protocol are identical across the `0.3.x` and `0.4.x` lines.
 
@@ -178,9 +181,9 @@ and relationships. Jupyter is recorded under
 [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
 and Scientific Python under [ADR
 0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md),
-and both are published in `forge-template 0.4.0`. The supported
-`forge-template>=0.4,<0.5` range (ADR 0026) exposes both capability
-descriptors through discovery; the canonical
+and both are published in `forge-template 0.4.0` and unchanged in `0.4.1`.
+The supported `forge-template>=0.4.1,<0.5` range (ADR 0031) exposes both
+capability descriptors through discovery; the canonical
 [component selection contract](component-selection.md)
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixes how a
 selected capability reaches an effective ProjectSpec; CF-13.03
@@ -224,8 +227,9 @@ everything else there.
 
 Before that protocol comparison, `engine._require_supported_package` checks
 the installed package version against `compat.SUPPORTED_ENGINE_RANGE`
-(`forge-template>=0.4,<0.5` as of
-[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md); `>=0.3.1,<0.4`
+(`forge-template>=0.4.1,<0.5` as of
+[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md);
+`>=0.4,<0.5` under ADR 0026 and `>=0.3.1,<0.4`
 under ADR 0018 before it) with `packaging.specifiers.SpecifierSet` — a real,
 released, bounded range, not the exact-equality development pin `0.3.0` that
 preceded both; see the
@@ -240,7 +244,7 @@ This is reachable from a real command as of CF-07.01, but only behind
 `engine.validate()` calls `forge_template.validate_project_spec` against the
 installed component catalogue. `forge-template`'s production catalogue ships
 `library` and `cli` (since `0.3.0`), so validating either reference archetype
-selection succeeds; the `>=0.4,<0.5` line (ADR 0026) also carries the
+selection succeeds; the `>=0.4.1,<0.5` range (ADR 0031) also carries the
 `data-science` archetype and the `jupyter`/`scientific-python` capabilities.
 [`tests/test_engine_adapter.py::test_validate_succeeds_against_the_real_production_catalogue`](../tests/test_engine_adapter.py)
 characterizes this outcome against the real installed engine, replacing the
@@ -258,9 +262,10 @@ pattern-matching message text.
 
 `forge-template` is the optional `engine` extra as of #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)):
-`[project.optional-dependencies].engine = ["forge-template>=0.4,<0.5"]`
+`[project.optional-dependencies].engine = ["forge-template>=0.4.1,<0.5"]`
 ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved the
-range from `>=0.3.1,<0.4`), resolved from PyPI like any other dependency --
+range from `>=0.3.1,<0.4`; [ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
+adopted the reviewed lower bound), resolved from PyPI like any other dependency --
 no `[tool.uv.sources]` override, no dev-only dependency group.
 `[project.dependencies]` remains unaffected, so `create-forge` itself
 (`pip install create-forge`, or `uvx create-forge`) never resolves it; only

@@ -251,7 +251,7 @@ toml = [
 
 [[package]]
 name = "create-forge"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
@@ -298,7 +298,7 @@ typecheck = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.4,<10" },
-    { name = "forge-template", marker = "extra == 'engine'", specifier = ">=0.4,<0.5" },
+    { name = "forge-template", marker = "extra == 'engine'", specifier = ">=0.4.1,<0.5" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "questionary", specifier = ">=2.0" },
     { name = "rich", specifier = ">=13.9" },
@@ -367,16 +367,16 @@ wheels = [
 
 [[package]]
 name = "forge-template"
-version = "0.4.0"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
     { name = "packaging" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/1e/4f954d1c2fe3118a850e35ea6ce5b2a7ded0a309d6b7780895bd71b6f5b0/forge_template-0.4.0.tar.gz", hash = "sha256:07b3df2c1845646de16971df11af3016acec4915971e47a2e746e7db95bc726e", size = 517146, upload-time = "2026-09-03T09:10:25.988Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/2d/5dbfcce3c24cca55348a26fdbb94b4dac656df6bd7621f0cd9d3c3f110c6/forge_template-0.4.1.tar.gz", hash = "sha256:ecab4ee966cda24e252ea1287923cfc89c411897e69c3b62e1d5101255f216e6", size = 537755, upload-time = "2026-09-04T18:35:12.543Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/bd/c330750dee415ac45d9e33debbfc865217a38a05925c9560752e740b6a11/forge_template-0.4.0-py3-none-any.whl", hash = "sha256:ea731259f65c553c09b7b9fd33eb23c0cc4ea297359b34b11b713fcdaaeb6d5f", size = 72544, upload-time = "2026-09-03T09:10:24.631Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/84/22ae6b9c4c0ffe86c9153bba24b2bf82c1841b6fc9d6b96d5886aeb30fd9/forge_template-0.4.1-py3-none-any.whl", hash = "sha256:053a67b748dad0d1c437892981efd4614401bcf2c7488d3e2b67adc18db3d144", size = 72735, upload-time = "2026-09-04T18:35:11.262Z" },
 ]
 
 [[package]]

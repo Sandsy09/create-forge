@@ -22,8 +22,8 @@ has resolved the narrower question of an installable engine range.
 
 The `forge-template` dependency -- the optional `engine` extra since #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
-is range-bound to `>=0.4,<0.5`
-([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)). That
+is range-bound to `>=0.4.1,<0.5`
+([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)). That
 production catalogue ships five descriptors, including `library` and the
 optionless `cli` archetype; the 0.4 line also adds capability-kind
 descriptors and a catalogue relationship, which discovery returns unchanged.
@@ -50,7 +50,7 @@ itself, not that selection layer.
 
 1. call the public `forge_template.get_engine_info()` facade once;
 2. require the installed package version to fall within
-   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.4,<0.5`);
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.4.1,<0.5`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and

@@ -11,6 +11,10 @@
 
 FT-EPIC-14 is natively blocked by CF-EPIC-13. CF-EPIC-14 is natively blocked
 by FT-EPIC-14, enforcing provider review and release before client adoption.
+Both provider blockers are complete. CF-14.01 adopts the resulting
+`forge-template 0.4.1` release under
+[ADR 0031](../../../adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md),
+so CF-14.02 and CF-14.03 are the next open client-validation steps.
 
 ## Child sequence
 
@@ -26,7 +30,7 @@ forge-template completes provider review first:
 create-forge then completes client rollout:
 
 1. [CF-14.01 / create-forge#111](https://github.com/Sandsy09/create-forge/issues/111)
-   adopts the reviewed 0.4.1 engine release.
+   adopts the reviewed 0.4.1 engine release (complete; ADR 0031).
 2. [CF-14.02 / create-forge#112](https://github.com/Sandsy09/create-forge/issues/112)
    runs installed-console Data Science end-to-end validation.
 3. [CF-14.03 / create-forge#113](https://github.com/Sandsy09/create-forge/issues/113)

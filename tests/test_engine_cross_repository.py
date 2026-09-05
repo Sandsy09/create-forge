@@ -1,7 +1,7 @@
 """Executable create-forge/forge-template engine contract (ADR 0018).
 
-The normal suite exercises the released `forge-template>=0.4,<0.5` range
-(ADR 0026) resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
+The normal suite exercises the released `forge-template>=0.4.1,<0.5` range
+(ADR 0031) resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
 ``docs/cross-repository-workflow.md`` installs both working trees in
 isolation and runs this same file against pending local changes without
 exposing forge-template's private fixture-catalogue seam.
@@ -55,7 +55,7 @@ def _spec() -> ProjectSpec:
 
 def _info(
     *,
-    package_version: str = "0.4.0",
+    package_version: str = "0.4.1",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
 ) -> EngineInfo:
@@ -72,6 +72,7 @@ def test_real_engine_matches_the_supported_range() -> None:
     declared range and advertise a compatible protocol pair."""
     info = get_engine_info()
 
+    assert info.package_version == "0.4.1"
     assert Version(info.package_version) in SpecifierSet(compat.SUPPORTED_ENGINE_RANGE)
     assert set(info.projectspec_protocols) & set(compat.SUPPORTED_PROJECTSPEC_PROTOCOLS)
     assert set(info.component_manifest_protocols) & set(
@@ -153,8 +154,10 @@ def test_selection_model_matches_the_documented_contract() -> None:
     assert re.match(option_pattern, "a-b") is None
 
 
+@pytest.mark.parametrize("package_version", ["0.4.0", "0.5.0"])
 def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch: pytest.MonkeyPatch,
+    package_version: str,
 ) -> None:
     spec = _spec()
     invoked: list[str] = []
@@ -169,7 +172,7 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch.setattr(
         engine,
         "get_engine_info",
-        lambda: _info(package_version="0.5.0"),
+        lambda: _info(package_version=package_version),
     )
     monkeypatch.setattr(engine, "_parse_project_spec", unexpected("parse"))
     monkeypatch.setattr(engine, "_discover_components", unexpected("discover"))
@@ -186,7 +189,7 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     for operation in operations:
         with pytest.raises(
             engine.EngineCompatibilityError,
-            match=rf"0\.5\.0.*{supported}",
+            match=rf"{re.escape(package_version)}.*{supported}",
         ):
             operation()
 
