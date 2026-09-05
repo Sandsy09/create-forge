@@ -249,8 +249,13 @@ path with no engine installed, a real out-of-range engine, and the full
 selection / option / destination / lock / cleanup failure matrix — see the
 canonical
 [rollout regression and failure validation](docs/rollout-regression-validation.md).
-CF-14.04 is the remaining child: it publishes create-forge `0.3.0` and closes
-the Stage 14 milestones.
+CF-14.04 ([ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md))
+then published create-forge `0.3.0` to PyPI, verified the released
+`create-forge` / `forge-template 0.4.1` pair against its own artefacts, and
+closed CF-EPIC-14 and both Stage 13 and Stage 14 milestones — see the canonical
+[release 0.3.0 validation](docs/release-0-3-0-validation.md). The Data Science
+roadmap is complete in both repositories; `--engine-preview` stays hidden and
+the default `new` path stays direct-Copier.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,
@@ -509,8 +514,11 @@ The declared engine range moved from the first assigned
 [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)), the
 0.4 Data Science line, then to the reviewed `>=0.4.1,<0.5` lower bound
 (CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
-`main` is prepared at `pyproject.toml` version `0.3.0`; CF-14.04 owns its
-changelog, tag, publication, and release verification.
+`create-forge 0.3.0` is tagged `v0.3.0`, released, and published to PyPI
+(`create-forge` and `create-forge[engine]`) — CF-14.04,
+[ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md),
+verified against its own artefacts in
+[release 0.3.0 validation](docs/release-0-3-0-validation.md).
 
 Not yet done:
 - MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))

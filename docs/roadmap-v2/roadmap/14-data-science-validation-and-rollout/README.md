@@ -19,8 +19,11 @@ installed create-forge candidate under
 [ADR 0032](../../../adr/0032-validate-installed-data-science-generation.md).
 CF-14.03 completes the installed regression and failure matrix under
 [ADR 0033](../../../adr/0033-complete-rollout-regression-validation.md).
-CF-14.04 is the only remaining child: it publishes create-forge `0.3.0` and
-closes the Stage 14 milestones.
+CF-14.04 published create-forge `0.3.0` to PyPI and closed CF-EPIC-14 and both
+Stage 13 and Stage 14 milestones under
+[ADR 0034](../../../adr/0034-publish-0-3-0-and-close-roadmap-v2.md). All four
+children are complete; the Data Science roadmap is closed in both
+repositories.
 
 ## Child sequence
 
@@ -60,8 +63,14 @@ create-forge then completes client rollout:
    [rollout regression and failure validation](https://github.com/Sandsy09/create-forge/blob/main/docs/rollout-regression-validation.md)
    record.
 4. [CF-14.04 / create-forge#114](https://github.com/Sandsy09/create-forge/issues/114)
-   publishes create-forge 0.3.0 and completes roadmap v2; it remains blocked
-   only by CF-14.03.
+   publishes create-forge 0.3.0 and completes roadmap v2. **Complete** under
+   [ADR 0034](../../../adr/0034-publish-0-3-0-and-close-roadmap-v2.md):
+   `create-forge` and `create-forge[engine]` `0.3.0` are on PyPI, tag `v0.3.0`
+   is released, the published pair generates and checks every archetype and the
+   engine-less default Copier path, and both Stage 13 and Stage 14 milestones
+   are closed. Canonical
+   [release 0.3.0 validation](https://github.com/Sandsy09/create-forge/blob/main/docs/release-0-3-0-validation.md)
+   record.
 
 ## Entry criteria
 

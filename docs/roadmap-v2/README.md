@@ -31,7 +31,9 @@ Provider Stage 14 is complete and published the reviewed
 `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; CF-14.02
 (ADR 0032) completes installed-console Data Science validation, and CF-14.03
 (ADR 0033) completes the installed regression and failure matrix. CF-14.04
-publishes the client and closes the Stage 14 milestones.
+(ADR 0034) published create-forge `0.3.0` to PyPI, verified the released pair,
+and closed CF-EPIC-14 and both Stage 13 and Stage 14 milestones. **The Data
+Science roadmap is complete in both repositories.**
 
 ## Repository roles
 

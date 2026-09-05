@@ -153,9 +153,14 @@ the installed regression matrix — Library, CLI Application, the engine-less
 default Copier path, the out-of-range engine, and every selection / option /
 destination / lock / cleanup failure — recorded by the canonical
 [rollout regression and failure validation](docs/rollout-regression-validation.md).
-CF-14.04 owns the complete changelog and publication. Do not hard-code a
-capability or Data Science rule — selection is discovery-driven and semantic
-validation stays engine-owned.
+CF-14.04
+([ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md)) published
+create-forge `0.3.0` to PyPI and verified the released pair against its own
+artefacts — the canonical
+[release 0.3.0 validation](docs/release-0-3-0-validation.md) record — closing
+CF-EPIC-14 and the Data Science roadmap. Do not hard-code a capability or Data
+Science rule — selection is discovery-driven and semantic validation stays
+engine-owned.
 
 ## What CI runs
 

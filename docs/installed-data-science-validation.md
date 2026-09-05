@@ -95,8 +95,9 @@ CF-14.03's, delivered in
 [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py)
 and recorded by the canonical
 [rollout regression and failure validation](rollout-regression-validation.md).
-CF-14.04 owns the create-forge changelog, tag, publication, and release
-verification.
+CF-14.04 ([ADR 0034](adr/0034-publish-0-3-0-and-close-roadmap-v2.md))
+published create-forge `0.3.0` and verified the released pair — the canonical
+[release 0.3.0 validation](release-0-3-0-validation.md) record.
 
 When this installed boundary or its evidence changes, update this record,
 the [end-to-end tests contract](end-to-end-tests.md), and the executable suite

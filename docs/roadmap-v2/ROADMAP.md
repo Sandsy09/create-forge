@@ -45,8 +45,9 @@ the `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
 (ADR 0032) validates both Data Science compositions through the installed
 candidate, and CF-14.03 (ADR 0033) completes the installed regression and
 failure matrix for Library, CLI Application, the engine-less Copier path, and
-every failure mode. CF-14.04 publishes create-forge `0.3.0` and closes the
-Stage 14 milestones.
+every failure mode. CF-14.04 (ADR 0034) published create-forge `0.3.0` to PyPI,
+verified the released pair against its own artefacts, and closed CF-EPIC-14 and
+both Stage 13 and Stage 14 milestones. The Data Science roadmap is complete.
 
 ## Delivery rules
 
