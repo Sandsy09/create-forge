@@ -136,6 +136,13 @@ by the time either can occur.
   five failure modes (missing requirement, invalid option, incompatible
   engine, destination conflict, lock failure) each leaving no partial
   project and no staging sibling.
+- [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py)
+  (CF-14.03, [ADR 0033](adr/0033-complete-rollout-regression-validation.md)) —
+  the same guarantees through the *installed* `0.3.0` console script:
+  `test_installed_non_empty_destination_is_preserved` on both paths,
+  `test_installed_lock_failure_leaves_no_partial_project` (a real emptied-`PATH`
+  `create_uv_lock` failure, not a fake), and every `test_installed_failure_case_*`
+  asserting no destination and no `.create-forge-*` staging sibling.
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — the adopted `validate_rendered_project` contract against the real pinned
   engine, proving what `finalise_generation_request` relies on already

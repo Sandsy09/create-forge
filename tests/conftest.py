@@ -6,8 +6,21 @@ from __future__ import annotations
 
 import os
 import shutil
+import tempfile
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+from tests.installed_client import (
+    ENGINE_VERSION,
+    InstalledClient,
+    build_candidate_wheel,
+    build_client,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -68,3 +81,32 @@ def e2e_child_env() -> dict[str, str]:
         }
     )
     return env
+
+
+@pytest.fixture(scope="session")
+def candidate_wheel(e2e_child_env: dict[str, str]) -> Iterator[Path]:
+    """Build the create-forge `0.3.0` candidate wheel exactly once per session.
+
+    Shared by every `e2e`-marked suite that installs the release candidate
+    rather than resolving the editable console script: CF-14.02's installed
+    Data Science validation and CF-14.03's installed rollout regression matrix
+    (ADR 0032, ADR 0033).
+    """
+    with tempfile.TemporaryDirectory(prefix="create-forge-candidate-wheel-") as tmp:
+        yield build_candidate_wheel(Path(tmp), e2e_child_env)
+
+
+@pytest.fixture(scope="session")
+def installed_client(
+    candidate_wheel: Path, e2e_child_env: dict[str, str]
+) -> Iterator[InstalledClient]:
+    """The candidate wheel installed with its `engine` extra and the reviewed
+    `forge-template 0.4.1` release in one isolated virtual environment.
+    """
+    with build_client(
+        candidate_wheel,
+        e2e_child_env,
+        extras="[engine]",
+        engine=f"forge-template=={ENGINE_VERSION}",
+    ) as client:
+        yield client

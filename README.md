@@ -256,10 +256,15 @@ adopts the reviewed `forge-template 0.4.1` release as the new
 `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
 ([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
 validates both Data Science compositions through the installed candidate
-wheel; CF-14.03 owns the remaining regression matrix and CF-14.04 publication.
-See the canonical
+wheel, and CF-14.03
+([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) reuses it
+for the Library / CLI Application engine paths, the engine-less default Copier
+path, a real out-of-range engine, and the full failure matrix; CF-14.04 owns
+publication. See the canonical
 [installed Data Science validation](docs/installed-data-science-validation.md)
-record. The
+and
+[rollout regression and failure validation](docs/rollout-regression-validation.md)
+records. The
 [Data Science roadmap](docs/roadmap-v2/README.md) runs Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier

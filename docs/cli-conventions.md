@@ -355,6 +355,16 @@ The contract is characterized by these tests:
   through that surface is proven by `tests/test_data_science_pipeline.py`
   (CF-13.05), mapped to the epic checklist by the canonical
   [Data Science preview-pipeline validation](data-science-preview-validation.md).
+- [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py)
+  (CF-14.03, [ADR 0033](adr/0033-complete-rollout-regression-validation.md))
+  re-proves the exit-status table and the `doctor --json` diagnostics through
+  the *installed* `0.3.0` console script:
+  `test_installed_failure_case_is_rejected_cleanly` covers exit `1` and `2`
+  across the selection / option / template-flag / malformed-input surface,
+  `test_out_of_range_engine_is_rejected_before_any_write` covers exit `3`, and
+  the `test_engineless_*` cases cover the no-engine command surface. The
+  canonical [rollout regression and failure validation](rollout-regression-validation.md)
+  maps each to #113's acceptance criteria.
 
 When a change intentionally alters one of these conventions, update this
 document and its characterization test in the same pull request.

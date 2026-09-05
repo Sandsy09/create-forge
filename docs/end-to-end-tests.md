@@ -6,8 +6,9 @@ records the decision this document keeps current.
 
 ## Status
 
-Three `e2e`-marked modules cover both generation paths and the installed
-Data Science release-candidate boundary. `tests/test_e2e_generation.py`
+Four `e2e`-marked modules cover both generation paths, the installed
+Data Science release-candidate boundary, and the installed rollout regression
+matrix. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
@@ -26,9 +27,15 @@ Data Science composition — `data-science` with its `jupyter` and
 CF-14.02 ([ADR 0032](adr/0032-validate-installed-data-science-generation.md))
 adds `tests/test_e2e_installed_data_science.py`: it builds and installs the
 create-forge `0.3.0` candidate wheel with the published `forge-template 0.4.1`
-engine, then validates both accepted Data Science compositions. See
-[the engine path](#the-engine-path) and
-[the installed Data Science path](#the-installed-data-science-path) below.
+engine, then validates both accepted Data Science compositions. CF-14.03
+([ADR 0033](adr/0033-complete-rollout-regression-validation.md)) adds
+`tests/test_e2e_installed_rollout.py`, which reuses that wheel for everything
+CF-14.02 left out: the Library and CLI Application engine paths, the default
+Copier path in a wheel with no engine installed, a real out-of-range engine,
+and the full selection / option / destination / lock / cleanup failure matrix.
+See [the engine path](#the-engine-path),
+[the installed Data Science path](#the-installed-data-science-path), and
+[the installed rollout path](#the-installed-rollout-path) below.
 
 ## The three-tier test split
 
@@ -36,7 +43,7 @@ engine, then validates both accepted Data Science compositions. See
 | --- | --- | --- | --- |
 | Fast | *(none)* | Resolved values and in-memory behaviour — `ScaffoldRequest` construction, staging/finalisation bytes, prompt flow, registry validation. No network, no subprocess beyond what a test fakes. | Seconds; runs on every `poe check`. |
 | Network | `network` | `forge-template`'s `copier.yml` matches `templates.toml` (the drift guard, invariant 1 in `CLAUDE.md`); a real `update()` between two released tags. Clones a repository or drives Copier's Python API in-process. | Seconds to low tens of seconds. |
-| End-to-end | `e2e` | The real console script for both generation paths, installed-candidate Data Science validation, and each generated project's own checks. | Minutes rather than seconds. The existing engine suite's happy path needs no network; the installed-candidate suite resolves the reviewed engine from PyPI, restores scientific-Python and Jupyter dependency trees, and executes live notebooks across the Python handoff matrix. The CI job retains its 45-minute budget. |
+| End-to-end | `e2e` | The real console script for both generation paths, installed-candidate Data Science validation, and each generated project's own checks. | Minutes rather than seconds. The existing engine suite's happy path needs no network; the installed-candidate suite resolves the reviewed engine from PyPI, restores scientific-Python and Jupyter dependency trees, and executes live notebooks across the Python handoff matrix; CF-14.03's rollout suite adds three more installed environments and an engine-less Copier generation on top. The CI job's budget is 60 minutes. |
 
 `poe test` (the fast suite `uv run poe check` runs) excludes both `network`
 and `e2e`: `pytest -m 'not network and not e2e'`. `uv run pytest -m network`
@@ -140,7 +147,46 @@ The canonical
 [installed Data Science validation](installed-data-science-validation.md)
 record maps every #112 acceptance criterion to a named test. This suite does
 not replace or broaden the existing Library, CLI Application, Copier, or
-failure-path suites; CF-14.03 owns that regression matrix.
+failure-path suites — [the installed rollout path](#the-installed-rollout-path)
+below covers those at the same boundary.
+
+## The installed rollout path
+
+`tests/test_e2e_installed_rollout.py` (CF-14.03,
+[ADR 0033](adr/0033-complete-rollout-regression-validation.md)) closes the
+regression and failure matrix CF-14.02 deliberately deferred. It reuses
+`tests/conftest.py`'s session `candidate_wheel` — one `uv build` shared with
+the Data Science suite — and installs it three ways: with the `engine` extra
+and `forge-template 0.4.1`, with no engine at all, and with a real
+`forge-template 0.3.2` from PyPI that sits permanently below
+`compat.SUPPORTED_ENGINE_RANGE`.
+
+- **Library and CLI Application generate through the installed engine console**
+  — project shape, a current lock, every rendered byte matched to the
+  installed pipeline's own Foundation/component ownership plan, no Forge
+  distribution anywhere, the `cli` console-script name, and
+  `uv run --locked poe check`.
+- **The default Copier path runs from a wheel with no engine installed** — one
+  real generation with `_tasks`, `.copier-answers.yml` round-tripping every
+  answer, `.git` and `uv.lock`, and `uv run poe check`. `--version`, `list`
+  (proving the bundled `templates.toml` shipped), `doctor --json`, and
+  `new --engine-preview`'s actionable rejection are checked in the same
+  environment.
+- **The compatibility boundary uses the real out-of-range install** —
+  `new --engine-preview` exits `3` naming both `0.3.2` and the supported
+  range, with nothing written; `doctor --json` reports the out-of-range
+  package.
+- **The failure matrix runs through the installed console**, parametrised:
+  every documented exit status (`docs/cli-conventions.md`'s table), an
+  actionable message, the destination absent or byte-identical, and no
+  surviving `.create-forge-*` staging sibling. One case exercises a real
+  emptied-`PATH` lock failure — `staging.staged()`'s cleanup for real, not a
+  faked `create_uv_lock`.
+
+The canonical
+[rollout regression and failure validation](rollout-regression-validation.md)
+record maps every #113 acceptance criterion, and the epic criteria it
+discharges, to a named test.
 
 ## Running it
 
@@ -159,11 +205,14 @@ it tests what a real `uvx create-forge new` gives a user today, and the
 Monday cron surfaces template breakage independent of any push to this
 repository.
 
-The installed Data Science suite does not import the engine from the parent
-test environment and does not skip an unavailable published package: resolving
-the reviewed PyPI release is part of the proof. All of its candidate builds,
-environments, projects, and artefacts live in context-managed temporary roots
-that clean up for both successful and failing tests.
+The installed Data Science and rollout suites do not import the engine from the
+parent test environment and do not skip an unavailable published package:
+resolving the reviewed PyPI release (and, for the rollout suite, the
+deliberately out-of-range `forge-template 0.3.2`) is part of the proof. All of
+their candidate builds, environments, projects, and artefacts live in
+context-managed temporary roots that clean up for both successful and failing
+tests. The rollout suite's engine-less Copier generation still needs GitHub, so
+it skips rather than fails when GitHub is unreachable.
 
 ## Executable examples
 
@@ -175,6 +224,14 @@ that clean up for both successful and failing tests.
   CF-14.02's candidate-wheel suite for both accepted Data Science compositions,
   deterministic locks, the Python handoff matrix, built artefacts, and
   Forge-free isolated installs.
+- [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py) —
+  CF-14.03's candidate-wheel suite for the Library / CLI Application engine
+  paths, the engine-less default Copier path, the real out-of-range engine,
+  and the parametrised selection / option / destination / lock / cleanup
+  failure matrix.
+- [`tests/installed_client.py`](../tests/installed_client.py) — the shared
+  harness: the wheel build, the `build_client` environment context manager,
+  and the installed-pipeline ownership probe both installed suites use.
 - [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py) —
   CF-13.05's fast-suite composition proofs against the real installed engine:
   component-owner attribution, the optional-capability render differential,

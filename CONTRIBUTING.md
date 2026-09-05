@@ -65,14 +65,20 @@ paths, then each generated project's own checks. CF-14.02 also builds the
 create-forge `0.3.0` candidate wheel, installs it with the published
 `forge-template 0.4.1` engine, and validates both Data Science compositions
 through that isolated console script across the provider handoff's Python
-matrix. It is dramatically slower than `network`, so it carries its own
-`e2e` marker and CI job. The Copier and released-install negative tests skip
-when GitHub is unreachable; the installed Data Science suite treats resolving
-the reviewed PyPI engine as part of its proof. See the canonical
+matrix; CF-14.03 reuses that wheel for the Library / CLI Application engine
+paths, the default Copier path with no engine installed, a real out-of-range
+`forge-template 0.3.2`, and the selection / option / destination / lock /
+cleanup failure matrix. It is dramatically slower than `network`, so it
+carries its own `e2e` marker and CI job (a 60-minute budget). The Copier and
+released-install negative tests skip when GitHub is unreachable; the installed
+suites treat resolving the reviewed PyPI engine as part of their proof. See the
+canonical
 [end-to-end tests contract](docs/end-to-end-tests.md),
 [installed Data Science validation](docs/installed-data-science-validation.md),
-[ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md), and
-[ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md).
+[rollout regression and failure validation](docs/rollout-regression-validation.md),
+[ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md),
+[ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md), and
+[ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md).
 
 Before any release, also run:
 
@@ -141,10 +147,15 @@ prepares create-forge `0.3.0`. CF-14.02
 proves both accepted compositions through the installed candidate wheel — see
 the canonical
 [installed Data Science validation](docs/installed-data-science-validation.md)
-record. CF-14.03 owns the remaining regression matrix; CF-14.04 owns the
-complete changelog and publication. Do not hard-code a capability or Data
-Science rule — selection is discovery-driven and semantic validation stays
-engine-owned.
+record. CF-14.03
+([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) completes
+the installed regression matrix — Library, CLI Application, the engine-less
+default Copier path, the out-of-range engine, and every selection / option /
+destination / lock / cleanup failure — recorded by the canonical
+[rollout regression and failure validation](docs/rollout-regression-validation.md).
+CF-14.04 owns the complete changelog and publication. Do not hard-code a
+capability or Data Science rule — selection is discovery-driven and semantic
+validation stays engine-owned.
 
 ## What CI runs
 
@@ -158,7 +169,7 @@ request:
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
-| `e2e` | `pytest -m e2e` — both generation paths plus installed-candidate Data Science, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
+| `e2e` | `pytest -m e2e` — both generation paths, installed-candidate Data Science and rollout regression, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
 | `all-green` | an aggregate check; this is the one branch protection requires |
 
 `network` and `e2e` also run on a Monday cron, independent of any push here —
