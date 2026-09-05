@@ -60,15 +60,19 @@ A third tier, separate from both the fast suite and `network`:
 uv run poe test:e2e
 ```
 
-This runs the real `create-forge` console script against `forge-template`'s
-latest released tag, then the generated project's own `uv run poe check`.
-It is dramatically slower than `network` — well over a minute, since it runs
-`copier.yml`'s `_tasks` (`git init`, `uv sync --all-groups`,
-`pre-commit install --install-hooks`) and then a full check on the result —
-so it carries its own `e2e` marker and CI job rather than joining `network`.
-Like the network-marked tests, it skips rather than fails when GitHub is
-unreachable. See the canonical [end-to-end tests contract](docs/end-to-end-tests.md)
-and [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md).
+This runs the real `create-forge` console script through the Copier and engine
+paths, then each generated project's own checks. CF-14.02 also builds the
+create-forge `0.3.0` candidate wheel, installs it with the published
+`forge-template 0.4.1` engine, and validates both Data Science compositions
+through that isolated console script across the provider handoff's Python
+matrix. It is dramatically slower than `network`, so it carries its own
+`e2e` marker and CI job. The Copier and released-install negative tests skip
+when GitHub is unreachable; the installed Data Science suite treats resolving
+the reviewed PyPI engine as part of its proof. See the canonical
+[end-to-end tests contract](docs/end-to-end-tests.md),
+[installed Data Science validation](docs/installed-data-science-validation.md),
+[ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md), and
+[ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md).
 
 Before any release, also run:
 
@@ -132,9 +136,15 @@ released engine, closing CF-EPIC-13 — see the canonical
 record. CF-14.01
 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 then adopts the reviewed `0.4.1` release as the `>=0.4.1,<0.5` lower bound and
-prepares create-forge `0.3.0`; CF-14.04 owns the complete changelog and
-publication. Do not hard-code a capability or Data Science rule — selection is
-discovery-driven and semantic validation stays engine-owned.
+prepares create-forge `0.3.0`. CF-14.02
+([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md)) now
+proves both accepted compositions through the installed candidate wheel — see
+the canonical
+[installed Data Science validation](docs/installed-data-science-validation.md)
+record. CF-14.03 owns the remaining regression matrix; CF-14.04 owns the
+complete changelog and publication. Do not hard-code a capability or Data
+Science rule — selection is discovery-driven and semantic validation stays
+engine-owned.
 
 ## What CI runs
 
@@ -148,7 +158,7 @@ request:
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
-| `e2e` | `pytest -m e2e` — the real console script against a real destination, and the generated project's own `uv run poe check` ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md)) |
+| `e2e` | `pytest -m e2e` — both generation paths plus installed-candidate Data Science, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
 | `all-green` | an aggregate check; this is the one branch protection requires |
 
 `network` and `e2e` also run on a Monday cron, independent of any push here —

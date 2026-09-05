@@ -19,15 +19,16 @@ Data Science composition specifically.
 
 Accepted as a contract under
 [ADR 0030](adr/0030-data-science-preview-pipeline-validation.md). CF-13.05 is
-implemented; CF-EPIC-13 is complete. This is **not** the CLI cutover:
-`--engine-preview` stays hidden and dev-only, and the default `new` path is
-unchanged. Installed-console release validation and create-forge publication
-are Stage 14 (CF-14.02, CF-14.04).
+implemented; CF-EPIC-13 is complete. CF-14.02 now extends this evidence through
+the installed create-forge `0.3.0` candidate and reviewed engine under
+[ADR 0032](adr/0032-validate-installed-data-science-generation.md). This is
+**not** the CLI cutover: `--engine-preview` stays hidden and dev-only, the
+default `new` path is unchanged, and create-forge publication remains CF-14.04.
 
 ## The composition under test
 
 The full Data Science composition, discovered from the installed
-`forge-template>=0.4,<0.5` engine:
+`forge-template>=0.4.1,<0.5` engine:
 
 | Component | Kind | Relationship |
 | --- | --- | --- |
@@ -73,6 +74,19 @@ is selected without `jupyter`, the request reaches the engine unchanged and
 | 4 | No create-forge branch selects behaviour by a hard-coded Data Science component ID | `tests/test_archetype_parity.py::test_no_shipped_module_hardcodes_a_discovered_component_id` (widened to every string literal); the three discovery-driven parametrisations in `test_archetype_parity.py`, `test_pipeline.py`, `test_component_selection.py` |
 | 5 | The Stage 13 epic acceptance checklist has executable evidence | this document |
 
+## CF-14.02 (#112) installed-candidate evidence
+
+The canonical
+[installed Data Science validation](installed-data-science-validation.md)
+record maps all four #112 acceptance criteria to
+`tests/test_e2e_installed_data_science.py`. That suite builds and installs the
+create-forge `0.3.0` wheel with published `forge-template 0.4.1`, generates
+both accepted compositions twice through its console script, compares
+rendered output and client-owned locks byte-for-byte, and validates locked
+restoration, notebook execution, Scientific Python smoke behavior, wheel/sdist
+contents, and Forge-free isolated installation. The full composition also
+runs at Python 3.11 and 3.14.
+
 ## Where the coverage lives
 
 - **Fast suite** (`uv run poe check`): `tests/test_data_science_pipeline.py`
@@ -80,7 +94,9 @@ is selected without `jupyter`, the request reaches the engine unchanged and
 - **`e2e`** (`uv run poe test:e2e`): `tests/test_e2e_engine_generation.py`
   generates `data-science --capability jupyter --capability scientific-python`
   through the real console script and runs the generated project's own
-  `uv run --locked poe check`. CI's `e2e` job budget is `timeout-minutes: 45`.
+  `uv run --locked poe check`; `tests/test_e2e_installed_data_science.py`
+  separately validates the built candidate wheel and both accepted
+  compositions. CI's `e2e` job budget is `timeout-minutes: 45`.
 
 When a Data Science acceptance rule or its evidence changes, update this
 document and the test it names in the same pull request.

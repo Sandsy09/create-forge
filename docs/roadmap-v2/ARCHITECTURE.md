@@ -44,7 +44,10 @@ create-forge staging, uv lock, atomic finalisation
   range became `forge-template>=0.4,<0.5`, so all five descriptors became
   discoverable. Provider Stage 14 then republished the reviewed, unchanged
   production catalogue as `forge-template 0.4.1`; CF-14.01 (ADR 0031) adopts
-  it as the current `forge-template>=0.4.1,<0.5` lower bound.
+  it as the current `forge-template>=0.4.1,<0.5` lower bound, and CF-14.02
+  (ADR 0032) proves both accepted Data Science compositions through the
+  installed create-forge `0.3.0` candidate without changing this ownership
+  model.
 - Capabilities remain bundled, reviewed forge-template components. This
   roadmap does not introduce plugins or remote component registries.
 - create-forge consumes public descriptors and never recreates component

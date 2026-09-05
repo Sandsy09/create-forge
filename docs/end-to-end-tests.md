@@ -6,7 +6,8 @@ records the decision this document keeps current.
 
 ## Status
 
-Two `e2e`-marked modules cover both generation paths. `tests/test_e2e_generation.py`
+Three `e2e`-marked modules cover both generation paths and the installed
+Data Science release-candidate boundary. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
@@ -22,8 +23,12 @@ covers every archetype the catalogue discovers; CF-13.05
 ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) added the
 Data Science composition — `data-science` with its `jupyter` and
 `scientific-python` capabilities — alongside `library` and `cli`.
-See [the engine path](#the-engine-path) below for how it differs from the
-Copier suite.
+CF-14.02 ([ADR 0032](adr/0032-validate-installed-data-science-generation.md))
+adds `tests/test_e2e_installed_data_science.py`: it builds and installs the
+create-forge `0.3.0` candidate wheel with the published `forge-template 0.4.1`
+engine, then validates both accepted Data Science compositions. See
+[the engine path](#the-engine-path) and
+[the installed Data Science path](#the-installed-data-science-path) below.
 
 ## The three-tier test split
 
@@ -31,7 +36,7 @@ Copier suite.
 | --- | --- | --- | --- |
 | Fast | *(none)* | Resolved values and in-memory behaviour — `ScaffoldRequest` construction, staging/finalisation bytes, prompt flow, registry validation. No network, no subprocess beyond what a test fakes. | Seconds; runs on every `poe check`. |
 | Network | `network` | `forge-template`'s `copier.yml` matches `templates.toml` (the drift guard, invariant 1 in `CLAUDE.md`); a real `update()` between two released tags. Clones a repository or drives Copier's Python API in-process. | Seconds to low tens of seconds. |
-| End-to-end | `e2e` | The real console script for both generation paths, and each generated project's own checks. | A few minutes locally for both modules together — dramatically more expensive than `network` and must stay separable from it. The engine path's happy tests need no network at all; the Data Science project CF-13.05 added carries a scientific-Python and Jupyter dependency tree and runs its own `notebook:check`, which is why the CI `e2e` job's budget is `timeout-minutes: 45`. |
+| End-to-end | `e2e` | The real console script for both generation paths, installed-candidate Data Science validation, and each generated project's own checks. | Minutes rather than seconds. The existing engine suite's happy path needs no network; the installed-candidate suite resolves the reviewed engine from PyPI, restores scientific-Python and Jupyter dependency trees, and executes live notebooks across the Python handoff matrix. The CI job retains its 45-minute budget. |
 
 `poe test` (the fast suite `uv run poe check` runs) excludes both `network`
 and `e2e`: `pytest -m 'not network and not e2e'`. `uv run pytest -m network`
@@ -113,6 +118,30 @@ from the Copier suite in ways worth being explicit about:
   status `1` with nothing written. Both need GitHub reachable to build the
   isolated environment, so both skip (not fail) when it is not.
 
+## The installed Data Science path
+
+`tests/test_e2e_installed_data_science.py` closes the installed-distribution
+gap left deliberately by CF-13.05 and the provider's release audit. It builds
+a fresh create-forge `0.3.0` wheel, installs `wheel[engine]` plus exactly the
+published `forge-template 0.4.1` into a temporary Python 3.13 environment, and
+uses that environment's console script and `uv` executable throughout.
+
+Both accepted Data Science compositions generate twice. Every rendered file
+is matched byte-for-byte to the installed pipeline's Foundation/component
+ownership plan, every selected component contributes, and the two complete
+trees — including client-owned `uv.lock` — are byte-identical. Each project
+then restores from the lock, passes its own canonical check and explicit
+notebook execution, builds a wheel and sdist with no ignored working-tree
+payload, and installs independently with neither Forge distribution present.
+The full Scientific Python composition also runs its generated smoke test and
+repeats the locked check/notebook path at Python 3.11 and 3.14.
+
+The canonical
+[installed Data Science validation](installed-data-science-validation.md)
+record maps every #112 acceptance criterion to a named test. This suite does
+not replace or broaden the existing Library, CLI Application, Copier, or
+failure-path suites; CF-14.03 owns that regression matrix.
+
 ## Running it
 
 ```bash
@@ -130,12 +159,22 @@ it tests what a real `uvx create-forge new` gives a user today, and the
 Monday cron surfaces template breakage independent of any push to this
 repository.
 
+The installed Data Science suite does not import the engine from the parent
+test environment and does not skip an unavailable published package: resolving
+the reviewed PyPI release is part of the proof. All of its candidate builds,
+environments, projects, and artefacts live in context-managed temporary roots
+that clean up for both successful and failing tests.
+
 ## Executable examples
 
 - [`tests/test_e2e_generation.py`](../tests/test_e2e_generation.py) — the
   Copier-path suite.
 - [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py) —
   the engine-path suite, parametrised over every discovered archetype.
+- [`tests/test_e2e_installed_data_science.py`](../tests/test_e2e_installed_data_science.py) —
+  CF-14.02's candidate-wheel suite for both accepted Data Science compositions,
+  deterministic locks, the Python handoff matrix, built artefacts, and
+  Forge-free isolated installs.
 - [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py) —
   CF-13.05's fast-suite composition proofs against the real installed engine:
   component-owner attribution, the optional-capability render differential,

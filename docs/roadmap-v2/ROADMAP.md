@@ -41,8 +41,9 @@ CF-13.04 (ADR 0029) per-component option collection, and CF-13.05 (ADR 0030)
 validated the Data Science composition through the shared pipeline against the
 released engine, closing CF-EPIC-13. Provider Stage 14 then reviewed and
 published `forge-template 0.4.1`. CF-14.01 (ADR 0031) adopts that release as
-the `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; CF-14.02
-and CF-14.03 are next.
+the `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
+(ADR 0032) validates both Data Science compositions through the installed
+candidate; CF-14.03 is the remaining validation step before publication.
 
 ## Delivery rules
 

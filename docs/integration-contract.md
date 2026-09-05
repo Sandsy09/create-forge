@@ -95,6 +95,12 @@ with its canonical
 CF-14.01 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 raises the client lower bound to that reviewed release without copying any
 provider-owned component rule.
+CF-14.02
+([ADR 0032](adr/0032-validate-installed-data-science-generation.md)) now proves
+the create-forge `0.3.0` candidate wheel consumes that exact release through
+its installed console script for both accepted Data Science compositions; see
+the canonical
+[installed Data Science validation](installed-data-science-validation.md).
 
 The optional `engine` extra also includes `uv>=0.12,<0.13`. After a validated
 render is written to adjacent staging, create-forge runs
@@ -202,7 +208,7 @@ The Stage 09 acceptance criteria are backed by the following durable evidence:
 | `forge-template` has no dependency on `create-forge` | [`tests/test_reference_client_boundary.py`](../tests/test_reference_client_boundary.py) inspects the supported installed distribution's metadata and Python imports. |
 | Shared-client logic stays engine-owned | [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) confines engine access to the top-level facade; forge-template's [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md) proves clients reuse package-bound content and composition. |
 | Policy cannot gain rendering or code-execution authority | [`tests/test_policy_hook.py`](../tests/test_policy_hook.py) restricts the client seam to resolved selections and policy identifiers; forge-template's [extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md) rejects content and override grants. |
-| Generated projects are independent of both packages | [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py) checks both production archetypes' dependency metadata and locks; [`tests/test_downstream_reference.py`](../tests/test_downstream_reference.py) independently scans the second client's real output. |
+| Generated projects are independent of both packages | [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py) checks every discovered archetype's dependency metadata and locks; [`tests/test_e2e_installed_data_science.py`](../tests/test_e2e_installed_data_science.py) additionally audits Data Science wheels, sdists, and isolated installs; [`tests/test_downstream_reference.py`](../tests/test_downstream_reference.py) independently scans the second client's real output. |
 | The behavior is documented and automatically validated | This living contract, ADRs 0022–0024, and the linked fast/end-to-end suites are the versioned record and executable proof. |
 | No forge-template responsibility is duplicated here | The public-facade import guards, selection-only field guards, and upstream no-copy ownership proof fail if engine content, private modules, or policy rendering authority cross the boundary. |
 | Stage 06 exposes the reusable contract | The [cross-repository engine contract suite](engine-contract-tests.md) exercises the released engine range and both supported protocols through the public facade. |

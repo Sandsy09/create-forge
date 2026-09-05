@@ -253,8 +253,13 @@ released engine, closing **Stage 13**; Stage 14 then takes the released client
 and engine pair through installed-console validation and rollout. CF-14.01
 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 adopts the reviewed `forge-template 0.4.1` release as the new
-`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; installed-console
-validation and publication remain later Stage 14 issues. The
+`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
+([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
+validates both Data Science compositions through the installed candidate
+wheel; CF-14.03 owns the remaining regression matrix and CF-14.04 publication.
+See the canonical
+[installed Data Science validation](docs/installed-data-science-validation.md)
+record. The
 [Data Science roadmap](docs/roadmap-v2/README.md) runs Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier
