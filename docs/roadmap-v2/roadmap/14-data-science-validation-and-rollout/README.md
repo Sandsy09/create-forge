@@ -17,7 +17,10 @@ Both provider blockers are complete. CF-14.01 adopts the resulting
 and CF-14.02 validates both accepted Data Science compositions through the
 installed create-forge candidate under
 [ADR 0032](../../../adr/0032-validate-installed-data-science-generation.md).
-CF-14.03 is the remaining open validation step; CF-14.04 stays blocked on it.
+CF-14.03 completes the installed regression and failure matrix under
+[ADR 0033](../../../adr/0033-complete-rollout-regression-validation.md).
+CF-14.04 is the only remaining child: it publishes create-forge `0.3.0` and
+closes the Stage 14 milestones.
 
 ## Child sequence
 
@@ -43,7 +46,19 @@ create-forge then completes client rollout:
    and notebooks across the Python handoff matrix, build clean distributions,
    and install without Forge runtime dependencies.
 3. [CF-14.03 / create-forge#113](https://github.com/Sandsy09/create-forge/issues/113)
-   completes existing-path regressions and failure validation.
+   completes existing-path regressions and failure validation. **Complete**
+   under
+   [ADR 0033](../../../adr/0033-complete-rollout-regression-validation.md):
+   `tests/test_e2e_installed_rollout.py` reuses the CF-14.02 candidate wheel
+   for the Library and CLI Application engine paths, the default Copier path in
+   a wheel with no engine installed, a real `forge-template 0.3.2` out-of-range
+   engine, and the full selection / option / destination / lock / cleanup
+   failure matrix — every case at its documented exit status with the
+   destination untouched and no staging tree left behind. The installed-client
+   harness moved to `tests/installed_client.py` and is shared with CF-14.02
+   through `tests/conftest.py`. Canonical
+   [rollout regression and failure validation](https://github.com/Sandsy09/create-forge/blob/main/docs/rollout-regression-validation.md)
+   record.
 4. [CF-14.04 / create-forge#114](https://github.com/Sandsy09/create-forge/issues/114)
    publishes create-forge 0.3.0 and completes roadmap v2; it remains blocked
    only by CF-14.03.

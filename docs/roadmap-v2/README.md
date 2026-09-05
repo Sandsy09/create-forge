@@ -29,8 +29,9 @@ client and engine pair through installed-console validation and rollout.
 Provider Stage 14 is complete and published the reviewed
 `forge-template 0.4.1` release. CF-14.01 (ADR 0031) adopts it as create-forge's
 `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`; CF-14.02
-(ADR 0032) completes installed-console Data Science validation. CF-14.03 owns
-the remaining regression matrix before CF-14.04 publishes the client.
+(ADR 0032) completes installed-console Data Science validation, and CF-14.03
+(ADR 0033) completes the installed regression and failure matrix. CF-14.04
+publishes the client and closes the Stage 14 milestones.
 
 ## Repository roles
 

@@ -16,37 +16,42 @@ after success, assertion failure, subprocess failure, or timeout. See ADR
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import subprocess
 import tarfile
 import tempfile
 import tomllib
 import zipfile
-from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
+from tests.installed_client import CLIENT_VERSION as _CLIENT_VERSION
+from tests.installed_client import DEFAULT_PYTHON as _DEFAULT_PYTHON
+from tests.installed_client import ENGINE_VERSION as _ENGINE_VERSION
+from tests.installed_client import FORGE_DISTRIBUTIONS as _FORGE_DISTRIBUTIONS
+from tests.installed_client import (
+    InstalledClient,
+    assert_output_matches_owned_plan,
+)
+from tests.installed_client import assert_success as _assert_success
+from tests.installed_client import file_bytes as _file_bytes
+from tests.installed_client import run as _run
+from tests.installed_client import venv_python as _venv_python
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 pytestmark = pytest.mark.e2e
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-_CLIENT_VERSION = "0.3.0"
-_ENGINE_VERSION = "0.4.1"
-_DEFAULT_PYTHON = "3.13"
 _PYTHON_WINDOW_EDGES = ("3.11", "3.14")
-_SUBPROCESS_TIMEOUT = 1800
-_FORGE_DISTRIBUTIONS = {
-    canonicalize_name("create-forge"),
-    canonicalize_name("forge-template"),
-}
 _IGNORED_WORKING_TREES = (
     "data/raw",
     "data/interim",
@@ -68,19 +73,6 @@ class Composition:
     capabilities: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class InstalledClient:
-    """The candidate wheel installed with the reviewed engine in one venv."""
-
-    root: Path
-    venv: Path
-    python: Path
-    console: Path
-    uv: Path
-    wheel: Path
-    env: Mapping[str, str]
-
-
 _COMPOSITIONS = (
     Composition(
         slug="jupyter",
@@ -98,121 +90,6 @@ _COMPOSITIONS = (
     ),
 )
 _FULL_COMPOSITION = _COMPOSITIONS[1]
-
-
-def _run(
-    command: Sequence[str],
-    cwd: Path,
-    *,
-    env: Mapping[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603
-        list(command),
-        cwd=cwd,
-        env=dict(env) if env is not None else None,
-        capture_output=True,
-        text=True,
-        timeout=_SUBPROCESS_TIMEOUT,
-        check=False,
-    )
-
-
-def _assert_success(result: subprocess.CompletedProcess[str], description: str) -> None:
-    assert result.returncode == 0, (
-        f"{description} failed (exit {result.returncode}):\n"
-        f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}"
-    )
-
-
-def _is_windows_venv(venv: Path) -> bool:
-    return (venv / "Scripts").is_dir()
-
-
-def _venv_python(venv: Path) -> Path:
-    return venv / ("Scripts/python.exe" if _is_windows_venv(venv) else "bin/python")
-
-
-def _venv_script(venv: Path, name: str) -> Path:
-    if _is_windows_venv(venv):
-        return venv / "Scripts" / f"{name}.exe"
-    return venv / "bin" / name
-
-
-def _installed_child_env(
-    base: Mapping[str, str], venv: Path, config_root: Path
-) -> dict[str, str]:
-    """Isolate CLI configuration and make the candidate's ``uv`` authoritative."""
-    env = {
-        key: value
-        for key, value in base.items()
-        if not key.upper().startswith("FORGE_")
-    }
-    for leak in ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT", "PYTHONHOME", "PYTHONPATH"):
-        env.pop(leak, None)
-
-    path_key = next((key for key in env if key.upper() == "PATH"), "PATH")
-    scripts = _venv_python(venv).parent
-    env[path_key] = f"{scripts}{os.pathsep}{env.get(path_key, '')}"
-    env["XDG_CONFIG_HOME"] = str(config_root)
-    return env
-
-
-@pytest.fixture(scope="session")
-def installed_client(e2e_child_env: dict[str, str]) -> Iterator[InstalledClient]:
-    """Build and install the candidate wheel; never import the working tree."""
-    with tempfile.TemporaryDirectory(prefix="create-forge-installed-client-") as tmp:
-        root = Path(tmp)
-        dist = root / "dist"
-        build = _run(
-            ["uv", "build", "--wheel", "--out-dir", str(dist)],
-            REPO_ROOT,
-            env=e2e_child_env,
-        )
-        _assert_success(build, "candidate wheel build")
-
-        wheels = sorted(dist.glob("*.whl"))
-        assert len(wheels) == 1, wheels
-        wheel = wheels[0]
-        assert wheel.name.startswith(f"create_forge-{_CLIENT_VERSION}-")
-
-        venv = root / "client-venv"
-        created = _run(
-            ["uv", "venv", "--python", _DEFAULT_PYTHON, str(venv)],
-            root,
-            env=e2e_child_env,
-        )
-        _assert_success(created, "candidate virtual environment creation")
-
-        python = _venv_python(venv)
-        installed = _run(
-            [
-                "uv",
-                "pip",
-                "install",
-                "--python",
-                str(python),
-                f"{wheel}[engine]",
-                f"forge-template=={_ENGINE_VERSION}",
-            ],
-            root,
-            env=e2e_child_env,
-        )
-        _assert_success(installed, "candidate wheel installation")
-
-        console = _venv_script(venv, "create-forge")
-        uv = _venv_script(venv, "uv")
-        assert console.is_file(), console
-        assert uv.is_file(), uv
-
-        yield InstalledClient(
-            root=root,
-            venv=venv,
-            python=python,
-            console=console,
-            uv=uv,
-            wheel=wheel,
-            env=_installed_child_env(e2e_child_env, venv, root / "config"),
-        )
 
 
 _CLIENT_METADATA_PROBE = """
@@ -350,87 +227,19 @@ def _assert_initial_project_shape(project: Path, composition: Composition) -> No
     assert list(project.parent.glob(".create-forge-*")) == []
 
 
-def _file_bytes(root: Path) -> dict[str, bytes]:
-    return {
-        path.relative_to(root).as_posix(): path.read_bytes()
-        for path in sorted(root.rglob("*"))
-        if path.is_file()
-    }
-
-
-_OWNERSHIP_PROBE = """
-import hashlib
-import json
-import sys
-
-from create_forge.pipeline import build_generation_request
-from create_forge.spec import SelectionRequest
-
-payload = json.loads(sys.argv[1])
-request = build_generation_request(
-    payload["answers"],
-    selection=SelectionRequest.of(
-        archetype="data-science",
-        capabilities=payload["capabilities"],
-        platforms=[],
-    ),
-)
-planned = [
-    {
-        "target": item.target,
-        "owner": (
-            item.owner.id if item.owner.kind == "component" else item.owner.kind
-        ),
-    }
-    for item in request.rendered.plan.files
-]
-rendered = [
-    {"target": item.target, "sha256": hashlib.sha256(item.content).hexdigest()}
-    for item in request.rendered.files
-]
-print(json.dumps({"planned": planned, "rendered": rendered}))
-"""
-
-
 def _assert_output_matches_owned_plan(
     client: InstalledClient,
     project: Path,
     composition: Composition,
     endpoint: str,
 ) -> None:
-    payload = json.dumps(
-        {
-            "answers": _answers(composition, endpoint),
-            "capabilities": composition.capabilities,
-        }
+    assert_output_matches_owned_plan(
+        client,
+        project,
+        archetype="data-science",
+        capabilities=composition.capabilities,
+        answers=_answers(composition, endpoint),
     )
-    probed = _run(
-        [str(client.python), "-c", _OWNERSHIP_PROBE, payload],
-        client.root,
-        env=client.env,
-    )
-    _assert_success(probed, "installed pipeline ownership probe")
-    evidence: dict[str, list[dict[str, str]]] = json.loads(probed.stdout)
-
-    planned = evidence["planned"]
-    rendered = evidence["rendered"]
-    planned_targets = [item["target"] for item in planned]
-    rendered_targets = [item["target"] for item in rendered]
-    assert len(planned_targets) == len(set(planned_targets))
-    assert len(rendered_targets) == len(set(rendered_targets))
-    assert planned_targets == rendered_targets
-
-    selected = {"data-science", *composition.capabilities}
-    owners = {item["owner"] for item in planned}
-    assert owners == {"foundation", *selected}
-    for component_id in selected:
-        assert any(item["owner"] == component_id for item in planned)
-
-    actual = _file_bytes(project)
-    assert set(actual) == {*rendered_targets, "uv.lock"}
-    expected_hashes = {item["target"]: item["sha256"] for item in rendered}
-    for target, expected in expected_hashes.items():
-        assert hashlib.sha256(actual[target]).hexdigest() == expected, target
 
 
 def _assert_lock_is_current(client: InstalledClient, project: Path) -> None:

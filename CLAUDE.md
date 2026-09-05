@@ -240,10 +240,17 @@ validated the Data Science preview pipeline, closing Stage 13.
 CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 has now adopted the reviewed `forge-template 0.4.1` release and prepared
 create-forge `0.3.0`. CF-14.02
-([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md)) now
+([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
 proves both accepted Data Science compositions through that candidate wheel's
-installed console script; CF-14.03 is the remaining validation issue before
-CF-14.04 publishes the client.
+installed console script, and CF-14.03
+([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) reuses
+that wheel for the Library / CLI Application engine paths, the default Copier
+path with no engine installed, a real out-of-range engine, and the full
+selection / option / destination / lock / cleanup failure matrix — see the
+canonical
+[rollout regression and failure validation](docs/rollout-regression-validation.md).
+CF-14.04 is the remaining child: it publishes create-forge `0.3.0` and closes
+the Stage 14 milestones.
 FT-10.01's canonical
 [Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 now fixes an optionless package, test, starter-notebook, ignored working-tree,

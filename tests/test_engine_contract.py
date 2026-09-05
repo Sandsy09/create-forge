@@ -35,6 +35,7 @@ DATA_SCIENCE_PREVIEW_VALIDATION = (
 INSTALLED_DATA_SCIENCE_VALIDATION = (
     REPO_ROOT / "docs" / "installed-data-science-validation.md"
 )
+ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
@@ -297,6 +298,21 @@ def test_installed_data_science_validation_doc_is_linked_from_entry_points() -> 
         )
 
     assert INSTALLED_DATA_SCIENCE_VALIDATION.is_file()
+
+
+def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-14.03's rollout regression evidence (ADR 0033) must stay
+    discoverable, mirroring the CF-14.02 guard above.
+    """
+    link_re = re.compile(r"\([^)]*rollout-regression-validation\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link rollout-regression-validation.md"
+        )
+
+    assert ROLLOUT_REGRESSION_VALIDATION.is_file()
 
 
 def test_reserved_compatibility_exit_status_is_documented_once() -> None:

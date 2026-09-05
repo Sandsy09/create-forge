@@ -43,7 +43,10 @@ released engine, closing CF-EPIC-13. Provider Stage 14 then reviewed and
 published `forge-template 0.4.1`. CF-14.01 (ADR 0031) adopts that release as
 the `>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
 (ADR 0032) validates both Data Science compositions through the installed
-candidate; CF-14.03 is the remaining validation step before publication.
+candidate, and CF-14.03 (ADR 0033) completes the installed regression and
+failure matrix for Library, CLI Application, the engine-less Copier path, and
+every failure mode. CF-14.04 publishes create-forge `0.3.0` and closes the
+Stage 14 milestones.
 
 ## Delivery rules
 

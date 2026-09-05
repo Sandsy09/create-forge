@@ -211,6 +211,12 @@ Stage 06 development contract used before a real release existed.
   `test_config_cannot_redirect_the_template_source` and
   `test_no_config_field_looks_like_a_source_or_version_selector`
   characterize the "ordinary configuration may never do" rule above.
+- [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py)
+  (CF-14.03, [ADR 0033](adr/0033-complete-rollout-regression-validation.md)) --
+  `test_engineless_doctor_json_reports_the_absent_engine` and
+  `test_out_of_range_engine_is_visible_in_doctor` characterize the diagnostics
+  table's `engine_package` against the *installed* release candidate with, in
+  turn, no engine and a real out-of-range engine resolved.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.
