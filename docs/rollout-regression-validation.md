@@ -78,9 +78,11 @@ The completed CF-14.03 implementation was validated on Windows on 2026-09-05:
 This is an E2E test and documentation change only. No shipped module, public
 API, CLI flag, schema, dependency range, protocol, component identifier,
 runtime behaviour, or default path changes. `--engine-preview` remains hidden
-and opt-in. CF-14.04 owns the create-forge `0.3.0` changelog, tag,
-publication, and installed release verification, and the epic closure that
-depends on it.
+and opt-in. CF-14.04
+([ADR 0034](adr/0034-publish-0-3-0-and-close-roadmap-v2.md)) published the
+create-forge `0.3.0` release this record's evidence supports and verified it
+against its own artefacts — the canonical
+[release 0.3.0 validation](release-0-3-0-validation.md) record.
 
 When this boundary or its evidence changes, update this record, the
 [end-to-end tests contract](end-to-end-tests.md), and the executable suite in

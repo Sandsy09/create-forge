@@ -259,16 +259,17 @@ validates both Data Science compositions through the installed candidate
 wheel, and CF-14.03
 ([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) reuses it
 for the Library / CLI Application engine paths, the engine-less default Copier
-path, a real out-of-range engine, and the full failure matrix; CF-14.04 owns
-publication. See the canonical
-[installed Data Science validation](docs/installed-data-science-validation.md)
-and
-[rollout regression and failure validation](docs/rollout-regression-validation.md)
-records. The
-[Data Science roadmap](docs/roadmap-v2/README.md) runs Stages 10–14.
+path, a real out-of-range engine, and the full failure matrix. CF-14.04
+([ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md)) then published
+create-forge `0.3.0` to PyPI and verified the released pair against its own
+artefacts, closing the roadmap in both repositories. See the canonical
+[installed Data Science validation](docs/installed-data-science-validation.md),
+[rollout regression and failure validation](docs/rollout-regression-validation.md),
+and [release 0.3.0 validation](docs/release-0-3-0-validation.md) records. The
+[Data Science roadmap](docs/roadmap-v2/README.md) ran Stages 10–14.
 All 24 child issues are filed and attached across both repositories; GitHub
 issue bodies and native relationships are authoritative. The default Copier
-path remains unchanged.
+path remains unchanged, and `--engine-preview` stays hidden.
 
 ## Contributing
 

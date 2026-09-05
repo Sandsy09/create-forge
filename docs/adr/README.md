@@ -36,6 +36,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0031 — Adopt the reviewed forge-template 0.4.1 release](0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
 - [0032 — Validate Data Science through the installed create-forge candidate](0032-validate-installed-data-science-generation.md)
 - [0033 — Complete the rollout regression and failure matrix at the installed boundary](0033-complete-rollout-regression-validation.md)
+- [0034 — Publish create-forge 0.3.0 and close the Data Science roadmap](0034-publish-0-3-0-and-close-roadmap-v2.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.
