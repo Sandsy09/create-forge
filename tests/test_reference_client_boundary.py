@@ -75,7 +75,7 @@ def test_reference_client_decision_is_linked_from_canonical_entry_points() -> No
     link_re = re.compile(r"0024-reference-client-not-framework-dependency\.md")
 
     for relative_path in (
-        "README.md",
+        "docs/user-guide/reference.md",
         "CLAUDE.md",
         "CONTRIBUTING.md",
         "docs/integration-contract.md",

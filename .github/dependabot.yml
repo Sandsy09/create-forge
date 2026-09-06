@@ -36,6 +36,11 @@ updates:
     # tests/test_engine_contract.py reads this block; deleting either rule
     # fails the fast suite.
     ignore:
+      # Keep the docs stack on the reviewed MkDocs 1 / Material 9 line.
+      - dependency-name: "mkdocs"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mkdocs-material"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "copier"
         update-types: ["version-update:semver-major"]
       - dependency-name: "forge-template"

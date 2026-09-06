@@ -22,7 +22,11 @@ body:
     id: doctor
     attributes:
       label: create-forge doctor output
-      description: Run `uvx create-forge doctor` and paste the output.
+      description: >-
+        Run doctor through the same installation used to generate the project.
+        For preview, use uvx --from "create-forge[engine]" create-forge doctor
+        with the same package version constraints as your failing command.
+        Remove credentials and private data before posting.
       render: text
 
   - type: input
@@ -32,3 +36,30 @@ body:
       description: Output of `create-forge --version`.
     validations:
       required: true
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Workflow
+      options:
+        - Default Copier generation or update
+        - Engine preview
+        - Installation, configuration, or other command
+    validations:
+      required: true
+  - type: input
+    id: provider-version
+    attributes:
+      label: Template tag or engine package version
+      description: >-
+        For Copier, the _commit in .copier-answers.yml; for preview,
+        the forge-template version reported by doctor.
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Python version
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction command and error output
+      description: Include selections and relevant output, with private data removed.
+      render: text

@@ -60,6 +60,7 @@ Issues = "https://github.com/Sandsy09/create-forge/issues"
 Changelog = "https://github.com/Sandsy09/create-forge/blob/main/CHANGELOG.md"
 
 [dependency-groups]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 lint = ["ruff>=0.14", "pre-commit>=4.0"]
 test = [
     "pytest>=8.3",
@@ -71,6 +72,7 @@ test = [
 ]
 typecheck = ["mypy>=1.14", "types-PyYAML>=6.0"]
 dev = [
+    { include-group = "docs" },
     { include-group = "lint" },
     { include-group = "test" },
     { include-group = "typecheck" },
@@ -179,6 +181,8 @@ test = "pytest -m 'not network and not e2e'"
 "test:e2e" = "pytest -m e2e"
 check = ["format:check", "lint", "typecheck", "test"]
 changelog = "git-cliff --output CHANGELOG.md"
+docs = "mkdocs serve"
+"docs:build" = "mkdocs build --strict"
 
 # Verifies templates.toml actually ships in the wheel. This is the failure
 # that passes every local test and breaks on first uvx run. Builds into a

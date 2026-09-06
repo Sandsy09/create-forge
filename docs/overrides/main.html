@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}
+  {% if page %}
+    <hr>
+    <p>
+      Missing an example or found an unclear step?
+      <a href="https://github.com/Sandsy09/create-forge/issues/new?template=documentation.yml&amp;page={{ page.canonical_url | urlencode }}">Send documentation feedback</a>.
+    </p>
+  {% endif %}
+{% endblock %}

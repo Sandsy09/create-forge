@@ -16,6 +16,14 @@ repos:
       - id: trailing-whitespace
       - id: mixed-line-ending
 
+  # The user-facing entry points; historical contracts and ADRs retain
+  # their existing formatting conventions.
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.2
+    hooks:
+      - id: markdownlint-cli2
+        files: ^(README\.md|docs/user-guide/.*\.md)$
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Pinned to match the ruff version pyproject.toml's `ruff>=0.14` actually
     # resolves to (`uv run ruff --version`) -- older pins disagree with the

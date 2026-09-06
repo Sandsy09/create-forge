@@ -363,6 +363,41 @@ validation ownership, and exit statuses. Changes to `cli.py`, `prompts.py`, or
 their replacement at the public-engine cutover must update that contract and
 its executable examples together when behavior changes.
 
+## User documentation
+
+The shared [Forge site](https://sandsy09.github.io/create-forge/) is authored
+in [docs/user-guide/](docs/user-guide/). It covers released usage of both
+repositories; technical contracts and ADRs remain in their owning repos.
+Keep root READMEs focused on orientation and essential commands.
+
+```bash
+uv sync --locked
+uv run poe docs
+uv run poe docs:build
+```
+
+The docs dependencies are included in the development group. The preview
+serves at `http://127.0.0.1:8000/create-forge/`; the strict build writes
+`site/`. CI builds the site on every PR and uploads a `forge-docs` artifact
+for review. The Documentation job is part of `All checks passed`.
+
+When changing user-visible behaviour in either repo, update the affected
+guides and README examples in the same coordinated set of PRs. Keep the
+guide's release pair current, label preview features, and exercise changed
+recipes in disposable projects. Check external links and review desktop and
+mobile navigation, search, code copying, and feedback links before
+publication. The strict build rejects broken local links and anchors.
+Pre-commit also lints the root README and user-guide Markdown; long command
+lines and tables are exempt from wrapping so examples remain copyable.
+
+For the first publication, review both PRs and the built site before
+merging. Enable Pages in this repo with **GitHub Actions** as its source,
+then run **Publish documentation** on `main` if the initial push happened
+before Pages was enabled. Verify the live site before merging sibling links.
+Later changes deploy automatically from `main`; PRs only build. No package
+version bump is required, and PyPI README changes arrive with the next
+package release. See [ADR 0035](docs/adr/0035-shared-forge-user-documentation.md).
+
 ## Commit messages
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, ...). A `commit-msg` hook

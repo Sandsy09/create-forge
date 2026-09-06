@@ -1,280 +1,179 @@
 # create-forge
 
 [![CI](https://github.com/Sandsy09/create-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandsy09/create-forge/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/create-forge)](https://pypi.org/project/create-forge/)
 
-Scaffold modern Python projects from maintained templates — and pull template
-improvements back into projects you generated months ago.
+Create Python projects with packaging, quality checks, and a useful starting
+structure already in place.
 
 ```bash
 uvx create-forge new
 ```
 
-No install step. Requires [uv](https://docs.astral.sh/uv/) and git.
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/), Git,
+and Python 3.11+ (uv can install Python for you). Configure your Git author
+name and email before generating a default Library project: generation
+creates local commits.
 
-## Why
+**[Read the Forge user guide](https://sandsy09.github.io/create-forge/)**
+for walkthroughs, template choices, and troubleshooting.
 
-Most project generators are fire-and-forget: you scaffold once, and from that
-moment your project drifts away from the template. Six months later the template
-has better lint rules, a security fix in CI, and a newer toolchain — and no path
-to get any of it into projects already in the wild.
+## How the repositories fit together
 
-create-forge is built on [Copier](https://copier.readthedocs.io/), which does a
-three-way merge between the template version your project was generated from and
-the latest one. Local edits survive; template changes arrive.
-
-```bash
-uvx create-forge update
-```
-
-## What you get
-
-Every generated project ships with:
-
-- **[uv](https://docs.astral.sh/uv/)** for packaging and dependency management
-- **[Ruff](https://docs.astral.sh/ruff/)** for linting and formatting
-- **mypy** or **pyright** (or both) for type checking
-- **pytest** with coverage
-- **pre-commit** hooks, including Conventional Commits enforcement
-- **GitHub Actions** CI, with a test matrix across your supported Python versions
-- **Renovate** or **Dependabot** for dependency updates
-- `README`, `CONTRIBUTING`, `SECURITY`, `CHANGELOG`, issue and PR templates
-- Optionally: a MkDocs documentation site and ADR scaffolding
-
-Choices you make at scaffold time — build backend, versioning strategy, license,
-type checker — are remembered, so updates respect them.
-
-## Usage
-
-```bash
-# Interactive
-uvx create-forge new
-
-# Named up front
-uvx create-forge new "Credit Risk Utils"
-
-# Non-interactive, for scripts and CI
-uvx create-forge new "My Lib" --yes \
-  --data build_backend=hatchling \
-  --data versioning=vcs \
-  --data type_checking=both
-
-# Validate an update without changing project files
-uvx create-forge update --dry-run
-```
-
-| Command | What it does |
+| Repository | What it provides |
 | --- | --- |
-| `new` | Create a project |
-| `list` | Show available templates |
-| `update` | Pull template changes into an existing project |
-| `doctor` | Check your environment can scaffold and update |
-| `config` | Inspect or initialise your saved configuration |
+| **create-forge** | The CLI: prompts, project creation, updates, and diagnostics. |
+| [forge-template](https://github.com/Sandsy09/forge-template) | The project templates and composition engine used to generate files. |
 
-Useful flags on `new`: `--template/-t`, `--path/-p`, `--data/-d`, `--yes/-y`,
-`--ref`, `--dry-run`.
+You normally use the CLI without cloning either repository. Generated
+projects do not depend on either Forge package at runtime.
 
-Useful flags on `update`: `--ref`, `--dry-run`. An update dry run validates the
-requested template update but does not apply it or produce a file-by-file diff.
-
-## Configuration
-
-Optional. Saves retyping the same answers:
-
-```toml
-# ~/.config/create-forge/config.toml
-author_name = "Your Name"
-author_email = "you@example.com"
-github_org = "your-org"
-default_template = "library"
-```
-
-`create-forge config init` writes a commented starter file at that path
-without overwriting one that already exists. `create-forge config show`
-prints the resolved values and where each came from.
-
-`github_org` pre-fills its prompt — you're still asked, just with the answer
-already typed in. `author_name` and `author_email` aren't prompted for at all,
-so a configured value is applied directly. `default_template` picks which
-template `new` offers first, interactively or under `--yes`.
-
-Every key can be overridden with an environment variable —
-`FORGE_GITHUB_ORG` and so on — or a command line flag. Precedence is
-config < environment < `--data` < an interactive answer.
-
-## Templates
-
-Run `create-forge list` for what your installed version offers. The registry is
-bundled with each release, so new templates arrive when you update the tool.
-
-To use your own template:
+## Create your first project
 
 ```bash
-uvx create-forge new --template-url https://github.com/you/your-template
+uvx create-forge new "My Library"
+cd my-library
+uv run poe check
 ```
 
-This describes the released v0.1.x architecture. Forge has accepted a future
-[public-engine integration contract](docs/integration-contract.md) in which a
-versioned `forge-template` package owns discovery and rendering. Its strict
-[ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-are now implemented behind the canonical
-[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
-([ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md)).
-The canonical
-[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
-defines how downstream clients resolve component-selection defaults and
-constraints before constructing that effective ProjectSpec. CF-09.01
-([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) delivered
-the client-side consumption hook — this repository still resolves no policy
-itself; see the canonical
-[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
-The canonical
-[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
-[organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
-[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
-and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md)
-complete forge-template's Stage 09 boundary. They deny arbitrary file
-replacement and prove that a client can retain policy/orchestration concerns
-without copying engine content or importing private engine modules. The
-decisions are recorded by forge-template
-[ADRs 0039](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0039-deny-policy-file-overrides.md),
-[0040](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0040-organisation-policy-reference-fixture.md),
-[0041](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0041-forge-blueprint-compatibility-policy.md),
-and [0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0042-validate-no-copy-downstream-inheritance.md).
-The accepted
-[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-defines the first production component, implemented on `forge-template/main`
-and released at `0.3.0`. The accepted
-[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-selects the optionless engine-owned `cli` archetype and derives its console
-command from `ProjectSpec.project.repository_name`;
-[FT-08.04](https://github.com/Sandsy09/forge-template/issues/4) implemented
-it in the same `0.3.0` release, and
-[CF-08.02](https://github.com/Sandsy09/create-forge/issues/10) exposes both
-archetypes behind the hidden `new --engine-preview` flag's `--archetype`
-option. Neither change alters this CLI's default `new` answers, registry, or
-released dependency surface.
-The Stage 08
-[composition architecture review](https://github.com/Sandsy09/forge-template/blob/main/docs/composition-architecture-review.md)
-is released in `forge-template 0.3.2`. On the engine-preview path,
-`create-forge 0.2.1` now finalises the validated in-memory render with
-`uv lock --directory <staging-directory>` before the atomic rename. The
-result contains `uv.lock` and uses `uv run --locked poe check`, while the
-default Copier path remains unchanged; see
-[ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md).
-The engine now also defines in-memory
-[generated-project validation](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
-([ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md))
-before rendered output is returned; `render_project` already calls it before
-`--engine-preview` receives a result.
-This repository depends on a real, released `forge-template` range —
-`>=0.4.1,<0.5`. [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)
-moved it from the first assigned `>=0.3.1,<0.4`, and
-[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
-adopted the reviewed `0.4.1` release as its lower bound. It is published to
-PyPI with
-`uv>=0.12,<0.13` as the optional `engine` extra
-(`pip install 'create-forge[engine]'`; [#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)) —
-rather than a development-only pin. That range is reachable only behind
-`--engine-preview`; the current registry and `--template-url` behaviour
-remain unchanged until the complete, tested cutover is released — at which
-point `--engine-source`/`--engine-ref` (see the
-[engine resolution contract](docs/engine-resolution.md)) take over this role,
-not `--template-url`.
+The default workflow creates an installable Library with a `src/` layout,
+uv, Ruff, pytest with coverage, mypy and/or pyright, pre-commit hooks, and
+GitHub Actions CI. Choose your build backend, versioning, license, and
+dependency-update tooling. MkDocs documentation is optional.
 
-## Security
+The template is rendered by [Copier](https://copier.readthedocs.io/), which
+also supports bringing later template improvements into existing projects.
 
-**create-forge executes code from the template it clones.** Copier templates can
-declare post-generation tasks, and this tool runs them — that is how a generated
-project arrives already git-initialised with hooks installed.
+## Install and manage the tool
 
-The template addresses are compiled into each release rather than fetched at
-runtime or read from user configuration, so the only code trusted by default is
-code published alongside the tool. `--template-url` bypasses that, and prompts
-for confirmation before doing so. Point it only at repositories you trust.
+Use `uvx` for occasional runs, or install a persistent command:
 
-Report vulnerabilities per [SECURITY.md](SECURITY.md) rather than in a public
-issue.
+```bash
+uv tool install create-forge
+create-forge new
+uv tool upgrade create-forge
+```
 
-## Using this at work
+If the command is not on your PATH, run `uv tool update-shell` and restart
+your terminal.
 
-The preferred route for organisation defaults, required selections, and
-forbidden selections is a downstream client of the public `forge-template`
-engine, resolving the canonical
-[organisation-policy protocol](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
-before constructing a ProjectSpec — see the canonical
-[downstream policy-consumption contract](docs/organisation-policy-consumption.md)
-and [ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md).
-[`examples/downstream_cli.py`](examples/downstream_cli.py) is a runnable,
-second, independent client demonstrating exactly this — no dependency on
-`create-forge` at all — see the canonical
-[downstream client reference](docs/downstream-client-reference.md) and
-[ADR 0023](docs/adr/0023-downstream-client-reference.md).
-[ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md)
-completes the Stage 09 boundary: `create-forge` is one reference client, not a
-framework dependency for that client, the engine, or generated projects.
+### Choose a CLI version
 
-Forking this repository remains appropriate only for genuinely custom
-executable template content that has no equivalent in the reviewed public
-engine — point the bundled registry at your own templates and maintain the
-fork internally, as v0.1.x always supported. See the
-[integration contract](docs/integration-contract.md) for the full boundary.
+```bash
+uvx create-forge@latest new
+uvx create-forge@0.3.0 new
+uv tool install "create-forge==0.3.0"
+```
 
-The [accepted Data Science shape](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
-is an independent, package-backed, notebook-oriented third archetype. The
-[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
-define its required reusable Jupyter tooling and independently optional
-Scientific Python stack. FT-11.02 implements Jupyter under [ADR
-0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
-and FT-11.03 implements Scientific Python under [ADR
-0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-Stage 11 then validated their production composition, and Stage 12 added and
-validated the `data-science` archetype. The complete five-component catalogue
-is published as
-[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-on [PyPI](https://pypi.org/project/forge-template/0.4.0/); its
-[published acceptance evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification)
-was the immutable provider hand-off to Stage 13.
-[CF-13.01](https://github.com/Sandsy09/create-forge/issues/106)
-([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) adopted
-`forge-template>=0.4,<0.5`, so the engine-preview path now discovers all five
-components, and CF-13.02
-([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
-how they are selected in the canonical
-[component selection contract](docs/component-selection.md). CF-13.03
-([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
-capability and platform selection behind `--engine-preview`, and CF-13.04
-([ADR 0029](docs/adr/0029-per-component-option-collection.md)) per-component
-option collection and `--component-option`. CF-13.05
-([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-validated the Data Science composition through the shared pipeline against the
-released engine, closing **Stage 13**; Stage 14 then takes the released client
-and engine pair through installed-console validation and rollout. CF-14.01
-([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
-adopts the reviewed `forge-template 0.4.1` release as the new
-`>=0.4.1,<0.5` lower bound and prepares create-forge `0.3.0`. CF-14.02
-([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
-validates both Data Science compositions through the installed candidate
-wheel, and CF-14.03
-([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) reuses it
-for the Library / CLI Application engine paths, the engine-less default Copier
-path, a real out-of-range engine, and the full failure matrix. CF-14.04
-([ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md)) then published
-create-forge `0.3.0` to PyPI and verified the released pair against its own
-artefacts, closing the roadmap in both repositories. See the canonical
-[installed Data Science validation](docs/installed-data-science-validation.md),
-[rollout regression and failure validation](docs/rollout-regression-validation.md),
-and [release 0.3.0 validation](docs/release-0-3-0-validation.md) records. The
-[Data Science roadmap](docs/roadmap-v2/README.md) ran Stages 10–14.
-All 24 child issues are filed and attached across both repositories; GitHub
-issue bodies and native relationships are authoritative. The default Copier
-path remains unchanged, and `--engine-preview` stays hidden.
+Plain `uvx create-forge` can reuse a cached or persistently installed
+version; `@latest` explicitly requests the latest release. Tool upgrades
+respect the constraints used at installation, so an exact pin stays pinned.
+To return to the latest release, run `uv tool install create-forge@latest`.
+See [installation and versions](https://sandsy09.github.io/create-forge/installation/).
 
-## Contributing
+## Everyday usage
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
-Significant design decisions are recorded in [docs/adr/](docs/adr/).
+| Command | Purpose |
+| --- | --- |
+| `uvx create-forge new` | Create a project interactively. |
+| `uvx create-forge list` | List the bundled Copier templates. |
+| `uvx create-forge update` | Update a Copier-generated project from its directory. |
+| `uvx create-forge doctor` | Diagnose Python, Git, uv, and package compatibility. |
+| `uvx create-forge config init` | Create an optional configuration file. |
+| `uvx create-forge config show` | Show resolved configuration and its sources. |
+
+For scripts and CI, provide a project name and skip questions with `--yes`:
+
+```bash
+uvx create-forge new "My Library" --yes --data github_org=your-org --data build_backend=hatchling --data versioning=vcs
+```
+
+Use `--path` to choose the destination and repeat `--data key=value` to
+preset answers. Run `uvx create-forge new --help` for the default workflow's
+options. Saved author details, GitHub organisation, and preferred template
+are covered in the [CLI guide](https://sandsy09.github.io/create-forge/cli/).
+
+### Choose a template version or source
+
+```bash
+uvx create-forge new "My Library" --template library --ref v0.4.1
+uvx create-forge new "Custom Project" --template-url https://github.com/you/your-template
+```
+
+`--ref` selects a Git revision in the **template repository**. It does not
+select the CLI version. Without it, Copier uses the latest suitable release
+tag. The bundled registry currently offers Library; upgrade the CLI to
+receive registry changes.
+
+Templates can execute code through generation and update tasks. Use custom
+sources only when you trust their content; `--yes` also skips the custom
+template confirmation.
+
+### Update a generated project
+
+From a clean, committed Copier-generated project:
+
+```bash
+uvx create-forge update --dry-run
+uvx create-forge update
+uv run poe check
+```
+
+Keep `.copier-answers.yml` committed. Review the resulting diff and resolve
+conflicts before committing. A dry run validates the update without applying
+it; it does not produce a file-by-file diff. Use `update --ref v0.4.1` to
+target a particular template version.
+
+## Preview: more project types and capabilities
+
+The `0.3.0` CLI also provides an opt-in engine preview using
+`forge-template>=0.4.1,<0.5`. These options are currently hidden from help.
+
+| Project type | Use it for |
+| --- | --- |
+| Library | A distributable Python package with a choice of packaging modes. |
+| CLI Application | A Typer application with a console command and tests. |
+| Data Science | A Python package with a starter notebook and Jupyter tooling. |
+
+Add **Jupyter** for notebook development or **Scientific Python** for NumPy,
+pandas, Matplotlib, and scikit-learn. Data Science requires Jupyter;
+Scientific Python is optional. These capabilities can also accompany the
+other preview archetypes.
+
+```bash
+uvx --from "create-forge[engine]==0.3.0" create-forge new "My Analysis" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
+cd my-analysis
+uv run --locked poe check
+uv run poe notebook
+```
+
+For regular preview use, install with `uv tool install "create-forge[engine]"`.
+The [project guide](https://sandsy09.github.io/create-forge/projects/) explains
+each type's output and links to complete recipes.
+
+**Preview projects do not support `create-forge update`.** Their shared
+tooling differs from the default Copier template; the preview does not
+generate its CI workflows or install Git hooks. `--template`,
+`--template-url`, and `--ref` apply only to the Copier workflow.
+
+## What's next
+
+The Foundation and Data Science roadmaps are complete. Making the engine
+the default generation workflow is a planned direction with no scheduled
+release. Follow [open work](https://github.com/Sandsy09/create-forge/issues)
+and [releases](https://github.com/Sandsy09/create-forge/releases) for updates,
+or suggest a project type, capability, or guide you would find useful.
+
+## Feedback and contributing
+
+- [Report a CLI problem or suggest a feature](https://github.com/Sandsy09/create-forge/issues/new/choose).
+- [Request or correct documentation](https://github.com/Sandsy09/create-forge/issues/new?template=documentation.yml).
+- [Report generated-content or capability problems](https://github.com/Sandsy09/forge-template/issues/new/choose).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and PR checks, and
+the [reference index](https://sandsy09.github.io/create-forge/reference/) for
+engine APIs and architecture documents. Report vulnerabilities through
+[SECURITY.md](SECURITY.md).
 
 ## License
 
