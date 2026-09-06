@@ -1,0 +1,67 @@
+site_name: Forge
+site_description: Create Python libraries, CLI applications, and Data Science projects with Forge.
+site_url: https://sandsy09.github.io/create-forge/
+repo_url: https://github.com/Sandsy09/create-forge
+repo_name: Sandsy09/create-forge
+edit_uri: edit/main/docs/user-guide/
+docs_dir: docs/user-guide
+site_dir: site
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.action.edit
+    - content.code.copy
+    - navigation.footer
+    - navigation.top
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
+nav:
+  - Getting started: index.md
+  - Installation and versions: installation.md
+  - CLI usage: cli.md
+  - Project types:
+      - Choosing a project: projects.md
+      - Library: library.md
+      - CLI Application: cli-application.md
+      - Data Science: data-science.md
+  - Capabilities: capabilities.md
+  - Updates and troubleshooting: updates.md
+  - Reference and direction: reference.md
+  - Feedback: feedback.md

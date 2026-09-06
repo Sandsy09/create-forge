@@ -21,6 +21,25 @@ env:
   UV_VERSION: "0.12.0"
 
 jobs:
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # GitHub-owned actions are allowed by this repo's action policy;
+      # setup-uv is currently allowlisted only by its mutable v7 tag.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "uv==${{ env.UV_VERSION }}"
+      - run: uv sync --locked
+      - run: uv run --locked poe docs:build
+      - name: Upload site for review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: forge-docs
+          path: site/
+          if-no-files-found: error
   # ---------------------------------------------------------------------------
   # Same gate as `uv run pre-commit run --all-files` locally: ruff, and the
   # whitespace/EOF/toml/yaml hooks. Everything else waits on this so a
@@ -207,11 +226,14 @@ jobs:
   all-green:
     name: All checks passed
     runs-on: ubuntu-latest
-    needs: [lint, test, windows, wheel, network, e2e]
+    needs: [lint, test, windows, wheel, network, e2e, docs]
     if: always()
     steps:
       - name: Verify
         run: |
+          if [ "${{ needs.docs.result }}" != "success" ]; then
+            echo "::error::Documentation checks did not pass"; exit 1
+          fi
           if echo "${{ join(needs.*.result, ',') }}" | grep -qE 'failure|cancelled'; then
             echo "::error::One or more jobs failed"; exit 1
           fi
