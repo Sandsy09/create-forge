@@ -15,6 +15,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
@@ -42,6 +43,7 @@ from create_forge.prompts import (
 )
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+from create_forge.sources import SourceError, display_source, validate_source
 from create_forge.spec import (
     DESCRIPTOR_KIND,
     SELECTABLE_KINDS,
@@ -249,8 +251,11 @@ def _confirm_third_party(template_url: str | None, *, yes: bool) -> None:
         return
     err.print(
         Panel(
-            f"Scaffolding from [bold]{template_url}[/bold]\n"
-            "Template code will be executed. Only continue if you trust it.",
+            Text.assemble(
+                "Scaffolding from ",
+                (display_source(template_url), "bold"),
+                "\nTemplate code will be executed. Only continue if you trust it.",
+            ),
             title="[yellow]Third-party template[/yellow]",
             border_style="yellow",
         )
@@ -857,6 +862,12 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     ] = None,
 ) -> None:
     """Create a new project."""
+    if template_url is not None:
+        try:
+            validate_source(template_url)
+        except SourceError as exc:
+            err.print(str(exc), style="red", markup=False)
+            raise typer.Exit(1) from None
     if archetype is not None and not engine_preview:
         err.print("[red]--archetype requires --engine-preview.[/red]")
         raise typer.Exit(1)

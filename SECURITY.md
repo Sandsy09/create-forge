@@ -18,6 +18,26 @@ The only code trusted by default is code published alongside the tool.
 else. It runs that source's code too, and prompts for confirmation before
 doing so. Point it only at repositories you trust.
 
+Template sources must not embed credentials. `new --template-url` and
+`update`'s recorded `.copier-answers.yml` `_src_path` reject HTTP(S) user-info
+(including username-only and encoded forms), SSH URL passwords, and URL
+queries or fragments. Use a credential-free HTTPS URL with an external Git
+credential helper, or SSH with an SSH agent; select versions with `--ref`.
+Ordinary SSH usernames, SCP-style sources, Copier shorthand and local paths
+remain supported. The same checks cover Copier's `git+` URL prefix.
+
+Rejection happens before prompts or generation effects; an unsafe recorded
+update source is rejected before Copier runs, without changing the project.
+Replace that recorded source with its credential-free equivalent before
+retrying. Malformed answers files are reported without quoting YAML content.
+Warnings display source text literally and strip URL authentication, queries,
+and fragments defensively. Expected Copier/Git failures use fixed guidance,
+never raw process output or unknown exception text. Internal exception causes
+are retained for debugging and must not be logged or rendered to users.
+These safeguards do not sandbox trusted template tasks or manage credentials
+stored by Git, shells, or other external tools. See
+[ADR 0036](docs/adr/0036-template-source-credentials.md).
+
 A vulnerability in how `create-forge` itself handles this trust boundary — for
 example, a way to reach `unsafe=True` behaviour from the bundled registry
 without `--template-url`, or a way for `config.toml` to influence which code

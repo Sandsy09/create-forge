@@ -12,11 +12,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import yaml
 from copier import run_copy, run_update
 from copier.errors import CopierError
 from plumbum.commands.processes import ProcessExecutionError
 
 from create_forge import staging
+from create_forge.sources import SourceError, validate_source
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -56,6 +58,10 @@ def scaffold(request: ScaffoldRequest) -> None:
     revisiting this.
     """
     try:
+        validate_source(request.src)
+    except SourceError as exc:
+        raise ScaffoldError(str(exc)) from None
+    try:
         staging.ensure_available(request.dst)
     except staging.DestinationConflictError as exc:
         raise ScaffoldError(str(exc)) from exc
@@ -94,6 +100,28 @@ def update(project: Path, *, vcs_ref: str | None = None, dry_run: bool = False) 
             "by forge, or the answers file was deleted."
         )
         raise ScaffoldError(msg)
+
+    try:
+        recorded = yaml.safe_load(answers.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, yaml.YAMLError):
+        raise ScaffoldError(
+            "Cannot read .copier-answers.yml. Repair its YAML before retrying; "
+            "use a credential-free _src_path with a Git credential helper or SSH agent."
+        ) from None
+    if (
+        not isinstance(recorded, dict)
+        or not isinstance(recorded.get("_src_path"), str)
+        or not recorded["_src_path"]
+    ):
+        raise ScaffoldError(
+            ".copier-answers.yml needs a non-empty string _src_path. "
+            "Restore a credential-free source with a Git credential helper "
+            "or SSH agent."
+        )
+    try:
+        validate_source(recorded["_src_path"], origin=".copier-answers.yml _src_path")
+    except SourceError as exc:
+        raise ScaffoldError(str(exc)) from None
 
     try:
         run_update(
@@ -158,5 +186,6 @@ def _explain(exc: CopierError | ProcessExecutionError) -> str:
     return (
         _PROCESS_FAILURE_MESSAGE
         if "authentication" in lowered or "permission denied" in lowered
-        else text
+        else "Copier could not complete the template operation. "
+        "Check the template configuration, supplied answers, and --ref, then retry."
     )

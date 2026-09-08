@@ -142,6 +142,41 @@ def test_update_applies_template_changes(template: Path, tmp_path: Path) -> None
     assert "v2" in (project / "README.md").read_text(encoding="utf-8")
 
 
+def test_documented_local_source_through_console(
+    template: Path,
+    tmp_path: Path,
+    create_forge_command: str,
+    e2e_child_env: dict[str, str],
+) -> None:
+    """Exercise the guide's local --template-url/--ref HEAD recipe without network."""
+    dst = tmp_path / "local-trial"
+    result = subprocess.run(  # noqa: S603 -- installed console and disposable fixture
+        [
+            create_forge_command,
+            "new",
+            "Local Template Trial",
+            "--yes",
+            "--template-url",
+            str(template),
+            "--ref",
+            "HEAD",
+            "--path",
+            str(dst),
+        ],
+        env=e2e_child_env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Template code will be executed" in result.stderr
+    assert "v2" in (dst / "README.md").read_text(encoding="utf-8")
+    assert yaml.safe_load((dst / ".copier-answers.yml").read_text(encoding="utf-8"))[
+        "_src_path"
+    ] == str(template)
+
+
 def test_update_dry_run_changes_nothing_before_a_real_update(
     template: Path, tmp_path: Path
 ) -> None:
