@@ -83,6 +83,24 @@ Replace the URL with a Copier template you trust. It may execute arbitrary
 generation or update tasks. The command warns and asks for confirmation;
 `--yes` skips that confirmation as well as normal questions.
 
+The source validation below is implemented on `main` for the next release;
+released 0.3.0 does not enforce it. Use credential-free sources with every
+version.
+
+Template URLs must be credential-free: HTTP(S) usernames, passwords or tokens
+in the URL are rejected, as are SSH URL passwords and URL queries or
+fragments. Authenticate with an external Git credential helper or SSH agent.
+An SSH username such as `git` in `git@github.com:you/your-template.git` is
+supported. Use `--ref` for a tag or branch instead of a URL fragment.
+These checks also apply with `--yes` and `--dry-run`, and to Copier's
+`git+`, `gh:` and `gl:` source forms.
+
+When updating an existing project, the recorded `_src_path` in
+`.copier-answers.yml` must follow the same policy. If it contains credentials,
+replace it with the equivalent credential-free source and configure external
+authentication before retrying. The CLI reports the affected field without
+printing its value and does not edit the answers file for you.
+
 The CLI's interactive questions still come from its bundled template
 registry. For a custom template with different questions, pass matching
 `--data` answers with `--yes`, or use Copier directly for its native prompt

@@ -121,9 +121,14 @@ def test_scaffold_process_failure_hides_credentials_and_process_output(
 ) -> None:
     dst = tmp_path / "proj"
     sensitive = "do-not-display"
-    source = f"https://user:{sensitive}@example.invalid/template.git"
+    source = "https://example.invalid/template.git"
     process_error = ProcessExecutionError(
-        ["git", "clone", source, "v1-secret-ref"],
+        [
+            "git",
+            "clone",
+            f"https://user:{sensitive}@example.invalid/template.git",
+            "v1-secret-ref",
+        ],
         128,
         f"sensitive stdout: {sensitive}",
         f"sensitive stderr: {sensitive}",

@@ -237,6 +237,23 @@ for the full staging, finalisation, and cleanup rules ADR 0015 introduces.
 
 ## Exit statuses
 
+Template sources are validated before `new` asks any questions, including
+the third-party confirmation; `--yes` and `--dry-run` do not bypass validation.
+HTTP(S) user-info (even username-only or encoded), SSH URL passwords, URL
+queries/fragments, malformed authorities, and control characters fail with
+exit `1`. Copier's `git+` and `gh:`/`gl:` forms receive the same checks, while
+ordinary SSH usernames, SCP-style sources, and local paths remain supported.
+Accepted source strings and `--ref` values reach Copier unchanged. Source
+warnings use literal text rather than interpreting source characters as Rich
+markup; authentication, queries, and fragments are defensively removed.
+
+`update` validates the recorded `.copier-answers.yml` `_src_path` before
+invoking Copier. Missing or malformed source metadata also fails with exit
+`1`, without rewriting the answers file or changing project contents. Errors
+identify the affected option or metadata field without echoing its value and
+recommend credential helpers or SSH agents; URL query/fragment errors point
+to `--ref` for version selection. See [ADR 0036](adr/0036-template-source-credentials.md).
+
 | Status | Meaning | Examples |
 | --- | --- | --- |
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
@@ -253,6 +270,9 @@ Copier's `ProcessExecutionError` boundary and reports checks for the template
 URL, `--ref`, network, repository access, and Git credentials. It never echoes
 the raw Git command, stdout, stderr, source, or ref because those details may
 contain credentials. Unrelated exceptions are not converted into user errors.
+Unrecognised `CopierError` messages likewise use fixed template/answers/ref
+guidance rather than repeating raw exception text. Original causes remain
+internal; normal error rendering never prints their chains.
 
 `doctor --json` prints the same facts as the table — see
 [docs/engine-resolution.md](engine-resolution.md)'s diagnostics contract for
