@@ -2,8 +2,8 @@
 
 Copier's Python API is public but not versioned as strictly as its CLI, so this
 module is the single place that touches it. Pin copier narrowly in
-pyproject.toml (`copier>=9.4,<10`) and this file is the only thing that needs
-attention on a major bump.
+pyproject.toml (`copier>=9.15.2,<10`) and this file is the only thing that
+needs attention on a major bump.
 """
 
 from __future__ import annotations

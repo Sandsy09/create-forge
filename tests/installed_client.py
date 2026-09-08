@@ -2,9 +2,10 @@
 
 `tests/test_e2e_installed_data_science.py` (CF-14.02, ADR 0032) and
 `tests/test_e2e_installed_rollout.py` (CF-14.03, ADR 0033) both drive the real
-`create-forge` console script installed from a freshly built `0.3.0` wheel,
-rather than the editable development environment `tests/conftest.py`'s
-`create_forge_command` resolves. Building that wheel and its virtual
+`create-forge` console script installed from a freshly built wheel (at
+`CLIENT_VERSION`), rather than the editable development environment
+`tests/conftest.py`'s `create_forge_command` resolves. Building that wheel and
+its virtual
 environments is the most expensive thing either suite does, so the build, the
 environment construction, and the subprocess plumbing live here and are shared.
 
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-CLIENT_VERSION = "0.3.0"
+CLIENT_VERSION = "0.3.1"
 ENGINE_VERSION = "0.4.1"
 DEFAULT_PYTHON = "3.13"
 SUBPROCESS_TIMEOUT = 1800
@@ -133,7 +134,7 @@ def installed_child_env(
 
 
 def build_candidate_wheel(dist_dir: Path, base_env: Mapping[str, str]) -> Path:
-    """Build one `create_forge-0.3.0-*.whl` into `dist_dir`.
+    """Build one `create_forge-<CLIENT_VERSION>-*.whl` into `dist_dir`.
 
     Uses the repository's own `uv` -- the wheel build is a create-forge
     working-tree operation, not part of the isolated candidate environment.

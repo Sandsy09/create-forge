@@ -85,7 +85,7 @@ def e2e_child_env() -> dict[str, str]:
 
 @pytest.fixture(scope="session")
 def candidate_wheel(e2e_child_env: dict[str, str]) -> Iterator[Path]:
-    """Build the create-forge `0.3.0` candidate wheel exactly once per session.
+    """Build the create-forge candidate wheel exactly once per session.
 
     Shared by every `e2e`-marked suite that installs the release candidate
     rather than resolving the editable console script: CF-14.02's installed

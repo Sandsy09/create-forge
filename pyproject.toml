@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "create-forge"
-version = "0.3.0"
+version = "0.3.1"
 description = "Scaffold modern Python projects from maintained templates."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,9 +29,16 @@ classifiers = [
 
 dependencies = [
     # Pinned to a major: the Python API is public but evolves faster than the
-    # CLI. runner.py is the only module that touches it.
-    "copier>=9.4,<10",
-    "typer>=0.15",
+    # CLI. runner.py is the only module that touches it. The lower bound clears
+    # every published Copier advisory -- the destination-escape set fixed
+    # through 9.14.1, and one patch further to 9.15.2 for a clean rule. See
+    # ADR 0038 and docs/engine-updates.md.
+    "copier>=9.15.2,<10",
+    # >=0.16: typer 0.15.0-0.15.3 declare an uncapped click and break against
+    # click >=8.2 (TyperArgument.make_metavar), and 0.15.4 pins click <8.2.
+    # 0.16.0 is the first release that works with current click. The CI
+    # `floor` job (ADR 0038) is what caught the stale >=0.15 bound.
+    "typer>=0.16",
     "questionary>=2.0",
     "pydantic>=2.10",
     "rich>=13.9",
@@ -48,7 +55,9 @@ dependencies = [
 # call. src/create_forge/engine.py is the only module that imports it;
 # src/create_forge/compat.py holds the range itself so cli.py's `doctor` can
 # report it without importing the engine. ADR 0021 adds bounded uv to finalise
-# the engine render's dynamic lockfile.
+# the engine render's dynamic lockfile; ADR 0038 reviewed that `uv` floor
+# against the advisory record and held it -- the whole `>=0.12,<0.13` range is
+# already advisory-free.
 engine = ["forge-template>=0.4.1,<0.5", "uv>=0.12,<0.13"]
 
 [project.scripts]

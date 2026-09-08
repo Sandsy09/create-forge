@@ -126,6 +126,19 @@ def _engine_extra_requirement(
     return matches[0]
 
 
+def _base_requirement(raw_requirements: Sequence[str], name: str) -> Requirement:
+    """The unconditional (`marker is None`) requirement for ``name``."""
+    matches = [
+        requirement
+        for raw in raw_requirements
+        if canonicalize_name((requirement := Requirement(raw)).name)
+        == canonicalize_name(name)
+        and requirement.marker is None
+    ]
+    assert len(matches) == 1, matches
+    return matches[0]
+
+
 def test_candidate_wheel_installs_the_reviewed_pair(
     installed_client: InstalledClient,
 ) -> None:
@@ -161,6 +174,11 @@ def test_candidate_wheel_installs_the_reviewed_pair(
     assert str(engine.marker) == 'extra == "engine"'
     assert str(uv.marker) == 'extra == "engine"'
     assert Version(payload["uv_version"]) in uv.specifier
+
+    # ADR 0038: the advisory-cleared Copier floor is carried through into the
+    # built wheel's own metadata, not just pyproject.toml.
+    copier = _base_requirement(requirements, "copier")
+    assert {str(specifier) for specifier in copier.specifier} == {">=9.15.2", "<10"}
 
     path_probe = _run(
         [
