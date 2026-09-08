@@ -43,6 +43,19 @@ Two reference kinds sit **outside** the rule:
 Reusable-workflow references (`owner/repo/.github/workflows/x.yml@<sha>`) follow
 the same SHA rule; there are none today.
 
+## The repository action allowlist
+
+Settings → Actions → General on this repo is set to **Allow select actions**:
+GitHub-owned actions plus an explicit `patterns_allowed` list. That list gates
+*which* third-party actions may run at all — today `astral-sh/setup-uv` and
+`pypa/gh-action-pypi-publish`. The entries use the `owner/repo@*` form so a
+SHA-pinned reference still matches; the SHA in the workflow and
+`check_workflows.py` are what fix the *version*. A brand-new third-party action
+needs an allowlist entry added (via the settings UI or
+`gh api --method PUT repos/<owner>/<repo>/actions/permissions/selected-actions`)
+in the same change that introduces it — otherwise the workflow fails at
+startup with no log.
+
 ## The permissions rule
 
 Each workflow declares `permissions:` at the top level with `contents: read`
@@ -65,7 +78,7 @@ scopes. Job-level scopes are not otherwise constrained: a new job that needs
 
 ## Reviewing a Dependabot Action upgrade
 
-Dependabot's `github-actions` ecomony proposes a new SHA and version comment
+Dependabot's `github-actions` ecosystem proposes a new SHA and version comment
 for an action. Before approving:
 
 1. Confirm the new SHA is the commit the proposed tag resolves to —

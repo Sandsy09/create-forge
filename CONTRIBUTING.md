@@ -193,7 +193,13 @@ When Dependabot opens a `chore: bump actions/…` PR, confirm the proposed SHA i
 the commit its version tag resolves to before approving — `gh api
 repos/<owner>/<repo>/git/ref/tags/<tag>`, dereferencing an annotated tag with
 `gh api repos/<owner>/<repo>/git/tags/<sha>`. Pin at that SHA; a version jump
-you did not intend is declined, not merged. The full rules are in the canonical
+you did not intend is declined, not merged.
+
+This repo is set to **Allow select actions** (Settings → Actions → General),
+so a brand-new third-party action also needs an allowlist entry —
+`gh api --method PUT repos/Sandsy09/create-forge/actions/permissions/selected-actions`
+— added in the same change, or the whole run fails at startup with no log. The
+full rules are in the canonical
 [workflow security contract](docs/workflow-security.md) and
 [ADR 0037](docs/adr/0037-immutable-workflow-actions.md).
 

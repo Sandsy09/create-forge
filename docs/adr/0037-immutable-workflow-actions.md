@@ -26,6 +26,11 @@ it. PRs #132–#135 SHA-pinned `actions/setup-python`, `actions/upload-artifact`
 `actions/upload-pages-artifact` and `actions/deploy-pages`; this decision
 finishes the set and makes the policy self-enforcing.
 
+This repo's Actions policy is **Allow select actions** with an explicit
+third-party allowlist, which previously named the exact mutable tags
+(`astral-sh/setup-uv@v7`). A SHA reference does not match a `@v7` allowlist
+entry, and a non-matching `uses:` fails the whole run at startup with no log.
+
 ## Decision
 
 1. **Pin every external `uses:` reference to a full 40-character commit SHA.**
@@ -48,7 +53,12 @@ finishes the set and makes the policy self-enforcing.
    `tests/test_workflows.py` runs it inside the fast suite that the `all-green`
    aggregate check requires.
 
-4. **Resolve a Dependabot Action upgrade to its reviewed commit before
+4. **Widen the Actions allowlist entries to `owner/repo@*`.** The allowlist
+   stays as the gate on *which* third-party actions may run; the SHA pin and
+   check 3 are the gate on *which version*. A new third-party action is
+   allowlisted in the change that introduces it.
+
+5. **Resolve a Dependabot Action upgrade to its reviewed commit before
    merging.** Dependabot proposes a new SHA and version comment; the reviewer
    confirms the SHA is the commit the claimed tag resolves to. The check keeps
    the PR red until the reference is a full SHA with a comment.
@@ -67,6 +77,10 @@ finishes the set and makes the policy self-enforcing.
   check blocks a workflow-level `write` grant, including `permissions:
   write-all`; a read-only workflow-level `contents: read` is allowed as the
   floor.
+- The Actions allowlist now admits any ref of the two named third-party
+  actions, not one tag. Narrowing *which version* runs moves entirely to the
+  workflow SHA and check 3; the allowlist keeps its narrower job of bounding
+  *which actions* run at all.
 - This changes CI and release plumbing only. It does not alter the package
   version, the engine compatibility range, the template trust boundary, or
   `forge-template`.

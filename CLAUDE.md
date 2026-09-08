@@ -614,3 +614,10 @@ PyPI is a separate, deferred decision — [#9](https://github.com/Sandsy09/creat
 - `gh` pushes fail on `.github/workflows/**` without the `workflow` OAuth scope
   (`gh auth refresh -h github.com -s workflow`). Relevant if repo creation is
   ever added.
+- This repo's Actions policy is **Allow select actions** (Settings → Actions →
+  General). A `uses:` a pattern in `patterns_allowed` doesn't match fails the
+  whole run at startup with no log — `startup_failure`, 0s. The entries use
+  `owner/repo@*` so SHA pins match; a new third-party action needs an
+  allowlist entry (`gh api --method PUT
+  repos/Sandsy09/create-forge/actions/permissions/selected-actions`) added
+  with it. See [ADR 0037](docs/adr/0037-immutable-workflow-actions.md).
