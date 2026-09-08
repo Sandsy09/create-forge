@@ -66,6 +66,7 @@ uvx --from "create-forge[engine]==0.3.0" create-forge doctor
 | uvx runs an older CLI | Request `create-forge@latest`, or update your persistent installation. |
 | Generation cannot commit | Check `git config user.name` and `git config user.email`. |
 | Template download fails | Check the repository URL, requested Git ref, network, and repository access. |
+| Template cache is unusable, or `doctor` reports it not writable | Point `COPIER_CACHE_DIR` at a fresh writable directory (see below). Common on managed machines. |
 | Destination already contains files | Choose a new or empty directory; generation does not overwrite a populated project. |
 | Engine is missing or incompatible | Install the engine extra and run diagnostics in that same environment. |
 | Data Science rejects the selection | Include `--capability jupyter`; an explicit scientific stack alone is insufficient. |
@@ -78,3 +79,29 @@ Before retrying a failed generation, inspect the destination. Report the
 exact command, CLI version, template tag or engine version, operating
 system, and relevant error output through [feedback](feedback.md). Remove
 credentials and private data from commands and logs before posting.
+
+## Redirect the template cache
+
+Copier keeps a git mirror of each template under a per-user cache directory.
+On a managed or corporate machine that location can be redirected to a path
+that is missing, read-only, or not a real Git repository, and generation then
+fails with a cache error. `create-forge doctor` shows the resolved cache path
+and whether it is writable.
+
+Point Copier at a fresh, writable directory — do not delete the existing one:
+
+```powershell
+$env:COPIER_CACHE_DIR = "C:\forge-cache"
+```
+
+```bash
+export COPIER_CACHE_DIR="$HOME/.cache/forge-copier"
+```
+
+Then re-run `create-forge doctor` in the same shell to confirm the new path is
+writable, and retry generation. To make it permanent, set `COPIER_CACHE_DIR`
+in your shell profile or system environment.
+
+Capture `create-forge doctor --json` *before* retrying a failed generation:
+Copier removes its temporary worktree when a run fails, so diagnostics
+collected afterwards no longer show the state that caused it.

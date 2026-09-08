@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,14 @@ from create_forge.prompts import (
     slugify,
 )
 from create_forge.registry import load_registry
-from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+from create_forge.runner import (
+    ScaffoldError,
+    ScaffoldRequest,
+    cache_probe,
+    copier_cache_location,
+    scaffold,
+    update,
+)
 from create_forge.sources import SourceError, display_source, validate_source
 from create_forge.spec import (
     DESCRIPTOR_KIND,
@@ -1051,6 +1059,30 @@ class ConfigSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class CopierCache:
+    """Copier's git-mirror cache location and whether create-forge could use
+    it -- see docs/engine-resolution.md's diagnostics contract. `writable` is
+    the only field that can fail a `doctor` check; the rest are facts.
+    """  # noqa: D205
+
+    path: str
+    override: bool
+    exists: bool
+    writable: bool
+
+
+@dataclass(frozen=True, slots=True)
+class UvStatus:
+    """The `uv` create-forge would actually run, and the one the `engine`
+    extra declares -- distinct facts that can legitimately differ.
+    """  # noqa: D205
+
+    path: str | None
+    version: str | None
+    package: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class Diagnostics:
     """Everything `doctor` reports, gathered once so the table and `--json`
     output can never disagree.
@@ -1061,12 +1093,81 @@ class Diagnostics:
     platform: str
     integration: Integration
     config: ConfigSummary
+    copier_cache: CopierCache
+    uv: UvStatus
     checks: list[Check]
 
     @property
     def ok(self) -> bool:
         """Whether every non-informational check passed."""
         return all(check.passed for check in self.checks if not check.informational)
+
+
+def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache, UvStatus]:
+    """Append the tooling rows and return the structured facts.
+
+    The git / uv / Copier-cache rows land in `checks`; the cache and uv facts
+    `doctor --json` reports alongside them come back as dataclasses.
+    """
+    git_found = shutil.which("git")
+    checks.append(
+        Check(
+            "git",
+            bool(git_found),
+            git_found or "not on PATH — required to clone templates",
+        )
+    )
+
+    uv_found = shutil.which("uv")
+    uv_version = _uv_version(uv_found)
+    checks.append(
+        Check(
+            "uv",
+            bool(uv_found),
+            f"{uv_version} ({uv_found})"
+            if uv_found and uv_version
+            else uv_found or "not on PATH — required by generated projects",
+        )
+    )
+
+    cache = copier_cache_location()
+    probe = cache_probe(cache)
+    checks.append(
+        Check(
+            "copier cache",
+            True,
+            f"{cache.path} "
+            + (
+                "(COPIER_CACHE_DIR override)"
+                if cache.overridden
+                else "(default location)"
+            ),
+            informational=True,
+        )
+    )
+    checks.append(
+        Check(
+            "copier cache writable",
+            probe.writable,
+            "writable"
+            if probe.writable
+            else "not writable — set COPIER_CACHE_DIR to a writable directory",
+        )
+    )
+
+    return (
+        CopierCache(
+            path=str(cache.path),
+            override=cache.overridden,
+            exists=probe.exists,
+            writable=probe.writable,
+        ),
+        UvStatus(
+            path=uv_found,
+            version=uv_version,
+            package=_optional_dist_version("uv"),
+        ),
+    )
 
 
 def _gather_diagnostics() -> Diagnostics:
@@ -1091,12 +1192,7 @@ def _gather_diagnostics() -> Diagnostics:
     python_version = f"{py.major}.{py.minor}.{py.micro}"
     check(py >= (3, 11), "Python 3.11+", python_version)
 
-    for tool, why in (
-        ("git", "required to clone templates"),
-        ("uv", "required by generated projects"),
-    ):
-        found = shutil.which(tool)
-        check(bool(found), tool, found or f"not on PATH — {why}")
+    copier_cache, uv_status = _tooling_diagnostics(checks)
 
     if shutil.which("git"):
         name = _git_config("user.name")
@@ -1171,8 +1267,36 @@ def _gather_diagnostics() -> Diagnostics:
             template_ref=None,
         ),
         config=ConfigSummary(path=str(config_path()), keys=config_keys),
+        copier_cache=copier_cache,
+        uv=uv_status,
         checks=checks,
     )
+
+
+def _uv_version(uv_path: str | None) -> str | None:
+    """The version `uv --version` reports, or None when it can't be trusted.
+
+    `uv --version` prints e.g. `uv 0.12.10`. Only a token that looks like a
+    version is returned, so nothing arbitrary from the subprocess can reach
+    `doctor`'s output.
+    """
+    if not uv_path:
+        return None
+    try:
+        result = subprocess.run(  # noqa: S603
+            [uv_path, "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):  # pragma: no cover
+        return None
+    match result.stdout.split():
+        case [_, token, *_] if re.fullmatch(r"[0-9][0-9A-Za-z.+-]*", token):
+            return token
+        case _:
+            return None
 
 
 def _render_diagnostics_table(diagnostics: Diagnostics, target: Console) -> None:
@@ -1219,6 +1343,17 @@ def _diagnostics_payload(diagnostics: Diagnostics) -> dict[str, object]:
             "template_ref": integration.template_ref,
         },
         "config": {"path": diagnostics.config.path, "keys": diagnostics.config.keys},
+        "copier_cache": {
+            "path": diagnostics.copier_cache.path,
+            "override": diagnostics.copier_cache.override,
+            "exists": diagnostics.copier_cache.exists,
+            "writable": diagnostics.copier_cache.writable,
+        },
+        "uv": {
+            "path": diagnostics.uv.path,
+            "version": diagnostics.uv.version,
+            "package": diagnostics.uv.package,
+        },
         "checks": [
             {"name": c.name, "ok": c.passed, "detail": c.detail}
             for c in diagnostics.checks

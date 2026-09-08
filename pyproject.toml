@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "create-forge"
-version = "0.3.1"
+version = "0.3.2"
 description = "Scaffold modern Python projects from maintained templates."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,11 +29,13 @@ classifiers = [
 
 dependencies = [
     # Pinned to a major: the Python API is public but evolves faster than the
-    # CLI. runner.py is the only module that touches it. The lower bound clears
-    # every published Copier advisory -- the destination-escape set fixed
-    # through 9.14.1, and one patch further to 9.15.2 for a clean rule. See
-    # ADR 0038 and docs/engine-updates.md.
-    "copier>=9.15.2,<10",
+    # CLI. runner.py is the only module that touches it. The lower bound was
+    # raised past the destination-escape advisories to 9.15.2 (ADR 0038), then
+    # to 9.16 (ADR 0039): 9.16 is the first release with the git-mirror cache
+    # and COPIER_CACHE_DIR that runner.py models and `doctor` reports -- a
+    # required-behaviour move, not an advisory one. The whole >=9.16 range is
+    # advisory-free. See docs/engine-updates.md.
+    "copier>=9.16,<10",
     # >=0.16: typer 0.15.0-0.15.3 declare an uncapped click and break against
     # click >=8.2 (TyperArgument.make_metavar), and 0.15.4 pins click <8.2.
     # 0.16.0 is the first release that works with current click. The CI
@@ -43,6 +45,11 @@ dependencies = [
     "pydantic>=2.10",
     "rich>=13.9",
     "pyyaml>=6.0",
+    # runner.py resolves Copier's cache directory by Copier's own documented
+    # rule (COPIER_CACHE_DIR, else the platformdirs user cache). Pinned to the
+    # bound Copier itself declares so it adds no resolution pressure and the
+    # CI `floor` job sees the version Copier's own floor would (ADR 0039).
+    "platformdirs>=4.3.6",
 ]
 
 [project.optional-dependencies]

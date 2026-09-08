@@ -274,6 +274,16 @@ Unrecognised `CopierError` messages likewise use fixed template/answers/ref
 guidance rather than repeating raw exception text. Original causes remain
 internal; normal error rendering never prints their chains.
 
+An unusable Copier template cache (Copier `>=9.16`) is a distinct exit-`1`
+condition ([ADR 0039](adr/0039-copier-cache-diagnostics.md)). It is recognised
+from fixed signals only -- a `not a git repository` phrase in stderr that also
+names the resolved cache directory, or an `OSError` Copier raises directly
+while creating that directory -- and answered with `COPIER_CACHE_DIR` recovery
+guidance for PowerShell and POSIX shells. The message names only create-forge's
+own resolved cache path; argv, stdout, and stderr are still never emitted. An
+`OSError` whose path is not under the cache directory re-raises untouched
+rather than being disguised as a user error.
+
 `doctor --json` prints the same facts as the table — see
 [docs/engine-resolution.md](engine-resolution.md)'s diagnostics contract for
 the field list — as a single JSON object on stdout instead, with no table

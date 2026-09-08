@@ -173,7 +173,7 @@ request:
 | `test` | the fast suite, matrixed across Python 3.11–3.14 — includes `tests/test_workflows.py`, the SHA-pin and permission-placement guard for `.github/workflows/` |
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
-| `floor` | the fast suite with `uv --resolution lowest-direct`, so `copier>=9.15.2` and the `engine` extra's `forge-template` / `uv` floors are exercised at their lower bounds, not just at whatever CI resolves ([ADR 0038](docs/adr/0038-dependency-floor-review.md)) |
+| `floor` | the fast suite with `uv --resolution lowest-direct`, so `copier>=9.16` and the `engine` extra's `forge-template` / `uv` floors are exercised at their lower bounds, not just at whatever CI resolves ([ADR 0038](docs/adr/0038-dependency-floor-review.md), [ADR 0039](docs/adr/0039-copier-cache-diagnostics.md)) |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
 | `e2e` | `pytest -m e2e` — both generation paths, installed-candidate Data Science and rollout regression, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
 | `all-green` | an aggregate check; this is the one branch protection requires |
@@ -206,15 +206,18 @@ full rules are in the canonical
 
 ## Dependency floors
 
-The lower bounds in `pyproject.toml` — `copier>=9.15.2`, the `engine` extra's
+The lower bounds in `pyproject.toml` — `copier>=9.16`, the `engine` extra's
 `uv>=0.12` — are a support claim, and the CI `floor` job proves the fast suite
 still passes at them. They move only on advisory or required-behaviour
 evidence, never because Dependabot bumped the lock
-([ADR 0038](docs/adr/0038-dependency-floor-review.md); the rule and the
+([ADR 0038](docs/adr/0038-dependency-floor-review.md),
+[ADR 0039](docs/adr/0039-copier-cache-diagnostics.md); the rule and the
 re-verification query are in
 [docs/engine-updates.md](docs/engine-updates.md), "Reviewing a dependency
-floor"). Before a release, re-check that the `copier` floor still clears every
-published advisory:
+floor"). The `copier` floor was raised to `9.16` because that is the first
+release with the git-mirror cache and `COPIER_CACHE_DIR` that `runner.py`
+models and `doctor` reports. Before a release, re-check that the `copier`
+floor still clears every published advisory:
 
 ```bash
 gh api graphql -f query='{ securityVulnerabilities(first: 20, ecosystem: PIP, package: "copier") { nodes { advisory { ghsaId severity } vulnerableVersionRange firstPatchedVersion { identifier } } } }'

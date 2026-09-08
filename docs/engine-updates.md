@@ -33,7 +33,7 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.1.x default `new` | `copier` | `>=9.15.2,<10` | Current released architecture (floor raised by ADR 0038) |
+| v0.1.x default `new` | `copier` | `>=9.16,<10` | Current released architecture (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Current architecture (ADR 0031) |
 
@@ -43,7 +43,11 @@ governs the hidden engine-preview path, and each has its own Dependabot gate
 below. Neither has replaced the other; the engine cutover that would retire
 the `copier` row remains a future, unfiled decision. `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
-updated by Dependabot, out of scope for everything below.
+updated by Dependabot, out of scope for everything below. `platformdirs`
+([ADR 0039](adr/0039-copier-cache-diagnostics.md)) is likewise ordinary —
+`runner.py` uses it to resolve Copier's cache directory by Copier's own rule —
+but its floor is deliberately held at `>=4.3.6`, the exact bound Copier itself
+declares, so the CI `floor` job resolves the version Copier's own floor would.
 
 `uv` (on the `engine` extra, [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md))
 is a **bounded ordinary** dependency, a category
@@ -127,13 +131,16 @@ adopted. The **lower** bound is a separate question with its own rule, set by
 - A floor moves only on **advisory or required-behaviour evidence**. A newer
   release, or a Dependabot lockfile bump, is not evidence — the lock tracking
   `copier 9.18.2` is not a reason to advertise `>=9.18.2`.
-- The `copier` floor is `>=9.15.2`: the lowest version with no published
-  GitHub advisory. Five of those advisories are *safe*-template
-  destination escapes that `create-forge` is directly exposed to; the rest
-  concern Copier's trust prefix, which `unsafe=True` means this client never
-  relies on — ADR 0038 has the full reasoning.
-- Re-verify the claim before changing a bound, because it is only as good as
-  the day it was last checked:
+- The `copier` floor is `>=9.16`. It clears every published GitHub advisory
+  (five *safe*-template destination escapes `create-forge` is directly
+  exposed to, fixed by `9.14.1`; the rest concern Copier's trust prefix, which
+  `unsafe=True` means this client never relies on — [ADR 0038](adr/0038-dependency-floor-review.md)
+  has the full reasoning). It was then raised from `9.15.2` to `9.16` because
+  `9.16.0` is the first release with the git-mirror cache and
+  `COPIER_CACHE_DIR` that `runner.py` models and `doctor` reports — a
+  required-behaviour move, [ADR 0039](adr/0039-copier-cache-diagnostics.md).
+- Re-verify the advisory claim before changing a bound, because it is only as
+  good as the day it was last checked:
 
   ```bash
   gh api graphql -f query='{ securityVulnerabilities(first: 20, ecosystem: PIP, package: "copier") { nodes { advisory { ghsaId severity } vulnerableVersionRange firstPatchedVersion { identifier } } } }'
@@ -141,7 +148,7 @@ adopted. The **lower** bound is a separate question with its own rule, set by
 
 - The CI `floor` job is the standing proof the advertised floors still
   resolve and pass: it runs the fast suite under
-  `uv sync --resolution lowest-direct`, so `>=9.15.2` and the `engine` extra's
+  `uv sync --resolution lowest-direct`, so `>=9.16` and the `engine` extra's
   `forge-template` / `uv` floors are tested, not assumed.
 
 ## Existing generated projects
@@ -180,7 +187,7 @@ source of truth the table can drift from.
   characterize the `forge-template` gate the same way, now that #9
   ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) has
   declared it. `test_copier_floor_clears_the_published_advisories` pins the
-  `copier` *lower* bound at `>=9.15.2` by exact string (ADR 0038).
+  `copier` *lower* bound at `>=9.16,<10` by exact string (ADR 0038, ADR 0039).
 - `.github/workflows/ci.yml`'s `floor` job runs the fast suite under
   `uv --resolution lowest-direct`, so the advertised floors are exercised and
   not merely asserted. It feeds the protected `all-green` aggregate check.
