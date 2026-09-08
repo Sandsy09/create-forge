@@ -61,8 +61,8 @@ your terminal.
 
 ```bash
 uvx create-forge@latest new
-uvx create-forge@0.3.0 new
-uv tool install "create-forge==0.3.0"
+uvx create-forge@0.3.2 new
+uv tool install "create-forge==0.3.2"
 ```
 
 Plain `uvx create-forge` can reuse a cached or persistently installed
@@ -126,7 +126,7 @@ target a particular template version.
 
 ## Preview: more project types and capabilities
 
-The `0.3.0` CLI also provides an opt-in engine preview using
+The `0.3.2` CLI also provides an opt-in engine preview using
 `forge-template>=0.4.1,<0.5`. These options are currently hidden from help.
 
 | Project type | Use it for |
@@ -141,7 +141,7 @@ Scientific Python is optional. These capabilities can also accompany the
 other preview archetypes.
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "My Analysis" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "My Analysis" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
 cd my-analysis
 uv run --locked poe check
 uv run poe notebook

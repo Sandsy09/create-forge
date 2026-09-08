@@ -5,14 +5,16 @@
 #
 # Every `key` below must match a question in forge-template's copier.yml
 # (invariant 1 in CLAUDE.md — Copier silently drops unknown `data` keys, so a
-# typo here produces a scaffold that looks fine and is subtly wrong). Audited
-# against forge-template@v0.1.1. Questions deliberately left unasked and
+# typo here produces a scaffold that looks fine and is subtly wrong). The
+# network drift suite checks the latest forge-template release (currently
+# v0.4.1), while --forge-template-root checks a pending sibling checkout.
+# Questions deliberately left unasked and
 # falling through to their copier.yml default via runner.py's `defaults=True`:
 # package_name, repo_name, repo_url, author_name, author_email,
 # codeowners_team, python_all, python_version, python_min_version,
 # python_matrix, versioning_resolved, initial_version, coverage_fail_under,
 # dependency_updates, changelog_tool. All of them have a default, so this is
-# safe — a test guarding it is tracked as a follow-up issue.
+# safe — test_unasked_questions_all_have_a_default guards that requirement.
 
 default_template = "library"
 

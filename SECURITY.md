@@ -8,7 +8,7 @@ templates declare `_tasks` — this is how a generated project arrives already
 git-initialised with hooks installed, and it is also a trust boundary: whatever
 is cloned, runs.
 
-That is acceptable only because template addresses are **bundled** in
+That is the default trust boundary because template addresses are **bundled** in
 [templates.toml](src/create_forge/templates.toml) — compiled into each
 release rather than fetched at runtime or read from user configuration
 (`config.toml` cannot set a template URL; see [config.py](src/create_forge/config.py)).
@@ -71,13 +71,17 @@ arbitrary `--template-url` execution. Unsupported engine or ProjectSpec
 protocol versions fail before discovery, template tasks or destination
 writes, exiting with a dedicated status (`3`) and no silent direct-Copier
 fallback; see the [engine resolution contract](docs/engine-resolution.md).
-This is an accepted target only; the v0.1.x rules above remain the current
-behaviour, and neither the new flags nor exit status `3` exist yet.
+The hidden `--engine-preview` path already performs package and protocol
+negotiation and uses exit status `3` for incompatibility. The default `new`
+path is still direct-Copier, however, and `--engine-source`/`--engine-ref` do
+not exist yet. Making the engine the default and adding those override flags
+remain one future, coordinated cutover.
 
-Automated dependency tooling cannot cross the compatibility-line dependency
-(`copier` today) on its own — [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md)
-restricts Dependabot to proposing updates within the declared range; crossing
-one requires a deliberate, human-authored pull request. See the
+Automated dependency tooling cannot cross either compatibility line (`copier`
+for the default path or `forge-template` for the preview path) on its own —
+[ADR 0012](docs/adr/0012-engine-dependency-update-policy.md) restricts
+Dependabot to proposing updates within each declared range; crossing one
+requires a deliberate, human-authored pull request. See the
 [engine update policy](docs/engine-updates.md).
 
 ## Supported versions

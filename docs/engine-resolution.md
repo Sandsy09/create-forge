@@ -150,7 +150,7 @@ major version.
 | --- | --- | --- |
 | `create_forge` | CLI version | always |
 | `python`, `platform` | interpreter version and OS | always |
-| `integration.line` | `"v0.2.x-copier"` | always |
+| `integration.line` | `"v0.3.x-copier"` | always — the CLI release line and default generation architecture; installing the engine extra does not change it |
 | `integration.copier` | installed Copier version | always -- Copier remains a direct dependency |
 | `integration.engine_package` | installed `forge-template` version, `null` if the `engine` extra isn't installed | `importlib.metadata`, never an import of the engine itself |
 | `integration.engine_range` | `"forge-template>=0.4.1,<0.5"` | always -- this is what this CLI release declares, independent of what's installed |
@@ -176,6 +176,14 @@ a real `get_engine_info()` call, which only `--engine-preview` makes.
 `integration.template_ref` stays `null` for the same "no network, no
 cutover-scoped work" reason -- that resolution belongs to `scaffold`/`update`,
 not to a health check.
+
+The human table reports `integration line` as the same informational value.
+It is not a health check and cannot change the exit status. The explicit value
+lives in engine-free `compat.py`; a fast regression test compares its major and
+minor components with `pyproject.toml`, so a future release-line change must
+review the identifier deliberately while patch releases leave it unchanged.
+The corrected `v0.3.x-copier` value is unreleased and will first appear in an
+installed package with the next create-forge release after `0.3.2`.
 
 The `copier_cache.writable` probe is non-destructive: it writes and deletes one
 uniquely named file in the cache directory, or -- when that directory does not

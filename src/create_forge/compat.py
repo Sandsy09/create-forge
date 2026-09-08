@@ -21,6 +21,15 @@ from __future__ import annotations
 ENGINE_DISTRIBUTION = "forge-template"
 """The PyPI distribution name `create-forge[engine]` declares."""
 
+INTEGRATION_LINE = "v0.3.x-copier"
+"""The create-forge release line and its default generation architecture.
+
+This is explicit rather than derived from installed metadata so a new release
+line requires a deliberate compatibility review. Installing the optional
+engine extra does not change it: `new` remains Copier-backed unless the hidden
+`--engine-preview` flag is selected.
+"""
+
 SUPPORTED_ENGINE_RANGE = ">=0.4.1,<0.5"
 """The supported `forge-template` compatibility range.
 

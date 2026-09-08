@@ -33,7 +33,7 @@ lists all supported answers, including ones the CLI does not prompt for.
 ## Scripts and CI
 
 ```bash
-uvx create-forge@0.3.0 new "Automation Lib" --ref v0.4.1 --yes --data github_org=example-org --data author_name=Example --data author_email=example@example.com --data build_backend=hatchling --data versioning=static
+uvx create-forge@0.3.2 new "Automation Lib" --ref v0.4.1 --yes --data github_org=example-org --data author_name=Example --data author_email=example@example.com --data build_backend=hatchling --data versioning=static
 ```
 
 `--yes` requires a project name, skips questions, and uses defaults for
@@ -83,9 +83,8 @@ Replace the URL with a Copier template you trust. It may execute arbitrary
 generation or update tasks. The command warns and asks for confirmation;
 `--yes` skips that confirmation as well as normal questions.
 
-The source validation below is implemented on `main` for the next release;
-released 0.3.0 does not enforce it. Use credential-free sources with every
-version.
+Source validation is enforced by released `0.3.2`. Use credential-free
+sources with every version.
 
 Template URLs must be credential-free: HTTP(S) usernames, passwords or tokens
 in the URL are rejected, as are SSH URL passwords and URL queries or

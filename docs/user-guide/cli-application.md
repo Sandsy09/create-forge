@@ -7,7 +7,7 @@ a `python -m` entry point, and tests for the starter command.
 ## Generate and run
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Weather Tools" --engine-preview --archetype cli --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Weather Tools" --engine-preview --archetype cli --yes --data license=mit
 cd weather-tools
 uv run --locked poe check
 uv run weather-tools --help

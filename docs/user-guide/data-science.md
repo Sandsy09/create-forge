@@ -7,7 +7,7 @@ required; the scientific runtime stack is optional.
 ## Start with notebooks and a package
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Notebook Study" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Notebook Study" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
 cd notebook-study
 uv run --locked poe check
 uv run poe notebook
@@ -24,7 +24,7 @@ For numerical work, data frames, charts, or machine learning, generate a
 second project with Scientific Python selected:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Model Study" --engine-preview --archetype data-science --capability jupyter --capability scientific-python --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Model Study" --engine-preview --archetype data-science --capability jupyter --capability scientific-python --yes --data license=mit
 cd model-study
 uv run --locked poe check
 uv run poe notebook

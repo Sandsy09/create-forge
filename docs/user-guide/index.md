@@ -8,7 +8,7 @@ provides the generated content and the optional composition engine. You do
 not need to clone either repository to generate a project, and your
 generated application does not depend on Forge at runtime.
 
-This guide covers **create-forge 0.3.0** and **forge-template 0.4.1**. The
+This guide covers **create-forge 0.3.2** and **forge-template 0.4.1**. The
 default workflow creates an updatable Library project. CLI Application,
 Data Science, and reusable capabilities are available through the
 [engine preview](projects.md).

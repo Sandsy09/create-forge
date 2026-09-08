@@ -42,7 +42,7 @@ create a starter notebook; Data Science supplies that file.
 Choose one archetype interactively:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new --engine-preview
+uvx --from "create-forge[engine]==0.3.2" create-forge new --engine-preview
 ```
 
 The CLI offers the archetypes and capabilities supplied by the installed

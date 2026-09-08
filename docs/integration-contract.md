@@ -279,7 +279,7 @@ status `3` exclusively for a failed compatibility check — see the
 before the engine cutover.
 
 At the engine cutover this compatible override replaces the current arbitrary
-`--template-url` option. The v0.1.x option and warning remain supported until
+`--template-url` option. The current Copier option and warning remain supported until
 then; there is no dual direct-Copier path afterward.
 
 ## Release coordination

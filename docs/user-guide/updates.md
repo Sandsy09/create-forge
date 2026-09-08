@@ -57,7 +57,7 @@ uvx create-forge doctor --json
 For the pinned preview environment instead:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge doctor
+uvx --from "create-forge[engine]==0.3.2" create-forge doctor
 ```
 
 | Symptom | Next step |

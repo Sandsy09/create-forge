@@ -33,7 +33,7 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.1.x default `new` | `copier` | `>=9.16,<10` | Current released architecture (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
+| v0.3.x default `new` | `copier` | `>=9.16,<10` | Current released architecture (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Current architecture (ADR 0031) |
 
@@ -115,12 +115,13 @@ step.
 | --- | --- | --- |
 | `github-actions` | Dependabot | None needed — not a compatibility-line dependency |
 | `uv` (`pyproject.toml` / `uv.lock`) | Dependabot | separate `ignore` rules block a major bump on `copier` and a major-or-minor bump on `forge-template` (pre-1.0) |
-| `.pre-commit-config.yaml` pinned hook revisions | Nobody | Known gap, tracked separately — [issue #17](https://github.com/Sandsy09/create-forge/issues/17); out of scope here |
+| `.pre-commit-config.yaml` pinned hook revisions | Maintainers | Reviewed and updated manually; closed [issue #17](https://github.com/Sandsy09/create-forge/issues/17) records why Dependabot does not cover this file |
 
-The `.pre-commit-config.yaml` gap is the same one that produced the stale
-ruff pin `.github/dependabot.yml`'s own comment describes. It is a real,
-already-filed gap in a different surface — dev tooling, not the
-compatibility line — and this decision does not close it.
+Pinned pre-commit hook revisions remain a manual maintenance surface.
+Dependabot covers GitHub Actions and uv dependencies, but not
+`.pre-commit-config.yaml`; closed issue #17 records that deliberate tooling
+choice and its history. Hook updates are reviewed alongside the corresponding
+development dependency when their behaviour must stay aligned.
 
 ## Reviewing a dependency floor
 

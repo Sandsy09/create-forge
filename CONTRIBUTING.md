@@ -98,18 +98,18 @@ the canonical [cross-repository contributor workflow](docs/cross-repository-work
 It defines the sibling-checkout commands, local registry/schema drift check,
 trust boundary, validation ladder, and safe merge/release order.
 
-The [Data Science roadmap](docs/roadmap-v2/README.md) continues the completed
-Foundation roadmap through Stages 10–14. create-forge owns its Stage 13
-discovery-driven preview integration and the Stage 14 end-to-end client
-rollout; component contracts and generated content remain in forge-template.
+The completed [Data Science roadmap](docs/roadmap-v2/README.md) followed the
+Foundation roadmap through Stages 10–14. create-forge owns its delivered Stage
+13 discovery-driven preview integration and Stage 14 end-to-end client rollout;
+component contracts and generated content remain in forge-template.
 The canonical
 [Data Science archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
 fixes the future shape and ownership boundary; create-forge must consume it
 through discovery rather than reproduce its component semantics.
 The canonical
 [initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
-likewise keep Jupyter requirements and Scientific Python selection engine-
-owned until generic capability selection is implemented in Stage 13.
+likewise keep Jupyter requirements and Scientific Python selection
+engine-owned; Stage 13 consumes those relationships through discovery.
 FT-11.01 through FT-11.03 are complete: the engine publishes the
 required Foundation points, Jupyter component under [forge-template ADR
 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
@@ -333,7 +333,7 @@ unchanged. [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds
 time, via the hidden `new --engine-preview` flag and a lazily-imported
 module `cli.py` otherwise never touches; ADR 0015 completes that flag with
 real staging and finalisation. The default `new` path, and every other
-command, remain the current v0.1.x Copier/registry implementation,
+command, remain the current v0.3.x Copier/registry implementation,
 authoritative until the coordinated CLI cutover.
 [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
 [end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
