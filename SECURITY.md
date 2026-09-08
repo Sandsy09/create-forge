@@ -41,9 +41,9 @@ stored by Git, shells, or other external tools. See
 The release and documentation workflows are a second supply-chain boundary:
 they hold `contents: write`, `id-token: write` (PyPI Trusted Publishing) and
 `pages: write`. Every external GitHub Action is pinned to a full commit SHA so
-a moved tag cannot change the code a privileged job runs, and token
-permissions are `{}` at the workflow level with `write`/`id-token` scopes only
-on the individual jobs that need them. `scripts/check_workflows.py` enforces
+a moved tag cannot change the code a privileged job runs, and workflow-level
+token permissions are read-only with `write`/`id-token` scopes only on the
+individual jobs that need them. `scripts/check_workflows.py` enforces
 both in CI, and a Dependabot Action bump is merged only after its proposed SHA
 is confirmed against the tag it claims. See
 [ADR 0037](docs/adr/0037-immutable-workflow-actions.md) and the

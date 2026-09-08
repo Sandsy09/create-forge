@@ -397,10 +397,11 @@ Run this before any release.
 
 Every external `uses:` in `.github/workflows/` is a full 40-character commit
 SHA with an adjacent `# vX.Y.Z` comment — not a branch or tag, which can be
-repointed after review. `permissions:` is `{}` at the workflow level; `write`
-and `id-token` scopes exist only on the individual `release`/`publish`/`deploy`
-jobs that need them. `docker://` and repository-local (`./…`) references are
-the only exceptions to the SHA rule. `scripts/check_workflows.py`
+repointed after review. Workflow-level `permissions:` is read-only
+(`contents: read`); `write` and `id-token` scopes exist only on the individual
+`release`/`publish`/`deploy` jobs that need them. `docker://` and
+repository-local (`./…`) references are the only exceptions to the SHA rule.
+`scripts/check_workflows.py`
 (`uv run poe check:workflows`, and `tests/test_workflows.py` in the fast suite)
 enforces both. A Dependabot Action bump merges only once its proposed tag is
 resolved to the SHA that tag points to. See
@@ -423,8 +424,8 @@ resolved to the SHA that tag points to. See
   crossed, and what automated dependency tooling may never do on its own.
 - The canonical [workflow security contract](docs/workflow-security.md)
   (ADR 0037) defines the external-action SHA-pinning rule and its `docker://`
-  / repository-local exceptions, the workflow-level `permissions: {}` rule and
-  per-job write scopes, and how a Dependabot Action bump is reviewed.
+  / repository-local exceptions, the read-only workflow-level `permissions:`
+  rule and per-job write scopes, and how a Dependabot Action bump is reviewed.
   `scripts/check_workflows.py` enforces it.
 - The canonical [ProjectSpec construction contract](docs/project-spec-construction.md)
   defines the CLI-answer-to-ProjectSpec field mapping, derivation rules,

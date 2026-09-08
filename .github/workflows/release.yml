@@ -14,11 +14,12 @@ on:
         type: boolean
         default: false
 
-# No token scope by default; `release` re-grants `contents: write` for the tag
-# push and `publish` re-grants `id-token: write` for PyPI Trusted Publishing.
-# External actions are pinned to full commit SHAs -- see
-# docs/workflow-security.md and scripts/check_workflows.py.
-permissions: {}
+# Read-only by default. `release` re-grants `contents: write` for the tag push;
+# `publish` re-grants `id-token: write` for PyPI Trusted Publishing. No job
+# holds a write scope it does not use -- see docs/workflow-security.md.
+# External actions are pinned to full commit SHAs (scripts/check_workflows.py).
+permissions:
+  contents: read
 
 env:
   UV_VERSION: "0.12.0"

@@ -18,9 +18,7 @@ the least immutable.
 
 Permissions were also granted too broadly. `release.yml` set `contents: write`
 at the workflow level, so its `publish` job held repository write access on top
-of the `id-token: write` it actually needs. `ci.yml` and `docs.yml` set
-`contents: read` at the workflow level, which every job then inherited whether
-it checked out or not.
+of the `id-token: write` it actually needs.
 
 `forge-template` already pins every external action to a full commit SHA.
 Dependabot reintroduces a mutable tag on each upgrade unless a check rejects
@@ -35,11 +33,12 @@ finishes the set and makes the policy self-enforcing.
    form Dependabot writes. Repository-local (`./…`) and explicitly accepted
    `docker://` references stay outside the rule.
 
-2. **Grant no token permissions at the workflow level.** Each workflow sets
-   `permissions: {}` at the top; every job re-grants only what it uses —
-   `contents: read` for a checkout, `contents: write` only on the `release`
-   job that pushes the tag, `id-token: write` only on the `publish` and Pages
-   `deploy` jobs, `pages: write` only on the Pages `deploy` job.
+2. **Keep the workflow-level token scope read-only.** Each workflow sets
+   `permissions: { contents: read }` at the top — the floor a checkout needs;
+   a job re-grants a wider scope only where it uses one: `contents: write`
+   only on the `release` job that pushes the tag, `id-token: write` only on
+   the `publish` and Pages `deploy` jobs, `pages: write` only on the Pages
+   `deploy` job.
 
 3. **Enforce both properties in the protected test path.**
    `scripts/check_workflows.py` rejects an external reference that is a branch,
@@ -65,7 +64,9 @@ finishes the set and makes the policy self-enforcing.
   so a release dry run does not exercise the OIDC path; the first real exercise
   is the next actual release.
 - A new workflow or job that needs a write scope must place it on the job. The
-  check blocks a workflow-level grant, including `permissions: write-all`.
+  check blocks a workflow-level `write` grant, including `permissions:
+  write-all`; a read-only workflow-level `contents: read` is allowed as the
+  floor.
 - This changes CI and release plumbing only. It does not alter the package
   version, the engine compatibility range, the template trust boundary, or
   `forge-template`.

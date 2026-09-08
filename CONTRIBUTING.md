@@ -184,9 +184,9 @@ can surface a registry mismatch or a template regression.
 ## Workflow security
 
 Every external action in `.github/workflows/` is pinned to a full commit SHA,
-and `permissions:` is `{}` at the workflow level with `write` / `id-token`
-scopes on only the `release`, `publish` and Pages `deploy` jobs.
-`scripts/check_workflows.py` (`uv run poe check:workflows`, and
+and workflow-level `permissions:` is read-only (`contents: read`) with
+`write` / `id-token` scopes on only the `release`, `publish` and Pages
+`deploy` jobs. `scripts/check_workflows.py` (`uv run poe check:workflows`, and
 `tests/test_workflows.py` in the fast suite) enforces both.
 
 When Dependabot opens a `chore: bump actions/…` PR, confirm the proposed SHA is

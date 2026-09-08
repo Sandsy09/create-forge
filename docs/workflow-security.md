@@ -45,16 +45,16 @@ the same SHA rule; there are none today.
 
 ## The permissions rule
 
-Each workflow declares `permissions: {}` at the top level, granting nothing by
-default. Every job then re-grants only the scopes it uses:
+Each workflow declares `permissions:` at the top level with `contents: read`
+and nothing more — a read-only floor. A job re-grants a wider scope only when
+it needs one:
 
 | Workflow / job | Scope | Why |
 | --- | --- | --- |
-| `ci.yml` — every job that checks out | `contents: read` | clone the repo |
-| `ci.yml` — `all-green` | none | only reads `needs.*.result` |
+| `ci.yml` — all jobs | `contents: read` (inherited) | clone the repo; nothing here writes |
 | `release.yml` — `release` | `contents: write` | push the release tag, create the GitHub release |
 | `release.yml` — `publish` | `contents: read`, `id-token: write` | check out, then PyPI Trusted Publishing |
-| `docs.yml` — `build` | `contents: read` | check out, build the site |
+| `docs.yml` — `build` | `contents: read` (inherited) | check out, build the site |
 | `docs.yml` — `deploy` | `pages: write`, `id-token: write` | deploy to GitHub Pages |
 
 The check rejects any `write` scope — or `permissions: write-all` — at the
