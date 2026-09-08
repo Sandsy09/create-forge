@@ -170,7 +170,7 @@ request:
 | Job | What |
 | --- | --- |
 | `lint` | `pre-commit run --all-files`, then `mypy` — the exact gate that runs locally on commit |
-| `test` | the fast suite, matrixed across Python 3.11–3.14 |
+| `test` | the fast suite, matrixed across Python 3.11–3.14 — includes `tests/test_workflows.py`, the SHA-pin and permission-placement guard for `.github/workflows/` |
 | `windows` | the fast suite on `windows-latest` — this tool is developed on Windows |
 | `wheel` | `poe check:wheel` |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
@@ -181,6 +181,28 @@ request:
 `forge-template` moves on its own schedule, so a PR is not the only thing that
 can surface a registry mismatch or a template regression.
 
+## Workflow security
+
+Every external action in `.github/workflows/` is pinned to a full commit SHA,
+and workflow-level `permissions:` is read-only (`contents: read`) with
+`write` / `id-token` scopes on only the `release`, `publish` and Pages
+`deploy` jobs. `scripts/check_workflows.py` (`uv run poe check:workflows`, and
+`tests/test_workflows.py` in the fast suite) enforces both.
+
+When Dependabot opens a `chore: bump actions/…` PR, confirm the proposed SHA is
+the commit its version tag resolves to before approving — `gh api
+repos/<owner>/<repo>/git/ref/tags/<tag>`, dereferencing an annotated tag with
+`gh api repos/<owner>/<repo>/git/tags/<sha>`. Pin at that SHA; a version jump
+you did not intend is declined, not merged.
+
+This repo is set to **Allow select actions** (Settings → Actions → General),
+so a brand-new third-party action also needs an allowlist entry —
+`gh api --method PUT repos/Sandsy09/create-forge/actions/permissions/selected-actions`
+— added in the same change, or the whole run fails at startup with no log. The
+full rules are in the canonical
+[workflow security contract](docs/workflow-security.md) and
+[ADR 0037](docs/adr/0037-immutable-workflow-actions.md).
+
 ## Architecture decisions
 
 Significant decisions live in [docs/adr/](docs/adr/) as Architecture Decision
@@ -190,6 +212,8 @@ record and incrementing the number; records are immutable, so a decision that
 changes is superseded by a new record, not an edit to an old one. `poe test`
 (and standalone, `uv run poe check:adr`) checks the set stays internally
 consistent — filenames, numbering, the index, and the four required headings.
+`poe test` likewise runs `check:workflows` (standalone: `uv run poe
+check:workflows`) over `.github/workflows/`.
 
 The accepted future boundary with `forge-template` is recorded in
 [ADR 0010](docs/adr/0010-public-engine-integration-contract.md), while the
