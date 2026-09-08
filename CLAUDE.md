@@ -393,6 +393,20 @@ uv run poe check:wheel
 
 Run this before any release.
 
+### 6. External Actions are pinned to reviewed commits
+
+Every external `uses:` in `.github/workflows/` is a full 40-character commit
+SHA with an adjacent `# vX.Y.Z` comment — not a branch or tag, which can be
+repointed after review. `permissions:` is `{}` at the workflow level; `write`
+and `id-token` scopes exist only on the individual `release`/`publish`/`deploy`
+jobs that need them. `docker://` and repository-local (`./…`) references are
+the only exceptions to the SHA rule. `scripts/check_workflows.py`
+(`uv run poe check:workflows`, and `tests/test_workflows.py` in the fast suite)
+enforces both. A Dependabot Action bump merges only once its proposed tag is
+resolved to the SHA that tag points to. See
+[ADR 0037](docs/adr/0037-immutable-workflow-actions.md) and the canonical
+[workflow security contract](docs/workflow-security.md).
+
 ## Conventions
 
 - The canonical [CLI UX and prompting conventions](docs/cli-conventions.md)
@@ -407,6 +421,11 @@ Run this before any release.
 - The canonical [engine update policy](docs/engine-updates.md) defines how a
   compatibility-line dependency update is adopted, how a breaking line is
   crossed, and what automated dependency tooling may never do on its own.
+- The canonical [workflow security contract](docs/workflow-security.md)
+  (ADR 0037) defines the external-action SHA-pinning rule and its `docker://`
+  / repository-local exceptions, the workflow-level `permissions: {}` rule and
+  per-job write scopes, and how a Dependabot Action bump is reviewed.
+  `scripts/check_workflows.py` enforces it.
 - The canonical [ProjectSpec construction contract](docs/project-spec-construction.md)
   defines the CLI-answer-to-ProjectSpec field mapping, derivation rules,
   protocol negotiation, and validation behaviour `spec.py`/`engine.py`
@@ -561,7 +580,10 @@ templates, CODEOWNERS.
 3.11–3.14, a Windows smoke job, `scripts/check_wheel.py` (`poe check:wheel`),
 and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
 covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
-Branch protection on `main` requires the `all-green` aggregate check.
+Branch protection on `main` requires the `all-green` aggregate check. Every
+external Action is SHA-pinned and workflow permissions are per-job, enforced by
+`scripts/check_workflows.py` (`poe check:workflows`, and `tests/test_workflows.py`
+in the fast suite) — ADR 0037.
 
 **5. `docs/`.** ✅ Partially done — `docs/adr/` records the accepted decisions,
 including the current Copier architecture, release version source, and the

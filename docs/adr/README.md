@@ -39,6 +39,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0034 — Publish create-forge 0.3.0 and close the Data Science roadmap](0034-publish-0-3-0-and-close-roadmap-v2.md)
 - [0035 — Shared Forge user documentation](0035-shared-forge-user-documentation.md)
 - [0036 — Keep credentials out of template sources and CLI diagnostics](0036-template-source-credentials.md)
+- [0037 — Pin external Actions to reviewed commits and scope permissions per job](0037-immutable-workflow-actions.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

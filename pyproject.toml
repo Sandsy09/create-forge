@@ -196,6 +196,12 @@ docs = "mkdocs serve"
 # via tests/test_adr.py; this is the standalone entry point.
 "check:adr" = "python scripts/adr.py"
 
+# Verifies every workflow pins its external actions to a full commit SHA and
+# keeps write permissions off the workflow level (ADR 0037). Also runs inside
+# the fast test suite via tests/test_workflows.py; this is the standalone
+# entry point -- see scripts/check_workflows.py.
+"check:workflows" = "python scripts/check_workflows.py"
+
 # Reconciles a repo's GitHub labels against .github/labels.toml. Idempotent:
 # `gh label create --force` creates or updates. Pass extra args after `--`,
 # e.g. `uv run poe labels:sync --dry-run` or `--repo OWNER/NAME --prune`
