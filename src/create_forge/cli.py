@@ -20,6 +20,7 @@ from rich.text import Text
 
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
+    INTEGRATION_LINE,
     SUPPORTED_ENGINE_RANGE,
     SUPPORTED_PROJECTSPEC_PROTOCOLS,
 )
@@ -106,7 +107,7 @@ def _optional_dist_version(name: str) -> str | None:
     Distinct from `_dist_version`: `create-forge` always depends on `name`
     there, so "unknown" signals a broken environment. Here `name` is the
     `engine` extra's `forge-template` -- not installed is the normal,
-    expected v0.2.x default, and docs/engine-resolution.md's diagnostics
+    expected default, and docs/engine-resolution.md's diagnostics
     contract documents `integration.engine_package` as `null` for it, not
     the string "unknown".
     """
@@ -1239,6 +1240,7 @@ def _gather_diagnostics() -> Diagnostics:
     info("create-forge", _dist_version("create-forge"))
     info("copier", _dist_version("copier"))
     info("template source", source_detail)
+    info("integration line", INTEGRATION_LINE)
     info(
         "engine",
         f"{ENGINE_DISTRIBUTION} {engine_package} installed (supports {engine_range})"
@@ -1257,7 +1259,7 @@ def _gather_diagnostics() -> Diagnostics:
         python=python_version,
         platform=sys.platform,
         integration=Integration(
-            line="v0.2.x-copier",
+            line=INTEGRATION_LINE,
             copier=_dist_version("copier"),
             engine_package=engine_package,
             engine_range=engine_range,

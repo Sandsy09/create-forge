@@ -152,7 +152,7 @@ engine internals to obtain them.
   dependency -- `forge-template>=0.3.1,<0.4` as the optional `engine`
   extra -- so this adapter now checks a real installable range rather than
   an exact development version. The atomic cutover that replaces the
-  v0.1.x registry seam and `--engine-preview` together with the engine as
+  default Copier registry seam and `--engine-preview` together with the engine as
   the default path remains a future, unfiled decision.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
   reviewed both archetypes for parity and confirmed discovery stays fully

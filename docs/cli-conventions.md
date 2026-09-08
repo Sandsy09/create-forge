@@ -4,7 +4,7 @@ This is the living contributor contract for `create-forge` commands, prompts,
 errors, and exit statuses. It records the user experience that future CLI work
 must preserve deliberately.
 
-The released v0.1.x implementation gathers answers from a bundled registry and
+The released v0.3.x default path gathers answers from a bundled registry and
 calls Copier directly. The accepted target in [ADR 0010](adr/0010-public-engine-integration-contract.md)
 replaces that boundary with the public `forge-template` engine and ProjectSpec.
 The implementation-specific mechanisms below will change at that cutover; the
@@ -24,7 +24,7 @@ Configuration, explicit inputs, and prompts have different jobs:
    A preset suppresses the corresponding prompt. If both the positional name
    and `--data project_name=...` are supplied, the `--data` value wins.
 4. Values the CLI does not ask for are resolved by the template-owned defaults.
-   In v0.1.x this is Copier's `defaults=True`; after the engine cutover it is
+   On the current default path this is Copier's `defaults=True`; after the engine cutover it is
    ProjectSpec and engine validation.
 
 Within an interactive question, a default derived from an earlier answer takes
@@ -60,7 +60,7 @@ Prompting is omitted only when the answer or decision is already explicit:
 
 The current `--template-url` escape hatch always prints its code-execution
 warning. It asks for confirmation unless `--yes` was supplied. This behavior
-remains authoritative for v0.1.x; the compatible local/VCS engine override
+remains authoritative for the current default path; the compatible local/VCS engine override
 described by the [integration contract](integration-contract.md) replaces it
 only at the coordinated engine cutover.
 
@@ -259,7 +259,7 @@ to `--ref` for version selection. See [ADR 0036](adr/0036-template-source-creden
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
 | `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)), or an `--engine-preview` selection `create-forge` rejects itself — a selection flag without `--engine-preview`, a contradictory `--capability`/`--no-capabilities` pair, an unknown or wrong-kind component id, or an option for an unselected component ([component selection contract](component-selection.md)). |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, malformed `--data` without `key=value`, or a malformed `--component-option` without `ID.OPTION=VALUE`. |
-| `3` | *Reserved.* An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md)) — the default `new` path is still v0.1.x direct-Copier and cannot produce it. |
+| `3` | An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md) — the default direct-Copier path cannot produce it). |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are
@@ -300,7 +300,7 @@ every check passes, `1` when any does not.
 - template selection, local configuration, and target-directory checks; and
 - presentation of user-facing diagnostics.
 
-It does not own generated-project schema or compatibility rules. In v0.1.x,
+It does not own generated-project schema or compatibility rules. On the default Copier path,
 `forge-template`'s `copier.yml` is authoritative for question types, defaults,
 choice domains, conditional semantics, and generated-project validation. The
 bundled registry contains the presentation metadata Questionary needs, but it
@@ -369,7 +369,7 @@ The contract is characterized by these tests:
   case for a descriptor that declares none, and — for
   `resolve_component_options` — multi-descriptor ordering and undeclared-key
   pass-through.
-- [`tests/test_drift.py`](../tests/test_drift.py) covers the v0.1.x boundary
+- [`tests/test_drift.py`](../tests/test_drift.py) covers the default-path boundary
   between registry presentation metadata and template-owned questions,
   choices, conditions, and defaults.
 - [`tests/test_update.py`](../tests/test_update.py) exercises a real Copier

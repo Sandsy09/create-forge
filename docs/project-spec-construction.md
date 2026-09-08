@@ -14,7 +14,7 @@ contract — today's mechanisms will change as the engine cutover approaches.
 
 The construction boundary is reachable from a real command, but only behind
 a hidden, opt-in flag: `create-forge new --engine-preview`. Without that
-flag, `new` keeps its v0.1.x direct-Copier path completely unchanged. [ADR
+flag, `new` keeps its default direct-Copier path completely unchanged. [ADR
 0014](adr/0014-lazy-engine-reachability.md) records why a hidden flag with a
 lazy import, rather than a default-path cutover, is what CF-07.01 shipped —
 `forge-template` is the optional `engine` extra (ADR 0018), not installed by

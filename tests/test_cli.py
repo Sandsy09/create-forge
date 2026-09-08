@@ -171,6 +171,8 @@ def test_doctor_reports_versions_and_the_engine_range(
     assert "not installed" in result.output
     assert "forge-template>=0.4.1,<0.5" in result.output
     assert "engine" in result.output
+    assert "integration line" in result.output
+    assert "v0.3.x-copier" in result.output
 
 
 def test_doctor_reports_the_installed_engine_package_when_present(
@@ -181,10 +183,15 @@ def test_doctor_reports_the_installed_engine_package_when_present(
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
     _show_engine_extra(monkeypatch, "0.4.1")
 
+    table_result = runner.invoke(app, ["doctor"])
     result = runner.invoke(app, ["doctor", "--json"])
 
+    assert table_result.exception is None, table_result.output
+    assert "integration line" in table_result.output
+    assert "v0.3.x-copier" in table_result.output
     payload = json.loads(result.output)
     assert payload["integration"]["engine_package"] == "0.4.1"
+    assert payload["integration"]["line"] == "v0.3.x-copier"
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -202,7 +209,7 @@ def test_doctor_json_emits_the_documented_shape(
     assert payload["create_forge"] == cli_module._version()
     assert payload["ok"] is True
     integration = payload["integration"]
-    assert integration["line"] == "v0.2.x-copier"
+    assert integration["line"] == "v0.3.x-copier"
     assert integration["engine_package"] is None
     assert integration["engine_range"] == "forge-template>=0.4.1,<0.5"
     assert integration["projectspec_protocol"] == {"supported": "1", "detected": None}
@@ -213,6 +220,7 @@ def test_doctor_json_emits_the_documented_shape(
     # into "checks".
     assert "Check" not in result.output
     assert all(c["name"] != "engine" for c in payload["checks"])
+    assert all(c["name"] != "integration line" for c in payload["checks"])
 
 
 def test_doctor_json_exits_1_when_a_check_fails(

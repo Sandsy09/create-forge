@@ -17,6 +17,8 @@ from typing import Any
 
 import yaml
 
+from create_forge.compat import INTEGRATION_LINE
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 DEPENDABOT = REPO_ROOT / ".github" / "dependabot.yml"
@@ -52,6 +54,18 @@ UV_REQUIREMENT = "uv>=0.12,<0.13"
 # >=9.16 range is still advisory-free. A silent edit back toward an earlier
 # floor must fail the fast suite, not just the CI `floor` job.
 COPIER_REQUIREMENT = "copier>=9.16,<10"
+
+
+def test_diagnostic_integration_line_matches_package_release_line() -> None:
+    """A major/minor release must deliberately review diagnostic metadata."""
+    project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
+    version_match = re.fullmatch(r"(\d+)\.(\d+)\.\d+", project["version"])
+    line_match = re.fullmatch(r"v(\d+)\.(\d+)\.x-copier", INTEGRATION_LINE)
+
+    assert version_match is not None
+    assert line_match is not None
+    assert line_match.groups() == version_match.groups()[:2]
+
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -339,20 +353,15 @@ def test_release_0_3_0_validation_doc_is_linked_from_entry_points() -> None:
     assert RELEASE_0_3_0_VALIDATION.is_file()
 
 
-def test_reserved_compatibility_exit_status_is_documented_once() -> None:
-    """Exit status 3 is reserved by ADR 0011 for engine/protocol
-    compatibility failures. It must appear in the CLI's exit-status table
-    (docs/cli-conventions.md) and agree with the engine-resolution contract
-    that it is reserved rather than already raised -- there is no code path
-    under the v0.1.x direct-Copier line that can produce it yet.
-    """
+def test_compatibility_exit_status_is_documented_once() -> None:
+    """Exit 3 is live for preview engine/protocol compatibility failures."""
     conventions_text = CLI_CONVENTIONS.read_text(encoding="utf-8")
     resolution_text = ENGINE_RESOLUTION.read_text(encoding="utf-8")
 
     row_re = re.compile(r"^\|\s*`3`\s*\|.*\|\s*$", re.MULTILINE)
     row_match = row_re.search(conventions_text)
     assert row_match, "docs/cli-conventions.md has no exit-status row for `3`"
-    assert "Reserved" in row_match.group(0)
+    assert "--engine-preview" in row_match.group(0)
 
     assert "exit status **`3`**, reserved exclusively for it" in resolution_text
 

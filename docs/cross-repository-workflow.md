@@ -19,7 +19,7 @@ release histories remain separate.
 
 ## Current and target integration
 
-The released v0.1.x CLI owns a bundled prompt registry and calls Copier through
+The released v0.3.x CLI's default path owns a bundled prompt registry and calls Copier through
 `src/create_forge/runner.py`. The current `--template-url` option is the
 sanctioned development escape hatch for selecting a sibling template checkout.
 It is also capable of running arbitrary third-party templates, so it always
@@ -31,7 +31,7 @@ engine. Cross-repository development will retain an explicit, warned local or
 VCS override; [ADR 0011](adr/0011-engine-source-and-version-resolution.md) and
 the canonical [engine resolution contract](engine-resolution.md) define that
 interface as `--engine-source`/`--engine-ref`, shipping at the coordinated
-engine cutover rather than today. Do not treat the v0.1.x option name as the
+engine cutover rather than today. Do not treat the current Copier option name as the
 future contract or bypass the compatibility rules in the
 [integration contract](integration-contract.md).
 
@@ -92,6 +92,10 @@ version outside it fails until the range, contract, and tests are deliberately
 moved together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
 
+This isolated installation is the supported preview-engine development seam.
+It is separate from `--template-url`, which exercises the default Copier path
+against template source and does not test the installed engine package.
+
 When `copier.yml` and `templates.toml` change together, point the drift suite
 at the working tree rather than its latest release:
 
@@ -101,8 +105,8 @@ uv run pytest tests/test_drift.py --forge-template-root=../forge-template
 
 This test-only option reads `../forge-template/copier.yml` directly, including
 uncommitted changes. Without the option, the network-marked drift suite keeps
-its normal behavior and clones the latest PEP 440 tag, matching what released
-v0.1.x users receive. Keep the option and path in the single equals-form
+its normal behavior and clones the latest PEP 440 tag, matching what supported
+v0.3.x users receive. Keep the option and path in the single equals-form
 argument shown above so pytest does not discover the sibling test suite while
 processing its initial paths.
 
@@ -153,27 +157,34 @@ ref, answers, tasks, and generated-project checks. Both are required for a
 paired schema/registry change because a successful scaffold alone can look
 correct after Copier silently discards an unknown answer.
 
-## Merge and release v0.1.x changes
+## Merge and release compatible changes
 
-Merging `forge-template` does not release it: v0.1.x consumers resolve its
-latest PEP 440 tag. Use this sequence for compatible paired changes:
+Merging `forge-template` does not publish either downstream surface: the
+default path resolves its latest PEP 440 Git tag, while the preview path
+resolves a bounded package from PyPI. Use this sequence for compatible paired
+changes:
 
 1. Open both pull requests and validate their working trees together with the
    local drift and scaffold commands above.
-2. Prove the pending template remains compatible with every supported released
-   v0.1.x CLI. Today that includes `create-forge` v0.1.0.
-3. Merge the `forge-template` pull request first, then publish its compatible
-   template tag.
-4. Rerun `uv run pytest -m network` on the `create-forge` branch so its registry
-   is checked against the tag users will resolve.
-5. Merge and, when needed, release the compatible `create-forge` change.
+2. Prove the pending provider remains compatible with the latest supported
+   create-forge release, currently `0.3.2`, on every affected surface.
+3. Merge the `forge-template` pull request first. Publish a compatible template
+   tag for Copier changes, or publish the provider package before changing the
+   client's engine bound. A change affecting both surfaces needs both provider
+   publications.
+4. After a template tag, rerun `uv run pytest -m network` on the create-forge
+   branch so its registry is checked against what default-path users resolve.
+   For an engine package, run the isolated cross-repository contract before
+   publication and the normal client suite against the published version.
+5. Merge and, when needed, release the compatible create-forge change only
+   after the provider surface it declares is available.
 
 Do not publish registry metadata before the corresponding template behavior is
 available from the latest compatible tag. Conversely, every new template tag
-must continue to work with supported v0.1.x CLI releases because those clients
+must continue to work with the latest supported CLI release because those clients
 also resolve the latest tag.
 
-There is no safe one-step v0.1.x release order for a removal, rename, narrowed
+There is no safe one-step release order for a removal, rename, narrowed
 choice domain, or other change that invalidates an existing CLI's inputs. Stage
 such work through a backward-compatible transition or defer it to the public
 engine cutover, where bounded package ranges and ProjectSpec protocol checks

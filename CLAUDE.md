@@ -36,7 +36,7 @@ src/create_forge/
 ├── models.py       Pydantic v2 models for the registry. No I/O.
 ├── templates.toml  Bundled registry data. Package data, ships in the wheel.
 ├── registry.py     Loads + validates templates.toml. Cached.
-├── config.py       User config (~/.config/create-forge/config.toml). NOT WIRED.
+├── config.py       User config (~/.config/create-forge/config.toml).
 ├── prompts.py      questionary flow. Driven entirely by registry data.
 ├── staging.py      Destination conflicts, staging, atomic finalisation,
 │                   cleanup. Engine-free; shared by runner.py and pipeline.py
@@ -225,21 +225,15 @@ The two-repository Stage 08 implementation is complete.
 
 ## Data Science roadmap
 
-The completed Foundation roadmap remains under `docs/roadmap-v1`. The live
-[Data Science roadmap](docs/roadmap-v2/README.md) continues through Stages
-10–14 with six epics and 24 filed child issues. forge-template owns the
-package-backed, notebook-oriented third archetype, reusable capabilities, and
-engine review;
-create-forge owns generic capability selection behind `--engine-preview` and
-the final client E2E rollout. Completed #91 is a native predecessor of
-CF-EPIC-13 because descriptor-driven option prompting is required. All 24
-child issues are filed and attached; do not recreate component metadata or
-make the engine path the default during roadmap work. **CF-EPIC-13 is
-complete** — CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-validated the Data Science preview pipeline, closing Stage 13.
+The completed Foundation roadmap remains under `docs/roadmap-v1`; the completed
+[Data Science roadmap](docs/roadmap-v2/README.md) covers Stages 10–14.
+forge-template owns the package-backed Data Science archetype, reusable
+capabilities, and engine review. create-forge owns generic capability selection
+behind `--engine-preview` and the client E2E rollout. Do not recreate provider
+component metadata or treat roadmap completion as an engine-default decision.
 CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
-has now adopted the reviewed `forge-template 0.4.1` release and prepared
-create-forge `0.3.0`. CF-14.02
+adopted the reviewed `forge-template 0.4.1` release and prepared create-forge
+`0.3.0`. CF-14.02
 ([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
 proves both accepted Data Science compositions through that candidate wheel's
 installed console script, and CF-14.03
@@ -310,10 +304,11 @@ Python 3.11/3.13/3.14 handoff matrix. The canonical
 record maps that evidence under
 [ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md).
 
-That target does not describe the current v0.1.x code. Until the coordinated
-cutover lands, the architecture and invariants below remain authoritative. Do
-not partially migrate ownership or weaken the bundled-source trust boundary in
-advance of the roadmap issues that implement and test the complete contract.
+The engine boundary is released behind `--engine-preview`, but it is not the
+default path. Until the coordinated cutover lands, the default Copier
+architecture and the invariants below remain authoritative. Do not partially
+migrate ownership or weaken the bundled-source trust boundary in advance of a
+decision that implements and tests the complete cutover contract.
 
 ## Invariants — do not break these
 
@@ -326,9 +321,9 @@ target template's `copier.yml`.
 error, the answer vanishes, the template default applies. A typo produces a
 scaffold that looks fine and is subtly wrong.
 
-There is currently **no test guarding this**. Adding one is a priority task
-(see backlog). It requires cloning the template repo, so mark it
-`@pytest.mark.network`.
+`tests/test_drift.py` guards this against the latest released template and an
+explicit sibling checkout. It is marked `network` because the release path
+clones the template repository.
 
 ### 2. copier.yml is the source of truth for defaults
 
@@ -342,12 +337,15 @@ never require a CLI change.
 `runner.scaffold()` passes `unsafe=True` (the API form of `--trust`) because
 templates declare `_tasks`. This executes code from whatever is cloned.
 
-This is acceptable **only because template URLs are bundled** — they ship with
+The default is acceptable because template URLs are bundled — they ship with
 the reviewed release and cannot be altered at runtime. Do not add remote
 registry fetching or config-based URL overrides without revisiting this. The
-`--template-url` flag is the sanctioned escape hatch and prompts for
-confirmation. See [ADR 0005](docs/adr/0005-execute-template-tasks.md) and
-[ADR 0006](docs/adr/0006-bundled-registry-over-remote.md).
+`--template-url` flag is the sanctioned explicit escape hatch: it validates the
+source, displays the code-execution warning, and prompts for confirmation
+unless `--yes` was supplied. See
+[ADR 0005](docs/adr/0005-execute-template-tasks.md),
+[ADR 0006](docs/adr/0006-bundled-registry-over-remote.md), and
+[ADR 0036](docs/adr/0036-template-source-credentials.md).
 
 ### 4. Copier's Python API is touched in exactly one place
 
@@ -530,30 +528,23 @@ resolved to the SHA that tag points to. See
 
 ## Current state
 
-Working: all six modules written and wired, registry validates, CLI structure
-complete, `config.py` imported by `cli.py`, a test suite with a `copier.yml`
-drift guard, a `pre-commit` gate mirrored in CI, the repo-hygiene files below
-all present, `docs/adr/` records the decisions this file used to state without
-their reasoning, `v0.1.0` is tagged and released — `uvx --from
-git+https://github.com/Sandsy09/create-forge@v0.1.0 create-forge` verified end
-to end from a clean environment — and `create-forge`/`create-forge[engine]`
-are published to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+Working: the default Copier path, optional engine-preview path, configuration,
+registry drift guard, staged filesystem generation, diagnostics, documentation
+site, packaging and CI gates are all implemented. `create-forge` and its
+`engine` extra are published to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
 The declared engine range moved from the first assigned
 `forge-template>=0.3.1,<0.4` to `>=0.4,<0.5` (CF-13.01,
 [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)), the
 0.4 Data Science line, then to the reviewed `>=0.4.1,<0.5` lower bound
 (CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
-`create-forge 0.3.0` is tagged `v0.3.0`, released, and published to PyPI
-(`create-forge` and `create-forge[engine]`) — CF-14.04,
+`create-forge 0.3.2` is the latest tagged and published release. The `0.3.0`
+release introduced the current engine-preview line — CF-14.04,
 [ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md),
 verified against its own artefacts in
 [release 0.3.0 validation](docs/release-0-3-0-validation.md).
 
-Not yet done:
-- MkDocs site ([#8](https://github.com/Sandsy09/create-forge/issues/8))
-
-## Backlog, in order
+## Completed bootstrap plan
 
 See [docs/plan-v0.1.0.md](docs/plan-v0.1.0.md) for the phased roadmap covering
 items 0-6 below (drift guard against `forge-template`'s `copier.yml`, test
@@ -598,19 +589,16 @@ external Action is SHA-pinned and workflow permissions are per-job, enforced by
 `scripts/check_workflows.py` (`poe check:workflows`, and `tests/test_workflows.py`
 in the fast suite) — ADR 0037.
 
-**5. `docs/`.** ✅ Partially done — `docs/adr/` records the accepted decisions,
-including the current Copier architecture, release version source, and the
-future public-engine integration contract. `scripts/adr.py` (`poe check:adr`,
-and `tests/test_adr.py` in the fast suite) keeps the set internally consistent.
-MkDocs remains deferred —
-[#8](https://github.com/Sandsy09/create-forge/issues/8).
+**5. `docs/`.** ✅ Done — `docs/adr/` records accepted decisions and
+`scripts/adr.py` keeps that set internally consistent. The shared MkDocs site
+is published from `docs/user-guide/` under ADR 0035; pull requests build it and
+`main` deploys it.
 
 **6. First release.** ✅ Done — [`release.yml`](.github/workflows/release.yml)
 reads `pyproject.toml`'s `version` as the single source (ADR 0009, since
 `forge-template`'s bump-choice model would let the tag and the package's own
-`--version` drift apart). `v0.1.0` is tagged and released; `uvx --from
-git+...@v0.1.0 create-forge new` verified end to end from a clean environment.
-PyPI is a separate, deferred decision — [#9](https://github.com/Sandsy09/create-forge/issues/9).
+`--version` drift apart). `v0.1.0` established the release path; current
+releases publish GitHub artefacts and PyPI packages through Trusted Publishing.
 
 ## Deferred, with reasons
 

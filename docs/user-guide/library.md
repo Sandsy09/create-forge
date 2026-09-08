@@ -10,7 +10,7 @@ This example creates `credit-risk-utils/` with an import package named
 `credit_risk_utils`, Hatchling packaging, and a static version:
 
 ```bash
-uvx create-forge@0.3.0 new "Credit Risk Utils" --template library --ref v0.4.1 --yes --data github_org=example-org --data build_backend=hatchling --data versioning=static
+uvx create-forge@0.3.2 new "Credit Risk Utils" --template library --ref v0.4.1 --yes --data github_org=example-org --data build_backend=hatchling --data versioning=static
 cd credit-risk-utils
 uv run poe check
 uv build
@@ -48,7 +48,7 @@ Use this route to combine a distributable package with the engine's
 [capabilities](capabilities.md). It does not support template updates.
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Preview Lib" --engine-preview --archetype library --yes --component-option library.packaging_mode=hatchling-static --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Preview Lib" --engine-preview --archetype library --yes --component-option library.packaging_mode=hatchling-static --data license=mit
 cd preview-lib
 uv run --locked poe check
 uv build

@@ -5,12 +5,12 @@
 ```bash
 uvx create-forge new
 uvx create-forge@latest new
-uvx create-forge@0.3.0 new
+uvx create-forge@0.3.2 new
 ```
 
 `uvx` runs a tool in an isolated environment. A plain invocation may reuse
 a cached version or the version installed with `uv tool install`.
-`@latest` checks for the latest release; `@0.3.0` requests that exact CLI
+`@latest` checks for the latest release; `@0.3.2` requests that exact CLI
 version. These commands do not add Forge to your project's dependencies.
 
 ## Install a command for regular use
@@ -29,7 +29,7 @@ installed tools, and `uv tool uninstall create-forge` removes this one.
 ### Pin or change the installed version
 
 ```bash
-uv tool install "create-forge==0.3.0"
+uv tool install "create-forge==0.3.2"
 uv tool upgrade create-forge
 ```
 
@@ -49,7 +49,7 @@ The engine extra installs the compatible `forge-template` package and the
 uv version used to finish preview projects' lockfiles:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new --engine-preview
+uvx --from "create-forge[engine]==0.3.2" create-forge new --engine-preview
 ```
 
 For a persistent command:
@@ -61,12 +61,12 @@ uv tool upgrade create-forge
 ```
 
 Include `[engine]` when replacing an installation constraint if you want
-to retain preview support. The `0.3.0` CLI accepts
+to retain preview support. The `0.3.2` CLI accepts
 `forge-template>=0.4.1,<0.5`; this guide's examples are checked with `0.4.1`.
 To request that exact engine as well:
 
 ```bash
-uvx --with "forge-template==0.4.1" --from "create-forge[engine]==0.3.0" create-forge new --engine-preview
+uvx --with "forge-template==0.4.1" --from "create-forge[engine]==0.3.2" create-forge new --engine-preview
 ```
 
 `create-forge doctor` reports the installed engine and compatible range.
@@ -77,14 +77,14 @@ generation so you inspect the environment you actually use.
 
 | Selection | Controls |
 | --- | --- |
-| `create-forge@0.3.0` | The CLI package version used by uvx. |
+| `create-forge@0.3.2` | The CLI package version used by uvx. |
 | `new --ref v0.4.1` | The template repository's Git tag on the Copier path. |
 | `--with "forge-template==0.4.1"` | The engine package used by a preview invocation. |
 
 Pin both CLI and Copier template for a repeatable starting point:
 
 ```bash
-uvx create-forge@0.3.0 new "Pinned Library" --template library --ref v0.4.1
+uvx create-forge@0.3.2 new "Pinned Library" --template library --ref v0.4.1
 ```
 
 Without `--ref`, Copier selects the latest suitable release tag. Pinning

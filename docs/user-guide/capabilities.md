@@ -10,7 +10,7 @@ Use this when notebooks help you explore or demonstrate a package without
 needing the Data Science starter layout:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Exploration Lib" --engine-preview --archetype library --capability jupyter --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Exploration Lib" --engine-preview --archetype library --capability jupyter --yes --data license=mit
 cd exploration-lib
 uv run --locked poe check
 uv run poe notebook
@@ -28,7 +28,7 @@ Use this when a command-line application performs numerical or tabular
 analysis without notebooks:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Analysis Tools" --engine-preview --archetype cli --capability scientific-python --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Analysis Tools" --engine-preview --archetype cli --capability scientific-python --yes --data license=mit
 cd analysis-tools
 uv run --locked poe check
 uv run analysis-tools hello Analyst
@@ -63,7 +63,7 @@ the separate Copier registry.
 Options belong to a selected component and use its ID as a prefix:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.0" create-forge new "Versioned Lib" --engine-preview --archetype library --capability jupyter --component-option library.packaging_mode=hatchling-static --component-option library.initial_version=0.2.0 --yes --data license=mit
+uvx --from "create-forge[engine]==0.3.2" create-forge new "Versioned Lib" --engine-preview --archetype library --capability jupyter --component-option library.packaging_mode=hatchling-static --component-option library.initial_version=0.2.0 --yes --data license=mit
 ```
 
 This selects Library's packaging and initial version without changing
