@@ -1,0 +1,622 @@
+{
+  "schema_version": 1,
+  "status": "prepared-not-filed",
+  "roadmap": 4,
+  "name": "Streamlit Archetype",
+  "stages": [
+    {
+      "number": 19,
+      "title": "Streamlit Architecture Contracts",
+      "owners": [
+        "Sandsy09/forge-template"
+      ]
+    },
+    {
+      "number": 20,
+      "title": "Streamlit Provider Implementation and Release",
+      "owners": [
+        "Sandsy09/forge-template"
+      ]
+    },
+    {
+      "number": 21,
+      "title": "Streamlit Client Adoption and Rollout",
+      "owners": [
+        "Sandsy09/create-forge"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "FT-19.01",
+      "title": "FT-19.01 — Define the Streamlit project shape and ownership",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 19,
+      "milestone": "Streamlit Architecture Contracts — Stage 19",
+      "parent": "FT-EPIC-19",
+      "blocked_by": [
+        "CF-16.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:19",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-19.01.md"
+    },
+    {
+      "id": "FT-19.02",
+      "title": "FT-19.02 — Define Streamlit composition, compatibility and acceptance",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 19,
+      "milestone": "Streamlit Architecture Contracts — Stage 19",
+      "parent": "FT-EPIC-19",
+      "blocked_by": [
+        "FT-19.01"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:19",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-19.02.md"
+    },
+    {
+      "id": "FT-20.01",
+      "title": "FT-20.01 — Implement the independent Streamlit archetype",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 20,
+      "milestone": "Streamlit Provider Implementation and Release — Stage 20",
+      "parent": "FT-EPIC-20",
+      "blocked_by": [
+        "FT-19.02"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:20",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-20.01.md"
+    },
+    {
+      "id": "FT-20.02",
+      "title": "FT-20.02 — Implement Streamlit tasks, safeguards and capability composition",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 20,
+      "milestone": "Streamlit Provider Implementation and Release — Stage 20",
+      "parent": "FT-EPIC-20",
+      "blocked_by": [
+        "FT-20.01"
+      ],
+      "labels": [
+        "area:template",
+        "area:tests",
+        "type:feature",
+        "size:m",
+        "priority:medium",
+        "roadmap:20",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-20.02.md"
+    },
+    {
+      "id": "FT-20.03",
+      "title": "FT-20.03 — Validate Streamlit generated projects and distributions",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 20,
+      "milestone": "Streamlit Provider Implementation and Release — Stage 20",
+      "parent": "FT-EPIC-20",
+      "blocked_by": [
+        "FT-20.02"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:test",
+        "size:l",
+        "priority:medium",
+        "roadmap:20",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-20.03.md"
+    },
+    {
+      "id": "FT-20.04",
+      "title": "FT-20.04 — Publish and verify the reviewed Streamlit provider release",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 20,
+      "milestone": "Streamlit Provider Implementation and Release — Stage 20",
+      "parent": "FT-EPIC-20",
+      "blocked_by": [
+        "FT-20.03"
+      ],
+      "labels": [
+        "area:packaging",
+        "area:release",
+        "area:docs",
+        "area:tests",
+        "type:chore",
+        "size:m",
+        "priority:medium",
+        "roadmap:20",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-20.04.md"
+    },
+    {
+      "id": "CF-21.01",
+      "title": "CF-21.01 — Adopt the released Streamlit provider",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 21,
+      "milestone": "Streamlit Client Adoption and Rollout — Stage 21",
+      "parent": "CF-EPIC-21",
+      "blocked_by": [
+        "FT-20.04"
+      ],
+      "labels": [
+        "area:cli",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:chore",
+        "size:m",
+        "priority:medium",
+        "roadmap:21",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-21.01.md"
+    },
+    {
+      "id": "CF-21.02",
+      "title": "CF-21.02 — Validate installed Streamlit generation and document usage",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 21,
+      "milestone": "Streamlit Client Adoption and Rollout — Stage 21",
+      "parent": "CF-EPIC-21",
+      "blocked_by": [
+        "CF-21.01"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:test",
+        "size:l",
+        "priority:medium",
+        "roadmap:21",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-21.02.md"
+    },
+    {
+      "id": "CF-21.03",
+      "title": "CF-21.03 — Publish and verify Streamlit client support",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 21,
+      "milestone": "Streamlit Client Adoption and Rollout — Stage 21",
+      "parent": "CF-EPIC-21",
+      "blocked_by": [
+        "CF-21.02"
+      ],
+      "labels": [
+        "area:packaging",
+        "area:release",
+        "area:docs",
+        "area:tests",
+        "type:chore",
+        "size:m",
+        "priority:medium",
+        "roadmap:21",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-21.03.md"
+    },
+    {
+      "id": "FT-EPIC-19",
+      "title": "FT-EPIC-19 — Streamlit Architecture Contracts",
+      "repository": "Sandsy09/forge-template",
+      "kind": "epic",
+      "stage": 19,
+      "milestone": "Streamlit Architecture Contracts — Stage 19",
+      "parent": null,
+      "blocked_by": [
+        "CF-16.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:19",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-EPIC-19.md",
+      "children": [
+        "FT-19.01",
+        "FT-19.02"
+      ]
+    },
+    {
+      "id": "FT-EPIC-20",
+      "title": "FT-EPIC-20 — Streamlit Provider Implementation and Release",
+      "repository": "Sandsy09/forge-template",
+      "kind": "epic",
+      "stage": 20,
+      "milestone": "Streamlit Provider Implementation and Release — Stage 20",
+      "parent": null,
+      "blocked_by": [
+        "FT-19.02"
+      ],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:20",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-EPIC-20.md",
+      "children": [
+        "FT-20.01",
+        "FT-20.02",
+        "FT-20.03",
+        "FT-20.04"
+      ]
+    },
+    {
+      "id": "CF-EPIC-21",
+      "title": "CF-EPIC-21 — Streamlit Client Adoption and Rollout",
+      "repository": "Sandsy09/create-forge",
+      "kind": "epic",
+      "stage": 21,
+      "milestone": "Streamlit Client Adoption and Rollout — Stage 21",
+      "parent": null,
+      "blocked_by": [
+        "FT-20.04"
+      ],
+      "labels": [
+        "area:cli",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:21",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-EPIC-21.md",
+      "children": [
+        "CF-21.01",
+        "CF-21.02",
+        "CF-21.03"
+      ]
+    }
+  ],
+  "traceability": [
+    {
+      "id": "FT-ROADMAP-02-AC-01",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "An accepted contract defines the Streamlit project shape, entry point, dependency/task ownership, supported Python range and deployment boundary.",
+      "children": [
+        "FT-19.01",
+        "FT-19.02"
+      ],
+      "epics": [
+        "FT-EPIC-19"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-02",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Discovery exposes an immutable, path-free Streamlit archetype descriptor without a `create-forge` catalogue change.",
+      "children": [
+        "FT-20.01"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-03",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "The archetype owns its resources independently and uses only reviewed Foundation contribution points.",
+      "children": [
+        "FT-20.01"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-04",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "No-capability, Jupyter, Scientific Python and combined selections have an explicitly accepted compatibility matrix and deterministic render results.",
+      "children": [
+        "FT-19.02",
+        "FT-20.02",
+        "FT-20.03"
+      ],
+      "epics": [
+        "FT-EPIC-19",
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-05",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Generated projects restore from committed lock state, pass their canonical checks, build/install where applicable and complete a bounded Streamlit smoke check without starting a persistent server.",
+      "children": [
+        "FT-20.03"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-06",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Library, CLI Application and Data Science output remain protected by regression tests.",
+      "children": [
+        "FT-20.03"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-07",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Wheel/sdist audits include every new engine resource and no generated project depends on a Forge package at runtime.",
+      "children": [
+        "FT-20.03"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-AC-08",
+      "source": "FT-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "A reviewed `forge-template` release is published and verified before downstream adoption begins.",
+      "children": [
+        "FT-20.04"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-EX-01",
+      "source": "FT-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No cloud deployment, container orchestration, authentication, database or FastAPI service surface.",
+      "children": [
+        "FT-19.01",
+        "FT-20.02"
+      ],
+      "epics": [
+        "FT-EPIC-19",
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-EX-02",
+      "source": "FT-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No CLI prompt implementation or hard-coded downstream component identifier.",
+      "children": [
+        "FT-20.01"
+      ],
+      "epics": [
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-EX-03",
+      "source": "FT-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No engine-default cutover.",
+      "children": [
+        "FT-19.02"
+      ],
+      "epics": [
+        "FT-EPIC-19"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-02-EX-04",
+      "source": "FT-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No arbitrary Streamlit plugin ecosystem.",
+      "children": [
+        "FT-19.01",
+        "FT-20.02"
+      ],
+      "epics": [
+        "FT-EPIC-19",
+        "FT-EPIC-20"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-01",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "The compatible released provider is declared in package metadata, diagnostics and the development pairing without affecting plain installs.",
+      "children": [
+        "CF-21.01"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-02",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Interactive and non-interactive users can select Streamlit through the existing generic archetype/component contract.",
+      "children": [
+        "CF-21.01",
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-03",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "No production module hard-codes `streamlit` to determine catalogue, validation, composition or generated content behaviour.",
+      "children": [
+        "CF-21.01"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-04",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Installed-console E2E covers the accepted capability combinations, committed lock state, canonical generated checks and bounded Streamlit smoke validation.",
+      "children": [
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-05",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Invalid selections, incompatible providers, lock failures and destination conflicts leave no partial project or staging state.",
+      "children": [
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-06",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Existing Library, CLI Application, Data Science and supported Copier workflows remain green.",
+      "children": [
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-07",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "User documentation explains the Streamlit recipe and keeps generated project details linked to `forge-template` rather than duplicated.",
+      "children": [
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-AC-08",
+      "source": "CF-ROADMAP-02",
+      "kind": "acceptance",
+      "criterion": "Any client release is published only after the provider release and cross-repository evidence are immutable and verified.",
+      "children": [
+        "CF-21.03"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-EX-01",
+      "source": "CF-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No Streamlit source templates, generated dependencies, task definitions or component validation in `create-forge`.",
+      "children": [
+        "CF-21.01",
+        "CF-21.02"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-EX-02",
+      "source": "CF-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No FastAPI archetype or deployment platform.",
+      "children": [
+        "CF-21.01"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-02-EX-03",
+      "source": "CF-ROADMAP-02",
+      "kind": "exclusion",
+      "criterion": "No engine-default cutover unless separately delivered by CF-ROADMAP-01.",
+      "children": [
+        "CF-21.01"
+      ],
+      "epics": [
+        "CF-EPIC-21"
+      ]
+    }
+  ]
+}

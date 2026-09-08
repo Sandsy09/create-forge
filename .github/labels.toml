@@ -96,6 +96,14 @@ family = "orange"
 "13" = { color = "e67700", description = "Forge roadmap Stage 13 — Data Science CLI Integration" }
 "14" = { color = "b95000", description = "Forge roadmap Stage 14 — Data Science Validation and Rollout" }
 
+"15" = { color = "ffedd5", description = "Forge roadmap Stage 15 — Engine-Default Provider Contracts" }
+"16" = { color = "fed7aa", description = "Forge roadmap Stage 16 — Engine-Default Client Contracts" }
+"17" = { color = "fdba74", description = "Forge roadmap Stage 17 — Engine-Default Provider Implementation and Release" }
+"18" = { color = "fb923c", description = "Forge roadmap Stage 18 — Engine-Default Client Delivery and Validation" }
+"19" = { color = "f97316", description = "Forge roadmap Stage 19 — Streamlit Architecture Contracts" }
+"20" = { color = "ea580c", description = "Forge roadmap Stage 20 — Streamlit Provider Implementation and Release" }
+"21" = { color = "c2410c", description = "Forge roadmap Stage 21 — Streamlit Client Adoption and Rollout" }
+
 # Repository-wide metadata that is clearer without a namespace. GitHub
 # special-cases `good first issue` and `help wanted` in its discovery UI.
 [unprefixed]

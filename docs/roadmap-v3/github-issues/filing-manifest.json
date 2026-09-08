@@ -1,0 +1,992 @@
+{
+  "schema_version": 1,
+  "status": "prepared-not-filed",
+  "roadmap": 3,
+  "name": "Engine-Default Cutover",
+  "stages": [
+    {
+      "number": 15,
+      "title": "Engine-Default Provider Contracts",
+      "owners": [
+        "Sandsy09/forge-template"
+      ]
+    },
+    {
+      "number": 16,
+      "title": "Engine-Default Client Contracts",
+      "owners": [
+        "Sandsy09/create-forge"
+      ]
+    },
+    {
+      "number": 17,
+      "title": "Engine-Default Provider Implementation and Release",
+      "owners": [
+        "Sandsy09/forge-template"
+      ]
+    },
+    {
+      "number": 18,
+      "title": "Engine-Default Client Delivery and Validation",
+      "owners": [
+        "Sandsy09/create-forge",
+        "Sandsy09/forge-template"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "id": "FT-15.01",
+      "title": "FT-15.01 — Inventory default-Copier parity and assign ownership",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 15,
+      "milestone": "Engine-Default Provider Contracts — Stage 15",
+      "parent": "FT-EPIC-15",
+      "blocked_by": [],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:15",
+        "cross-repo",
+        "status:needs-decision"
+      ],
+      "body": "github-issues/forge-template/FT-15.01.md"
+    },
+    {
+      "id": "FT-15.02",
+      "title": "FT-15.02 — Define generation provenance and reproducible-update inputs",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 15,
+      "milestone": "Engine-Default Provider Contracts — Stage 15",
+      "parent": "FT-EPIC-15",
+      "blocked_by": [
+        "FT-15.01"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:15",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-15.02.md"
+    },
+    {
+      "id": "FT-15.03",
+      "title": "FT-15.03 — Define platform composition and generated-tooling parity",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 15,
+      "milestone": "Engine-Default Provider Contracts — Stage 15",
+      "parent": "FT-EPIC-15",
+      "blocked_by": [
+        "FT-15.01"
+      ],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:15",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-15.03.md"
+    },
+    {
+      "id": "FT-15.04",
+      "title": "FT-15.04 — Define provider compatibility, failure and release gates",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 15,
+      "milestone": "Engine-Default Provider Contracts — Stage 15",
+      "parent": "FT-EPIC-15",
+      "blocked_by": [
+        "FT-15.02",
+        "FT-15.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:15",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-15.04.md"
+    },
+    {
+      "id": "CF-16.01",
+      "title": "CF-16.01 — Define engine-default selection and source-resolution UX",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 16,
+      "milestone": "Engine-Default Client Contracts — Stage 16",
+      "parent": "CF-EPIC-16",
+      "blocked_by": [
+        "FT-15.04"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:registry",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:16",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-16.01.md"
+    },
+    {
+      "id": "CF-16.02",
+      "title": "CF-16.02 — Define update dispatch, migration and filesystem lifecycle",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 16,
+      "milestone": "Engine-Default Client Contracts — Stage 16",
+      "parent": "CF-EPIC-16",
+      "blocked_by": [
+        "CF-16.01"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:l",
+        "priority:medium",
+        "roadmap:16",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-16.02.md"
+    },
+    {
+      "id": "CF-16.03",
+      "title": "CF-16.03 — Approve coordinated cutover acceptance and support policy",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 16,
+      "milestone": "Engine-Default Client Contracts — Stage 16",
+      "parent": "CF-EPIC-16",
+      "blocked_by": [
+        "CF-16.02"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:packaging",
+        "area:release",
+        "area:docs",
+        "area:tests",
+        "type:decision",
+        "size:m",
+        "priority:medium",
+        "roadmap:16",
+        "cross-repo",
+        "status:needs-decision",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-16.03.md"
+    },
+    {
+      "id": "FT-17.01",
+      "title": "FT-17.01 — Implement provider provenance and public metadata contracts",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "CF-16.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:17",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.01.md"
+    },
+    {
+      "id": "FT-17.02",
+      "title": "FT-17.02 — Implement approved platform compositions",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "CF-16.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:17",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.02.md"
+    },
+    {
+      "id": "FT-17.03",
+      "title": "FT-17.03 — Complete approved generated-content parity",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "FT-17.02"
+      ],
+      "labels": [
+        "area:template",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:17",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.03.md"
+    },
+    {
+      "id": "FT-17.04",
+      "title": "FT-17.04 — Implement reproducible rendering for engine updates",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "FT-17.01"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:17",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.04.md"
+    },
+    {
+      "id": "FT-17.05",
+      "title": "FT-17.05 — Validate provider parity, reproducibility and distributions",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "FT-17.03",
+        "FT-17.04"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:test",
+        "size:l",
+        "priority:medium",
+        "roadmap:17",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.05.md"
+    },
+    {
+      "id": "FT-17.06",
+      "title": "FT-17.06 — Publish and verify the reviewed cutover provider release",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": "FT-EPIC-17",
+      "blocked_by": [
+        "FT-17.05"
+      ],
+      "labels": [
+        "area:packaging",
+        "area:release",
+        "area:docs",
+        "area:tests",
+        "type:chore",
+        "size:m",
+        "priority:medium",
+        "roadmap:17",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-17.06.md"
+    },
+    {
+      "id": "CF-18.01",
+      "title": "CF-18.01 — Adopt the released provider and implement engine-default selection",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "FT-17.06"
+      ],
+      "labels": [
+        "area:cli",
+        "area:registry",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked",
+        "breaking-change"
+      ],
+      "body": "github-issues/create-forge/CF-18.01.md"
+    },
+    {
+      "id": "CF-18.02",
+      "title": "CF-18.02 — Implement secure engine-source overrides",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "CF-18.01"
+      ],
+      "labels": [
+        "area:cli",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.02.md"
+    },
+    {
+      "id": "CF-18.03",
+      "title": "CF-18.03 — Complete engine generation finalisation, Git and hooks",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "CF-18.01"
+      ],
+      "labels": [
+        "area:cli",
+        "area:docs",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.03.md"
+    },
+    {
+      "id": "CF-18.04",
+      "title": "CF-18.04 — Implement engine-native project updates",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "CF-18.03"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:docs",
+        "area:tests",
+        "type:feature",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.04.md"
+    },
+    {
+      "id": "CF-18.05",
+      "title": "CF-18.05 — Preserve legacy Copier workflows and implement transition handling",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "CF-18.04"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:docs",
+        "area:tests",
+        "type:feature",
+        "size:m",
+        "priority:medium",
+        "roadmap:18",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.05.md"
+    },
+    {
+      "id": "FT-18.01",
+      "title": "FT-18.01 — Validate the integrated cutover against the released provider",
+      "repository": "Sandsy09/forge-template",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "FT-EPIC-18",
+      "blocked_by": [
+        "CF-18.02",
+        "CF-18.05"
+      ],
+      "labels": [
+        "area:template",
+        "area:packaging",
+        "area:tests",
+        "type:test",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-18.01.md"
+    },
+    {
+      "id": "CF-18.06",
+      "title": "CF-18.06 — Complete installed cutover regressions and migration documentation",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "CF-18.02",
+        "CF-18.05"
+      ],
+      "labels": [
+        "area:cli",
+        "area:copier",
+        "area:packaging",
+        "area:docs",
+        "area:tests",
+        "type:test",
+        "size:l",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.06.md"
+    },
+    {
+      "id": "CF-18.07",
+      "title": "CF-18.07 — Publish and verify the engine-default client release",
+      "repository": "Sandsy09/create-forge",
+      "kind": "child",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": "CF-EPIC-18",
+      "blocked_by": [
+        "FT-18.01",
+        "CF-18.06"
+      ],
+      "labels": [
+        "area:packaging",
+        "area:release",
+        "area:docs",
+        "area:tests",
+        "type:chore",
+        "size:m",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-18.07.md"
+    },
+    {
+      "id": "FT-EPIC-15",
+      "title": "FT-EPIC-15 — Engine-Default Provider Contracts",
+      "repository": "Sandsy09/forge-template",
+      "kind": "epic",
+      "stage": 15,
+      "milestone": "Engine-Default Provider Contracts — Stage 15",
+      "parent": null,
+      "blocked_by": [],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:15",
+        "cross-repo"
+      ],
+      "body": "github-issues/forge-template/FT-EPIC-15.md",
+      "children": [
+        "FT-15.01",
+        "FT-15.02",
+        "FT-15.03",
+        "FT-15.04"
+      ]
+    },
+    {
+      "id": "CF-EPIC-16",
+      "title": "CF-EPIC-16 — Engine-Default Client Contracts",
+      "repository": "Sandsy09/create-forge",
+      "kind": "epic",
+      "stage": 16,
+      "milestone": "Engine-Default Client Contracts — Stage 16",
+      "parent": null,
+      "blocked_by": [
+        "FT-15.04"
+      ],
+      "labels": [
+        "area:cli",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:16",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-EPIC-16.md",
+      "children": [
+        "CF-16.01",
+        "CF-16.02",
+        "CF-16.03"
+      ]
+    },
+    {
+      "id": "FT-EPIC-17",
+      "title": "FT-EPIC-17 — Engine-Default Provider Implementation and Release",
+      "repository": "Sandsy09/forge-template",
+      "kind": "epic",
+      "stage": 17,
+      "milestone": "Engine-Default Provider Implementation and Release — Stage 17",
+      "parent": null,
+      "blocked_by": [
+        "CF-16.03"
+      ],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:17",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-EPIC-17.md",
+      "children": [
+        "FT-17.01",
+        "FT-17.02",
+        "FT-17.03",
+        "FT-17.04",
+        "FT-17.05",
+        "FT-17.06"
+      ]
+    },
+    {
+      "id": "CF-EPIC-18",
+      "title": "CF-EPIC-18 — Engine-Default Client Delivery and Validation",
+      "repository": "Sandsy09/create-forge",
+      "kind": "epic",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": null,
+      "blocked_by": [
+        "FT-17.06",
+        "FT-18.01"
+      ],
+      "labels": [
+        "area:cli",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/create-forge/CF-EPIC-18.md",
+      "children": [
+        "CF-18.01",
+        "CF-18.02",
+        "CF-18.03",
+        "CF-18.04",
+        "CF-18.05",
+        "CF-18.06",
+        "CF-18.07"
+      ]
+    },
+    {
+      "id": "FT-EPIC-18",
+      "title": "FT-EPIC-18 — Engine-Default Client Delivery and Validation",
+      "repository": "Sandsy09/forge-template",
+      "kind": "epic",
+      "stage": 18,
+      "milestone": "Engine-Default Client Delivery and Validation — Stage 18",
+      "parent": null,
+      "blocked_by": [
+        "CF-18.02",
+        "CF-18.05"
+      ],
+      "labels": [
+        "area:template",
+        "area:docs",
+        "type:epic",
+        "priority:medium",
+        "roadmap:18",
+        "cross-repo",
+        "status:blocked"
+      ],
+      "body": "github-issues/forge-template/FT-EPIC-18.md",
+      "children": [
+        "FT-18.01"
+      ]
+    }
+  ],
+  "traceability": [
+    {
+      "id": "FT-ROADMAP-01-AC-01",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "A responsibility matrix identifies every remaining default-Copier behaviour and assigns it to provider, client or an explicit exclusion.",
+      "children": [
+        "FT-15.01"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-02",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "A versioned provider contract defines output ownership/provenance and the metadata required to reproduce or update a generated project.",
+      "children": [
+        "FT-15.02",
+        "FT-17.01",
+        "FT-17.04"
+      ],
+      "epics": [
+        "FT-EPIC-15",
+        "FT-EPIC-17"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-03",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Platform selection and composition rules remain manifest/catalogue-owned and are exposed only through public path-free descriptors.",
+      "children": [
+        "FT-15.03",
+        "FT-17.02"
+      ],
+      "epics": [
+        "FT-EPIC-15",
+        "FT-EPIC-17"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-04",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Failure and compatibility contracts preserve validation-before-render and do not require `create-forge` to inspect component resources.",
+      "children": [
+        "FT-15.04",
+        "FT-17.05"
+      ],
+      "epics": [
+        "FT-EPIC-15",
+        "FT-EPIC-17"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-05",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "The ADR states whether any protocol or package compatibility line must move and defines migration/rollback expectations.",
+      "children": [
+        "FT-15.04"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-06",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Follow-up provider issues cover implementation, regression validation and publication separately.",
+      "children": [
+        "FT-17.01",
+        "FT-17.05",
+        "FT-17.06"
+      ],
+      "epics": [
+        "FT-EPIC-17"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-AC-07",
+      "source": "FT-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "The final provider dependency for the client is an immutable reviewed `forge-template` release, not a moving branch.",
+      "children": [
+        "FT-17.06"
+      ],
+      "epics": [
+        "FT-EPIC-17"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-EX-01",
+      "source": "FT-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No CLI flags, prompts, user configuration, Git initialisation, hooks or destination finalisation.",
+      "children": [
+        "FT-15.01"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-EX-02",
+      "source": "FT-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No engine-default switch in this issue.",
+      "children": [
+        "FT-15.04"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-EX-03",
+      "source": "FT-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No Streamlit or other new archetype.",
+      "children": [
+        "FT-15.03"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "FT-ROADMAP-01-EX-04",
+      "source": "FT-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No arbitrary remote component registry or plugin execution.",
+      "children": [
+        "FT-15.04"
+      ],
+      "epics": [
+        "FT-EPIC-15"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-01",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "A living CLI contract defines the default, explicit legacy route, configuration precedence, prompts, `--yes` requirements and deprecation timeline.",
+      "children": [
+        "CF-16.01"
+      ],
+      "epics": [
+        "CF-EPIC-16"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-02",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Data still flows `create-forge → ProjectSpec → forge-template render → create-forge finalisation`; no component semantics or resources are copied downstream.",
+      "children": [
+        "CF-16.01",
+        "CF-18.01"
+      ],
+      "epics": [
+        "CF-EPIC-16",
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-03",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Client ownership of staging, VCS/hooks, update dispatch and cleanup is explicit and testable.",
+      "children": [
+        "CF-16.02",
+        "CF-18.03",
+        "CF-18.04"
+      ],
+      "epics": [
+        "CF-EPIC-16",
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-04",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Missing/incompatible providers, invalid selections and render/finalise failures have stable statuses and never silently fall back to Copier.",
+      "children": [
+        "CF-16.01",
+        "CF-18.06"
+      ],
+      "epics": [
+        "CF-EPIC-16",
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-05",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Existing Copier projects have a documented update/support route and the rollback plan does not corrupt their stored answers.",
+      "children": [
+        "CF-16.02",
+        "CF-18.05"
+      ],
+      "epics": [
+        "CF-EPIC-16",
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-06",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Implementation, migration E2E, legacy regression and release tasks are filed separately with an explicit dependency graph.",
+      "children": [
+        "CF-16.03",
+        "CF-18.06",
+        "CF-18.07"
+      ],
+      "epics": [
+        "CF-EPIC-16",
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-AC-07",
+      "source": "CF-ROADMAP-01",
+      "kind": "acceptance",
+      "criterion": "Cutover cannot ship until the reviewed provider release and full cross-repository matrix pass together.",
+      "children": [
+        "CF-18.07"
+      ],
+      "epics": [
+        "CF-EPIC-18"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-EX-01",
+      "source": "CF-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No provider manifest, composition or generated-content changes.",
+      "children": [
+        "CF-16.01"
+      ],
+      "epics": [
+        "CF-EPIC-16"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-EX-02",
+      "source": "CF-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No new archetype.",
+      "children": [
+        "CF-16.01"
+      ],
+      "epics": [
+        "CF-EPIC-16"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-EX-03",
+      "source": "CF-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No remote plugin/registry system.",
+      "children": [
+        "CF-16.01"
+      ],
+      "epics": [
+        "CF-EPIC-16"
+      ]
+    },
+    {
+      "id": "CF-ROADMAP-01-EX-04",
+      "source": "CF-ROADMAP-01",
+      "kind": "exclusion",
+      "criterion": "No implementation or release in this decision issue.",
+      "children": [
+        "CF-16.03"
+      ],
+      "epics": [
+        "CF-EPIC-16"
+      ]
+    }
+  ]
+}
