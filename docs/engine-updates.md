@@ -33,7 +33,7 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.1.x default `new` | `copier` | `>=9.4,<10` | Current released architecture |
+| v0.1.x default `new` | `copier` | `>=9.15.2,<10` | Current released architecture (floor raised by ADR 0038) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Current architecture (ADR 0031) |
 
@@ -44,6 +44,17 @@ below. Neither has replaced the other; the engine cutover that would retire
 the `copier` row remains a future, unfiled decision. `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below.
+
+`uv` (on the `engine` extra, [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md))
+is a **bounded ordinary** dependency, a category
+[ADR 0038](adr/0038-dependency-floor-review.md) introduced. It is not a
+compatibility-line dependency — no integration contract turns on its version,
+and `create-forge` calls only `uv lock`, stable across `0.12.x` — so Dependabot
+freely proposes updates inside `<0.13`. But the `<0.13` bound is real: a
+pre-1.0 minor is itself a line, so adopting `0.13` is a human decision that
+moves the bound, not an automatic merge. It carries no Dependabot `ignore`
+rule, deliberately — `<0.13` already fails the build if crossed, and an
+`ignore` rule would hide that a new line exists.
 
 ## Adopting a compatible update
 
@@ -107,6 +118,32 @@ ruff pin `.github/dependabot.yml`'s own comment describes. It is a real,
 already-filed gap in a different surface — dev tooling, not the
 compatibility line — and this decision does not close it.
 
+## Reviewing a dependency floor
+
+Everything above is about the *upper* bound — which new releases may be
+adopted. The **lower** bound is a separate question with its own rule, set by
+[ADR 0038](adr/0038-dependency-floor-review.md):
+
+- A floor moves only on **advisory or required-behaviour evidence**. A newer
+  release, or a Dependabot lockfile bump, is not evidence — the lock tracking
+  `copier 9.18.2` is not a reason to advertise `>=9.18.2`.
+- The `copier` floor is `>=9.15.2`: the lowest version with no published
+  GitHub advisory. Five of those advisories are *safe*-template
+  destination escapes that `create-forge` is directly exposed to; the rest
+  concern Copier's trust prefix, which `unsafe=True` means this client never
+  relies on — ADR 0038 has the full reasoning.
+- Re-verify the claim before changing a bound, because it is only as good as
+  the day it was last checked:
+
+  ```bash
+  gh api graphql -f query='{ securityVulnerabilities(first: 20, ecosystem: PIP, package: "copier") { nodes { advisory { ghsaId severity } vulnerableVersionRange firstPatchedVersion { identifier } } } }'
+  ```
+
+- The CI `floor` job is the standing proof the advertised floors still
+  resolve and pass: it runs the fast suite under
+  `uv sync --resolution lowest-direct`, so `>=9.15.2` and the `engine` extra's
+  `forge-template` / `uv` floors are tested, not assumed.
+
 ## Existing generated projects
 
 A compatibility-line adoption, inside a line or crossing one, requires a
@@ -142,7 +179,11 @@ source of truth the table can drift from.
   and `test_automation_cannot_cross_the_forge_template_compatibility_line`
   characterize the `forge-template` gate the same way, now that #9
   ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) has
-  declared it.
+  declared it. `test_copier_floor_clears_the_published_advisories` pins the
+  `copier` *lower* bound at `>=9.15.2` by exact string (ADR 0038).
+- `.github/workflows/ci.yml`'s `floor` job runs the fast suite under
+  `uv --resolution lowest-direct`, so the advertised floors are exercised and
+  not merely asserted. It feeds the protected `all-green` aggregate check.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

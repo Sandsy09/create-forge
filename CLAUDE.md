@@ -352,7 +352,10 @@ confirmation. See [ADR 0005](docs/adr/0005-execute-template-tasks.md) and
 ### 4. Copier's Python API is touched in exactly one place
 
 `runner.py`. It is public but evolves faster than the CLI, hence the
-`copier>=9.4,<10` pin. On a major bump, only that file should need attention.
+`copier>=9.15.2,<10` pin. On a major bump, only that file should need
+attention. The lower bound clears every published Copier advisory — the
+destination-escape set through 9.14.1, one patch further for a clean rule
+([ADR 0038](docs/adr/0038-dependency-floor-review.md), the CI `floor` job).
 See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md). `copier`
 is today's *compatibility-line dependency* per
 [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md): Dependabot is
@@ -579,7 +582,9 @@ templates, CODEOWNERS.
 
 **4. CI.** ✅ Done — lint (`pre-commit` + `mypy`), a test matrix over
 3.11–3.14, a Windows smoke job, `scripts/check_wheel.py` (`poe check:wheel`),
-and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
+a `floor` job that runs the fast suite under `uv --resolution lowest-direct`
+so the advertised dependency floors are tested not asserted (ADR 0038), and
+the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
 covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
 Branch protection on `main` requires the `all-green` aggregate check. Every
 external Action is SHA-pinned and workflow permissions are per-job, enforced by

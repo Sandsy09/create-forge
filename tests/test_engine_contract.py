@@ -45,6 +45,13 @@ ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 ENGINE_REQUIREMENT = "forge-template>=0.4.1,<0.5"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
+# ADR 0038: the Copier floor clears every published Copier advisory. 9.14.1 is
+# the strict minimum for the destination-escape set create-forge is exposed to;
+# 9.15.2 is one patch further and clears the whole record, so the rule stays
+# "no supported version carries a known advisory". A silent edit back toward
+# `>=9.4` must fail the fast suite, not just the CI `floor` job.
+COPIER_REQUIREMENT = "copier>=9.15.2,<10"
+
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
 # one module ADR 0013 permits to import forge_template, mirroring invariant
@@ -365,6 +372,18 @@ def test_compatibility_line_dependency_keeps_a_strict_upper_bound() -> None:
     )
     assert re.search(r">=\d", spec), f"{spec!r} has no tested lower bound"
     assert re.search(r"<\d", spec), f"{spec!r} has no strict upper bound"
+
+
+def test_copier_floor_clears_the_published_advisories() -> None:
+    """ADR 0038: `copier` is pinned at exactly `>=9.15.2,<10`, the lowest
+    version with no published GitHub advisory. `test_compatibility_line_
+    dependency_keeps_a_strict_upper_bound` above only checks the range shape;
+    this checks the actual floor, so lowering it back toward `>=9.4` (which
+    admits five destination-escape advisories) fails here. Re-verify the
+    floor against the advisory database before changing this constant --
+    docs/engine-updates.md, "Reviewing a dependency floor".
+    """
+    assert _required_dependencies().get("copier") == COPIER_REQUIREMENT
 
 
 def test_automation_cannot_cross_the_copier_compatibility_line() -> None:
