@@ -158,6 +158,13 @@ major version.
 | `integration.projectspec_protocol.detected` | `null` | never by `doctor` -- see below |
 | `integration.template_source` | bundled registry URL | always |
 | `integration.template_ref` | `null` (doctor stays offline; it does not resolve a ref) | never |
+| `copier_cache.path` | Copier's resolved git-mirror cache directory | always, from `runner.copier_cache_location()` — Copier's documented `COPIER_CACHE_DIR`-else-platformdirs rule ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) |
+| `copier_cache.override` | `true` when `COPIER_CACHE_DIR` selected the path | always |
+| `copier_cache.exists` | whether that directory exists yet | always |
+| `copier_cache.writable` | whether create-forge could write there (or into its deepest existing ancestor) without creating or altering it | always — the one new field that can fail a check and set `ok` to `false` |
+| `uv.path` | `shutil.which("uv")` — the binary `staging.create_uv_lock` would run | always, `null` when `uv` is not on `PATH` |
+| `uv.version` | the version token parsed from `uv --version`, or `null` if it can't be trusted | always; a subprocess, never a network call |
+| `uv.package` | the `engine` extra's declared `uv` distribution version | `importlib.metadata`, `null` when the extra isn't installed — a distinct fact from `uv.path` |
 
 `doctor` performs no network calls and, deliberately, no engine import: it
 reads `engine_package`/`engine_range`/`projectspec_protocol.supported` via
@@ -169,6 +176,15 @@ a real `get_engine_info()` call, which only `--engine-preview` makes.
 `integration.template_ref` stays `null` for the same "no network, no
 cutover-scoped work" reason -- that resolution belongs to `scaffold`/`update`,
 not to a health check.
+
+The `copier_cache.writable` probe is non-destructive: it writes and deletes one
+uniquely named file in the cache directory, or -- when that directory does not
+exist yet -- in its deepest existing ancestor, which is what Copier's own
+`mirror.parent.mkdir(parents=True)` writes into. It never creates the cache
+directory and never reads, writes, or lists a `<sha>.git` mirror. `os.access`
+is deliberately not used: on Windows it ignores ACLs and reports a locked-down
+corporate cache directory as writable, the exact condition the probe exists to
+catch ([ADR 0039](adr/0039-copier-cache-diagnostics.md)).
 
 ## Unsupported combinations
 
@@ -207,6 +223,16 @@ Stage 06 development contract used before a real release existed.
   contract's table and `--json` output above, including `engine_package`
   and `projectspec_protocol.detected` staying `null` when the extra isn't
   installed or doctor hasn't negotiated, respectively.
+  `test_doctor_reports_the_copier_cache_and_uv` and
+  `test_doctor_fails_when_the_copier_cache_is_unwritable` cover the
+  `copier_cache.*` / `uv.*` objects and the unwritable-cache check flipping
+  `ok` to `false`.
+- [`tests/test_copier_cache.py`](../tests/test_copier_cache.py)
+  ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) -- pins
+  `runner.copier_cache_location()` to Copier's own `copier._vcs._get_cache_dir`
+  under both the default and `COPIER_CACHE_DIR` branches, and characterizes
+  the non-destructive writability probe (missing directory, denied directory,
+  contents left untouched).
 - [`tests/test_config.py`](../tests/test_config.py) --
   `test_config_cannot_redirect_the_template_source` and
   `test_no_config_field_looks_like_a_source_or_version_selector`

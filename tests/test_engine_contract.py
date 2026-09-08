@@ -45,12 +45,13 @@ ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 ENGINE_REQUIREMENT = "forge-template>=0.4.1,<0.5"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
-# ADR 0038: the Copier floor clears every published Copier advisory. 9.14.1 is
-# the strict minimum for the destination-escape set create-forge is exposed to;
-# 9.15.2 is one patch further and clears the whole record, so the rule stays
-# "no supported version carries a known advisory". A silent edit back toward
-# `>=9.4` must fail the fast suite, not just the CI `floor` job.
-COPIER_REQUIREMENT = "copier>=9.15.2,<10"
+# ADR 0038 raised the Copier floor past the destination-escape advisories
+# (9.14.1) to 9.15.2. ADR 0039 raised it again to 9.16 -- the first release
+# with the git-mirror cache and COPIER_CACHE_DIR that runner.py models and
+# doctor reports -- a required-behaviour move, not an advisory one. The whole
+# >=9.16 range is still advisory-free. A silent edit back toward an earlier
+# floor must fail the fast suite, not just the CI `floor` job.
+COPIER_REQUIREMENT = "copier>=9.16,<10"
 
 # Every module reachable from create-forge's shipped entry point
 # (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
@@ -375,13 +376,14 @@ def test_compatibility_line_dependency_keeps_a_strict_upper_bound() -> None:
 
 
 def test_copier_floor_clears_the_published_advisories() -> None:
-    """ADR 0038: `copier` is pinned at exactly `>=9.15.2,<10`, the lowest
-    version with no published GitHub advisory. `test_compatibility_line_
-    dependency_keeps_a_strict_upper_bound` above only checks the range shape;
-    this checks the actual floor, so lowering it back toward `>=9.4` (which
-    admits five destination-escape advisories) fails here. Re-verify the
-    floor against the advisory database before changing this constant --
-    docs/engine-updates.md, "Reviewing a dependency floor".
+    """ADR 0038 / ADR 0039: `copier` is pinned at exactly `>=9.16,<10`. 9.16
+    is above the destination-escape advisories (all fixed by 9.14.1) and is
+    the first release with the git-mirror cache and COPIER_CACHE_DIR that
+    `runner.py` models. `test_compatibility_line_dependency_keeps_a_strict_
+    upper_bound` above only checks the range shape; this checks the actual
+    floor, so lowering it fails here. Re-verify the floor against the advisory
+    database before changing this constant -- docs/engine-updates.md,
+    "Reviewing a dependency floor".
     """
     assert _required_dependencies().get("copier") == COPIER_REQUIREMENT
 

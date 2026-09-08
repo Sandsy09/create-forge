@@ -66,6 +66,9 @@ def _isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     _clean_forge_env, extended to also isolate the file path.
     """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    # doctor now probes Copier's cache directory; keep that off the real
+    # user cache the same way config is kept off the real config file.
+    monkeypatch.setenv("COPIER_CACHE_DIR", str(tmp_path / "copier-cache"))
     for field in UserConfig.model_fields:
         monkeypatch.delenv(f"FORGE_{field.upper()}", raising=False)
     return config_path()
@@ -233,6 +236,56 @@ def test_doctor_json_exits_1_when_a_check_fails(
     assert payload["ok"] is False
     registry_check = next(c for c in payload["checks"] if c["name"] == "registry")
     assert registry_check["ok"] is False
+
+
+def test_doctor_reports_the_copier_cache_and_uv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR 0039 / docs/engine-resolution.md diagnostics contract: `doctor`
+    names Copier's cache directory, whether COPIER_CACHE_DIR overrides it, and
+    whether it is writable, plus the `uv` binary it would actually run.
+    """
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    override = tmp_path / "cache dir"
+    override.mkdir()
+    monkeypatch.setenv("COPIER_CACHE_DIR", str(override))
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["copier_cache"] == {
+        "path": str(override),
+        "override": True,
+        "exists": True,
+        "writable": True,
+    }
+    assert set(payload["uv"]) == {"path", "version", "package"}
+    assert "copier cache" in result.output  # informational row in the table too
+
+
+def test_doctor_fails_when_the_copier_cache_is_unwritable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unwritable cache means the environment genuinely cannot scaffold, so
+    the check fails and `doctor` exits 1 -- the schema stays additive, only
+    the boolean flips.
+    """
+    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(
+        cli_module,
+        "cache_probe",
+        lambda _location: runner_module.CacheProbe(exists=True, writable=False),
+    )
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    assert payload["copier_cache"]["writable"] is False
+    check = next(c for c in payload["checks"] if c["name"] == "copier cache writable")
+    assert check["ok"] is False
 
 
 def test_doctor_survives_a_console_that_cannot_encode_check_marks(

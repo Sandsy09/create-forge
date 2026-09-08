@@ -438,10 +438,11 @@ toml = [
 
 [[package]]
 name = "create-forge"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
+    { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "questionary" },
@@ -491,8 +492,9 @@ typecheck = [
 
 [package.metadata]
 requires-dist = [
-    { name = "copier", specifier = ">=9.15.2,<10" },
+    { name = "copier", specifier = ">=9.16,<10" },
     { name = "forge-template", marker = "extra == 'engine'", specifier = ">=0.4.1,<0.5" },
+    { name = "platformdirs", specifier = ">=4.3.6" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "questionary", specifier = ">=2.0" },
