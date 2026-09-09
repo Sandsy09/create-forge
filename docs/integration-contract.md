@@ -54,7 +54,13 @@ hidden `new --engine-preview` flag, with a discovery-driven `--archetype`
 selection — for the production archetypes. **This is not the CLI cutover.**
 The released default `new` command remains a thin Copier wrapper with a
 bundled registry, and its current security and update invariants remain
-authoritative until a future, still-unfiled cutover replaces it.
+authoritative until the cutover replaces it. That cutover is now filed as
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) and
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
+selection and source-resolution UX is fixed by
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) and the
+canonical [engine-default CLI contract](engine-default-cli.md), and no
+implementing release has shipped.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
@@ -278,9 +284,14 @@ status `3` exclusively for a failed compatibility check — see the
 [engine resolution contract](engine-resolution.md) for both. Neither ships
 before the engine cutover.
 
-At the engine cutover this compatible override replaces the current arbitrary
-`--template-url` option. The current Copier option and warning remain supported until
-then; there is no dual direct-Copier path afterward.
+At the engine cutover, the engine-default CLI contract
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[engine-default CLI contract](engine-default-cli.md)) *retains*
+`--template-url`/`--ref`, scoped to an explicit `--legacy` Copier route, and
+adds `--engine-source`/`--engine-ref` as an orthogonal engine-package
+override. It supersedes ADR 0011's "no dual direct-Copier path afterward"
+clause only: `forge-template` guarantees the direct-Copier path stays
+supported, so the client keeps a working entry point to it.
 
 ## Release coordination
 

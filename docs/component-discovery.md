@@ -16,9 +16,14 @@ reachable today only via the hidden `new --engine-preview` flag
 filesystem staging and finalisation -- see the canonical
 [filesystem generation contract](filesystem-generation.md). The default `new`
 path continues to use the bundled registry and direct-Copier integration
-unchanged; the atomic cutover away from it remains a future, unfiled
-decision, now that [#9](https://github.com/Sandsy09/create-forge/issues/9)
-has resolved the narrower question of an installable engine range.
+unchanged; the cutover away from it is filed as
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153) — its
+selection and source-resolution UX fixed by
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) — and
+no implementing release has shipped, now that
+[#9](https://github.com/Sandsy09/create-forge/issues/9) has resolved the
+narrower question of an installable engine range.
 
 The `forge-template` dependency -- the optional `engine` extra since #9
 ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
@@ -151,9 +156,12 @@ engine internals to obtain them.
   replaced that development pin with the first released, range-bound
   dependency -- `forge-template>=0.3.1,<0.4` as the optional `engine`
   extra -- so this adapter now checks a real installable range rather than
-  an exact development version. The atomic cutover that replaces the
-  default Copier registry seam and `--engine-preview` together with the engine as
-  the default path remains a future, unfiled decision.
+  an exact development version. The cutover that replaces the default Copier
+  registry seam and `--engine-preview` with the engine as the default path is
+  filed as [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
+  ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md));
+  no implementing release has shipped.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
   reviewed both archetypes for parity and confirmed discovery stays fully
   engine-owned -- descriptors pass through this adapter unchanged, and

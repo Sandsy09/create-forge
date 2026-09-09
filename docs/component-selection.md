@@ -45,6 +45,18 @@ via `new --engine-preview`; the default `new` path stays direct-Copier with a
 bundled registry, exactly as [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)
 left it.
 
+At the engine-default cutover the five flags become the visible primary
+selection surface with their names unchanged — they lose the
+`"Development-only: "` help prefix and the exit-`1` *requires
+`--engine-preview`* rejection, and `--engine-preview` itself is removed. Every
+rule in this document carries over verbatim; only the flags' visibility
+changes. That is fixed by the
+[engine-default CLI contract](engine-default-cli.md)
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), a
+Stage 16 decision), implemented by
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) — not yet
+shipped.
+
 ## The selection surface
 
 `new` gains five hidden options, each carrying the `"Development-only: "` help

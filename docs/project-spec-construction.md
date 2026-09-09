@@ -311,10 +311,14 @@ by
   archetypes.
 - **#9** ([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
   replaced the exact development pin above with the first released,
-  installable range. The atomic cutover that replaces `--engine-preview` and
-  `--template-url` with the engine as the default path remains a future,
-  unfiled decision -- it is no longer blocked on a distribution channel, only
-  on that decision being made.
+  installable range. The cutover that makes the engine the default `new` path
+  (removing `--engine-preview`, retaining `--template-url` under an explicit
+  `--legacy` route) is filed as
+  [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
+  selection and source-resolution UX is fixed by
+  [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), and
+  no implementing release has shipped.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) reviewed
   both archetypes for parity, confirmed the shared ProjectSpec/pipeline path
   and engine-owned discovery hold, and generalised the legacy `library`

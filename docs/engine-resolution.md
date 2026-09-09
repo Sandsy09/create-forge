@@ -42,9 +42,15 @@ command remains a thin Copier wrapper with a bundled registry
 `src/create_forge/runner.py`. The engine range below is reachable only
 through `--engine-preview`; nothing about the default path, its
 `--template-url` escape hatch, or `--ref` changed. The full cutover this
-document otherwise describes — the engine replacing direct Copier as the
-default, `--engine-source`/`--engine-ref` replacing `--template-url` — is
-still a future, unfiled decision.
+document otherwise describes — the engine as the default `new` path, with
+`--engine-source`/`--engine-ref` alongside a retained `--template-url` — is
+the subject of
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152); its
+selection and source-resolution UX is fixed by
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) and
+[`docs/engine-default-cli.md`](engine-default-cli.md), and implemented by
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153), none of
+which has shipped.
 
 `forge-template 0.4.1` is the lower bound of the current line and its current
 compatible release. It republishes the reviewed `0.4.0` production source and
@@ -112,9 +118,31 @@ code-execution warning; `--yes` skips the confirmation but not the warning.
 Content resolved this way must pass the same compatibility check as an
 installed engine before anything renders.
 
-**These flags do not exist yet.** Until the cutover, the sanctioned
-development path is today's `--template-url`, exactly as
-[`docs/cross-repository-workflow.md`](cross-repository-workflow.md)
+The engine-default cutover contract
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[`docs/engine-default-cli.md`](engine-default-cli.md)) fixes the mechanism ADR
+0011 left open: `--engine-source` provisions the named path or VCS URL — with
+an optional `--engine-ref` — into an **isolated ephemeral environment** with
+`uv`, and the whole generation runs against that engine. The installed engine
+is never imported, shadowed or modified, and there is no in-process `sys.path`
+injection. Source validation is `--template-url`'s
+([ADR 0036](adr/0036-template-source-credentials.md)). A render produced this
+way writes **no generation-metadata document** — that document fixes
+`provider.distribution` to `forge-template` and admits no source string — so
+an `--engine-source` project is not `create-forge update`-able, and its
+post-generation message says so.
+
+`--engine-source`/`--engine-ref` select an engine *distribution*; they are
+orthogonal to the retained `--template-url`/`--ref`, which stay scoped to the
+`--legacy` Copier route rather than being replaced (ADR 0040 supersedes ADR
+0011's "no dual direct-Copier path afterward" clause only —
+[CF-16.01 / #155](https://github.com/Sandsy09/create-forge/issues/155),
+a Stage 16 contract, not yet implemented).
+
+**These flags do not exist yet.** Until the cutover,
+[CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) implements
+them, and the sanctioned development path is today's `--template-url`, exactly
+as [`docs/cross-repository-workflow.md`](cross-repository-workflow.md)
 describes:
 
 ```bash
@@ -124,9 +152,6 @@ uv run create-forge new "Cross Repo Smoke" --yes \
   --data github_org=test-org --data "author_name=Test User" \
   --data author_email=test@example.invalid
 ```
-
-At cutover, this predecessor option is replaced in the same atomic release —
-there is no dual direct-Copier and engine-override path afterward.
 
 ## What ordinary configuration may never do
 
@@ -185,6 +210,21 @@ review the identifier deliberately while patch releases leave it unchanged.
 The corrected `v0.3.x-copier` value is unreleased and will first appear in an
 installed package with the next create-forge release after `0.3.2`.
 
+At the engine-default cutover
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[`docs/engine-default-cli.md`](engine-default-cli.md)) `doctor` starts
+negotiating against the real engine: it calls `get_engine_info()` — still
+offline, still no destination write — and populates
+`projectspec_protocol.detected`, the component-manifest protocol tuple and
+`metadata_version`, reporting a mismatch as a failed check that exits `1`.
+`integration.copier` becomes `null` when the `legacy` extra is absent,
+`integration.engine_package` becomes a required field, and `integration.line`
+takes an identifier of the form `v<major>.<minor>.x-engine`. `compat.py` stays
+engine-free; the `get_engine_info()` call lives in `engine.py`. This is a
+Stage 16 contract ([CF-16.01 / #155](https://github.com/Sandsy09/create-forge/issues/155)),
+implemented by [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158),
+not yet shipped.
+
 The `copier_cache.writable` probe is non-destructive: it writes and deletes one
 uniquely named file in the cache directory, or -- when that directory does not
 exist yet -- in its deepest existing ancestor, which is what Copier's own
@@ -205,7 +245,13 @@ remediation. There is no fallback to the bundled registry or direct Copier.
 This failure class uses exit status **`3`**, reserved exclusively for it
 (see [`docs/cli-conventions.md`](cli-conventions.md)'s exit-status table).
 It is reachable today only via `--engine-preview` -- the default `new` path
-still cannot raise it, since it never touches the engine at all.
+still cannot raise it, since it never touches the engine at all. The
+engine-default cutover contract
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
+widens what `3` covers -- an engine that cannot be imported at all, an
+out-of-range component-manifest protocol or `metadata_version`, and `--legacy`
+without the `legacy` extra -- keeping one status for "the required generator
+is missing or unusable" with no silent fallback.
 
 `src/create_forge/engine.py` applies this ordering against the range in the
 table above: package and protocol mismatches fail before parsing, discovery,
