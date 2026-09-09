@@ -1,10 +1,10 @@
-# GitHub setup and future filing procedure
+# GitHub filing record and reconciliation procedure
 
-## Preparation status
+## Filing status
 
-Do not run GitHub writes while preparing this pack. Issues, labels and
-milestones have not been created or synchronized. Both documentation PRs
-must be reviewed before a separately authorized filing session.
+The issues, labels, milestones and native relationships were filed and verified
+on 2026-09-09. The manifest and issue indexes record their durable URLs and
+numbers. The temporary resumable receipt remains outside repository history.
 
 The shared label source is `.github/labels.toml`, byte-identical in both
 repositories. New stage labels are `roadmap:15` through `roadmap:21`.
@@ -27,9 +27,9 @@ and direct blockers appear in [the manifest](filing-manifest.json).
   Blocked-by edges remain native issue dependencies, including cross-repo
   edges. Do not replace child-level gates with whole-epic dependencies.
 
-## Ordered, resumable filing
+## Verified filing procedure
 
-1. Run the checker from the repository root against both prepared checkouts.
+1. Run the checker from the repository root against both roadmap checkouts.
    Validate **both** manifests together, even when filing only one roadmap.
    Read the current GitHub API documentation at filing time before selecting
    native sub-issue/dependency endpoints; this document does not freeze an API.
@@ -73,8 +73,8 @@ and direct blockers appear in [the manifest](filing-manifest.json).
    creating another.
 10. Update both roadmap indexes and dependency mirrors through documentation
     PRs with verified GitHub links. GitHub bodies and native relationships are
-    authoritative once filed; reviewed contract changes must reconcile both
-    mirrors before dependent implementation begins.
+    authoritative; reviewed contract changes must reconcile both mirrors before
+    dependent implementation begins.
 
 ## Release and contract safeguards
 

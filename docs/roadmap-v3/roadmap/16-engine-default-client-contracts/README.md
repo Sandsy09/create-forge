@@ -2,8 +2,8 @@
 
 ## Status and epics
 
-Prepared, not filed.
-[CF-EPIC-16](../../github-issues/create-forge/CF-EPIC-16.md).
+Filed and open.
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
 
 ## Entry criteria
 
@@ -15,9 +15,9 @@ its required decision or immutable hand-off is accepted.
 
 | Child | Outcome | Direct blockers |
 | --- | --- | --- |
-| [CF-16.01](../../github-issues/create-forge/CF-16.01.md) | Settle defaults, configuration precedence, explicit legacy access, override security and flag deprecations. | [FT-15.04](../../github-issues/forge-template/FT-15.04.md) |
-| [CF-16.02](../../github-issues/create-forge/CF-16.02.md) | Settle engine updates, legacy and preview-project handling, conflicts, dry-run, rollback, Git and hooks. | [CF-16.01](../../github-issues/create-forge/CF-16.01.md) |
-| [CF-16.03](../../github-issues/create-forge/CF-16.03.md) | Define release sequencing, support windows and executable release gates. | [CF-16.02](../../github-issues/create-forge/CF-16.02.md) |
+| [CF-16.01](https://github.com/Sandsy09/create-forge/issues/155) | Settle defaults, configuration precedence, explicit legacy access, override security and flag deprecations. | [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) |
+| [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) | Settle engine updates, legacy and preview-project handling, conflicts, dry-run, rollback, Git and hooks. | [CF-16.01](https://github.com/Sandsy09/create-forge/issues/155) |
+| [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Define release sequencing, support windows and executable release gates. | [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) |
 
 ## Exit criteria
 

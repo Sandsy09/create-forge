@@ -51,10 +51,10 @@ keeps Copier as the default and exposes the engine through an opt-in
 preview. Making the engine the default is a planned direction, with no
 scheduled release or supported migration available yet.
 
-Prepared roadmap packs now outline the
+Filed roadmap packs now track the
 [Engine-Default Cutover](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v3/README.md)
 and [Streamlit Archetype](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v4/README.md).
-These are unfiled plans, not available features. Engine-native updates and
+These are open plans, not available features. Engine-native updates and
 continued legacy Copier updates must work before the default switch.
 Streamlit can proceed after the cutover contracts are accepted; adoption stays
 on the supported preview path if the cutover has not shipped.

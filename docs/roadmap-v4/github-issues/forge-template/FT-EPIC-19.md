@@ -43,9 +43,10 @@ package has been published.
 
 ## Child issues
 
-- [FT-19.01](FT-19.01.md) — Define the Streamlit project shape and ownership
-- [FT-19.02](FT-19.02.md) — Define Streamlit composition, compatibility and
-  acceptance
+- [FT-19.01](https://github.com/Sandsy09/forge-template/issues/157)
+  — Define the Streamlit project shape and ownership
+- [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158)
+  — Define Streamlit composition, compatibility and acceptance
 
 ## Exclusions
 
@@ -59,7 +60,7 @@ package has been published.
 ## Dependencies
 
 - Blocked by
-  [CF-16.03](../../../roadmap-v3/github-issues/create-forge/CF-16.03.md).
+  [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -74,7 +75,7 @@ Streamlit Architecture Contracts — Stage 19
 
 ## Roadmap
 
-[Stage 19](../../roadmap/19-streamlit-architecture-contracts/README.md)
+[Stage 19](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v4/roadmap/19-streamlit-architecture-contracts/README.md)
 
 ## Labels
 

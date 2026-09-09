@@ -1,15 +1,15 @@
 # forge-template Streamlit Archetype issue index
 
-All entries are **prepared, not filed**. No GitHub issue number is assigned.
-Labels and full bodies are recorded in each draft and the filing manifest.
+All entries are **filed and open**. Verified issue numbers, labels and full
+bodies are recorded here and in the filing manifest.
 
-| ID | Title | Parent | Direct blockers | Milestone |
-| --- | --- | --- | --- | --- |
-| [FT-EPIC-19](FT-EPIC-19.md) | Streamlit Architecture Contracts | — | [CF-16.03](../../../roadmap-v3/github-issues/create-forge/CF-16.03.md) | Streamlit Architecture Contracts — Stage 19 |
-| [FT-19.01](FT-19.01.md) | Define the Streamlit project shape and ownership | [FT-EPIC-19](FT-EPIC-19.md) | [CF-16.03](../../../roadmap-v3/github-issues/create-forge/CF-16.03.md) | Streamlit Architecture Contracts — Stage 19 |
-| [FT-19.02](FT-19.02.md) | Define Streamlit composition, compatibility and acceptance | [FT-EPIC-19](FT-EPIC-19.md) | [FT-19.01](FT-19.01.md) | Streamlit Architecture Contracts — Stage 19 |
-| [FT-EPIC-20](FT-EPIC-20.md) | Streamlit Provider Implementation and Release | — | [FT-19.02](FT-19.02.md) | Streamlit Provider Implementation and Release — Stage 20 |
-| [FT-20.01](FT-20.01.md) | Implement the independent Streamlit archetype | [FT-EPIC-20](FT-EPIC-20.md) | [FT-19.02](FT-19.02.md) | Streamlit Provider Implementation and Release — Stage 20 |
-| [FT-20.02](FT-20.02.md) | Implement Streamlit tasks, safeguards and capability composition | [FT-EPIC-20](FT-EPIC-20.md) | [FT-20.01](FT-20.01.md) | Streamlit Provider Implementation and Release — Stage 20 |
-| [FT-20.03](FT-20.03.md) | Validate Streamlit generated projects and distributions | [FT-EPIC-20](FT-EPIC-20.md) | [FT-20.02](FT-20.02.md) | Streamlit Provider Implementation and Release — Stage 20 |
-| [FT-20.04](FT-20.04.md) | Publish and verify the reviewed Streamlit provider release | [FT-EPIC-20](FT-EPIC-20.md) | [FT-20.03](FT-20.03.md) | Streamlit Provider Implementation and Release — Stage 20 |
+| ID | Issue | Title | Parent | Direct blockers | Milestone |
+| --- | --- | --- | --- | --- | --- |
+| [FT-EPIC-19](https://github.com/Sandsy09/forge-template/issues/144) | [#144](https://github.com/Sandsy09/forge-template/issues/144) | Streamlit Architecture Contracts | — | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Streamlit Architecture Contracts — Stage 19 |
+| [FT-19.01](https://github.com/Sandsy09/forge-template/issues/157) | [#157](https://github.com/Sandsy09/forge-template/issues/157) | Define the Streamlit project shape and ownership | [FT-EPIC-19](https://github.com/Sandsy09/forge-template/issues/144) | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Streamlit Architecture Contracts — Stage 19 |
+| [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158) | [#158](https://github.com/Sandsy09/forge-template/issues/158) | Define Streamlit composition, compatibility and acceptance | [FT-EPIC-19](https://github.com/Sandsy09/forge-template/issues/144) | [FT-19.01](https://github.com/Sandsy09/forge-template/issues/157) | Streamlit Architecture Contracts — Stage 19 |
+| [FT-EPIC-20](https://github.com/Sandsy09/forge-template/issues/145) | [#145](https://github.com/Sandsy09/forge-template/issues/145) | Streamlit Provider Implementation and Release | — | [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158) | Streamlit Provider Implementation and Release — Stage 20 |
+| [FT-20.01](https://github.com/Sandsy09/forge-template/issues/159) | [#159](https://github.com/Sandsy09/forge-template/issues/159) | Implement the independent Streamlit archetype | [FT-EPIC-20](https://github.com/Sandsy09/forge-template/issues/145) | [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158) | Streamlit Provider Implementation and Release — Stage 20 |
+| [FT-20.02](https://github.com/Sandsy09/forge-template/issues/160) | [#160](https://github.com/Sandsy09/forge-template/issues/160) | Implement Streamlit tasks, safeguards and capability composition | [FT-EPIC-20](https://github.com/Sandsy09/forge-template/issues/145) | [FT-20.01](https://github.com/Sandsy09/forge-template/issues/159) | Streamlit Provider Implementation and Release — Stage 20 |
+| [FT-20.03](https://github.com/Sandsy09/forge-template/issues/161) | [#161](https://github.com/Sandsy09/forge-template/issues/161) | Validate Streamlit generated projects and distributions | [FT-EPIC-20](https://github.com/Sandsy09/forge-template/issues/145) | [FT-20.02](https://github.com/Sandsy09/forge-template/issues/160) | Streamlit Provider Implementation and Release — Stage 20 |
+| [FT-20.04](https://github.com/Sandsy09/forge-template/issues/162) | [#162](https://github.com/Sandsy09/forge-template/issues/162) | Publish and verify the reviewed Streamlit provider release | [FT-EPIC-20](https://github.com/Sandsy09/forge-template/issues/145) | [FT-20.03](https://github.com/Sandsy09/forge-template/issues/161) | Streamlit Provider Implementation and Release — Stage 20 |

@@ -1,42 +1,42 @@
 # Direct dependency matrix
 
-Every direct edge is listed, including local edges for context. Native GitHub
-blocked-by relationships become authoritative only after filing. No issue has
-been filed by this pack. Parent membership is not a blocked-by edge.
+Every direct edge is listed, including local edges for context. The verified
+native GitHub blocked-by relationships are authoritative. Parent membership is
+recorded separately and is not a blocked-by edge.
 
 | Blocked issue | Blocked by | Boundary |
 | --- | --- | --- |
-| [FT-15.02](forge-template/FT-15.02.md) | [FT-15.01](forge-template/FT-15.01.md) | Local |
-| [FT-15.03](forge-template/FT-15.03.md) | [FT-15.01](forge-template/FT-15.01.md) | Local |
-| [FT-15.04](forge-template/FT-15.04.md) | [FT-15.02](forge-template/FT-15.02.md) | Local |
-| [FT-15.04](forge-template/FT-15.04.md) | [FT-15.03](forge-template/FT-15.03.md) | Local |
-| [CF-16.01](create-forge/CF-16.01.md) | [FT-15.04](forge-template/FT-15.04.md) | Cross-repo |
-| [CF-16.02](create-forge/CF-16.02.md) | [CF-16.01](create-forge/CF-16.01.md) | Local |
-| [CF-16.03](create-forge/CF-16.03.md) | [CF-16.02](create-forge/CF-16.02.md) | Local |
-| [FT-17.01](forge-template/FT-17.01.md) | [CF-16.03](create-forge/CF-16.03.md) | Cross-repo |
-| [FT-17.02](forge-template/FT-17.02.md) | [CF-16.03](create-forge/CF-16.03.md) | Cross-repo |
-| [FT-17.03](forge-template/FT-17.03.md) | [FT-17.02](forge-template/FT-17.02.md) | Local |
-| [FT-17.04](forge-template/FT-17.04.md) | [FT-17.01](forge-template/FT-17.01.md) | Local |
-| [FT-17.05](forge-template/FT-17.05.md) | [FT-17.03](forge-template/FT-17.03.md) | Local |
-| [FT-17.05](forge-template/FT-17.05.md) | [FT-17.04](forge-template/FT-17.04.md) | Local |
-| [FT-17.06](forge-template/FT-17.06.md) | [FT-17.05](forge-template/FT-17.05.md) | Local |
-| [CF-18.01](create-forge/CF-18.01.md) | [FT-17.06](forge-template/FT-17.06.md) | Cross-repo |
-| [CF-18.02](create-forge/CF-18.02.md) | [CF-18.01](create-forge/CF-18.01.md) | Local |
-| [CF-18.03](create-forge/CF-18.03.md) | [CF-18.01](create-forge/CF-18.01.md) | Local |
-| [CF-18.04](create-forge/CF-18.04.md) | [CF-18.03](create-forge/CF-18.03.md) | Local |
-| [CF-18.05](create-forge/CF-18.05.md) | [CF-18.04](create-forge/CF-18.04.md) | Local |
-| [FT-18.01](forge-template/FT-18.01.md) | [CF-18.02](create-forge/CF-18.02.md) | Cross-repo |
-| [FT-18.01](forge-template/FT-18.01.md) | [CF-18.05](create-forge/CF-18.05.md) | Cross-repo |
-| [CF-18.06](create-forge/CF-18.06.md) | [CF-18.02](create-forge/CF-18.02.md) | Local |
-| [CF-18.06](create-forge/CF-18.06.md) | [CF-18.05](create-forge/CF-18.05.md) | Local |
-| [CF-18.07](create-forge/CF-18.07.md) | [FT-18.01](forge-template/FT-18.01.md) | Cross-repo |
-| [CF-18.07](create-forge/CF-18.07.md) | [CF-18.06](create-forge/CF-18.06.md) | Local |
-| [CF-EPIC-16](create-forge/CF-EPIC-16.md) | [FT-15.04](forge-template/FT-15.04.md) | Cross-repo |
-| [FT-EPIC-17](forge-template/FT-EPIC-17.md) | [CF-16.03](create-forge/CF-16.03.md) | Cross-repo |
-| [CF-EPIC-18](create-forge/CF-EPIC-18.md) | [FT-17.06](forge-template/FT-17.06.md) | Cross-repo |
-| [CF-EPIC-18](create-forge/CF-EPIC-18.md) | [FT-18.01](forge-template/FT-18.01.md) | Cross-repo |
-| [FT-EPIC-18](forge-template/FT-EPIC-18.md) | [CF-18.02](create-forge/CF-18.02.md) | Cross-repo |
-| [FT-EPIC-18](forge-template/FT-EPIC-18.md) | [CF-18.05](create-forge/CF-18.05.md) | Cross-repo |
+| [FT-15.02](https://github.com/Sandsy09/forge-template/issues/147) | [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146) | Local |
+| [FT-15.03](https://github.com/Sandsy09/forge-template/issues/148) | [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146) | Local |
+| [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) | [FT-15.02](https://github.com/Sandsy09/forge-template/issues/147) | Local |
+| [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) | [FT-15.03](https://github.com/Sandsy09/forge-template/issues/148) | Local |
+| [CF-16.01](https://github.com/Sandsy09/create-forge/issues/155) | [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) | Cross-repo |
+| [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) | [CF-16.01](https://github.com/Sandsy09/create-forge/issues/155) | Local |
+| [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) | Local |
+| [FT-17.01](https://github.com/Sandsy09/forge-template/issues/150) | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Cross-repo |
+| [FT-17.02](https://github.com/Sandsy09/forge-template/issues/151) | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Cross-repo |
+| [FT-17.03](https://github.com/Sandsy09/forge-template/issues/152) | [FT-17.02](https://github.com/Sandsy09/forge-template/issues/151) | Local |
+| [FT-17.04](https://github.com/Sandsy09/forge-template/issues/153) | [FT-17.01](https://github.com/Sandsy09/forge-template/issues/150) | Local |
+| [FT-17.05](https://github.com/Sandsy09/forge-template/issues/154) | [FT-17.03](https://github.com/Sandsy09/forge-template/issues/152) | Local |
+| [FT-17.05](https://github.com/Sandsy09/forge-template/issues/154) | [FT-17.04](https://github.com/Sandsy09/forge-template/issues/153) | Local |
+| [FT-17.06](https://github.com/Sandsy09/forge-template/issues/155) | [FT-17.05](https://github.com/Sandsy09/forge-template/issues/154) | Local |
+| [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) | [FT-17.06](https://github.com/Sandsy09/forge-template/issues/155) | Cross-repo |
+| [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) | [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) | Local |
+| [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) | [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) | Local |
+| [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) | [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) | Local |
+| [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) | [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) | Local |
+| [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) | [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) | Cross-repo |
+| [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) | [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) | Cross-repo |
+| [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) | [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) | Local |
+| [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) | [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) | Local |
+| [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) | [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) | Cross-repo |
+| [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) | [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) | Local |
+| [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) | [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) | Cross-repo |
+| [FT-EPIC-17](https://github.com/Sandsy09/forge-template/issues/142) | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) | Cross-repo |
+| [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153) | [FT-17.06](https://github.com/Sandsy09/forge-template/issues/155) | Cross-repo |
+| [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153) | [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) | Cross-repo |
+| [FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143) | [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) | Cross-repo |
+| [FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143) | [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) | Cross-repo |
 
 FT-15.01 is the only initially actionable child across both packs. The
 Streamlit entry gate is CF-16.03; do not add CF-18.07 as a blanket blocker.

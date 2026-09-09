@@ -4,28 +4,28 @@
 
 [Stage record](roadmap/15-engine-default-provider-contracts/README.md)
 
-Epics: [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md).
+Epics: [FT-EPIC-15](https://github.com/Sandsy09/forge-template/issues/141).
 
 ## Stage 16 — Engine-Default Client Contracts
 
 [Stage record](roadmap/16-engine-default-client-contracts/README.md)
 
-Epics: [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md).
+Epics: [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
 
 ## Stage 17 — Engine-Default Provider Implementation and Release
 
 [Stage
 record](roadmap/17-engine-default-provider-implementation-and-release/README.md)
 
-Epics: [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md).
+Epics: [FT-EPIC-17](https://github.com/Sandsy09/forge-template/issues/142).
 
 ## Stage 18 — Engine-Default Client Delivery and Validation
 
 [Stage
 record](roadmap/18-engine-default-client-delivery-and-validation/README.md)
 
-Epics: [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md),
-[FT-EPIC-18](github-issues/forge-template/FT-EPIC-18.md).
+Epics: [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
+[FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143).
 
 ## Completion rule
 

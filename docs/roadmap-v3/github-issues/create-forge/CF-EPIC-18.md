@@ -44,17 +44,20 @@ package has been published.
 
 ## Child issues
 
-- [CF-18.01](CF-18.01.md) — Adopt the released provider and implement
-  engine-default selection
-- [CF-18.02](CF-18.02.md) — Implement secure engine-source overrides
-- [CF-18.03](CF-18.03.md) — Complete engine generation finalisation, Git and
-  hooks
-- [CF-18.04](CF-18.04.md) — Implement engine-native project updates
-- [CF-18.05](CF-18.05.md) — Preserve legacy Copier workflows and implement
-  transition handling
-- [CF-18.06](CF-18.06.md) — Complete installed cutover regressions and
-  migration documentation
-- [CF-18.07](CF-18.07.md) — Publish and verify the engine-default client release
+- [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)
+  — Adopt the released provider and implement engine-default selection
+- [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159)
+  — Implement secure engine-source overrides
+- [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
+  — Complete engine generation finalisation, Git and hooks
+- [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+  — Implement engine-native project updates
+- [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162)
+  — Preserve legacy Copier workflows and implement transition handling
+- [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163)
+  — Complete installed cutover regressions and migration documentation
+- [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)
+  — Publish and verify the engine-default client release
 
 ## Exclusions
 
@@ -65,8 +68,8 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [FT-17.06](../forge-template/FT-17.06.md).
-- Blocked by [FT-18.01](../forge-template/FT-18.01.md).
+- Blocked by [FT-17.06](https://github.com/Sandsy09/forge-template/issues/155).
+- Blocked by [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -82,7 +85,7 @@ Engine-Default Client Delivery and Validation — Stage 18
 ## Roadmap
 
 [Stage
-18](../../roadmap/18-engine-default-client-delivery-and-validation/README.md)
+18](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v3/roadmap/18-engine-default-client-delivery-and-validation/README.md)
 
 ## Labels
 

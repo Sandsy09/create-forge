@@ -2,9 +2,10 @@
 
 ## Status
 
-Prepared, not filed. This pack contains 3 repository-owned epics and
-9 child drafts for Stages 19–21. No issue numbers, milestones,
-releases or implementation are claimed by these documents.
+Filed and open. This pack records 3 repository-owned epics and
+9 children for Stages 19–21, with verified issue numbers, labels,
+milestones, native parents and direct dependencies. No release or runtime
+implementation is claimed by these planning documents.
 
 Streamlit begins after the provider and client cutover contracts are accepted.
 If cutover has not shipped, client adoption uses the supported engine-preview
@@ -16,7 +17,7 @@ path without expanding the Copier registry or changing plain installs.
 - [Architecture and decision boundaries](ARCHITECTURE.md)
 - [Repository ownership](REPOSITORY-OWNERSHIP.md)
 - [Review traceability](TRACEABILITY.md)
-- [GitHub setup and future filing procedure](github-issues/GITHUB-SETUP.md)
+- [GitHub filing record and reconciliation procedure](github-issues/GITHUB-SETUP.md)
 - [Direct dependency matrix](github-issues/CROSS-REPO-DEPENDENCIES.md)
 - [Client issue index](github-issues/create-forge/ISSUE-INDEX.md)
 - [Provider issue index](github-issues/forge-template/ISSUE-INDEX.md)
@@ -24,16 +25,16 @@ path without expanding the Copier registry or changing plain installs.
 
 ## Coordination
 
-The two packs are mirrored in both repositories. Before filing, the reviewed
-manifest and complete bodies are the proposed source of truth. After filing,
-GitHub bodies and native relationships are authoritative; update both mirrors
-when decisions alter scope or dependencies. Never invent GitHub numbers.
+The two packs are mirrored in both repositories. The reviewed manifest and
+complete bodies record the filed state. GitHub bodies and native relationships
+are authoritative; update both mirrors when decisions alter scope or
+dependencies. Never invent or reuse GitHub numbers.
 
 The companion [Engine-Default Cutover roadmap](../roadmap-v3/README.md) shares
 the contract gates. Preserve completed roadmap-v1/v2 records and historical
 ADRs.
 
-## Preparation validation
+## Filed-state validation
 
 From either repository root:
 

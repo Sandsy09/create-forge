@@ -2,8 +2,8 @@
 
 ## Status and epics
 
-Prepared, not filed.
-[FT-EPIC-15](../../github-issues/forge-template/FT-EPIC-15.md).
+Filed and open.
+[FT-EPIC-15](https://github.com/Sandsy09/forge-template/issues/141).
 
 ## Entry criteria
 
@@ -15,10 +15,10 @@ its required decision or immutable hand-off is accepted.
 
 | Child | Outcome | Direct blockers |
 | --- | --- | --- |
-| [FT-15.01](../../github-issues/forge-template/FT-15.01.md) | Account for every supported behaviour, generated concern and explicit exclusion. | None |
-| [FT-15.02](../../github-issues/forge-template/FT-15.02.md) | Specify versioned metadata, output ownership and reproducible old/new render requirements. | [FT-15.01](../../github-issues/forge-template/FT-15.01.md) |
-| [FT-15.03](../../github-issues/forge-template/FT-15.03.md) | Assign concerns to Foundation, archetypes, capabilities and platforms; identify necessary extension points. | [FT-15.01](../../github-issues/forge-template/FT-15.01.md) |
-| [FT-15.04](../../github-issues/forge-template/FT-15.04.md) | Classify public API/protocol changes and approve the provider acceptance matrix. | [FT-15.02](../../github-issues/forge-template/FT-15.02.md), [FT-15.03](../../github-issues/forge-template/FT-15.03.md) |
+| [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146) | Account for every supported behaviour, generated concern and explicit exclusion. | None |
+| [FT-15.02](https://github.com/Sandsy09/forge-template/issues/147) | Specify versioned metadata, output ownership and reproducible old/new render requirements. | [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146) |
+| [FT-15.03](https://github.com/Sandsy09/forge-template/issues/148) | Assign concerns to Foundation, archetypes, capabilities and platforms; identify necessary extension points. | [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146) |
+| [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149) | Classify public API/protocol changes and approve the provider acceptance matrix. | [FT-15.02](https://github.com/Sandsy09/forge-template/issues/147), [FT-15.03](https://github.com/Sandsy09/forge-template/issues/148) |
 
 ## Exit criteria
 

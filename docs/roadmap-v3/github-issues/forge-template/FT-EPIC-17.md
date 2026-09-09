@@ -44,15 +44,18 @@ package has been published.
 
 ## Child issues
 
-- [FT-17.01](FT-17.01.md) — Implement provider provenance and public metadata
-  contracts
-- [FT-17.02](FT-17.02.md) — Implement approved platform compositions
-- [FT-17.03](FT-17.03.md) — Complete approved generated-content parity
-- [FT-17.04](FT-17.04.md) — Implement reproducible rendering for engine updates
-- [FT-17.05](FT-17.05.md) — Validate provider parity, reproducibility and
-  distributions
-- [FT-17.06](FT-17.06.md) — Publish and verify the reviewed cutover provider
-  release
+- [FT-17.01](https://github.com/Sandsy09/forge-template/issues/150)
+  — Implement provider provenance and public metadata contracts
+- [FT-17.02](https://github.com/Sandsy09/forge-template/issues/151)
+  — Implement approved platform compositions
+- [FT-17.03](https://github.com/Sandsy09/forge-template/issues/152)
+  — Complete approved generated-content parity
+- [FT-17.04](https://github.com/Sandsy09/forge-template/issues/153)
+  — Implement reproducible rendering for engine updates
+- [FT-17.05](https://github.com/Sandsy09/forge-template/issues/154)
+  — Validate provider parity, reproducibility and distributions
+- [FT-17.06](https://github.com/Sandsy09/forge-template/issues/155)
+  — Publish and verify the reviewed cutover provider release
 
 ## Exclusions
 
@@ -63,7 +66,7 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [CF-16.03](../create-forge/CF-16.03.md).
+- Blocked by [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -79,7 +82,7 @@ Engine-Default Provider Implementation and Release — Stage 17
 ## Roadmap
 
 [Stage
-17](../../roadmap/17-engine-default-provider-implementation-and-release/README.md)
+17](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v3/roadmap/17-engine-default-provider-implementation-and-release/README.md)
 
 ## Labels
 

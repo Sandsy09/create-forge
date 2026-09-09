@@ -43,10 +43,12 @@ package has been published.
 
 ## Child issues
 
-- [CF-21.01](CF-21.01.md) — Adopt the released Streamlit provider
-- [CF-21.02](CF-21.02.md) — Validate installed Streamlit generation and
-  document usage
-- [CF-21.03](CF-21.03.md) — Publish and verify Streamlit client support
+- [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165)
+  — Adopt the released Streamlit provider
+- [CF-21.02](https://github.com/Sandsy09/create-forge/issues/166)
+  — Validate installed Streamlit generation and document usage
+- [CF-21.03](https://github.com/Sandsy09/create-forge/issues/167)
+  — Publish and verify Streamlit client support
 
 ## Exclusions
 
@@ -59,7 +61,7 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [FT-20.04](../forge-template/FT-20.04.md).
+- Blocked by [FT-20.04](https://github.com/Sandsy09/forge-template/issues/162).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -74,7 +76,7 @@ Streamlit Client Adoption and Rollout — Stage 21
 
 ## Roadmap
 
-[Stage 21](../../roadmap/21-streamlit-client-adoption-and-rollout/README.md)
+[Stage 21](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v4/roadmap/21-streamlit-client-adoption-and-rollout/README.md)
 
 ## Labels
 

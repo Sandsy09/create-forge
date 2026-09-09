@@ -44,13 +44,14 @@ package has been published.
 
 ## Child issues
 
-- [FT-15.01](FT-15.01.md) — Inventory default-Copier parity and assign ownership
-- [FT-15.02](FT-15.02.md) — Define generation provenance and
-  reproducible-update inputs
-- [FT-15.03](FT-15.03.md) — Define platform composition and generated-tooling
-  parity
-- [FT-15.04](FT-15.04.md) — Define provider compatibility, failure and release
-  gates
+- [FT-15.01](https://github.com/Sandsy09/forge-template/issues/146)
+  — Inventory default-Copier parity and assign ownership
+- [FT-15.02](https://github.com/Sandsy09/forge-template/issues/147)
+  — Define generation provenance and reproducible-update inputs
+- [FT-15.03](https://github.com/Sandsy09/forge-template/issues/148)
+  — Define platform composition and generated-tooling parity
+- [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149)
+  — Define provider compatibility, failure and release gates
 
 ## Exclusions
 
@@ -76,7 +77,7 @@ Engine-Default Provider Contracts — Stage 15
 
 ## Roadmap
 
-[Stage 15](../../roadmap/15-engine-default-provider-contracts/README.md)
+[Stage 15](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v3/roadmap/15-engine-default-provider-contracts/README.md)
 
 ## Labels
 

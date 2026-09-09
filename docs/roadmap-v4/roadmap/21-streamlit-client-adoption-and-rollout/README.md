@@ -2,8 +2,8 @@
 
 ## Status and epics
 
-Prepared, not filed.
-[CF-EPIC-21](../../github-issues/create-forge/CF-EPIC-21.md).
+Filed and open.
+[CF-EPIC-21](https://github.com/Sandsy09/create-forge/issues/154).
 
 ## Entry criteria
 
@@ -15,9 +15,9 @@ its required decision or immutable hand-off is accepted.
 
 | Child | Outcome | Direct blockers |
 | --- | --- | --- |
-| [CF-21.01](../../github-issues/create-forge/CF-21.01.md) | Update compatible package bounds and verify generic interactive/non-interactive discovery. | [FT-20.04](../../github-issues/forge-template/FT-20.04.md) |
-| [CF-21.02](../../github-issues/create-forge/CF-21.02.md) | Cover accepted combinations, locks, checks, smoke validation and failure cleanup. | [CF-21.01](../../github-issues/create-forge/CF-21.01.md) |
-| [CF-21.03](../../github-issues/create-forge/CF-21.03.md) | Release only after installed-path evidence and documentation are complete. | [CF-21.02](../../github-issues/create-forge/CF-21.02.md) |
+| [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165) | Update compatible package bounds and verify generic interactive/non-interactive discovery. | [FT-20.04](https://github.com/Sandsy09/forge-template/issues/162) |
+| [CF-21.02](https://github.com/Sandsy09/create-forge/issues/166) | Cover accepted combinations, locks, checks, smoke validation and failure cleanup. | [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165) |
+| [CF-21.03](https://github.com/Sandsy09/create-forge/issues/167) | Release only after installed-path evidence and documentation are complete. | [CF-21.02](https://github.com/Sandsy09/create-forge/issues/166) |
 
 ## Exit criteria
 
