@@ -1,0 +1,37 @@
+# Review acceptance and exclusion traceability
+
+The 7 September 2026 weekly review's four roadmap drafts are the source.
+The throwaway review file is intentionally not committed or linked as a
+required dependency. This table preserves each original acceptance criterion
+and exclusion verbatim in normalized single-line form, with stable row IDs.
+No source review completion is claimed.
+
+Decision-only exclusions constrain contract children, not their separately
+scheduled implementation and publication work. CF-ROADMAP-01's provider-release
+dependency is split: accepted provider contract for design, immutable release
+for adoption. Streamlit's conditional preview/plain-install rule remains intact.
+
+| Review ID | Kind | Original requirement | Owning epic(s) | Child owner(s) |
+| --- | --- | --- | --- | --- |
+| FT-ROADMAP-01-AC-01 | acceptance | A responsibility matrix identifies every remaining default-Copier behaviour and assigns it to provider, client or an explicit exclusion. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.01](github-issues/forge-template/FT-15.01.md) |
+| FT-ROADMAP-01-AC-02 | acceptance | A versioned provider contract defines output ownership/provenance and the metadata required to reproduce or update a generated project. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md), [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md) | [FT-15.02](github-issues/forge-template/FT-15.02.md), [FT-17.01](github-issues/forge-template/FT-17.01.md), [FT-17.04](github-issues/forge-template/FT-17.04.md) |
+| FT-ROADMAP-01-AC-03 | acceptance | Platform selection and composition rules remain manifest/catalogue-owned and are exposed only through public path-free descriptors. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md), [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md) | [FT-15.03](github-issues/forge-template/FT-15.03.md), [FT-17.02](github-issues/forge-template/FT-17.02.md) |
+| FT-ROADMAP-01-AC-04 | acceptance | Failure and compatibility contracts preserve validation-before-render and do not require `create-forge` to inspect component resources. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md), [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md) | [FT-15.04](github-issues/forge-template/FT-15.04.md), [FT-17.05](github-issues/forge-template/FT-17.05.md) |
+| FT-ROADMAP-01-AC-05 | acceptance | The ADR states whether any protocol or package compatibility line must move and defines migration/rollback expectations. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.04](github-issues/forge-template/FT-15.04.md) |
+| FT-ROADMAP-01-AC-06 | acceptance | Follow-up provider issues cover implementation, regression validation and publication separately. | [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md) | [FT-17.01](github-issues/forge-template/FT-17.01.md), [FT-17.05](github-issues/forge-template/FT-17.05.md), [FT-17.06](github-issues/forge-template/FT-17.06.md) |
+| FT-ROADMAP-01-AC-07 | acceptance | The final provider dependency for the client is an immutable reviewed `forge-template` release, not a moving branch. | [FT-EPIC-17](github-issues/forge-template/FT-EPIC-17.md) | [FT-17.06](github-issues/forge-template/FT-17.06.md) |
+| FT-ROADMAP-01-EX-01 | exclusion | No CLI flags, prompts, user configuration, Git initialisation, hooks or destination finalisation. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.01](github-issues/forge-template/FT-15.01.md) |
+| FT-ROADMAP-01-EX-02 | exclusion | No engine-default switch in this issue. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.04](github-issues/forge-template/FT-15.04.md) |
+| FT-ROADMAP-01-EX-03 | exclusion | No Streamlit or other new archetype. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.03](github-issues/forge-template/FT-15.03.md) |
+| FT-ROADMAP-01-EX-04 | exclusion | No arbitrary remote component registry or plugin execution. | [FT-EPIC-15](github-issues/forge-template/FT-EPIC-15.md) | [FT-15.04](github-issues/forge-template/FT-15.04.md) |
+| CF-ROADMAP-01-AC-01 | acceptance | A living CLI contract defines the default, explicit legacy route, configuration precedence, prompts, `--yes` requirements and deprecation timeline. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md) |
+| CF-ROADMAP-01-AC-02 | acceptance | Data still flows `create-forge → ProjectSpec → forge-template render → create-forge finalisation`; no component semantics or resources are copied downstream. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md), [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md), [CF-18.01](github-issues/create-forge/CF-18.01.md) |
+| CF-ROADMAP-01-AC-03 | acceptance | Client ownership of staging, VCS/hooks, update dispatch and cleanup is explicit and testable. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md), [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-16.02](github-issues/create-forge/CF-16.02.md), [CF-18.03](github-issues/create-forge/CF-18.03.md), [CF-18.04](github-issues/create-forge/CF-18.04.md) |
+| CF-ROADMAP-01-AC-04 | acceptance | Missing/incompatible providers, invalid selections and render/finalise failures have stable statuses and never silently fall back to Copier. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md), [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md), [CF-18.06](github-issues/create-forge/CF-18.06.md) |
+| CF-ROADMAP-01-AC-05 | acceptance | Existing Copier projects have a documented update/support route and the rollback plan does not corrupt their stored answers. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md), [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-16.02](github-issues/create-forge/CF-16.02.md), [CF-18.05](github-issues/create-forge/CF-18.05.md) |
+| CF-ROADMAP-01-AC-06 | acceptance | Implementation, migration E2E, legacy regression and release tasks are filed separately with an explicit dependency graph. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md), [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-16.03](github-issues/create-forge/CF-16.03.md), [CF-18.06](github-issues/create-forge/CF-18.06.md), [CF-18.07](github-issues/create-forge/CF-18.07.md) |
+| CF-ROADMAP-01-AC-07 | acceptance | Cutover cannot ship until the reviewed provider release and full cross-repository matrix pass together. | [CF-EPIC-18](github-issues/create-forge/CF-EPIC-18.md) | [CF-18.07](github-issues/create-forge/CF-18.07.md) |
+| CF-ROADMAP-01-EX-01 | exclusion | No provider manifest, composition or generated-content changes. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md) |
+| CF-ROADMAP-01-EX-02 | exclusion | No new archetype. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md) |
+| CF-ROADMAP-01-EX-03 | exclusion | No remote plugin/registry system. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md) | [CF-16.01](github-issues/create-forge/CF-16.01.md) |
+| CF-ROADMAP-01-EX-04 | exclusion | No implementation or release in this decision issue. | [CF-EPIC-16](github-issues/create-forge/CF-EPIC-16.md) | [CF-16.03](github-issues/create-forge/CF-16.03.md) |

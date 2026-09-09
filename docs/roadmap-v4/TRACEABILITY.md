@@ -1,0 +1,38 @@
+# Review acceptance and exclusion traceability
+
+The 7 September 2026 weekly review's four roadmap drafts are the source.
+The throwaway review file is intentionally not committed or linked as a
+required dependency. This table preserves each original acceptance criterion
+and exclusion verbatim in normalized single-line form, with stable row IDs.
+No source review completion is claimed.
+
+Decision-only exclusions constrain contract children, not their separately
+scheduled implementation and publication work. CF-ROADMAP-01's provider-release
+dependency is split: accepted provider contract for design, immutable release
+for adoption. Streamlit's conditional preview/plain-install rule remains intact.
+
+| Review ID | Kind | Original requirement | Owning epic(s) | Child owner(s) |
+| --- | --- | --- | --- | --- |
+| FT-ROADMAP-02-AC-01 | acceptance | An accepted contract defines the Streamlit project shape, entry point, dependency/task ownership, supported Python range and deployment boundary. | [FT-EPIC-19](github-issues/forge-template/FT-EPIC-19.md) | [FT-19.01](github-issues/forge-template/FT-19.01.md), [FT-19.02](github-issues/forge-template/FT-19.02.md) |
+| FT-ROADMAP-02-AC-02 | acceptance | Discovery exposes an immutable, path-free Streamlit archetype descriptor without a `create-forge` catalogue change. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.01](github-issues/forge-template/FT-20.01.md) |
+| FT-ROADMAP-02-AC-03 | acceptance | The archetype owns its resources independently and uses only reviewed Foundation contribution points. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.01](github-issues/forge-template/FT-20.01.md) |
+| FT-ROADMAP-02-AC-04 | acceptance | No-capability, Jupyter, Scientific Python and combined selections have an explicitly accepted compatibility matrix and deterministic render results. | [FT-EPIC-19](github-issues/forge-template/FT-EPIC-19.md), [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-19.02](github-issues/forge-template/FT-19.02.md), [FT-20.02](github-issues/forge-template/FT-20.02.md), [FT-20.03](github-issues/forge-template/FT-20.03.md) |
+| FT-ROADMAP-02-AC-05 | acceptance | Generated projects restore from committed lock state, pass their canonical checks, build/install where applicable and complete a bounded Streamlit smoke check without starting a persistent server. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.03](github-issues/forge-template/FT-20.03.md) |
+| FT-ROADMAP-02-AC-06 | acceptance | Library, CLI Application and Data Science output remain protected by regression tests. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.03](github-issues/forge-template/FT-20.03.md) |
+| FT-ROADMAP-02-AC-07 | acceptance | Wheel/sdist audits include every new engine resource and no generated project depends on a Forge package at runtime. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.03](github-issues/forge-template/FT-20.03.md) |
+| FT-ROADMAP-02-AC-08 | acceptance | A reviewed `forge-template` release is published and verified before downstream adoption begins. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.04](github-issues/forge-template/FT-20.04.md) |
+| FT-ROADMAP-02-EX-01 | exclusion | No cloud deployment, container orchestration, authentication, database or FastAPI service surface. | [FT-EPIC-19](github-issues/forge-template/FT-EPIC-19.md), [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-19.01](github-issues/forge-template/FT-19.01.md), [FT-20.02](github-issues/forge-template/FT-20.02.md) |
+| FT-ROADMAP-02-EX-02 | exclusion | No CLI prompt implementation or hard-coded downstream component identifier. | [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-20.01](github-issues/forge-template/FT-20.01.md) |
+| FT-ROADMAP-02-EX-03 | exclusion | No engine-default cutover. | [FT-EPIC-19](github-issues/forge-template/FT-EPIC-19.md) | [FT-19.02](github-issues/forge-template/FT-19.02.md) |
+| FT-ROADMAP-02-EX-04 | exclusion | No arbitrary Streamlit plugin ecosystem. | [FT-EPIC-19](github-issues/forge-template/FT-EPIC-19.md), [FT-EPIC-20](github-issues/forge-template/FT-EPIC-20.md) | [FT-19.01](github-issues/forge-template/FT-19.01.md), [FT-20.02](github-issues/forge-template/FT-20.02.md) |
+| CF-ROADMAP-02-AC-01 | acceptance | The compatible released provider is declared in package metadata, diagnostics and the development pairing without affecting plain installs. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md) |
+| CF-ROADMAP-02-AC-02 | acceptance | Interactive and non-interactive users can select Streamlit through the existing generic archetype/component contract. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md), [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-AC-03 | acceptance | No production module hard-codes `streamlit` to determine catalogue, validation, composition or generated content behaviour. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md) |
+| CF-ROADMAP-02-AC-04 | acceptance | Installed-console E2E covers the accepted capability combinations, committed lock state, canonical generated checks and bounded Streamlit smoke validation. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-AC-05 | acceptance | Invalid selections, incompatible providers, lock failures and destination conflicts leave no partial project or staging state. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-AC-06 | acceptance | Existing Library, CLI Application, Data Science and supported Copier workflows remain green. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-AC-07 | acceptance | User documentation explains the Streamlit recipe and keeps generated project details linked to `forge-template` rather than duplicated. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-AC-08 | acceptance | Any client release is published only after the provider release and cross-repository evidence are immutable and verified. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.03](github-issues/create-forge/CF-21.03.md) |
+| CF-ROADMAP-02-EX-01 | exclusion | No Streamlit source templates, generated dependencies, task definitions or component validation in `create-forge`. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md), [CF-21.02](github-issues/create-forge/CF-21.02.md) |
+| CF-ROADMAP-02-EX-02 | exclusion | No FastAPI archetype or deployment platform. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md) |
+| CF-ROADMAP-02-EX-03 | exclusion | No engine-default cutover unless separately delivered by CF-ROADMAP-01. | [CF-EPIC-21](github-issues/create-forge/CF-EPIC-21.md) | [CF-21.01](github-issues/create-forge/CF-21.01.md) |
