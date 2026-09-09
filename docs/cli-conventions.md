@@ -60,14 +60,18 @@ Prompting is omitted only when the answer or decision is already explicit:
 
 The current `--template-url` escape hatch always prints its code-execution
 warning. It asks for confirmation unless `--yes` was supplied. This behavior
-remains authoritative for the current default path; the compatible local/VCS engine override
-described by the [integration contract](integration-contract.md) replaces it
-only at the coordinated engine cutover.
+remains authoritative for the current default path.
 
-[ADR 0011](adr/0011-engine-source-and-version-resolution.md) specifies that
-replacement's interface — `--engine-source`/`--engine-ref` — and the
-[engine resolution contract](engine-resolution.md) records it in full. Until
-the cutover ships it, `--template-url`/`--ref` above are the only source and
+[ADR 0011](adr/0011-engine-source-and-version-resolution.md) specifies the
+`--engine-source`/`--engine-ref` engine-package override, and the
+[engine resolution contract](engine-resolution.md) records it in full. The
+engine-default cutover contract
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[`docs/engine-default-cli.md`](engine-default-cli.md)) supersedes ADR 0011 on
+one point: at the cutover `--template-url`/`--ref` are *retained*, scoped to
+the explicit `--legacy` route, rather than replaced — the direct-Copier path
+stays supported. `--engine-source`/`--engine-ref` are a new, orthogonal pair.
+Until the cutover ships, `--template-url`/`--ref` above are the only source and
 version options this CLI accepts; the new names are not yet implemented.
 
 ## The `--engine-preview` development flag
@@ -104,6 +108,12 @@ reserved for the eventual public override; `--engine-preview` is a distinct,
 temporary flag retired at the coordinated cutover, not renamed into that
 pair. A project it does create is not `create-forge update`-able — it writes
 no `.copier-answers.yml`.
+
+At the engine-default cutover
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)),
+`--engine-preview` is removed and the five hidden selection flags below become
+the visible primary surface, names unchanged — see
+[`docs/engine-default-cli.md`](engine-default-cli.md).
 
 A hidden `--archetype` option selects which engine archetype to build,
 resolved against `pipeline.discover_archetypes()` — the real, discovered
@@ -197,6 +207,36 @@ pair, an unknown or wrong-kind component id, an option for an unselected
 component — is exit `1`. Cancelling a selection prompt is exit `130` with
 nothing written. Missing requirements, conflicts, and invalid option values
 stay engine-owned and are translated through `engine.explain`.
+
+## Engine-default CLI
+
+The canonical [engine-default CLI contract](engine-default-cli.md)
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), the
+first child of [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152))
+defines the command surface **after the engine-default cutover** — the release
+in which the `forge-template` engine replaces direct Copier as the default
+`new` path:
+
+- the engine becomes a required dependency and the default `new` route;
+  `copier` becomes the optional `legacy` extra, reached through a visible
+  `--legacy` flag that scopes `--template`/`--template-url`/`--ref`;
+- `--template-url`/`--ref` are retained rather than replaced (superseding
+  [ADR 0011](adr/0011-engine-source-and-version-resolution.md) on that clause);
+  `--engine-source`/`--engine-ref` are a new orthogonal engine-package
+  override that provisions an isolated environment and whose renders write no
+  generation metadata;
+- `--engine-preview` and the five hidden selection flags: `--engine-preview` is
+  removed, the rest become visible with names unchanged;
+- `list` prints the discovered catalogue (`list --legacy` the registry);
+  `doctor` negotiates against the real engine while staying offline;
+- exit `3` widens to the whole "required generator missing or unusable" class;
+- the deprecation *rule and sequence* are fixed there; the concrete versions,
+  windows and dates are
+  [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
+
+That contract is a decision, not a shipped interface. Until
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) implements it,
+every convention above and in the rest of this document remains authoritative.
 
 ## Update dry runs
 

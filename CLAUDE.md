@@ -139,7 +139,21 @@ living [engine resolution contract](docs/engine-resolution.md) define how
 that engine is sourced, overridden for local development, diagnosed, and
 rejected when incompatible. The installable runtime range is implemented
 (ADR 0018) and now points at the 0.4 line (ADR 0026); the CLI cutover that
-makes it the default path is not.
+makes it the default path is not. That cutover is now filed —
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) (client
+contracts) and
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
+(implementation). CF-16.01
+([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
+canonical [engine-default CLI contract](docs/engine-default-cli.md)) fixes the
+default/`--legacy`/`--engine-source` selection and source-resolution UX:
+the engine becomes a required dependency and the default `new` path, `copier`
+becomes the optional `legacy` extra behind a visible `--legacy` flag,
+`--template-url`/`--ref` are retained (superseding ADR 0011's atomic-
+replacement clause only), `--engine-preview` is removed and its five selection
+flags become visible, and exit `3` widens to the whole "generator missing or
+unusable" class. It is a decision, not a shipped interface — no implementing
+release exists.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
 code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
 `forge-template`, now the optional `engine` extra rather than a
@@ -308,7 +322,11 @@ The engine boundary is released behind `--engine-preview`, but it is not the
 default path. Until the coordinated cutover lands, the default Copier
 architecture and the invariants below remain authoritative. Do not partially
 migrate ownership or weaken the bundled-source trust boundary in advance of a
-decision that implements and tests the complete cutover contract.
+decision that implements and tests the complete cutover contract. CF-16.01
+([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
+canonical [engine-default CLI contract](docs/engine-default-cli.md)) is a
+decision only: it fixes the post-cutover selection and source-resolution UX
+but ships no runtime code, moves no dependency, and bumps no version.
 
 ## Invariants — do not break these
 
@@ -421,6 +439,18 @@ resolved to the SHA that tag points to. See
 - The canonical [CLI UX and prompting conventions](docs/cli-conventions.md)
   cover input precedence, prompt skipping, parity, validation ownership, and
   exit statuses. Treat them as a compatibility contract.
+- The canonical [engine-default CLI contract](docs/engine-default-cli.md)
+  (CF-16.01, [ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md))
+  fixes the command surface *after* the engine-default cutover: the engine as
+  the default `new` path and a required dependency, `copier` as the optional
+  `legacy` extra behind a visible `--legacy` flag, retained
+  `--template-url`/`--ref` (superseding ADR 0011's atomic-replacement clause),
+  the new `--engine-source`/`--engine-ref` engine-package override, the removal
+  of `--engine-preview` and un-hiding of its five selection flags, `list` /
+  `doctor` against the discovered catalogue, the widened exit `3`, the
+  post-generation message, and the deprecation rule and sequence (numbers are
+  CF-16.03's). It is a decision, not a shipped interface — implemented by
+  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 - The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
   defines how to validate sibling `create-forge` and `forge-template` changes
   before tagging or release.

@@ -40,8 +40,13 @@ own path.
 Unlike the single-dependency framing this document previously used, both
 rows are live at once: `copier` governs the default path, `forge-template`
 governs the hidden engine-preview path, and each has its own Dependabot gate
-below. Neither has replaced the other; the engine cutover that would retire
-the `copier` row remains a future, unfiled decision. `typer`, `questionary`,
+below. Neither has replaced the other; the engine cutover moves `forge-template`
+into `[project.dependencies]` and `copier` into an optional `legacy` extra
+(both keep their compatibility-line gates) — filed as
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), with no
+implementing release shipped. `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below. `platformdirs`
 ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) is likewise ordinary —
@@ -168,8 +173,14 @@ This rule binds the default `new` path, whose generated projects track a
 obligation yet: it is a hidden, dev-only flag that has never been the
 default and writes no engine answers file, so there are no released
 engine-generated projects to migrate. ADR 0026's move to the 0.4 line was
-therefore vacuously compliant here; a future engine-first cutover is what
-gives the engine path its own update contract.
+therefore vacuously compliant here; the engine-first cutover
+([CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)) is what
+gives the engine path its own update contract —
+[CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) owns engine-
+native update dispatch, and
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) fixes
+the selection and source-resolution half.
 
 ## Where the supported range is recorded
 

@@ -31,6 +31,7 @@ END_TO_END_TESTS = REPO_ROOT / "docs" / "end-to-end-tests.md"
 DOWNSTREAM_CLIENT_REFERENCE = REPO_ROOT / "docs" / "downstream-client-reference.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
+ENGINE_DEFAULT_CLI = REPO_ROOT / "docs" / "engine-default-cli.md"
 DATA_SCIENCE_PREVIEW_VALIDATION = (
     REPO_ROOT / "docs" / "data-science-preview-validation.md"
 )
@@ -292,6 +293,21 @@ def test_component_selection_doc_is_linked_from_canonical_entry_points() -> None
         assert link_re.search(text), f"{path.name} does not link component-selection.md"
 
     assert COMPONENT_SELECTION.is_file()
+
+
+def test_engine_default_cli_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-16.01's living engine-default CLI contract (ADR 0040) must remain
+    discoverable wherever contributors enter the CLI and engine integration
+    documentation, mirroring component-selection.md's equivalent guard. It is
+    a CLI-surface contract, so its third entry point is cli-conventions.md.
+    """
+    link_re = re.compile(r"\([^)]*engine-default-cli\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link engine-default-cli.md"
+
+    assert ENGINE_DEFAULT_CLI.is_file()
 
 
 def test_data_science_preview_validation_doc_is_linked_from_entry_points() -> None:

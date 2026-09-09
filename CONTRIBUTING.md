@@ -410,6 +410,23 @@ validation ownership, and exit statuses. Changes to `cli.py`, `prompts.py`, or
 their replacement at the public-engine cutover must update that contract and
 its executable examples together when behavior changes.
 
+The engine-default cutover — the engine replacing direct Copier as the default
+`new` path — is filed as
+[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) (client
+contracts) and
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
+(implementation). CF-16.01
+([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md))
+fixes its selection and source-resolution UX in the canonical
+[engine-default CLI contract](docs/engine-default-cli.md): the engine as a
+required dependency and the default route, `copier` as the optional `legacy`
+extra behind a visible `--legacy` flag, retained `--template-url`/`--ref`
+(superseding ADR 0011's atomic-replacement clause only),
+`--engine-source`/`--engine-ref` as a new engine-package override, the removal
+of `--engine-preview`, `list`/`doctor` against the discovered catalogue, the
+widened exit `3`, and the deprecation rule and sequence. It is a contract
+decision — no runtime code, no dependency move, no version bump, no release.
+
 ## User documentation
 
 The shared [Forge site](https://sandsy09.github.io/create-forge/) is authored
