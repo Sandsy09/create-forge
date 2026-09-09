@@ -43,13 +43,14 @@ package has been published.
 
 ## Child issues
 
-- [FT-20.01](FT-20.01.md) — Implement the independent Streamlit archetype
-- [FT-20.02](FT-20.02.md) — Implement Streamlit tasks, safeguards and
-  capability composition
-- [FT-20.03](FT-20.03.md) — Validate Streamlit generated projects and
-  distributions
-- [FT-20.04](FT-20.04.md) — Publish and verify the reviewed Streamlit provider
-  release
+- [FT-20.01](https://github.com/Sandsy09/forge-template/issues/159)
+  — Implement the independent Streamlit archetype
+- [FT-20.02](https://github.com/Sandsy09/forge-template/issues/160)
+  — Implement Streamlit tasks, safeguards and capability composition
+- [FT-20.03](https://github.com/Sandsy09/forge-template/issues/161)
+  — Validate Streamlit generated projects and distributions
+- [FT-20.04](https://github.com/Sandsy09/forge-template/issues/162)
+  — Publish and verify the reviewed Streamlit provider release
 
 ## Exclusions
 
@@ -62,7 +63,7 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [FT-19.02](FT-19.02.md).
+- Blocked by [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -78,7 +79,7 @@ Streamlit Provider Implementation and Release — Stage 20
 ## Roadmap
 
 [Stage
-20](../../roadmap/20-streamlit-provider-implementation-and-release/README.md)
+20](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v4/roadmap/20-streamlit-provider-implementation-and-release/README.md)
 
 ## Labels
 

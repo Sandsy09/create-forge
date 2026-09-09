@@ -2,8 +2,8 @@
 
 ## Status and epics
 
-Prepared, not filed.
-[FT-EPIC-19](../../github-issues/forge-template/FT-EPIC-19.md).
+Filed and open.
+[FT-EPIC-19](https://github.com/Sandsy09/forge-template/issues/144).
 
 ## Entry criteria
 
@@ -15,8 +15,8 @@ its required decision or immutable hand-off is accepted.
 
 | Child | Outcome | Direct blockers |
 | --- | --- | --- |
-| [FT-19.01](../../github-issues/forge-template/FT-19.01.md) | Settle entry point, packaging, configuration, run/check tasks, tests and deployment exclusions. | [CF-16.03](../../../roadmap-v3/github-issues/create-forge/CF-16.03.md) |
-| [FT-19.02](../../github-issues/forge-template/FT-19.02.md) | Approve four capability combinations, Python support, bounded smoke validation and the target provider line. | [FT-19.01](../../github-issues/forge-template/FT-19.01.md) |
+| [FT-19.01](https://github.com/Sandsy09/forge-template/issues/157) | Settle entry point, packaging, configuration, run/check tasks, tests and deployment exclusions. | [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157) |
+| [FT-19.02](https://github.com/Sandsy09/forge-template/issues/158) | Approve four capability combinations, Python support, bounded smoke validation and the target provider line. | [FT-19.01](https://github.com/Sandsy09/forge-template/issues/157) |
 
 ## Exit criteria
 

@@ -44,8 +44,8 @@ package has been published.
 
 ## Child issues
 
-- [FT-18.01](FT-18.01.md) — Validate the integrated cutover against the
-  released provider
+- [FT-18.01](https://github.com/Sandsy09/forge-template/issues/156)
+  — Validate the integrated cutover against the released provider
 
 ## Exclusions
 
@@ -56,8 +56,8 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [CF-18.02](../create-forge/CF-18.02.md).
-- Blocked by [CF-18.05](../create-forge/CF-18.05.md).
+- Blocked by [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159).
+- Blocked by [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -73,7 +73,7 @@ Engine-Default Client Delivery and Validation — Stage 18
 ## Roadmap
 
 [Stage
-18](../../roadmap/18-engine-default-client-delivery-and-validation/README.md)
+18](https://github.com/Sandsy09/forge-template/blob/main/docs/roadmap-v3/roadmap/18-engine-default-client-delivery-and-validation/README.md)
 
 ## Labels
 

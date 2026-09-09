@@ -1,7 +1,8 @@
-"""Regression checks for the prepared roadmap filing packs."""
+"""Regression checks for prepared and filed roadmap packs."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -30,7 +31,7 @@ def run_check(
 
 @pytest.fixture
 def pack(tmp_path: Path) -> Path:
-    """Copy only prepared metadata into a disposable validation fixture."""
+    """Copy roadmap metadata into a disposable validation fixture."""
     for version in (3, 4):
         shutil.copytree(
             ROOT / f"docs/roadmap-v{version}", tmp_path / f"docs/roadmap-v{version}"
@@ -42,11 +43,30 @@ def pack(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_prepared_roadmaps_are_complete() -> None:
-    """The committed packs have complete bodies, metadata, links and a valid DAG."""
+def test_filed_roadmaps_are_complete() -> None:
+    """The filed packs have complete bodies, identities, links and a valid DAG."""
     result = run_check(ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "8 epics, 30 children, 45 review obligations" in result.stdout
+    assert "filed-open" in result.stdout
+
+
+def test_prepared_manifest_state_remains_supported(pack: Path) -> None:
+    """The checker still accepts complete packs before GitHub identities exist."""
+    for version in (3, 4):
+        manifest_path = (
+            pack / f"docs/roadmap-v{version}/github-issues/filing-manifest.json"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["status"] = "prepared-not-filed"
+        manifest.pop("filing")
+        for item in manifest["issues"]:
+            for field in ("number", "url", "body_sha256"):
+                item.pop(field)
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = run_check(pack)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "prepared-not-filed" in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -58,6 +78,8 @@ def test_prepared_roadmaps_are_complete() -> None:
         ("cycle", "Dependency cycle"),
         ("streamlit", "Streamlit must enter"),
         ("status", "inconsistent blocked status"),
+        ("filing", "missing filing record"),
+        ("hash", "body hash mismatch"),
     ],
 )
 def test_invalid_packs_fail_closed(pack: Path, mutation: str, message: str) -> None:
@@ -77,6 +99,10 @@ def test_invalid_packs_fail_closed(pack: Path, mutation: str, message: str) -> N
         manifest["traceability"].pop()
     elif mutation == "status":
         item["labels"].remove("status:blocked")
+    elif mutation == "filing":
+        manifest.pop("filing")
+    elif mutation == "hash":
+        item["body_sha256"] = "0" * 64
     else:
         old = item["blocked_by"][0]
         replacement = "CF-18.07" if mutation == "streamlit" else "FT-15.04"
@@ -88,6 +114,8 @@ def test_invalid_packs_fail_closed(pack: Path, mutation: str, message: str) -> N
             f"Blocked by [{replacement}]",
             body,
         )
+    if mutation in {"body", "cycle", "streamlit"}:
+        item["body_sha256"] = hashlib.sha256(body.encode()).hexdigest()
     body_path.write_text(body, encoding="utf-8")
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     result = run_check(pack)

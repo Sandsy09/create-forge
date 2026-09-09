@@ -158,10 +158,10 @@ generate its CI workflows or install Git hooks. `--template`,
 
 ## What's next
 
-The Foundation and Data Science roadmaps are complete. The prepared
+The Foundation and Data Science roadmaps are complete. The filed
 [Engine-Default Cutover](docs/roadmap-v3/README.md) and
 [Streamlit Archetype](docs/roadmap-v4/README.md) roadmaps describe future work;
-their issues are not yet filed and no release is scheduled. Working engine
+their issues are open, and no release is scheduled. Working engine
 updates and a supported legacy Copier route must precede the default switch.
 Follow [open work](https://github.com/Sandsy09/create-forge/issues)
 and [releases](https://github.com/Sandsy09/create-forge/releases) for updates,

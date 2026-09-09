@@ -1,8 +1,9 @@
-"""Validate the prepared cross-repository roadmap packs without GitHub writes."""
+"""Validate prepared or filed cross-repository roadmap packs without writes."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import tomllib
@@ -13,6 +14,8 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 SECTION_PARTS = 2
 ISSUE_COUNT = 38
+PACK_STATUSES = {"prepared-not-filed", "filed-open"}
+FILED_ISSUE_FIELDS = {"number", "url", "body_sha256"}
 HEADINGS = (
     "Outcome",
     "Issue context",
@@ -116,14 +119,17 @@ def validate_graph(issues: dict[str, dict[str, Any]]) -> None:
 
 
 def check_metadata(
-    item: dict[str, Any], stage_info: dict[str, Any], labels: set[str]
+    item: dict[str, Any],
+    stage_info: dict[str, Any],
+    labels: set[str],
+    status: str,
 ) -> None:
-    """Check an entry's owner, milestone and proposed labels."""
+    """Check an entry's owner, milestone, labels and filing identity."""
     identifier = item["id"]
     require(item["title"].startswith(identifier + " — "), "Invalid title")
     require(
-        not {"number", "url", "assignees", "due_date", "project"} & item.keys(),
-        f"{identifier}: invented filing metadata",
+        not {"assignees", "due_date", "project"} & item.keys(),
+        f"{identifier}: unsupported filing metadata",
     )
     expected_repo = (
         "Sandsy09/forge-template"
@@ -131,6 +137,29 @@ def check_metadata(
         else "Sandsy09/create-forge"
     )
     require(item["repository"] == expected_repo, f"{identifier}: wrong repo")
+    if status == "prepared-not-filed":
+        require(
+            not FILED_ISSUE_FIELDS & item.keys(),
+            f"{identifier}: invented filing metadata",
+        )
+    else:
+        require(
+            item.keys() >= FILED_ISSUE_FIELDS,
+            f"{identifier}: missing filed metadata",
+        )
+        require(
+            isinstance(item["number"], int) and item["number"] > 0,
+            f"{identifier}: invalid issue number",
+        )
+        require(
+            item["url"]
+            == f"https://github.com/{expected_repo}/issues/{item['number']}",
+            f"{identifier}: invalid issue URL",
+        )
+        require(
+            re.fullmatch(r"[0-9a-f]{64}", item["body_sha256"]) is not None,
+            f"{identifier}: invalid body hash",
+        )
     stage = item["stage"]
     require(expected_repo in stage_info["owners"], "Unowned stage milestone")
     stage_title = stage_info["title"]
@@ -170,7 +199,7 @@ def check_metadata(
         require({"type:epic", "cross-repo"} <= set(assigned), "Epic labels")
 
 
-def check_body(item: dict[str, Any], folder: Path) -> str:
+def check_body(item: dict[str, Any], folder: Path, status: str) -> str:
     """Check complete issue prose against its filing metadata."""
     identifier = item["id"]
     assigned = item["labels"]
@@ -180,6 +209,11 @@ def check_body(item: dict[str, Any], folder: Path) -> str:
         "Body path escapes roadmap",
     )
     body = body_path.read_text(encoding="utf-8")
+    if status == "filed-open":
+        require(
+            hashlib.sha256(body.encode()).hexdigest() == item["body_sha256"],
+            f"{identifier}: body hash mismatch",
+        )
     require(body.startswith("# " + item["title"] + "\n"), "Body title mismatch")
     for heading in HEADINGS:
         sections = re.split(rf"(?m)^## {re.escape(heading)}\n", body)
@@ -250,6 +284,86 @@ def check_epics(issues: dict[str, dict[str, Any]]) -> None:
             require(set(item["children"]) == children, "Epic child membership mismatch")
 
 
+def check_filing(
+    manifest: dict[str, Any], entries: list[dict[str, Any]], status: str
+) -> None:
+    """Validate the absence or complete shape of repository filing records."""
+    if status == "prepared-not-filed":
+        require("filing" not in manifest, "Prepared pack has filing record")
+        return
+    require("filing" in manifest, "Filed pack is missing filing record")
+    filing = manifest["filing"]
+    require(
+        re.fullmatch(r"\d{4}-\d{2}-\d{2}", filing["verified_at"]) is not None,
+        "Invalid filing date",
+    )
+    expected_labels = [
+        f"roadmap:{stage['number']}"
+        for stage in sorted(manifest["stages"], key=lambda stage: stage["number"])
+    ]
+    require(filing["labels_applied"] == expected_labels, "Filed label record differs")
+    expected_pairs = {(item["repository"], item["milestone"]) for item in entries}
+    records = filing["milestones"]
+    require(
+        {(item["repository"], item["title"]) for item in records} == expected_pairs
+        and len(records) == len(expected_pairs),
+        "Filed milestone record differs",
+    )
+    for record in records:
+        require(
+            isinstance(record["number"], int) and record["number"] > 0,
+            "Invalid milestone number",
+        )
+        require(
+            record["url"]
+            == f"https://github.com/{record['repository']}/milestone/{record['number']}",
+            "Invalid milestone URL",
+        )
+
+
+def check_resolved_issue_links(
+    issues: dict[str, dict[str, Any]], bodies: dict[str, str], status: str
+) -> None:
+    """Require filed parent and blocker links to use durable issue URLs."""
+    if status != "filed-open":
+        return
+    seen_numbers: set[tuple[str, int]] = set()
+    for identifier, item in issues.items():
+        key = (item["repository"], item["number"])
+        require(key not in seen_numbers, f"Duplicate filed issue number: {key}")
+        seen_numbers.add(key)
+        body = bodies[identifier]
+        references = [*item["blocked_by"]]
+        if item["parent"]:
+            references.append(item["parent"])
+        for reference in references:
+            require(
+                f"[{reference}]({issues[reference]['url']})" in body,
+                f"{identifier}: unresolved filed link to {reference}",
+            )
+
+
+def check_global_invariants(
+    stage_owners: dict[int, list[str]],
+    statuses: set[str],
+    issues: dict[str, dict[str, Any]],
+    bodies: dict[str, str],
+    traces: list[dict[str, Any]],
+) -> None:
+    """Validate invariants spanning both roadmap manifests."""
+    require(set(stage_owners) == set(range(15, 22)), "Missing stage")
+    require(len(statuses) == 1, "Roadmap pack filing states differ")
+    require(
+        len({item["title"] for item in issues.values()}) == ISSUE_COUNT,
+        "Duplicate title",
+    )
+    require("breaking-change" in issues["CF-18.01"]["labels"], "Unmarked cutover")
+    check_epics(issues)
+    validate_graph(issues)
+    check_traceability(traces, issues, bodies)
+    check_resolved_issue_links(issues, bodies, next(iter(statuses)))
+
+
 def check_packs(root: Path, mirror: Path | None = None) -> None:
     """Validate both manifests, complete bodies, traceability and mirrors."""
     labels_path = root / ".github/labels.toml"
@@ -262,6 +376,7 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
     issues: dict[str, dict[str, Any]] = {}
     bodies: dict[str, str] = {}
     traces: list[dict[str, Any]] = []
+    statuses: set[str] = set()
     all_paths: set[Path] = {labels_path, root / "scripts/check_roadmaps.py"}
     stage_owners: dict[int, list[str]] = {}
     for version, expected in ((3, (5, 21)), (4, (3, 9))):
@@ -269,7 +384,9 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
         manifest_path = folder / "github-issues/filing-manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         require(manifest["schema_version"] == 1, "Unsupported manifest schema")
-        require(manifest["status"] == "prepared-not-filed", "Unexpected pack status")
+        status = manifest["status"]
+        require(status in PACK_STATUSES, "Unexpected pack status")
+        statuses.add(status)
         require(manifest["roadmap"] == version, "Wrong roadmap number")
         entries = manifest["issues"]
         counts = tuple(
@@ -289,11 +406,12 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 for value in manifest["stages"]
                 if value["number"] == item["stage"]
             )
-            check_metadata(item, stage_info, labels)
-            body = check_body(item, folder)
+            check_metadata(item, stage_info, labels, status)
+            body = check_body(item, folder, status)
             issues[identifier] = item
             bodies[identifier] = body
         traces.extend(manifest["traceability"])
+        check_filing(manifest, entries, status)
         paths = {path for path in folder.rglob("*") if path.is_file()}
         all_paths.update(paths)
         expected_bodies = {folder / item["body"] for item in entries}
@@ -316,15 +434,7 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 f"Roadmap {version}: mirror inventory differs",
             )
 
-    require(set(stage_owners) == set(range(15, 22)), "Missing stage")
-    require(
-        len({item["title"] for item in issues.values()}) == ISSUE_COUNT,
-        "Duplicate title",
-    )
-    require("breaking-change" in issues["CF-18.01"]["labels"], "Unmarked cutover")
-    check_epics(issues)
-    validate_graph(issues)
-    check_traceability(traces, issues, bodies)
+    check_global_invariants(stage_owners, statuses, issues, bodies, traces)
     if mirror:
         for path in all_paths:
             other = mirror / path.relative_to(root)
@@ -333,7 +443,8 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 f"Mirror differs: {path.relative_to(root)}",
             )
     print(
-        "Roadmaps valid: 8 epics, 30 children, 45 review obligations; links and DAG OK."
+        "Roadmaps valid: 8 epics, 30 children, 45 review obligations; "
+        f"{next(iter(statuses))}; links and DAG OK."
     )
 
 

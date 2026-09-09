@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "prepared-not-filed",
+  "status": "filed-open",
   "roadmap": 4,
   "name": "Streamlit Archetype",
   "stages": [
@@ -51,7 +51,10 @@
         "status:needs-decision",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-19.01.md"
+      "body": "github-issues/forge-template/FT-19.01.md",
+      "number": 157,
+      "url": "https://github.com/Sandsy09/forge-template/issues/157",
+      "body_sha256": "e07de1ab7ad8760aac35520d007820d42b5c4399678b17cdaba388f6213050f0"
     },
     {
       "id": "FT-19.02",
@@ -77,7 +80,10 @@
         "status:needs-decision",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-19.02.md"
+      "body": "github-issues/forge-template/FT-19.02.md",
+      "number": 158,
+      "url": "https://github.com/Sandsy09/forge-template/issues/158",
+      "body_sha256": "4a8874e693752a85f059fb263e26f875fd7bcd8811f9bf652d5928fb802afd94"
     },
     {
       "id": "FT-20.01",
@@ -100,7 +106,10 @@
         "roadmap:20",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-20.01.md"
+      "body": "github-issues/forge-template/FT-20.01.md",
+      "number": 159,
+      "url": "https://github.com/Sandsy09/forge-template/issues/159",
+      "body_sha256": "c2631b7f229cd8754ad35bd675c0abaf7d0421a05ecf41281be227531b4a92bf"
     },
     {
       "id": "FT-20.02",
@@ -122,7 +131,10 @@
         "roadmap:20",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-20.02.md"
+      "body": "github-issues/forge-template/FT-20.02.md",
+      "number": 160,
+      "url": "https://github.com/Sandsy09/forge-template/issues/160",
+      "body_sha256": "5173d08b07730861c29fe86fde798e4baf6b12fadfb41dc6179f4f3273ed4c26"
     },
     {
       "id": "FT-20.03",
@@ -146,7 +158,10 @@
         "cross-repo",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-20.03.md"
+      "body": "github-issues/forge-template/FT-20.03.md",
+      "number": 161,
+      "url": "https://github.com/Sandsy09/forge-template/issues/161",
+      "body_sha256": "6bb64053783b6370947bd147c2fed9a3b6aca62993cd8cc210f55b2d0d3990e5"
     },
     {
       "id": "FT-20.04",
@@ -171,7 +186,10 @@
         "cross-repo",
         "status:blocked"
       ],
-      "body": "github-issues/forge-template/FT-20.04.md"
+      "body": "github-issues/forge-template/FT-20.04.md",
+      "number": 162,
+      "url": "https://github.com/Sandsy09/forge-template/issues/162",
+      "body_sha256": "50d7eb16141913b96a7bcd8548178e6eb44a7397175d37ac13b551e46d53c6e5"
     },
     {
       "id": "CF-21.01",
@@ -196,7 +214,10 @@
         "cross-repo",
         "status:blocked"
       ],
-      "body": "github-issues/create-forge/CF-21.01.md"
+      "body": "github-issues/create-forge/CF-21.01.md",
+      "number": 165,
+      "url": "https://github.com/Sandsy09/create-forge/issues/165",
+      "body_sha256": "c436525952ad4a9d3c6c0fad076bdc37d4ee2c96246a5c4de9b4978885e0ae47"
     },
     {
       "id": "CF-21.02",
@@ -222,7 +243,10 @@
         "cross-repo",
         "status:blocked"
       ],
-      "body": "github-issues/create-forge/CF-21.02.md"
+      "body": "github-issues/create-forge/CF-21.02.md",
+      "number": 166,
+      "url": "https://github.com/Sandsy09/create-forge/issues/166",
+      "body_sha256": "203e57001988597311546068962ad4860e5f4984829e7a28d1b277798b12d371"
     },
     {
       "id": "CF-21.03",
@@ -247,7 +271,10 @@
         "cross-repo",
         "status:blocked"
       ],
-      "body": "github-issues/create-forge/CF-21.03.md"
+      "body": "github-issues/create-forge/CF-21.03.md",
+      "number": 167,
+      "url": "https://github.com/Sandsy09/create-forge/issues/167",
+      "body_sha256": "baa65c3d0b7ba3a5fe566cd6de9b3eeb1e9919cf0bc6b2ac48f8d359c3bf85f0"
     },
     {
       "id": "FT-EPIC-19",
@@ -273,7 +300,10 @@
       "children": [
         "FT-19.01",
         "FT-19.02"
-      ]
+      ],
+      "number": 144,
+      "url": "https://github.com/Sandsy09/forge-template/issues/144",
+      "body_sha256": "ca1ca2d5ec29b57c6824fd0927e8a5dc90f711c79323f785f8ae5296ea4d5f04"
     },
     {
       "id": "FT-EPIC-20",
@@ -301,7 +331,10 @@
         "FT-20.02",
         "FT-20.03",
         "FT-20.04"
-      ]
+      ],
+      "number": 145,
+      "url": "https://github.com/Sandsy09/forge-template/issues/145",
+      "body_sha256": "02847e285377a8f26be82076ca279a44b94e1daf7c86001fc2a480a561af2417"
     },
     {
       "id": "CF-EPIC-21",
@@ -328,7 +361,10 @@
         "CF-21.01",
         "CF-21.02",
         "CF-21.03"
-      ]
+      ],
+      "number": 154,
+      "url": "https://github.com/Sandsy09/create-forge/issues/154",
+      "body_sha256": "544b0c56a358dcb078b8b0a86b708f915220e1a1e3bd42cdfef0b7b967044691"
     }
   ],
   "traceability": [
@@ -618,5 +654,33 @@
         "CF-EPIC-21"
       ]
     }
-  ]
+  ],
+  "filing": {
+    "verified_at": "2026-09-09",
+    "labels_applied": [
+      "roadmap:19",
+      "roadmap:20",
+      "roadmap:21"
+    ],
+    "milestones": [
+      {
+        "repository": "Sandsy09/create-forge",
+        "title": "Streamlit Client Adoption and Rollout — Stage 21",
+        "number": 12,
+        "url": "https://github.com/Sandsy09/create-forge/milestone/12"
+      },
+      {
+        "repository": "Sandsy09/forge-template",
+        "title": "Streamlit Architecture Contracts — Stage 19",
+        "number": 15,
+        "url": "https://github.com/Sandsy09/forge-template/milestone/15"
+      },
+      {
+        "repository": "Sandsy09/forge-template",
+        "title": "Streamlit Provider Implementation and Release — Stage 20",
+        "number": 16,
+        "url": "https://github.com/Sandsy09/forge-template/milestone/16"
+      }
+    ]
+  }
 }

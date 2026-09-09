@@ -44,12 +44,12 @@ package has been published.
 
 ## Child issues
 
-- [CF-16.01](CF-16.01.md) — Define engine-default selection and
-  source-resolution UX
-- [CF-16.02](CF-16.02.md) — Define update dispatch, migration and filesystem
-  lifecycle
-- [CF-16.03](CF-16.03.md) — Approve coordinated cutover acceptance and support
-  policy
+- [CF-16.01](https://github.com/Sandsy09/create-forge/issues/155)
+  — Define engine-default selection and source-resolution UX
+- [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156)
+  — Define update dispatch, migration and filesystem lifecycle
+- [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)
+  — Approve coordinated cutover acceptance and support policy
 
 ## Exclusions
 
@@ -60,7 +60,7 @@ package has been published.
 
 ## Dependencies
 
-- Blocked by [FT-15.04](../forge-template/FT-15.04.md).
+- Blocked by [FT-15.04](https://github.com/Sandsy09/forge-template/issues/149).
 
 Provider adoption must use a reviewed immutable release, never a moving
 branch. Local candidate pairing is validation evidence, not publication.
@@ -75,7 +75,7 @@ Engine-Default Client Contracts — Stage 16
 
 ## Roadmap
 
-[Stage 16](../../roadmap/16-engine-default-client-contracts/README.md)
+[Stage 16](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v3/roadmap/16-engine-default-client-contracts/README.md)
 
 ## Labels
 
