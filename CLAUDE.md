@@ -152,8 +152,15 @@ becomes the optional `legacy` extra behind a visible `--legacy` flag,
 `--template-url`/`--ref` are retained (superseding ADR 0011's atomic-
 replacement clause only), `--engine-preview` is removed and its five selection
 flags become visible, and exit `3` widens to the whole "generator missing or
-unusable" class. It is a decision, not a shipped interface — no implementing
-release exists.
+unusable" class. CF-16.02
+([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md))
+fixes the update-and-lifecycle half: the engine `new` path's post-rename
+`git init` + initial commit + conditional hooks, the committed
+`.forge/generation.json` metadata file, and `create-forge update` routing to a
+Git-backed engine-native three-way merge (`.copier-answers.yml` projects and
+`--legacy` stay on `copier update`). Both are decisions, not shipped
+interfaces — no implementing release exists.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
 code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
 `forge-template`, now the optional `engine` extra rather than a
@@ -324,9 +331,12 @@ architecture and the invariants below remain authoritative. Do not partially
 migrate ownership or weaken the bundled-source trust boundary in advance of a
 decision that implements and tests the complete cutover contract. CF-16.01
 ([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
-canonical [engine-default CLI contract](docs/engine-default-cli.md)) is a
-decision only: it fixes the post-cutover selection and source-resolution UX
-but ships no runtime code, moves no dependency, and bumps no version.
+canonical [engine-default CLI contract](docs/engine-default-cli.md)) and
+CF-16.02 ([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md))
+are decisions only: together they fix the post-cutover selection,
+source-resolution, `new` lifecycle and `update` UX, but ship no runtime code,
+move no dependency, and bump no version.
 
 ## Invariants — do not break these
 
@@ -451,6 +461,22 @@ resolved to the SHA that tag points to. See
   post-generation message, and the deprecation rule and sequence (numbers are
   CF-16.03's). It is a decision, not a shipped interface — implemented by
   [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
+- The canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md)
+  (CF-16.02, [ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md))
+  fixes what happens after the engine renders a project and when
+  `create-forge update` runs against one, after the cutover: the engine `new`
+  path's post-rename `git init` + initial commit + conditional
+  `pre-commit install` (a lifecycle failure keeps the project and warns); the
+  committed `.forge/generation.json` metadata file (the engine analogue of
+  `.copier-answers.yml`); `update` routing (`.forge/generation.json` →
+  engine-native, `.copier-answers.yml` → Copier, `--legacy` forces Copier);
+  the engine-native Git-backed three-way merge from a clean tree with inline
+  conflict markers, `--dry-run` per-target list, `git restore`/`git clean`
+  rollback (printed, never run), and the opt-in `--degraded` two-way update.
+  Also a decision only — built by
+  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
+  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
+  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
 - The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
   defines how to validate sibling `create-forge` and `forge-template` changes
   before tagging or release.

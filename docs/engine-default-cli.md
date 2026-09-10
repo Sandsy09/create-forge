@@ -284,15 +284,15 @@ they never name a Copier template or a component resource.
     the bundled registry.
 
 29. **An `--engine-source` render is not update-eligible.** It writes no
-    generation-metadata document, because that document fixes
-    `provider.distribution` to `"forge-template"` and admits no source URL,
-    path or VCS ref as a value
+    `.forge/generation.json` (the metadata file CF-16.02 /
+    [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md)
+    fixed), because that document fixes `provider.distribution` to
+    `"forge-template"` and admits no source URL, path or VCS ref as a value
     ([generation-provenance.md](https://github.com/Sandsy09/forge-template/blob/main/docs/generation-provenance.md)).
     The post-generation message says so plainly, mirroring today's
-    `--engine-preview` "create-forge update does not apply" line. Whether a
-    non-default source ever gets a degraded-mode metadata record is
-    [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156)'s to
-    decide alongside the metadata filename.
+    `--engine-preview` "create-forge update does not apply" line. CF-16.02
+    confirmed no degraded-mode record is written for a non-default source
+    either.
 
 30. **`--engine-source` combines with `--legacy` as an error.** The override
     is an engine-package selector; it has no meaning on the Copier route,
@@ -359,11 +359,13 @@ dates are [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
   [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158),
   [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159),
   [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160).
-- `update` dispatch, the generation-metadata filename and on-disk location,
-  the merge and conflict policy, dry-run, cancellation and rollback for an
-  engine-native update, and whether an `--engine-source` render ever gets a
-  degraded metadata record —
-  [CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) and
+- `update` dispatch, the generation-metadata file (`.forge/generation.json`),
+  the merge and conflict policy, dry-run, cancellation, rollback, and the
+  `new` Git/hook lifecycle for the engine path — decided by CF-16.02
+  ([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+  canonical [engine project lifecycle contract](engine-project-lifecycle.md)),
+  built by
+  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
   [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161).
 - Legacy Copier-project preservation and the transition handling for projects
   scaffolded through the old `--engine-preview` —
