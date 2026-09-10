@@ -15,8 +15,9 @@ on the provider side, it introduces no protocol increment, no new component,
 no `copier.yml` change, and no package version bump. The *rules* below are the
 contract; the release that implements them is
 [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) and its
-siblings, and the concrete version numbers and dates are
-[CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
+siblings, and the concrete version numbers, windows, acceptance matrix and
+support policy are CF-16.03's, in the
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md).
 
 It is a sibling of [`docs/cli-conventions.md`](cli-conventions.md) (which keeps
 the exit-status table and the pre-cutover behaviour it already documents), the
@@ -331,7 +332,13 @@ authoritative. The cutover changes two rows:
 ## Deprecation sequencing
 
 This contract fixes the **order** and the **rule**. The concrete releases and
-dates are [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
+windows are CF-16.03's, in the
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)): the
+cutover is `create-forge 0.4.0`, and any later-retired visible surface carries
+a deprecation warning naming its replacement for at least 90 days and at least
+one further tagged `create-forge` release — expressed relative to publication,
+never as a calendar date.
 
 33. **The direct-Copier route is not deprecated.** `--legacy`, `--template`,
     `--template-url`, `--ref`, the bundled registry and `create-forge update`
@@ -370,9 +377,11 @@ dates are [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
 - Legacy Copier-project preservation and the transition handling for projects
   scaffolded through the old `--engine-preview` —
   [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
-- The concrete cutover version numbers, the support windows, the
-  cross-repository acceptance matrix, and the deprecation dates —
-  [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157).
+- The concrete cutover version number (`create-forge 0.4.0`), the supported
+  OS / Python / install-mode matrix, the support and deprecation windows, the
+  cross-repository acceptance matrix and the release gates — decided by CF-16.03
+  ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md),
+  canonical [engine-default cutover acceptance contract](engine-cutover-acceptance.md)).
 - Any `forge-template` change. Provider manifests, composition, generated
   content and in-memory validation stay in `forge-template`
   (**CF-ROADMAP-01-EX-01**); this contract adds no archetype

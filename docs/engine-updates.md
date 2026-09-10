@@ -46,7 +46,13 @@ into `[project.dependencies]` and `copier` into an optional `legacy` extra
 [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
 [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), with no
-implementing release shipped. `typer`, `questionary`,
+implementing release shipped. CF-16.03
+([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md),
+canonical [engine-default cutover acceptance contract](engine-cutover-acceptance.md))
+fixes that release as **`create-forge 0.4.0`**, adopting
+`forge-template>=0.5,<0.6` — the same deliberate line crossing this document
+governs, performed by
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158). `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below. `platformdirs`
 ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) is likewise ordinary —
@@ -196,6 +202,13 @@ shipped.
 table is the single canonical record of the accepted range and protocol
 version. A release's own notes narrate a change; they are not a second
 source of truth the table can drift from.
+
+The engine-default cutover's own acceptance — the release that performs it
+(`create-forge 0.4.0`), its cross-repository acceptance matrix and release
+gates, its release-rollback rule, and the `create-forge 0.3.x` support and
+deprecation windows — is recorded in the canonical
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+(CF-16.03, [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)).
 
 ## Executable examples
 

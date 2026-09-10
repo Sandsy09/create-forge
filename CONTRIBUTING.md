@@ -434,9 +434,19 @@ engine `new` path's post-rename `git init` + initial commit + conditional
 Git-backed engine-native three-way merge from a clean tree — `--dry-run`
 per-target list, `git restore`/`git clean` rollback printed but never run,
 opt-in `--degraded` two-way update, `.copier-answers.yml` projects and
-`--legacy` staying on `copier update`. Both are contract decisions — no
-runtime code, no dependency move, no version bump, no release; built by
-[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
+`--legacy` staying on `copier update`. CF-16.03
+([ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md))
+fixes the acceptance half in the canonical
+[engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md):
+the cutover is a single `create-forge 0.4.0` release; the supported operating
+systems (Linux and Windows), Python versions (the latest four final CPython
+releases) and install modes (`uvx`, `uv tool install`, `pip`, the `legacy`
+extra); the cross-repository acceptance matrix and release gates; and the
+release-rollback, `0.3.x`-support and deprecation windows. All three are
+contract decisions — no runtime code, no dependency move, no version bump, no
+release, no new issue; built by
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153). CF-16.03
+closed [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
 
 ## User documentation
 

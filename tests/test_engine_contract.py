@@ -33,6 +33,7 @@ CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
 ENGINE_DEFAULT_CLI = REPO_ROOT / "docs" / "engine-default-cli.md"
 ENGINE_PROJECT_LIFECYCLE = REPO_ROOT / "docs" / "engine-project-lifecycle.md"
+ENGINE_CUTOVER_ACCEPTANCE = REPO_ROOT / "docs" / "engine-cutover-acceptance.md"
 DATA_SCIENCE_PREVIEW_VALIDATION = (
     REPO_ROOT / "docs" / "data-science-preview-validation.md"
 )
@@ -327,6 +328,24 @@ def test_engine_project_lifecycle_doc_is_linked_from_canonical_entry_points() ->
         )
 
     assert ENGINE_PROJECT_LIFECYCLE.is_file()
+
+
+def test_engine_cutover_acceptance_doc_is_linked_from_canonical_entry_points() -> None:
+    """CF-16.03's living engine-default cutover acceptance contract (ADR 0042)
+    must remain discoverable wherever contributors enter the CLI and engine
+    integration documentation, mirroring its two sibling contracts' guards. It
+    is a CLI-and-release-surface contract, so its third entry point is
+    cli-conventions.md.
+    """
+    link_re = re.compile(r"\([^)]*engine-cutover-acceptance\.md[^)]*\)")
+
+    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link engine-cutover-acceptance.md"
+        )
+
+    assert ENGINE_CUTOVER_ACCEPTANCE.is_file()
 
 
 def test_data_science_preview_validation_doc_is_linked_from_entry_points() -> None:
