@@ -160,7 +160,12 @@ rendering, Copier integration, and generated content. The canonical
 [filesystem generation contract](filesystem-generation.md) records the
 client-side staging, finalisation, and cleanup rules that safe filesystem
 orchestration implies, behind the same hidden `--engine-preview` flag as the
-rest of this boundary.
+rest of this boundary; the canonical
+[engine project lifecycle contract](engine-project-lifecycle.md) (CF-16.02,
+[ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md)) records
+the command-execution half the cutover adds — `git init` and the initial
+commit, conditional hook installation, the committed `.forge/generation.json`
+metadata file, and the engine-native `update` merge — none of it shipped.
 
 The canonical
 [organisation-policy protocol](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md),

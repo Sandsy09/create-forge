@@ -259,6 +259,54 @@ Projects generated through `new --engine-preview` remain ineligible for
 `update` because they do not contain `.copier-answers.yml`; `--dry-run` does not
 change that boundary.
 
+At the engine-default cutover, `update` gains an engine-native route
+(CF-16.02, [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+canonical [engine project lifecycle contract](engine-project-lifecycle.md)):
+`update` routes to it when the project holds a committed
+`.forge/generation.json`, to the Copier path above when it holds only
+`.copier-answers.yml`, and `update --legacy` forces the Copier path. The
+engine-native route runs a Git-backed three-way merge from a clean working
+tree, so `--dry-run` there prints a genuine per-target classification list
+(`added` / `changed` / `removed` / `renamed`, each clean or CONFLICT) rather
+than the change/no-change summary Copier's merge is limited to. That route is
+decided by CF-16.02 and built by
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161); it has not
+shipped.
+
+## Engine project lifecycle
+
+The canonical [engine project lifecycle contract](engine-project-lifecycle.md)
+(CF-16.02, [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md))
+defines what happens **after the engine renders a project** and **when
+`create-forge update` runs against one**, after the cutover:
+
+- the engine `new` path, after its staged render and atomic rename, runs
+  `git init` + one initial commit at the final destination, and
+  `pre-commit install --install-hooks` only when the render produced a
+  `.pre-commit-config.yaml`; a failure of any of these keeps the project and
+  warns rather than discarding a sound render;
+- `create-forge` persists `forge-template`'s generation-metadata document as a
+  committed `.forge/generation.json` — the engine analogue of
+  `.copier-answers.yml` — and rewrites it, last, after every successful
+  update;
+- an engine-native update requires a clean Git working tree, applies rename
+  records before diffing, writes inline conflict markers, deletes a `removed`
+  target only if pristine, never touches a `skip-if-exists` target, and leaves
+  the result staged for the user to review and commit;
+- recovery from a failed or cancelled update is `git restore . && git clean
+  -fd`, which `create-forge` prints but never runs itself;
+- an unavailable recorded engine release fails closed, with an opt-in
+  (`--degraded`, or an interactive prompt) two-way update that records
+  `reproduction.mode = "degraded"`;
+- update failures reuse the exit-status table above unchanged — `1` for a
+  dirty tree / bad merge / missing metadata / no route, `3` for an
+  incompatible or unavailable recorded engine, `130` for cancellation.
+
+That contract is a decision, not a shipped interface. Until
+[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
+implement it, the engine path is reachable only through hidden
+`new --engine-preview` and `update` handles only direct-Copier projects.
+
 ## Interactive and non-interactive parity
 
 Interactive prompts are an input mechanism, not a separate generation path.

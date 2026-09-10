@@ -424,8 +424,19 @@ extra behind a visible `--legacy` flag, retained `--template-url`/`--ref`
 (superseding ADR 0011's atomic-replacement clause only),
 `--engine-source`/`--engine-ref` as a new engine-package override, the removal
 of `--engine-preview`, `list`/`doctor` against the discovered catalogue, the
-widened exit `3`, and the deprecation rule and sequence. It is a contract
-decision — no runtime code, no dependency move, no version bump, no release.
+widened exit `3`, and the deprecation rule and sequence. CF-16.02
+([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md))
+fixes the rest in the canonical
+[engine project lifecycle contract](docs/engine-project-lifecycle.md): the
+engine `new` path's post-rename `git init` + initial commit + conditional
+`pre-commit install` (failure keeps the project and warns), the committed
+`.forge/generation.json` metadata file, and `create-forge update` routing to a
+Git-backed engine-native three-way merge from a clean tree — `--dry-run`
+per-target list, `git restore`/`git clean` rollback printed but never run,
+opt-in `--degraded` two-way update, `.copier-answers.yml` projects and
+`--legacy` staying on `copier update`. Both are contract decisions — no
+runtime code, no dependency move, no version bump, no release; built by
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 
 ## User documentation
 

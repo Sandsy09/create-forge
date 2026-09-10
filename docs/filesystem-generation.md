@@ -74,6 +74,18 @@ staging context removes the incomplete tree and leaves the destination
 untouched. Successful engine output contains `uv.lock`, but still contains no
 `.git`, `.venv`, hooks, or pre-commit installation.
 
+At the engine-default cutover, a **`new` finalisation step runs after the
+atomic rename** — `git init` + one initial commit at the final destination,
+`pre-commit install` when a `.pre-commit-config.yaml` was rendered, and the
+committed `.forge/generation.json` metadata file — the engine analogue of the
+Copier path's `_tasks`. It runs after the rename, not in staging, for the same
+absolute-path reason the Copier path is cleaned-up rather than staged. That
+step is CF-16.02's decision, recorded in the canonical
+[engine project lifecycle contract](engine-project-lifecycle.md)
+([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md)) and
+built by [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160); the
+staging, atomic-rename and cleanup rules on this page are unchanged by it.
+
 ## Target safety
 
 `staging.write_files` resolves every `(target, content)` pair the engine

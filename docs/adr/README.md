@@ -43,6 +43,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0038 — Raise the Copier floor past the destination-escape advisories and hold uv](0038-dependency-floor-review.md)
 - [0039 — Diagnose the Copier template cache](0039-copier-cache-diagnostics.md)
 - [0040 — Define engine-default selection and source-resolution UX](0040-engine-default-selection-and-source-resolution.md)
+- [0041 — Define engine project lifecycle and update dispatch](0041-engine-project-lifecycle-and-update-dispatch.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

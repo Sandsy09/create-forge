@@ -176,11 +176,19 @@ engine-generated projects to migrate. ADR 0026's move to the 0.4 line was
 therefore vacuously compliant here; the engine-first cutover
 ([CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)) is what
-gives the engine path its own update contract —
-[CF-16.02](https://github.com/Sandsy09/create-forge/issues/156) owns engine-
-native update dispatch, and
+gives the engine path its own update contract.
 [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) fixes
-the selection and source-resolution half.
+the selection and source-resolution half; CF-16.02
+([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+canonical [engine project lifecycle contract](engine-project-lifecycle.md))
+fixes the update half — `create-forge update` routes to an engine-native
+Git-backed three-way merge when the project holds a committed
+`.forge/generation.json`, to `copier update` when it holds only
+`.copier-answers.yml`, and `update --legacy` forces the latter. Existing
+direct-Copier projects keep exactly the route this section describes; the
+engine-native route is decided by CF-16.02 and built by
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161), and has not
+shipped.
 
 ## Where the supported range is recorded
 
