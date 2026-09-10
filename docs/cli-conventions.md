@@ -231,8 +231,9 @@ in which the `forge-template` engine replaces direct Copier as the default
   `doctor` negotiates against the real engine while staying offline;
 - exit `3` widens to the whole "required generator missing or unusable" class;
 - the deprecation *rule and sequence* are fixed there; the concrete versions,
-  windows and dates are
-  [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157)'s.
+  windows, acceptance matrix and support policy are fixed by CF-16.03 in the
+  [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+  ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)).
 
 That contract is a decision, not a shipped interface. Until
 [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) implements it,
@@ -306,6 +307,26 @@ That contract is a decision, not a shipped interface. Until
 [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
 implement it, the engine path is reachable only through hidden
 `new --engine-preview` and `update` handles only direct-Copier projects.
+
+## Engine-default cutover acceptance
+
+The canonical
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+(CF-16.03, [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md))
+fixes **how the cutover is accepted and supported** — the parts CF-16.01 and
+CF-16.02 deferred: the cutover is a single tagged **`create-forge 0.4.0`**
+release; the supported operating systems (Linux and Windows proven, macOS
+unclaimed), Python versions (the latest four final CPython releases, today
+3.11–3.14) and install modes (`uvx`, `uv tool install`, `pip`, and the
+`legacy` extra); the cross-repository acceptance matrix and release gates
+(provider publishes first; both integrated validations and working
+engine-native **and** legacy updates before `create-forge` publishes); the
+release-rollback rule (immutable-forward, yank the defective version); the
+`create-forge 0.3.x` support window (≥ 90 days and ≥ 1 further tagged release
+past the cutover); and the deprecation window (≥ 90 days and ≥ 1 release, no
+calendar dates). It is a decision only — the implementation, matrix execution
+and publication are
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 
 ## Interactive and non-interactive parity
 

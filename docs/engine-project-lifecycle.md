@@ -309,8 +309,11 @@ depend on the existence of — `forge-template`'s reserved
 - The exact rejection wording for a pre-cutover `--engine-preview` project and
   any migration helper, and the retention specifics of the direct-Copier
   update route — [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
-- The concrete cutover version numbers, support windows, and deprecation
-  dates — [CF-16.03](https://github.com/Sandsy09/create-forge/issues/157).
+- The concrete cutover version number (`create-forge 0.4.0`), the supported
+  OS / Python / install-mode matrix, the support and deprecation windows, and
+  the cross-repository acceptance matrix — decided by CF-16.03
+  ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md),
+  canonical [engine-default cutover acceptance contract](engine-cutover-acceptance.md)).
 - The generation-metadata document's schema, the `EngineErrorCode` values, the
   rename-record field names, and the reproducibility guarantee — all
   `forge-template`'s (FT-15.02, FT-17.01, FT-17.04). This contract adds no

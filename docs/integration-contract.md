@@ -319,6 +319,16 @@ Earlier `create-forge` releases retain their prior dependency bounds. Existing
 generated projects must have a supported update path or a documented, tested
 migration before the new client is released.
 
+For the engine-default cutover specifically, the canonical
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+(CF-16.03, [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md))
+is the client-side record of the acceptance matrix, the release gates
+(provider publishes the reviewed immutable `forge-template 0.5.0` first; both
+integrated validations and working engine-native and legacy updates before
+`create-forge 0.4.0` publishes), and the rollback, `0.3.x` support and
+deprecation windows. This section stays authoritative for the client-side
+mechanics it instantiates.
+
 ## Downstream and organisation integrations
 
 The canonical

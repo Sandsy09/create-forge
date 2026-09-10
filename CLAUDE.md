@@ -159,8 +159,20 @@ fixes the update-and-lifecycle half: the engine `new` path's post-rename
 `git init` + initial commit + conditional hooks, the committed
 `.forge/generation.json` metadata file, and `create-forge update` routing to a
 Git-backed engine-native three-way merge (`.copier-answers.yml` projects and
-`--legacy` stay on `copier update`). Both are decisions, not shipped
-interfaces — no implementing release exists.
+`--legacy` stay on `copier update`). CF-16.03
+([ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md),
+canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md))
+fixes the acceptance half: the cutover is a single **`create-forge 0.4.0`**
+release; Linux and Windows are supported (macOS unclaimed), the Python window
+is the latest four CPython releases, and the install modes are `uvx` /
+`uv tool install` / `pip` / the `legacy` extra; a cross-repository acceptance
+matrix (every row owned by a filed CF-18.x / FT-18.01 issue) and release gates
+(provider publishes first; both integrated validations and working
+engine-native **and** legacy updates before `create-forge` publishes); an
+immutable-forward-plus-yank release rollback; and a `create-forge 0.3.x`
+support window and a deprecation window of ≥ 90 days and ≥ 1 further tagged
+release. All three are decisions, not shipped interfaces — no implementing
+release exists. CF-16.03 closes CF-EPIC-16.
 [ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
 code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
 `forge-template`, now the optional `engine` extra rather than a
@@ -333,10 +345,15 @@ decision that implements and tests the complete cutover contract. CF-16.01
 ([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
 canonical [engine-default CLI contract](docs/engine-default-cli.md)) and
 CF-16.02 ([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md),
-canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md))
+canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md)),
+and CF-16.03 ([ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md),
+canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md))
 are decisions only: together they fix the post-cutover selection,
-source-resolution, `new` lifecycle and `update` UX, but ship no runtime code,
-move no dependency, and bump no version.
+source-resolution, `new` lifecycle, `update` UX, the `create-forge 0.4.0`
+cutover release, the supported OS / Python / install-mode matrix, the
+cross-repository acceptance matrix and release gates, and the rollback /
+support / deprecation windows — but ship no runtime code, move no dependency,
+and bump no version. CF-16.03 closed CF-EPIC-16.
 
 ## Invariants — do not break these
 
@@ -477,6 +494,23 @@ resolved to the SHA that tag points to. See
   [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
   [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
   [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
+- The canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md)
+  (CF-16.03, [ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md))
+  fixes how the cutover is accepted and supported: it is a single
+  **`create-forge 0.4.0`** release; the supported operating systems (Linux and
+  Windows proven, macOS unclaimed), Python versions (the latest four final
+  CPython releases, today 3.11–3.14) and install modes (`uvx`,
+  `uv tool install`, `pip`, and the `legacy` extra); the cross-repository
+  acceptance matrix (every row owned by a filed CF-18.x / FT-18.01 issue — no
+  new issue) and release gates (provider publishes the reviewed immutable
+  `forge-template 0.5.0` first; both integrated validations and working
+  engine-native **and** legacy updates before `create-forge` publishes); the
+  immutable-forward-plus-yank release rollback; the `create-forge 0.3.x`
+  support window (≥ 90 days and ≥ 1 further tagged release past the cutover);
+  and the deprecation window (≥ 90 days and ≥ 1 release, expressed relative to
+  publication, no calendar dates). A decision only, built by
+  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); it closed
+  [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
 - The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
   defines how to validate sibling `create-forge` and `forge-template` changes
   before tagging or release.
