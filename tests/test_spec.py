@@ -1,16 +1,16 @@
 """`spec.build_spec_payload` -- derivation, overrides, omission, and parity.
 
 No engine import here: `spec.py` must stay importable and testable without
-the optional `engine` extra (ADR 0018) installed, so these tests exercise
-only the wire-payload shape, never `forge_template.ProjectSpec` itself. That
-real parse is `tests/test_engine_adapter.py`'s job.
+the engine installed, so these tests exercise only the wire-payload shape,
+never `forge_template.ProjectSpec` itself. That real parse is
+`tests/test_engine_adapter.py`'s job.
 """
 
 from __future__ import annotations
 
 from typing import cast
 
-from create_forge.spec import build_spec_payload, legacy_library_answers
+from create_forge.spec import build_spec_payload
 
 
 def _project(payload: dict[str, object]) -> dict[str, object]:
@@ -191,35 +191,16 @@ def test_interactive_and_non_interactive_parity() -> None:
     ) == build_spec_payload(non_interactive_answers, archetype="library")
 
 
-def test_legacy_library_answers_is_none_without_build_backend() -> None:
-    """No `build_backend` answer means the question was never asked --
-    `pipeline` reads `None` as "send no component_options", not as a static
-    default (CF-08.02).
+def test_component_options_carry_build_backend_directly() -> None:
+    """ADR 0040 decision 10 (CF-18.01) retires the legacy `build_backend`/
+    `versioning` -> `packaging_mode` `--data` shim: a caller now sets
+    `library.packaging_mode` the same way as any other component option, via
+    `component_options`, never a `build_backend`/`versioning` answer key.
     """
-    assert legacy_library_answers({}) is None
+    payload = build_spec_payload(
+        {},
+        archetype="library",
+        component_options={"library": {"packaging_mode": "uv_build"}},
+    )
 
-
-def test_legacy_library_answers_uv_build_forces_static() -> None:
-    """Mirrors copier.yml's `versioning_resolved`: `uv_build` is always
-    static regardless of what `versioning` says.
-    """
-    assert legacy_library_answers(
-        {"build_backend": "uv_build", "versioning": "vcs"}
-    ) == {"build_backend": "uv_build", "versioning_resolved": "static"}
-
-
-def test_legacy_library_answers_hatchling_passes_versioning_through() -> None:
-    assert legacy_library_answers(
-        {"build_backend": "hatchling", "versioning": "vcs"}
-    ) == {"build_backend": "hatchling", "versioning_resolved": "vcs"}
-
-
-def test_legacy_library_answers_hatchling_defaults_versioning_to_static() -> None:
-    """`versioning` is gated on `build_backend == hatchling` in `templates.toml`
-    -- a hatchling answer with no `versioning` key still resolves to `static`,
-    matching copier.yml's own question default.
-    """
-    assert legacy_library_answers({"build_backend": "hatchling"}) == {
-        "build_backend": "hatchling",
-        "versioning_resolved": "static",
-    }
+    assert payload["component_options"] == {"library": {"packaging_mode": "uv_build"}}

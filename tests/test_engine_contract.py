@@ -47,7 +47,7 @@ CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-ENGINE_REQUIREMENT = "forge-template>=0.4.1,<0.5"
+ENGINE_REQUIREMENT = "forge-template>=0.5,<0.6"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
 # ADR 0038 raised the Copier floor past the destination-escape advisories
@@ -63,7 +63,7 @@ def test_diagnostic_integration_line_matches_package_release_line() -> None:
     """A major/minor release must deliberately review diagnostic metadata."""
     project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
     version_match = re.fullmatch(r"(\d+)\.(\d+)\.\d+", project["version"])
-    line_match = re.fullmatch(r"v(\d+)\.(\d+)\.x-copier", INTEGRATION_LINE)
+    line_match = re.fullmatch(r"v(\d+)\.(\d+)\.x-engine", INTEGRATION_LINE)
 
     assert version_match is not None
     assert line_match is not None
@@ -71,9 +71,12 @@ def test_diagnostic_integration_line_matches_package_release_line() -> None:
 
 
 # Every module reachable from create-forge's shipped entry point
-# (`create_forge.cli:app`). `engine.py` is deliberately excluded -- it is the
-# one module ADR 0013 permits to import forge_template, mirroring invariant
-# 4's rule that runner.py is the only module touching Copier's Python API.
+# (`create_forge.cli:app`). `engine.py` and `pipeline.py` are deliberately
+# excluded -- `engine.py` is the one module ADR 0013 permits to import
+# `forge_template` directly, and `pipeline.py` depends on it transitively
+# (importing engine-owned types only under `TYPE_CHECKING`), mirroring
+# invariant 4's rule that `runner.py` is the only module touching Copier's
+# Python API.
 _SHIPPED_MODULES = (
     "cli",
     "prompts",
@@ -152,31 +155,27 @@ def _dependabot_uv_ignores() -> list[dict[str, Any]]:
     return []
 
 
-def test_engine_dependency_stays_out_of_required_dependencies() -> None:
-    """ADR 0018: forge-template is declared as the optional `engine` extra,
-    never a hard `[project.dependencies]` entry -- that is what keeps ADR
-    0014's guarded `try/except ImportError` in cli.py meaningful, and what
-    keeps a plain `pip install create-forge`/`uvx create-forge` from ever
-    resolving it.
+def test_engine_dependency_is_a_required_dependency() -> None:
+    """ADR 0040 decision 1 (CF-18.01): `forge-template` moved from the
+    optional `engine` extra into `[project.dependencies]` -- the engine is
+    the default `new` path, so a plain `pip install create-forge` /
+    `uvx create-forge` must resolve it.
     """
-    assert "forge-template" not in _required_dependencies(), (
-        "forge-template must not be a required [project.dependencies] entry "
-        "-- it belongs in [project.optional-dependencies].engine (ADR 0018), "
-        "so the default `new` path never downloads an engine it doesn't call."
-    )
+    required = _required_dependencies()
+    assert required.get("forge-template") == ENGINE_REQUIREMENT
+    assert required.get("uv") == UV_REQUIREMENT
 
 
-def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None:
-    """The engine range and its client-finalisation tool stay optional
-    (#9/ADR 0018, ADR 0021, and ADR 0026's move to the 0.4 line).
+def test_engine_extra_is_retired_and_legacy_extra_holds_copier() -> None:
+    """ADR 0040 decisions 1/2 (CF-18.01): the `engine` extra is gone (its
+    contents moved into required dependencies); `copier` and its
+    cache-resolution dependency moved into a new `legacy` extra.
     """
     data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    extras = data["project"].get("optional-dependencies", {})
 
-    assert data["project"]["optional-dependencies"]["engine"] == [
-        ENGINE_REQUIREMENT,
-        UV_REQUIREMENT,
-    ]
-    assert "uv" not in _required_dependencies()
+    assert "engine" not in extras
+    assert extras.get("legacy") == [COPIER_REQUIREMENT, "platformdirs>=4.3.6"]
     assert "sources" not in data.get("tool", {}).get("uv", {}), (
         "a committed [tool.uv.sources] override must not survive ADR 0018 -- "
         "the engine now resolves from PyPI like any other dependency."
@@ -187,10 +186,10 @@ def test_engine_dependency_is_an_optional_extra_with_an_assigned_range() -> None
     )
 
     contract_text = INTEGRATION_CONTRACT.read_text(encoding="utf-8")
-    expected = f"| v0.3.x (`engine` extra) | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
+    expected = f"| v0.4.x | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
     assert expected in contract_text, (
         "docs/integration-contract.md's compatibility table must record the "
-        "same range this test just verified in pyproject.toml (ADR 0026)."
+        "same range this test just verified in pyproject.toml (ADR 0042)."
     )
 
 
@@ -408,14 +407,16 @@ def test_release_0_3_0_validation_doc_is_linked_from_entry_points() -> None:
 
 
 def test_compatibility_exit_status_is_documented_once() -> None:
-    """Exit 3 is live for preview engine/protocol compatibility failures."""
+    """Exit 3 is live for engine/protocol compatibility failures on the
+    now-default engine `new` path (ADR 0040, CF-18.01).
+    """
     conventions_text = CLI_CONVENTIONS.read_text(encoding="utf-8")
     resolution_text = ENGINE_RESOLUTION.read_text(encoding="utf-8")
 
     row_re = re.compile(r"^\|\s*`3`\s*\|.*\|\s*$", re.MULTILINE)
     row_match = row_re.search(conventions_text)
     assert row_match, "docs/cli-conventions.md has no exit-status row for `3`"
-    assert "--engine-preview" in row_match.group(0)
+    assert "engine cannot be imported" in row_match.group(0)
 
     assert "exit status **`3`**, reserved exclusively for it" in resolution_text
 
@@ -448,7 +449,7 @@ def test_copier_floor_clears_the_published_advisories() -> None:
     database before changing this constant -- docs/engine-updates.md,
     "Reviewing a dependency floor".
     """
-    assert _required_dependencies().get("copier") == COPIER_REQUIREMENT
+    assert _declared_dependencies().get("copier") == COPIER_REQUIREMENT
 
 
 def test_automation_cannot_cross_the_copier_compatibility_line() -> None:
@@ -556,10 +557,11 @@ def test_engine_adapter_imports_only_the_public_forge_template_facade() -> None:
 def test_shipped_cli_modules_do_not_import_the_engine() -> None:
     """ADR 0013: `engine.py` is the only module allowed to import
     `forge_template`, mirroring invariant 4's rule that `runner.py` is the
-    only module touching Copier's Python API. `forge_template` lives in a
-    dev-only dependency group (pinned to an unreleased commit) -- if any
-    module reachable from `create-forge`'s shipped entry point ever imports
-    it, a built wheel stops installing for real users.
+    only module touching Copier's Python API. `forge_template` is a required
+    dependency now (ADR 0040, CF-18.01), so this no longer guards against a
+    missing package -- it keeps the *seam* narrow, so a future engine
+    protocol change touches one module instead of every module that reaches
+    `cli.py`'s shipped entry point.
     """
     for module_name in _SHIPPED_MODULES:
         path = SRC_ROOT / f"{module_name}.py"

@@ -1,13 +1,13 @@
 """Interactive prompt flow.
 
-Two independent prompt sets live here. The Copier path is driven entirely by
-the registry, so surfacing a new question there is a data change rather than
-a code change — anything not prompted falls through to the template's own
-default in copier.yml. The engine path (`--engine-preview`, #91,
-ADR 0025) is driven by ProjectSpec's own required identity fields
-(`PROJECT_PROMPTS`) plus the selected archetype's own discovered
-`ComponentDescriptor.options` (`ask_component_options`) — it reads no
-registry data at all.
+Two independent prompt sets live here. The `--legacy` Copier path is driven
+entirely by the registry, so surfacing a new question there is a data change
+rather than a code change — anything not prompted falls through to the
+template's own default in copier.yml. The default engine path (#91,
+ADR 0025; the default architecture since ADR 0040 / CF-18.01) is driven by
+ProjectSpec's own required identity fields (`PROJECT_PROMPTS`) plus the
+selected archetype's own discovered `ComponentDescriptor.options`
+(`ask_component_options`) — it reads no registry data at all.
 """
 
 from __future__ import annotations
@@ -166,7 +166,7 @@ def choose_template(templates: list[Template], default_id: str) -> Template:
 def choose_archetype(archetypes: Sequence[ArchetypeChoice]) -> ArchetypeChoice:
     """Ask which engine archetype to build. Skipped when only one exists.
 
-    Mirrors `choose_template`'s shape for the engine-preview path (CF-08.02):
+    Mirrors `choose_template`'s shape for the default engine path (CF-08.02):
     same skip-when-one behaviour, same `PromptAbortedError` on cancel.
     `archetypes` is expected to be non-empty -- callers resolve an empty
     catalogue as a compatibility failure before reaching here.
@@ -194,8 +194,8 @@ COMPONENT_PROMPTS: dict[str, str] = {
     "platforms": "Which platforms?",
 }
 """The multi-select prompt message for each selectable component kind
-(`--engine-preview`, CF-13.03). Keyed by `spec.SelectionKind`'s value string,
-not the enum -- `prompts.py` cannot import `spec` (`spec` imports
+(the default engine path, CF-13.03). Keyed by `spec.SelectionKind`'s value
+string, not the enum -- `prompts.py` cannot import `spec` (`spec` imports
 `prompts.slugify`).
 """
 
@@ -288,7 +288,7 @@ PROJECT_PROMPTS: tuple[PromptSpec, ...] = (
         ],
     ),
 )
-"""The `--engine-preview` path's own prompt set (#91, ADR 0025).
+"""The default engine path's own prompt set (#91, ADR 0025).
 
 These are exactly the CLI-collected answers that reach `ProjectSpec.project`
 (see `spec._project_metadata`) -- `python_min_version`/`python_version`/

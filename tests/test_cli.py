@@ -81,10 +81,13 @@ def recorder(monkeypatch: pytest.MonkeyPatch) -> list[ScaffoldRequest]:
     def fake_scaffold(request: ScaffoldRequest) -> None:
         calls.append(request)
 
-    # Patch the name inside cli, not runner -- cli.py imports scaffold
-    # directly, so patching create_forge.runner.scaffold would not affect
-    # the reference `new()` actually calls.
-    monkeypatch.setattr(cli_module, "scaffold", fake_scaffold)
+    # Patch the name on `runner`, not `cli` -- since ADR 0040 (CF-18.01) made
+    # `copier` the optional `legacy` extra, `cli.py`'s `--legacy` route
+    # imports `scaffold` from `create_forge.runner` lazily, inside the
+    # function body, on every invocation. That late-binding `from
+    # create_forge.runner import scaffold` re-reads the module attribute at
+    # call time, so patching it here is what actually reaches `new --legacy`.
+    monkeypatch.setattr(runner_module, "scaffold", fake_scaffold)
     return calls
 
 
@@ -99,7 +102,9 @@ def update_recorder(
     ) -> None:
         calls.append((project, vcs_ref, dry_run))
 
-    monkeypatch.setattr(cli_module, "update", fake_update)
+    # See `recorder` above: `update_project` also imports `update` lazily
+    # from `create_forge.runner` on every invocation.
+    monkeypatch.setattr(runner_module, "update", fake_update)
     return calls
 
 
@@ -109,9 +114,19 @@ def _write_config(path: Path, contents: str) -> None:
 
 
 def test_list_shows_the_bundled_templates() -> None:
-    result = runner.invoke(app, ["list"])
+    result = runner.invoke(app, ["list", "--legacy"])
     assert result.exit_code == 0
     assert "library" in result.output
+
+
+def test_list_shows_the_discovered_engine_catalogue_by_default() -> None:
+    """ADR 0040 decisions 7/9 (CF-18.01): `list` with no flag shows the
+    engine's own discovered catalogue, not the bundled registry.
+    """
+    result = runner.invoke(app, ["list"])
+    assert result.exit_code == 0, result.output
+    assert "library" in result.output
+    assert "archetype" in result.output
 
 
 def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -153,45 +168,48 @@ def _show_engine_extra(monkeypatch: pytest.MonkeyPatch, installed_version: str) 
     monkeypatch.setattr(cli_module, "version", fake)
 
 
-def test_doctor_reports_versions_and_the_engine_range(
+def test_doctor_fails_when_the_engine_is_not_installed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """CF-04.01's diagnostics contract (docs/engine-resolution.md): doctor
-    must report the create-forge and Copier versions plus an explicit engine
-    row -- since ADR 0018, always naming the supported range, and the
-    installed version when the `engine` extra is present."""
+    """ADR 0040 decision 1/6 (CF-18.01): `forge-template` is a required
+    dependency now, so its absence is a genuinely broken environment -- a
+    failing check and exit `1`, not the informational "not installed" row
+    the optional `engine` extra used to get.
+    """
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
     _hide_engine_extra(monkeypatch)
 
     result = runner.invoke(app, ["doctor"])
 
-    assert result.exception is None, result.output
+    assert result.exit_code == 1, result.output
     assert "create-forge" in result.output
     assert "copier" in result.output
     assert "not installed" in result.output
-    assert "forge-template>=0.4.1,<0.5" in result.output
+    assert "forge-template>=0.5,<0.6" in result.output
     assert "engine" in result.output
     assert "integration line" in result.output
-    assert "v0.3.x-copier" in result.output
+    assert "v0.3.x-engine" in result.output
 
 
 def test_doctor_reports_the_installed_engine_package_when_present(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The other half of the row above: when the extra is installed, doctor
-    names the installed version, not "not installed"."""
+    """When the (now required) engine dependency is installed, doctor names
+    the installed version rather than "not installed", and the engine check
+    passes.
+    """
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
-    _show_engine_extra(monkeypatch, "0.4.1")
+    _show_engine_extra(monkeypatch, "0.5.0")
 
     table_result = runner.invoke(app, ["doctor"])
     result = runner.invoke(app, ["doctor", "--json"])
 
-    assert table_result.exception is None, table_result.output
+    assert table_result.exit_code == 0, table_result.output
     assert "integration line" in table_result.output
-    assert "v0.3.x-copier" in table_result.output
+    assert "v0.3.x-engine" in table_result.output
     payload = json.loads(result.output)
-    assert payload["integration"]["engine_package"] == "0.4.1"
-    assert payload["integration"]["line"] == "v0.3.x-copier"
+    assert payload["integration"]["engine_package"] == "0.5.0"
+    assert payload["integration"]["line"] == "v0.3.x-engine"
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -199,9 +217,11 @@ def test_doctor_json_emits_the_documented_shape(
 ) -> None:
     """`doctor --json` must carry every field docs/engine-resolution.md's
     diagnostics contract documents, print no table, and still exit 0 when
-    every check passes."""
+    every check passes -- against the real installed engine, so the
+    negotiated `*_detected` facts are genuinely populated (ADR 0040
+    decision 6, CF-18.01), not left at a hardcoded `None`.
+    """
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
-    _hide_engine_extra(monkeypatch)
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 0, result.output
 
@@ -209,17 +229,21 @@ def test_doctor_json_emits_the_documented_shape(
     assert payload["create_forge"] == cli_module._version()
     assert payload["ok"] is True
     integration = payload["integration"]
-    assert integration["line"] == "v0.3.x-copier"
-    assert integration["engine_package"] is None
-    assert integration["engine_range"] == "forge-template>=0.4.1,<0.5"
-    assert integration["projectspec_protocol"] == {"supported": "1", "detected": None}
+    assert integration["line"] == "v0.3.x-engine"
+    assert integration["engine_package"] is not None
+    assert integration["engine_range"] == "forge-template>=0.5,<0.6"
+    assert integration["projectspec_protocol"]["supported"] == "1"
+    assert integration["projectspec_protocol"]["detected"] is not None
+    assert integration["component_manifest_protocol"]["supported"] == "1,2,3"
+    assert integration["component_manifest_protocol"]["detected"] is not None
+    assert integration["metadata_version"]["supported"] == "1"
+    assert integration["metadata_version"]["detected"] is not None
     assert integration["template_source"] is not None
     assert {"name", "ok", "detail"} <= payload["checks"][0].keys()
     # The table's own column header must not leak into --json output, and
     # informational rows (already under "integration") must not duplicate
     # into "checks".
     assert "Check" not in result.output
-    assert all(c["name"] != "engine" for c in payload["checks"])
     assert all(c["name"] != "integration line" for c in payload["checks"])
 
 
@@ -280,8 +304,11 @@ def test_doctor_fails_when_the_copier_cache_is_unwritable(
     the boolean flips.
     """
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    # `_tooling_diagnostics` imports `cache_probe` lazily from
+    # `create_forge.runner` on every call (ADR 0040, CF-18.01), so the patch
+    # lands there, not on `cli_module`.
     monkeypatch.setattr(
-        cli_module,
+        runner_module,
         "cache_probe",
         lambda _location: runner_module.CacheProbe(exists=True, writable=False),
     )
@@ -369,7 +396,7 @@ def test_update_failure_exits_1_without_a_success_message(
         del vcs_ref, dry_run
         raise ScaffoldError("update failed")
 
-    monkeypatch.setattr(cli_module, "update", fail_update)
+    monkeypatch.setattr(runner_module, "update", fail_update)
 
     result = runner.invoke(app, ["update", str(tmp_path / "project"), "--dry-run"])
 
@@ -387,6 +414,7 @@ def test_new_dry_run_records_the_request_and_writes_nothing(
         app,
         [
             "new",
+            "--legacy",
             "My Project",
             "--yes",
             "--dry-run",
@@ -413,6 +441,7 @@ def test_new_data_coerces_true_and_false_to_bool(
         app,
         [
             "new",
+            "--legacy",
             "Bool Project",
             "--yes",
             "--dry-run",
@@ -434,13 +463,15 @@ def test_new_data_coerces_true_and_false_to_bool(
 def test_new_yes_without_a_project_name_is_rejected(
     recorder: list[ScaffoldRequest],
 ) -> None:
-    result = runner.invoke(app, ["new", "--yes"])
+    result = runner.invoke(app, ["new", "--legacy", "--yes"])
     assert result.exit_code == 1
     assert recorder == []
 
 
 def test_new_bad_data_format_is_rejected(recorder: list[ScaffoldRequest]) -> None:
-    result = runner.invoke(app, ["new", "X", "--yes", "--data", "no-equals-sign"])
+    result = runner.invoke(
+        app, ["new", "--legacy", "X", "--yes", "--data", "no-equals-sign"]
+    )
     assert result.exit_code == 2
     assert recorder == []
 
@@ -448,7 +479,9 @@ def test_new_bad_data_format_is_rejected(recorder: list[ScaffoldRequest]) -> Non
 def test_new_unknown_template_exits_with_an_explanation(
     recorder: list[ScaffoldRequest],
 ) -> None:
-    result = runner.invoke(app, ["new", "X", "--yes", "--template", "does-not-exist"])
+    result = runner.invoke(
+        app, ["new", "--legacy", "X", "--yes", "--template", "does-not-exist"]
+    )
     assert result.exit_code == 1
     assert recorder == []
     assert "unknown template" in result.output
@@ -504,7 +537,7 @@ def test_new_interactive_resolves_template_and_answers(
         },
     )
 
-    result = runner.invoke(app, ["new", "--path", str(tmp_path / "proj")])
+    result = runner.invoke(app, ["new", "--legacy", "--path", str(tmp_path / "proj")])
 
     assert result.exit_code == 0, result.output
     assert len(recorder) == 1
@@ -521,7 +554,7 @@ def test_new_aborting_the_template_choice_exits_130(
 
     monkeypatch.setattr(cli_module, "choose_template", _abort)
 
-    result = runner.invoke(app, ["new"])
+    result = runner.invoke(app, ["new", "--legacy"])
 
     assert result.exit_code == 130
     assert recorder == []
@@ -535,7 +568,7 @@ def test_new_aborting_the_answers_exits_130(
 
     monkeypatch.setattr(cli_module, "ask_all", _abort)
 
-    result = runner.invoke(app, ["new"])
+    result = runner.invoke(app, ["new", "--legacy"])
 
     assert result.exit_code == 130
     assert recorder == []
@@ -551,6 +584,7 @@ def test_new_warns_about_a_deprecated_template(
         app,
         [
             "new",
+            "--legacy",
             "Legacy Project",
             "--yes",
             "--dry-run",
@@ -579,7 +613,14 @@ def test_new_template_url_declined_scaffolds_nothing(
     monkeypatch.setattr(typer, "confirm", lambda *_a, **_kw: False)
 
     result = runner.invoke(
-        app, ["new", "Foo", "--template-url", "https://example.com/other-template"]
+        app,
+        [
+            "new",
+            "--legacy",
+            "Foo",
+            "--template-url",
+            "https://example.com/other-template",
+        ],
     )
 
     assert result.exit_code == 130
@@ -600,6 +641,7 @@ def test_new_template_url_accepted_forwards_local_source_ref_and_warning(
         app,
         [
             "new",
+            "--legacy",
             "Foo",
             "--dry-run",
             "--path",
@@ -624,10 +666,10 @@ def test_new_reports_a_scaffold_error(
     def _fail(_request: ScaffoldRequest) -> None:
         raise ScaffoldError("boom")
 
-    monkeypatch.setattr(cli_module, "scaffold", _fail)
+    monkeypatch.setattr(runner_module, "scaffold", _fail)
 
     result = runner.invoke(
-        app, ["new", "Foo", "--yes", "--path", str(tmp_path / "proj")]
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(tmp_path / "proj")]
     )
 
     assert result.exit_code == 1
@@ -654,7 +696,9 @@ def test_new_rejects_a_non_empty_destination_before_copier(
 
     monkeypatch.setattr(runner_module, "run_copy", unexpected_run_copy)
 
-    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+    result = runner.invoke(
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(dest)]
+    )
 
     assert result.exit_code == 1, result.output
     normalised_output = " ".join(result.output.split())
@@ -678,7 +722,9 @@ def test_new_removes_a_destination_it_created_on_failure(
 
     monkeypatch.setattr(runner_module, "run_copy", failing_run_copy)
 
-    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+    result = runner.invoke(
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(dest)]
+    )
 
     assert result.exit_code == 1, result.output
     assert not dest.exists()
@@ -695,7 +741,9 @@ def test_new_leaves_a_pre_existing_destination_untouched_on_failure(
 
     monkeypatch.setattr(runner_module, "run_copy", failing_run_copy)
 
-    result = runner.invoke(app, ["new", "Foo", "--yes", "--path", str(dest)])
+    result = runner.invoke(
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(dest)]
+    )
 
     assert result.exit_code == 1, result.output
     assert dest.is_dir()
@@ -711,6 +759,7 @@ def test_new_reports_where_the_project_was_created(
         app,
         [
             "new",
+            "--legacy",
             "Foo",
             "--yes",
             "--path",
@@ -731,9 +780,10 @@ def test_new_reports_where_the_project_was_created(
     assert dest.name in result.output
 
 
-# --- --engine-preview (CF-07.01 / #49, ADR 0014) ------------------------------
+# --- the default engine `new` path (CF-07.01 / #49, ADR 0014; the default
+# architecture since ADR 0040 / CF-18.01) -------------------------------------
 
-_ENGINE_PREVIEW_ANSWERS = [
+_ENGINE_ANSWERS = [
     "--data",
     "github_org=test-org",
     "--data",
@@ -754,28 +804,28 @@ _ENGINE_PREVIEW_ANSWERS = [
 ]
 
 
-def test_new_without_engine_preview_is_unchanged(
+def test_new_with_legacy_is_unchanged(
     recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
-    """The hidden flag defaults to False; every existing test above already
-    proves this, but this makes the default explicit and future-proof.
+    """`--legacy` still reaches the Copier path exactly as the pre-cutover
+    default did -- every Copier-path test above already proves this, but this
+    makes it explicit and future-proof.
     """
     result = runner.invoke(
-        app, ["new", "Foo", "--yes", "--path", str(tmp_path / "proj")]
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(tmp_path / "proj")]
     )
 
     assert result.exit_code == 0, result.output
     assert len(recorder) == 1
-    assert "Engine preview" not in result.output
 
 
-def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
+def test_new_fails_closed_when_the_engine_cannot_be_imported(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
-    """Simulates a real `uvx create-forge` install, where forge-template is
-    not installed at all. cli.py's lazy import must fail cleanly rather than
-    crash the whole command with a raw traceback -- and must never fall back
-    to actually scaffolding.
+    """A broken environment where `forge-template` -- a required dependency
+    since ADR 0040 (CF-18.01) -- somehow cannot be imported must fail closed
+    at exit `3` (decision 12's widened provider-availability class), not
+    crash the whole command with a raw traceback or fall back to scaffolding.
 
     Blocking via `sys.modules["forge_template"] = None` alone is not
     reliable here: `create_forge.engine`/`create_forge.pipeline` are already
@@ -810,26 +860,25 @@ def test_new_engine_preview_fails_cleanly_without_the_engine_dependency(
             "--yes",
             "--path",
             str(tmp_path / "proj"),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
         ],
     )
 
-    assert result.exit_code == 1, result.output
-    assert "engine extra isn't installed" in result.output
+    assert result.exit_code == 3, result.output
+    assert "forge-template is not installed" in result.output
     assert recorder == []
     assert not (tmp_path / "proj").exists()
 
 
-def test_new_engine_preview_generates_a_real_cli_application(
+def test_new_generates_a_real_cli_application(
     monkeypatch: pytest.MonkeyPatch,
     recorder: list[ScaffoldRequest],
     tmp_path: Path,
 ) -> None:
     """The real, unmocked engine: the installed `forge-template` production
-    catalogue (since 0.3.0, CF-08.02) makes `--engine-preview` generate for
-    real, superseding the Stage 06-era empty-catalogue rejection this test
-    replaces -- see
+    catalogue (since 0.3.0, CF-08.02) makes the default `new` path generate
+    for real, superseding the Stage 06-era empty-catalogue rejection this
+    test replaces -- see
     `tests/test_pipeline.py::test_build_generation_request_succeeds_against_the_real_catalogue`
     for the equivalent pipeline-level proof.
     """
@@ -848,8 +897,7 @@ def test_new_engine_preview_generates_a_real_cli_application(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
             "--archetype",
             "cli",
         ],
@@ -863,7 +911,7 @@ def test_new_engine_preview_generates_a_real_cli_application(
     assert 'engine-preview = "engine_preview.cli:app"' in pyproject
 
 
-def test_new_engine_preview_exits_3_on_incompatible_engine(
+def test_new_exits_3_on_incompatible_engine(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     monkeypatch.setattr(
@@ -873,6 +921,7 @@ def test_new_engine_preview_exits_3_on_incompatible_engine(
             package_version="9.0.0",
             projectspec_protocols=(99,),
             component_manifest_protocols=(1,),
+            metadata_version=1,
         ),
     )
 
@@ -884,8 +933,7 @@ def test_new_engine_preview_exits_3_on_incompatible_engine(
             "--yes",
             "--path",
             str(tmp_path / "proj"),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
         ],
     )
 
@@ -894,7 +942,7 @@ def test_new_engine_preview_exits_3_on_incompatible_engine(
     assert not (tmp_path / "proj").exists()
 
 
-def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
+def test_new_rejects_a_non_empty_destination_before_the_engine(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """ADR 0015: the destination conflict is checked before the engine is
@@ -917,8 +965,7 @@ def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
         ],
     )
 
@@ -932,7 +979,7 @@ def test_new_engine_preview_rejects_a_non_empty_destination_before_the_engine(
     assert (dest / "existing.txt").read_text(encoding="utf-8") == "hi"
 
 
-def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
+def test_new_dry_run_lists_targets_and_writes_nothing(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """`--dry-run` short-circuits before staging (ADR 0015).
@@ -970,8 +1017,7 @@ def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
             "--dry-run",
         ],
     )
@@ -982,7 +1028,7 @@ def test_new_engine_preview_dry_run_lists_targets_and_writes_nothing(
     assert not dest.exists()
 
 
-def test_new_engine_preview_finalises_a_successful_render(
+def test_new_finalises_a_successful_render(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """A successful (faked) render is staged and moved into place exactly
@@ -1019,8 +1065,7 @@ def test_new_engine_preview_finalises_a_successful_render(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
         ],
     )
 
@@ -1036,7 +1081,7 @@ def test_new_engine_preview_finalises_a_successful_render(
     assert "uv run --locked poe check" in normalised_output
 
 
-def test_new_engine_preview_reports_lock_failure_and_writes_nothing(
+def test_new_reports_lock_failure_and_writes_nothing(
     monkeypatch: pytest.MonkeyPatch,
     recorder: list[ScaffoldRequest],
     tmp_path: Path,
@@ -1070,8 +1115,7 @@ def test_new_engine_preview_reports_lock_failure_and_writes_nothing(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
         ],
     )
 
@@ -1081,20 +1125,23 @@ def test_new_engine_preview_reports_lock_failure_and_writes_nothing(
     assert not dest.exists()
 
 
-def test_new_archetype_without_engine_preview_is_rejected(
+def test_new_archetype_with_legacy_is_rejected(
     recorder: list[ScaffoldRequest],
 ) -> None:
-    """`--archetype` is meaningless on the Copier path (CF-08.02); passing it
-    without `--engine-preview` must not be silently ignored.
+    """`--archetype` selects an engine archetype (CF-08.02); combined with
+    `--legacy`'s Copier path it is contradictory and must not be silently
+    ignored.
     """
-    result = runner.invoke(app, ["new", "Foo", "--yes", "--archetype", "cli"])
+    result = runner.invoke(
+        app, ["new", "--legacy", "Foo", "--yes", "--archetype", "cli"]
+    )
 
     assert result.exit_code == 1, result.output
-    assert "--archetype requires --engine-preview" in result.output
+    assert "--archetype and --legacy are contradictory" in result.output
     assert recorder == []
 
 
-def test_new_engine_preview_yes_without_archetype_is_rejected(
+def test_new_yes_without_archetype_is_rejected(
     recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """`--yes` has no interactive fallback and the engine declares no
@@ -1123,7 +1170,6 @@ def test_new_engine_preview_yes_without_archetype_is_rejected(
             "python_min_version=3.11",
             "--data",
             "python_version=3.13",
-            "--engine-preview",
         ],
     )
 
@@ -1136,7 +1182,7 @@ def test_new_engine_preview_yes_without_archetype_is_rejected(
     assert not dest.exists()
 
 
-def test_new_engine_preview_unknown_archetype_is_rejected(
+def test_new_unknown_archetype_is_rejected(
     recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     dest = tmp_path / "proj"
@@ -1149,8 +1195,7 @@ def test_new_engine_preview_unknown_archetype_is_rejected(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
             "--archetype",
             "nonexistent",
         ],
@@ -1162,7 +1207,7 @@ def test_new_engine_preview_unknown_archetype_is_rejected(
     assert not dest.exists()
 
 
-def test_new_engine_preview_prompts_when_archetype_is_omitted(
+def test_new_prompts_when_archetype_is_omitted(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """Without `--yes` or `--archetype`, selection falls to an interactive
@@ -1203,8 +1248,7 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
     monkeypatch.setattr(cli_module, "choose_archetype", fake_choose_archetype)
 
     dest = tmp_path / "proj"
-
-    result = runner.invoke(app, ["new", "--path", str(dest), "--engine-preview"])
+    result = runner.invoke(app, ["new", "--path", str(dest)])
 
     assert result.exit_code == 0, result.output
     assert {"library", "cli"} <= set(seen_archetypes)
@@ -1212,7 +1256,7 @@ def test_new_engine_preview_prompts_when_archetype_is_omitted(
     assert (dest / "src" / "engine_preview" / "cli.py").exists()
 
 
-def test_new_engine_preview_aborting_archetype_choice_exits_130(
+def test_new_aborting_archetype_choice_exits_130(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """Mirrors `test_new_aborting_the_template_choice_exits_130`'s shape for
@@ -1227,8 +1271,7 @@ def test_new_engine_preview_aborting_archetype_choice_exits_130(
     monkeypatch.setattr(cli_module, "choose_archetype", _abort)
 
     dest = tmp_path / "proj"
-
-    result = runner.invoke(app, ["new", "--path", str(dest), "--engine-preview"])
+    result = runner.invoke(app, ["new", "--path", str(dest)])
 
     assert result.exit_code == 130, result.output
     assert recorder == []
@@ -1248,7 +1291,7 @@ class _Answer:
         return self._value
 
 
-def test_new_engine_preview_cli_archetype_asks_no_library_question(
+def test_new_cli_archetype_asks_no_library_question(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """#91 / ADR 0025's first acceptance criterion, against the real
@@ -1291,7 +1334,6 @@ def test_new_engine_preview_cli_archetype_asks_no_library_question(
             "new",
             "--path",
             str(dest),
-            "--engine-preview",
             "--archetype",
             "cli",
             "--dry-run",
@@ -1300,14 +1342,15 @@ def test_new_engine_preview_cli_archetype_asks_no_library_question(
 
     assert result.exit_code == 0, result.output
     assert seen_messages == ["Project name", "Short description", "License"]
-    # CF-13.03: `cli` requires no capability, but the 0.4 catalogue has
-    # capability descriptors, so the multi-select is still offered -- with
-    # the engine's own kind vocabulary, never a Library-specific question.
-    assert checkbox_messages == ["Which capabilities?"]
+    # CF-13.03: `cli` requires no capability or platform, but the catalogue
+    # has descriptors of both kinds, so both multi-selects are still offered
+    # -- with the engine's own kind vocabulary, never a Library-specific
+    # question. The `github` platform shipped at FT-17.02 / ADR 0063.
+    assert checkbox_messages == ["Which capabilities?", "Which platforms?"]
     assert recorder == []
 
 
-def test_new_engine_preview_library_archetype_asks_declared_options_only(
+def test_new_library_archetype_asks_declared_options_only(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """The counterpart to the `cli` case above: `library`'s own discovered
@@ -1357,7 +1400,6 @@ def test_new_engine_preview_library_archetype_asks_declared_options_only(
             "new",
             "--path",
             str(dest),
-            "--engine-preview",
             "--archetype",
             "library",
             "--dry-run",
@@ -1378,7 +1420,7 @@ def test_new_engine_preview_library_archetype_asks_declared_options_only(
     assert recorder == []
 
 
-def test_new_engine_preview_never_loads_the_registry(
+def test_new_never_loads_the_registry(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """#91 / ADR 0025: the engine path reads no registry data at all -- a
@@ -1404,8 +1446,7 @@ def test_new_engine_preview_never_loads_the_registry(
             "--yes",
             "--path",
             str(dest),
-            *_ENGINE_PREVIEW_ANSWERS,
-            "--engine-preview",
+            *_ENGINE_ANSWERS,
             "--archetype",
             "cli",
         ],
@@ -1416,7 +1457,7 @@ def test_new_engine_preview_never_loads_the_registry(
     assert recorder == []
 
 
-def test_new_engine_preview_interactive_asks_what_are_you_building_once(
+def test_new_interactive_asks_what_are_you_building_once(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """#91 / ADR 0025: since the engine path no longer selects a Copier
@@ -1454,9 +1495,7 @@ def test_new_engine_preview_interactive_asks_what_are_you_building_once(
     monkeypatch.setattr(questionary, "checkbox", fake_checkbox)
 
     dest = tmp_path / "proj"
-    result = runner.invoke(
-        app, ["new", "--path", str(dest), "--engine-preview", "--dry-run"]
-    )
+    result = runner.invoke(app, ["new", "--path", str(dest), "--dry-run"])
 
     assert result.exit_code == 0, result.output
     assert seen_prompts.count("What are you building?") == 1
@@ -1471,72 +1510,23 @@ def test_new_engine_preview_interactive_asks_what_are_you_building_once(
         ("--ref", "v1.0.0"),
     ],
 )
-def test_new_engine_preview_rejects_copier_only_flags(
+def test_new_rejects_copier_only_flags_without_legacy(
     flag: str, value: str, recorder: list[ScaffoldRequest]
 ) -> None:
-    """#91 / ADR 0025: `--template`/`--template-url`/`--ref` select a Copier
-    template, source, or ref -- meaningless once the engine path reads no
-    registry data and clones no template. Silently ignoring them would leave
-    a user believing one was in force; reject instead, mirroring the existing
-    `--archetype requires --engine-preview` precedent in reverse.
+    """ADR 0040 (CF-18.01): `--template`/`--template-url`/`--ref` select a
+    Copier template, source, or ref -- meaningless on the default engine
+    path, which reads no registry data and clones no template. Silently
+    ignoring them would leave a user believing one was in force; reject
+    instead, requiring `--legacy` to use them at all.
     """
     result = runner.invoke(
         app,
-        ["new", "Foo", "--yes", "--engine-preview", "--archetype", "cli", flag, value],
+        ["new", "Foo", "--yes", "--archetype", "cli", flag, value],
     )
 
     assert result.exit_code == 1, result.output
-    assert "--engine-preview" in result.output
+    assert "--legacy" in result.output
     assert recorder == []
-
-
-def test_new_engine_preview_yes_legacy_data_still_derives_packaging_mode(
-    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
-) -> None:
-    """Q2 (ADR 0025): `--data build_backend=...`/`versioning=...` still reach
-    `packaging_mode` through ADR 0019's legacy derivation, as a `--yes`
-    fallback for keys that never match a declared option name.
-    """
-    captured: dict[str, object] = {}
-    result_holder: dict[str, GenerationRequest] = {}
-    real_build = pipeline_module.build_generation_request
-
-    def spy(answers: Mapping[str, object], **kwargs: object) -> GenerationRequest:
-        captured.update(kwargs)
-        request = real_build(answers, **kwargs)  # type: ignore[arg-type]
-        result_holder["request"] = request
-        return request
-
-    monkeypatch.setattr(pipeline_module, "build_generation_request", spy)
-
-    dest = tmp_path / "proj"
-    result = runner.invoke(
-        app,
-        [
-            "new",
-            "Engine Preview",
-            "--yes",
-            "--path",
-            str(dest),
-            "--data",
-            "license=mit",
-            "--data",
-            "build_backend=hatchling",
-            "--data",
-            "versioning=vcs",
-            "--engine-preview",
-            "--archetype",
-            "library",
-            "--dry-run",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    assert captured["component_options"] is None
-    request = result_holder["request"]
-    assert request.spec.component_options.get("library", {}).get("packaging_mode") == (
-        "hatchling-vcs"
-    )
 
 
 # --- config wiring (issue #3) ------------------------------------------------
@@ -1554,6 +1544,7 @@ def test_new_config_reaches_scaffold_data(
         app,
         [
             "new",
+            "--legacy",
             "Demo",
             "--yes",
             "--dry-run",
@@ -1579,6 +1570,7 @@ def test_new_data_overrides_config(
         app,
         [
             "new",
+            "--legacy",
             "Demo",
             "--yes",
             "--dry-run",
@@ -1600,7 +1592,7 @@ def test_new_malformed_config_is_a_user_error(
 ) -> None:
     _write_config(_isolated_config, "not = [valid toml")
 
-    result = runner.invoke(app, ["new", "X", "--yes"])
+    result = runner.invoke(app, ["new", "--legacy", "X", "--yes"])
 
     assert result.exit_code == 1
     assert recorder == []
@@ -1612,7 +1604,7 @@ def test_new_unknown_default_template_names_the_config_path(
 ) -> None:
     _write_config(_isolated_config, 'default_template = "does-not-exist"\n')
 
-    result = runner.invoke(app, ["new", "X", "--yes"])
+    result = runner.invoke(app, ["new", "--legacy", "X", "--yes"])
 
     # Rich wraps long lines in CliRunner's fixed-width capture, so compare
     # with newlines collapsed rather than requiring one contiguous substring.

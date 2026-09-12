@@ -203,7 +203,6 @@ def test_a_full_composition_stages_locks_and_finalises(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags(_FULL_CAPABILITIES),
@@ -253,7 +252,6 @@ def test_a_missing_required_capability_writes_nothing(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *capability_args,
@@ -289,7 +287,6 @@ def test_an_undeclared_component_option_writes_nothing(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags((_REQUIRED_CAPABILITY,)),
@@ -304,7 +301,7 @@ def test_an_undeclared_component_option_writes_nothing(
     assert not dest.exists()
 
 
-@pytest.mark.parametrize("package_version", ["0.4.0", "0.5.0"])
+@pytest.mark.parametrize("package_version", ["0.4.1", "0.6.0"])
 def test_an_incompatible_engine_writes_nothing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -321,6 +318,7 @@ def test_an_incompatible_engine_writes_nothing(
             package_version=package_version,
             projectspec_protocols=(1,),
             component_manifest_protocols=(1,),
+            metadata_version=1,
         ),
     )
     dest = tmp_path / "p"
@@ -333,7 +331,6 @@ def test_an_incompatible_engine_writes_nothing(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags(_FULL_CAPABILITIES),
@@ -368,7 +365,6 @@ def test_a_non_empty_destination_is_rejected_before_the_engine(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags(_FULL_CAPABILITIES),
@@ -401,7 +397,6 @@ def test_a_lock_failure_leaves_no_partial_project(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags(_FULL_CAPABILITIES),
@@ -440,7 +435,6 @@ def test_dry_run_lists_every_planned_target_and_writes_nothing(
             "--path",
             str(dest),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
             *_capability_flags(_FULL_CAPABILITIES),
@@ -490,14 +484,16 @@ def test_interactive_selection_pre_locks_the_required_capability(
     monkeypatch.setattr(pipeline_module, "build_generation_request", spy)
 
     offered_messages: list[str] = []
-    offered_choices: list[object] = []
+    offered_choices: dict[str, list[object]] = {}
 
     def fake_checkbox(
         message: str, *, choices: Sequence[object] = (), **_kw: object
     ) -> _Reply:
         offered_messages.append(message)
-        offered_choices.extend(choices)
-        return _Reply([_OPTIONAL_CAPABILITY])
+        offered_choices[message] = list(choices)
+        if message == "Which capabilities?":
+            return _Reply([_OPTIONAL_CAPABILITY])
+        return _Reply([])
 
     def fake_text(message: str, **_kw: object) -> _Reply:
         return _Reply("Risk Models" if message == "Project name" else "d")
@@ -515,18 +511,24 @@ def test_interactive_selection_pre_locks_the_required_capability(
             "new",
             "--path",
             str(tmp_path / "p"),
-            "--engine-preview",
             "--archetype",
             _ARCHETYPE,
         ],
     )
 
-    assert offered_messages == ["Which capabilities?"]
-    choice_values = {getattr(c, "value", None) for c in offered_choices}
-    assert choice_values == set(_FULL_CAPABILITIES)
+    # The `github` platform shipped at FT-17.02 / ADR 0063, so the platform
+    # multi-select is now offered too, after the capability one.
+    assert offered_messages == ["Which capabilities?", "Which platforms?"]
+    choice_values = {
+        getattr(c, "value", None) for c in offered_choices["Which capabilities?"]
+    }
+    # The Stage 17 tooling capabilities (changelog, coverage, pre-commit, ...)
+    # widen the discovered set beyond just these two -- assert the DS-relevant
+    # pair is offered among them, not that it's the whole set.
+    assert set(_FULL_CAPABILITIES) <= choice_values
     locked = {
         getattr(c, "value", None)
-        for c in offered_choices
+        for c in offered_choices["Which capabilities?"]
         if getattr(c, "disabled", None)
     }
     assert locked == {_REQUIRED_CAPABILITY}

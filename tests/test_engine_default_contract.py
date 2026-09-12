@@ -1,18 +1,20 @@
 """Guards for the engine-default CLI contract (CF-16.01, ADR 0040).
 
-`docs/engine-default-cli.md` is a *decision*, not a shipped interface: it
-describes the `create-forge` command surface after the engine-default cutover,
-which no release has performed. This module keeps that document honest the same
-way `forge-template`'s `tests/test_cutover_gates.py` keeps its FT-15.04
-contract honest:
+`docs/engine-default-cli.md` is a *decision*; CF-18.01 has implemented most of
+it (the default `new` route, `--legacy`, the five selection flags un-hidden,
+`doctor`'s real negotiation), but not all -- `--engine-source`/`--engine-ref`
+are CF-18.02's. This module keeps the document honest the same way
+`forge-template`'s `tests/test_cutover_gates.py` keeps its FT-15.04 contract
+honest:
 
-- **Derived assertions** read the live pre-cutover CLI and `pyproject.toml`, so
-  a claim about *today's* state that silently changes fails here.
-- **Tripwires** assert the pre-cutover state deliberately, each with a comment
-  naming the CF-EPIC-18 issue whose merge must flip it. When the cutover lands,
-  these fail on purpose, forcing whoever implements it to move the affected
-  rule out of `docs/engine-default-cli.md`'s "decided" voice and into
-  `docs/cli-conventions.md`'s "in force" voice in the same change.
+- **Derived assertions** read the live, post-CF-18.01 CLI and
+  `pyproject.toml`, so a claim about *today's* state that silently changes
+  fails here.
+- **Tripwires** assert the still-pending state deliberately, each with a
+  comment naming the CF-EPIC-18 issue whose merge must flip it. When that
+  child lands, these fail on purpose, forcing whoever implements it to move
+  the affected rule out of `docs/engine-default-cli.md`'s "decided" voice and
+  into `docs/cli-conventions.md`'s "in force" voice in the same change.
 
 No network, no filesystem outside this repository.
 """
@@ -42,11 +44,9 @@ ADR_0040 = (
 ENGINE_DEFAULT_CLI = REPO_ROOT / "docs" / "engine-default-cli.md"
 CLI_CONVENTIONS = REPO_ROOT / "docs" / "cli-conventions.md"
 
-# The five selection flags ADR 0027 added, plus --engine-preview itself. ADR
-# 0040 decision 8: --engine-preview is removed at the cutover and the rest
-# become visible with their names unchanged.
-_PREVIEW_FLAGS = (
-    "--engine-preview",
+# The five selection flags ADR 0027 added. ADR 0040 decision 8 (CF-18.01)
+# removed --engine-preview and un-hid the rest with their names unchanged.
+_SELECTION_FLAGS = (
     "--archetype",
     "--capability",
     "--no-capabilities",
@@ -55,9 +55,9 @@ _PREVIEW_FLAGS = (
     "--component-option",
 )
 
-# ADR 0040 decisions 2 and 3: these are added at the cutover -- a route flag
-# and a new engine-package override. None exists on `new` today.
-_CUTOVER_FLAGS = ("--legacy", "--engine-source", "--engine-ref")
+# ADR 0040 decision 4 (CF-18.02): a new engine-source override pair, not yet
+# implemented.
+_PENDING_SOURCE_FLAGS = ("--engine-source", "--engine-ref")
 
 
 def _pyproject() -> dict[str, Any]:
@@ -76,29 +76,35 @@ def _new_params() -> dict[str, object]:
 
 
 # --------------------------------------------------------------------------- #
-# Derived assertions -- today's state, read from the live CLI                  #
+# Derived assertions -- today's post-CF-18.01 state, read from the live CLI    #
 # --------------------------------------------------------------------------- #
 
 
-def test_preview_flags_are_hidden_and_named_as_the_contract_expects() -> None:
-    """ADR 0040 decision 8 removes --engine-preview and un-hides the other
-    five with names unchanged. That is only meaningful if they are hidden and
-    present now -- this reads the live command, so a rename or an un-hide that
-    lands without updating the contract fails here.
+def test_engine_preview_flag_is_gone_and_selection_flags_are_visible() -> None:
+    """ADR 0040 decision 8 (CF-18.01): --engine-preview is removed outright
+    (no deprecation window -- it was hidden and development-only) and the
+    five selection flags are visible with their names unchanged.
     """
     params = _new_params()
-    for flag in _PREVIEW_FLAGS:
+    assert "--engine-preview" not in params
+    for flag in _SELECTION_FLAGS:
         assert flag in params, f"{flag} is no longer a `new` option"
-        assert getattr(params[flag], "hidden", False), (
-            f"{flag} is no longer hidden -- if the cutover un-hid it, move the "
-            "rule from docs/engine-default-cli.md into docs/cli-conventions.md"
-        )
+        assert not getattr(params[flag], "hidden", False), f"{flag} is still hidden"
+
+
+def test_legacy_flag_exists_and_is_visible() -> None:
+    """ADR 0040 decision 2 (CF-18.01): `--legacy` is the visible opt-in that
+    reaches the Copier path.
+    """
+    params = _new_params()
+    assert "--legacy" in params
+    assert not getattr(params["--legacy"], "hidden", False)
 
 
 def test_copier_only_flags_are_present_and_visible() -> None:
-    """ADR 0040 decisions 3 and 6 retain --template-url/--ref and scope them to
-    --legacy. They must still be here (superseding ADR 0011's removal) and
-    visible today, where there is no --legacy to scope them to.
+    """ADR 0040 decisions 3 and 6: --template/--template-url/--ref are
+    retained (superseding ADR 0011's removal), scoped to `--legacy` at
+    runtime rather than by Click-level visibility.
     """
     params = _new_params()
     for flag in ("--template", "--template-url", "--ref"):
@@ -106,16 +112,34 @@ def test_copier_only_flags_are_present_and_visible() -> None:
         assert not getattr(params[flag], "hidden", False), f"{flag} became hidden"
 
 
-def test_engine_is_declared_only_as_the_optional_extra() -> None:
-    """Pre-cutover: forge-template is the optional `engine` extra, never a
-    required dependency (ADR 0018). ADR 0040 decision 1 moves it into
-    [project.dependencies] -- see the tripwire below.
+def test_engine_is_a_required_dependency_and_copier_is_the_legacy_extra() -> None:
+    """ADR 0040 decisions 1/2 (CF-18.01): `forge-template` moved into
+    `[project.dependencies]`; `copier` moved into the optional `legacy` extra.
     """
     project = _pyproject()["project"]
     required = " ".join(project["dependencies"])
-    assert "forge-template" not in required
+    assert "forge-template" in required
+    assert "copier" not in required
     extras = project["optional-dependencies"]
-    assert any("forge-template" in dep for dep in extras.get("engine", []))
+    assert any(dep.startswith("copier") for dep in extras.get("legacy", []))
+
+
+def test_integration_line_is_engine_flavoured() -> None:
+    """ADR 0040 decision 6/13 (CF-18.01): `integration.line` takes the
+    `v<major>.<minor>.x-engine` form once the engine is the default path.
+    """
+    assert re.fullmatch(r"v\d+\.\d+\.x-engine", INTEGRATION_LINE), INTEGRATION_LINE
+
+
+def test_doctor_negotiates_the_real_engine() -> None:
+    """ADR 0040 decision 6 (CF-18.01): `doctor` calls `get_engine_info()` and
+    populates `projectspec_protocol.detected` for real, against the installed
+    engine, rather than leaving it hardcoded to `None`.
+    """
+    result = CliRunner().invoke(app, ["doctor", "--json"])
+    assert result.exit_code in (0, 1), result.output
+    payload = json.loads(result.output)
+    assert payload["integration"]["projectspec_protocol"]["detected"] is not None
 
 
 def test_new_contract_doc_and_adr_exist_and_are_consistent() -> None:
@@ -146,52 +170,17 @@ def test_adr_and_contract_name_their_exclusions_literally() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Tripwires -- fail deliberately when the cutover lands                        #
+# Tripwires -- fail deliberately when the still-pending children land          #
 # --------------------------------------------------------------------------- #
 
 
-def test_tripwire_engine_stays_out_of_required_dependencies() -> None:
-    """Flips when CF-18.01 (#158) moves forge-template into
-    [project.dependencies]. Update docs/engine-default-cli.md decision 1 and
-    docs/cli-conventions.md, then this test, in that change.
-    """
-    assert "forge-template" not in " ".join(_pyproject()["project"]["dependencies"])
-
-
-def test_tripwire_copier_is_required_and_there_is_no_legacy_extra() -> None:
-    """Flips when CF-18.01 (#158) moves copier into an optional `legacy` extra
-    (ADR 0040 decision 2).
-    """
-    project = _pyproject()["project"]
-    assert any(dep.startswith("copier") for dep in project["dependencies"])
-    assert "legacy" not in project.get("optional-dependencies", {})
-
-
-def test_tripwire_integration_line_is_still_copier_flavoured() -> None:
-    """Flips when CF-18.01 (#158) switches the default path to the engine and
-    `integration.line` becomes `v<major>.<minor>.x-engine` (ADR 0040
-    decision 6 / 13).
-    """
-    assert re.fullmatch(r"v\d+\.\d+\.x-copier", INTEGRATION_LINE), INTEGRATION_LINE
-
-
-def test_tripwire_new_has_no_cutover_route_or_source_flags() -> None:
-    """Flips when CF-18.01 (#158) adds --legacy or CF-18.02 (#159) adds
-    --engine-source/--engine-ref (ADR 0040 decisions 2 and 4).
+def test_tripwire_new_has_no_engine_source_override_flags() -> None:
+    """Flips when CF-18.02 (#159) adds --engine-source/--engine-ref (ADR 0040
+    decision 4).
     """
     params = _new_params()
-    for flag in _CUTOVER_FLAGS:
+    for flag in _PENDING_SOURCE_FLAGS:
         assert flag not in params, (
             f"{flag} now exists -- move its rule from docs/engine-default-cli.md "
             "into docs/cli-conventions.md and update this tripwire"
         )
-
-
-def test_tripwire_doctor_does_not_negotiate_the_projectspec_protocol() -> None:
-    """Flips when CF-18.01 (#158) makes `doctor` call get_engine_info() and
-    populate `projectspec_protocol.detected` (ADR 0040 decision 6).
-    """
-    result = CliRunner().invoke(app, ["doctor", "--json"])
-    assert result.exit_code in (0, 1), result.output
-    payload = json.loads(result.output)
-    assert payload["integration"]["projectspec_protocol"]["detected"] is None

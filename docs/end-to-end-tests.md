@@ -12,9 +12,10 @@ matrix. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
-`tests/test_e2e_engine_generation.py` does the same for `--engine-preview`,
-against the real installed `forge-template>=0.4.1,<0.5` engine — the engine
-path (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
+`tests/test_e2e_engine_generation.py` does the same for the default engine
+path (first reachable only via the hidden `--engine-preview` flag, now the
+default since CF-18.01), against the real installed `forge-template>=0.5,<0.6`
+engine (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
 client-owned lock finalisation from
 [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
 had no coverage here until this range existed to install

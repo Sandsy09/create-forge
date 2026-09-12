@@ -29,14 +29,16 @@ POLICIES_DIR = EXAMPLES_ROOT / "policies"
 
 def _engine_info(
     *,
-    package_version: str = "0.4.1",
+    package_version: str = "0.5.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
+    metadata_version: int = 1,
 ) -> EngineInfo:
     return EngineInfo(
         package_version=package_version,
         projectspec_protocols=projectspec_protocols,
         component_manifest_protocols=component_manifest_protocols,
+        metadata_version=metadata_version,
     )
 
 

@@ -441,19 +441,19 @@ name = "create-forge"
 version = "0.3.2"
 source = { editable = "." }
 dependencies = [
-    { name = "copier" },
-    { name = "platformdirs" },
+    { name = "forge-template" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "questionary" },
     { name = "rich" },
     { name = "typer" },
+    { name = "uv" },
 ]
 
 [package.optional-dependencies]
-engine = [
-    { name = "forge-template" },
-    { name = "uv" },
+legacy = [
+    { name = "copier" },
+    { name = "platformdirs" },
 ]
 
 [package.dev-dependencies]
@@ -492,17 +492,17 @@ typecheck = [
 
 [package.metadata]
 requires-dist = [
-    { name = "copier", specifier = ">=9.16,<10" },
-    { name = "forge-template", marker = "extra == 'engine'", specifier = ">=0.4.1,<0.5" },
-    { name = "platformdirs", specifier = ">=4.3.6" },
+    { name = "copier", marker = "extra == 'legacy'", specifier = ">=9.16,<10" },
+    { name = "forge-template", specifier = ">=0.5,<0.6" },
+    { name = "platformdirs", marker = "extra == 'legacy'", specifier = ">=4.3.6" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "questionary", specifier = ">=2.0" },
     { name = "rich", specifier = ">=13.9" },
     { name = "typer", specifier = ">=0.16" },
-    { name = "uv", marker = "extra == 'engine'", specifier = ">=0.12,<0.13" },
+    { name = "uv", specifier = ">=0.12,<0.13" },
 ]
-provides-extras = ["engine"]
+provides-extras = ["legacy"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -570,16 +570,16 @@ wheels = [
 
 [[package]]
 name = "forge-template"
-version = "0.4.1"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
     { name = "packaging" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/02/2d/5dbfcce3c24cca55348a26fdbb94b4dac656df6bd7621f0cd9d3c3f110c6/forge_template-0.4.1.tar.gz", hash = "sha256:ecab4ee966cda24e252ea1287923cfc89c411897e69c3b62e1d5101255f216e6", size = 537755, upload-time = "2026-09-04T18:35:12.543Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/1a/b487ba09594506912b0f7dc69501be62a0cca5059e4824ddb8927d2f5eff/forge_template-0.5.0.tar.gz", hash = "sha256:4bcd49a43749d73b2c7bb38122211b1824078470276706d4aa3608d15fd612ba", size = 738075, upload-time = "2026-09-12T15:14:34.647Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/84/22ae6b9c4c0ffe86c9153bba24b2bf82c1841b6fc9d6b96d5886aeb30fd9/forge_template-0.4.1-py3-none-any.whl", hash = "sha256:053a67b748dad0d1c437892981efd4614401bcf2c7488d3e2b67adc18db3d144", size = 72735, upload-time = "2026-09-04T18:35:11.262Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/d0/8d17b20268c5bdef9593ac55d7dde935f6bfa0d28839a929d54d311e274f/forge_template-0.5.0-py3-none-any.whl", hash = "sha256:dffaad1eae884856a3828edc2a31f889fcb44f233b6e19c85dc7d2cc9fc6a023", size = 108247, upload-time = "2026-09-12T15:14:29.527Z" },
 ]
 
 [[package]]

@@ -28,14 +28,20 @@ classifiers = [
 ]
 
 dependencies = [
-    # Pinned to a major: the Python API is public but evolves faster than the
-    # CLI. runner.py is the only module that touches it. The lower bound was
-    # raised past the destination-escape advisories to 9.15.2 (ADR 0038), then
-    # to 9.16 (ADR 0039): 9.16 is the first release with the git-mirror cache
-    # and COPIER_CACHE_DIR that runner.py models and `doctor` reports -- a
-    # required-behaviour move, not an advisory one. The whole >=9.16 range is
-    # advisory-free. See docs/engine-updates.md.
-    "copier>=9.16,<10",
+    # ADR 0040 (CF-18.01) makes the engine the default `new` path: the range
+    # moves from the optional `engine` extra into a required dependency. ADR
+    # 0018 assigned the first released range; ADR 0026 moved it to the
+    # `forge-template` 0.4 line; ADR 0031 raised the floor to the reviewed
+    # 0.4.1 release; this adopts the reviewed 0.5.0 cutover release (ADR 0042
+    # / docs/engine-cutover-acceptance.md). src/create_forge/engine.py stays
+    # the only module that imports it; src/create_forge/compat.py holds the
+    # range itself so `doctor` can report it without importing the engine.
+    "forge-template>=0.5,<0.6",
+    # ADR 0021 adds bounded uv to finalise the engine render's dynamic
+    # lockfile; ADR 0038 reviewed that floor against the advisory record and
+    # held it -- the whole `>=0.12,<0.13` range is already advisory-free. Now
+    # required alongside the engine itself rather than bundled in its extra.
+    "uv>=0.12,<0.13",
     # >=0.16: typer 0.15.0-0.15.3 declare an uncapped click and break against
     # click >=8.2 (TyperArgument.make_metavar), and 0.15.4 pins click <8.2.
     # 0.16.0 is the first release that works with current click. The CI
@@ -45,27 +51,26 @@ dependencies = [
     "pydantic>=2.10",
     "rich>=13.9",
     "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# ADR 0040 (CF-18.01) demotes Copier from a required dependency to the
+# explicit opt-in `--legacy` route: `pip install 'create-forge[legacy]'` (or
+# `uv sync --all-extras`) adds it back. `runner.py` stays the only module
+# that touches Copier's Python API; `sources.py`'s `--template-url`
+# validation is reachable only under `--legacy` too. The range itself is
+# unchanged by the cutover -- see docs/engine-updates.md for the floor
+# history (ADR 0038 raised it past the destination-escape advisories to
+# 9.15.2, ADR 0039 to 9.16 for the git-mirror cache and COPIER_CACHE_DIR
+# `runner.py` models and `doctor` reports).
+legacy = [
+    "copier>=9.16,<10",
     # runner.py resolves Copier's cache directory by Copier's own documented
     # rule (COPIER_CACHE_DIR, else the platformdirs user cache). Pinned to the
     # bound Copier itself declares so it adds no resolution pressure and the
     # CI `floor` job sees the version Copier's own floor would (ADR 0039).
     "platformdirs>=4.3.6",
 ]
-
-[project.optional-dependencies]
-# ADR 0018 assigned the first released engine range; ADR 0026 moved it to the
-# `forge-template` 0.4 compatibility line (the first to ship the Data Science
-# archetype and reusable capabilities), and ADR 0031 adopts the reviewed 0.4.1
-# release as the lower bound. Still an optional extra rather than a hard
-# dependency, so ADR 0014's guarded `try/except ImportError` in cli.py stays
-# meaningful and the default Copier path never downloads an engine it doesn't
-# call. src/create_forge/engine.py is the only module that imports it;
-# src/create_forge/compat.py holds the range itself so cli.py's `doctor` can
-# report it without importing the engine. ADR 0021 adds bounded uv to finalise
-# the engine render's dynamic lockfile; ADR 0038 reviewed that `uv` floor
-# against the advisory record and held it -- the whole `>=0.12,<0.13` range is
-# already advisory-free.
-engine = ["forge-template>=0.4.1,<0.5", "uv>=0.12,<0.13"]
 
 [project.scripts]
 create-forge = "create_forge.cli:app"

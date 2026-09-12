@@ -14,39 +14,41 @@ engine cutover approaches.
 
 ## Status
 
-`forge-template` is a real, released, installable dependency -- the optional
-`engine` extra (#9, [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md))
--- but reachable only via the hidden `new --engine-preview` flag, not the
-default `new` path. Its range has crossed one compatibility line since it was
-assigned:
+`forge-template` is a real, released, installable dependency -- required
+since CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)),
+previously the optional `engine` extra (#9,
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) reachable
+only via the hidden `new --engine-preview` flag -- and now the default `new`
+path. Its range has crossed two compatibility lines since it was assigned:
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it from
-`>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below. CF-14.01
+`>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below; CF-14.01
 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
-then adopted the reviewed `0.4.1` patch by raising the lower bound to
-`>=0.4.1,<0.5`. `copier`
-remains the compatibility-line dependency for the default path; the one
-[CLAUDE.md](../CLAUDE.md) invariant 4 already singles out. **Two**
-compatibility-line dependencies now exist simultaneously, each governing its
+adopted the reviewed `0.4.1` patch by raising the lower bound to
+`>=0.4.1,<0.5`; CF-18.01 then adopted the reviewed engine-default cutover
+release, moving it to `>=0.5,<0.6`. `copier`
+is now the compatibility-line dependency for the `--legacy` path instead,
+behind its own optional extra. **Two**
+compatibility-line dependencies exist simultaneously, each governing its
 own path.
 
 ## What the compatibility line is
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.3.x default `new` | `copier` | `>=9.16,<10` | Current released architecture (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
+| v0.4.x default `new` (required) | `forge-template` | `>=0.5,<0.6` | Current architecture (ADR 0042, CF-18.01) |
+| v0.3.x default `new` | `copier` | `>=9.16,<10` | Now the `--legacy` route's dependency, behind the optional `legacy` extra (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
+| v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Superseded by v0.4.x (ADR 0042) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Current architecture (ADR 0031) |
 
-Unlike the single-dependency framing this document previously used, both
-rows are live at once: `copier` governs the default path, `forge-template`
-governs the hidden engine-preview path, and each has its own Dependabot gate
-below. Neither has replaced the other; the engine cutover moves `forge-template`
-into `[project.dependencies]` and `copier` into an optional `legacy` extra
-(both keep their compatibility-line gates) — filed as
-[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
+Both rows are live at once: `forge-template` governs the default `new` path,
+`copier` governs `--legacy`, and each has its own Dependabot gate below. The
+engine cutover CF-18.01 implemented moved `forge-template` into
+`[project.dependencies]` and `copier` into the optional `legacy` extra (both
+keep their compatibility-line gates) — filed as
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
-[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), with no
-implementing release shipped. CF-16.03
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md).
+CF-16.03
 ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md),
 canonical [engine-default cutover acceptance contract](engine-cutover-acceptance.md))
 fixes that release as **`create-forge 0.4.0`**, adopting

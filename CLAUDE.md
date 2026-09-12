@@ -11,9 +11,12 @@ registry of known templates.
 
 Distributed via `uvx create-forge`, and since #9
 ([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
-published to PyPI as `create-forge` (`pip install create-forge`, or
-`create-forge[engine]` for the hidden `--engine-preview` path). Public, MIT,
-intended for open-source use.
+published to PyPI as `create-forge` (`pip install create-forge`). Since
+[ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md)
+(CF-18.01), the `forge-template` engine is the default `new` architecture and
+a required dependency; `pip install 'create-forge[legacy]'` adds `copier`
+back for the explicit `--legacy` Copier route. Public, MIT, intended for
+open-source use.
 
 ## Repository relationship
 
@@ -48,8 +51,8 @@ src/create_forge/
 ├── engine.py       The ONLY module that touches the forge-template engine.
 ├── pipeline.py     Shared discover→build→validate→render→finalise pipeline,
 │                   plus `Catalogue` (one discovery, grouped by kind; ADR
-│                   0028). Reachable only via `new --engine-preview` (hidden,
-│                   dev-only; ADR 0014, ADR 0015).
+│                   0028). Reachable from `new`'s default engine path (ADR
+│                   0040, CF-18.01 -- no flag required since the cutover).
 └── cli.py          Typer app: new, list, update, doctor.
 ```
 
@@ -58,11 +61,14 @@ Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry`/
 the only module whose *source* imports `forge_template`
 (ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py));
 `pipeline.py` depends on it but imports `forge_template` only under
-`TYPE_CHECKING`. `cli.py` imports `pipeline`/`engine` lazily — inside
-`--engine-preview`'s branch only, guarded by `try/except ImportError` — so
-every other command stays unaffected by whether `forge-template` is
-installed (ADR 0014). `staging.py` is engine-free and imported unconditionally
-by both `runner.py` and `cli.py` — see the canonical
+`TYPE_CHECKING`. Since `forge-template` is a required dependency (ADR 0040
+decision 1, CF-18.01), `cli.py` imports `engine`/`pipeline` lazily but
+unconditionally within the default `new` path -- guarding only against a
+genuinely broken install, not an optional extra. `copier` is the one now
+behind an extra (`legacy`), so `runner.py` is the module `cli.py`'s
+`--legacy` route and `update` import lazily instead -- the inverse of ADR
+0014's original guard, same shape. `staging.py` is engine-free and imported
+unconditionally by both `runner.py` and `cli.py` — see the canonical
 [filesystem generation contract](docs/filesystem-generation.md) (ADR 0015).
 
 ## Accepted target — engine available, CLI not integrated
@@ -618,18 +624,27 @@ resolved to the SHA that tag points to. See
 
 ## Current state
 
-Working: the default Copier path, optional engine-preview path, configuration,
+Working: the default engine `new` path, `--legacy` Copier path, configuration,
 registry drift guard, staged filesystem generation, diagnostics, documentation
-site, packaging and CI gates are all implemented. `create-forge` and its
-`engine` extra are published to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+site, packaging and CI gates are all implemented. `create-forge` is published
+to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
 The declared engine range moved from the first assigned
 `forge-template>=0.3.1,<0.4` to `>=0.4,<0.5` (CF-13.01,
 [ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)), the
 0.4 Data Science line, then to the reviewed `>=0.4.1,<0.5` lower bound
-(CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
-`create-forge 0.3.2` is the latest tagged and published release. The `0.3.0`
-release introduced the current engine-preview line — CF-14.04,
+(CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)),
+and, on `main` since CF-18.01
+([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md)),
+to the reviewed `>=0.5,<0.6` engine-default cutover release, adopted as a
+required dependency rather than the optional `engine` extra -- `copier`
+moved to the optional `legacy` extra in the same change. `create-forge 0.3.2`
+remains the latest **tagged and published** release; the engine-default
+cutover on `main` ships as `create-forge 0.4.0` only once
+[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) publishes it,
+gated on the remaining Stage 18 children (CF-18.02 through CF-18.06). The
+`0.3.0` release introduced the pre-cutover engine-preview line — CF-14.04,
 [ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md),
 verified against its own artefacts in
 [release 0.3.0 validation](docs/release-0-3-0-validation.md).

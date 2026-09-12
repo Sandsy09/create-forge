@@ -12,19 +12,21 @@ uv sync --all-groups --all-extras
 uv run pre-commit install --install-hooks
 ```
 
-`--all-extras` resolves `forge-template>=0.4.1,<0.5` and `uv>=0.12,<0.13`
-from PyPI as the optional `engine` extra
+`forge-template>=0.5,<0.6` and `uv>=0.12,<0.13` are required dependencies
 ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md);
 range moved to the 0.4 line by
-[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md), with the
+[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md), the
 reviewed `0.4.1` release adopted by
-[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)) --
-plain `uv sync` (or `pip install create-forge`) never resolves it. That
-optionality is what lets `src/create_forge/engine.py` — see
-[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — stay out of
-every `uvx create-forge` user's install. Omit `--all-extras` to work on
-anything that doesn't touch `--engine-preview`, `engine.py`, or `pipeline.py`.
+[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md),
+then the engine-default cutover's reviewed `0.5.0` release adopted by
+[ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md)/
+[ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md)
+(CF-18.01)) -- a plain `uv sync` (no extras) resolves them, same as
+`pip install create-forge`. `--all-extras` now resolves `copier` and
+`platformdirs`, the optional `legacy` extra ADR 0040 decision 2 introduced --
+plain `uv sync` never resolves those. Omit `--all-extras` to work on anything
+that doesn't touch `--legacy`, `update`, or `runner.py`.
 
 ## Before opening a pull request
 
@@ -281,10 +283,10 @@ Its canonical
 [generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
 checks rendered output in memory before the facade returns it. Filesystem
 staging, finalisation, and command execution remain `create-forge`
-responsibilities at the future cutover — the living
+responsibilities — the living
 [filesystem generation contract](docs/filesystem-generation.md) records how
-`staging.py` already implements the staging and finalisation half of that
-today, behind `--engine-preview`.
+`staging.py` implements the staging and finalisation half of that today,
+shared by both the default engine `new` path and `--legacy`'s Copier route.
 The canonical
 [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
 defines the production `library` component shipped by `forge-template` at
@@ -332,9 +334,10 @@ unchanged. [ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds
 `pipeline.py` and reaches this boundary from a real command for the first
 time, via the hidden `new --engine-preview` flag and a lazily-imported
 module `cli.py` otherwise never touches; ADR 0015 completes that flag with
-real staging and finalisation. The default `new` path, and every other
-command, remain the current v0.3.x Copier/registry implementation,
-authoritative until the coordinated CLI cutover.
+real staging and finalisation. That flag has since been removed: CF-18.01
+([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md))
+made this the default `new` path, with `--legacy` reaching the v0.3.x
+Copier/registry implementation described here instead.
 [ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md) and the living
 [end-to-end tests contract](docs/end-to-end-tests.md) close Stage 07 with
 real, CI-enforced coverage of that default `new` path against a released
@@ -447,6 +450,14 @@ contract decisions — no runtime code, no dependency move, no version bump, no
 release, no new issue; built by
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153). CF-16.03
 closed [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
+CF-18.01 has since implemented most of CF-16.01's contract on `main`: the
+engine is a required dependency and the default `new` route, `copier` is the
+`legacy` extra behind the visible `--legacy` flag, `--engine-preview` is
+removed, and `doctor`/`list` behave as decided. `--engine-source`/
+`--engine-ref` (CF-18.02), the engine `new` Git/hook lifecycle and
+`.forge/generation.json` (CF-18.03), engine-native `update` (CF-18.04), and
+the `create-forge 0.4.0` release itself (CF-18.07) remain open; `main` stays
+`0.3.2` and untagged until CF-18.07 publishes.
 
 ## User documentation
 

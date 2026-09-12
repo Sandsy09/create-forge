@@ -38,20 +38,22 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
-    package_version: str = "0.4.1",
+    package_version: str = "0.5.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
+    metadata_version: int = 1,
 ) -> EngineInfo:
     return EngineInfo(
         package_version=package_version,
         projectspec_protocols=projectspec_protocols,
         component_manifest_protocols=component_manifest_protocols,
+        metadata_version=metadata_version,
     )
 
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
     """No exception -- the installed engine falls within the supported
-    `forge-template>=0.4.1,<0.5` range (ADR 0031) and both sides speak
+    `forge-template>=0.5,<0.6` range (ADR 0042) and both sides speak
     ProjectSpec protocol 1.
     """
     engine.negotiate_protocol()
@@ -60,8 +62,8 @@ def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
 @pytest.mark.parametrize(
     "package_version",
     [
-        "0.4.0",  # below the lower bound -- the pre-review 0.4 release
-        "0.5.0",  # at the excluded upper bound
+        "0.4.1",  # below the new lower bound -- the pre-cutover release
+        "0.6.0",  # at the excluded upper bound
     ],
 )
 def test_negotiate_protocol_rejects_a_package_outside_the_supported_range(
@@ -89,14 +91,46 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.4.1",
+            package_version="0.5.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
+            metadata_version=1,
         ),
     )
 
     with pytest.raises(engine.EngineCompatibilityError, match="protocol"):
         engine.negotiate_protocol()
+
+
+def test_discover_rejects_an_out_of_range_metadata_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADR 0040 decision 11/12 (CF-18.01): an out-of-range `metadata_version`
+    is part of exit `3`'s widened provider-availability class, checked the
+    same way as the two protocol tuples.
+    """
+    monkeypatch.setattr(
+        engine, "get_engine_info", lambda: _engine_info(metadata_version=2)
+    )
+
+    with pytest.raises(engine.EngineCompatibilityError, match="generation-metadata"):
+        engine.discover()
+
+
+def test_get_info_returns_facts_without_a_compatibility_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`doctor` uses this to report an out-of-range engine as one failed
+    check row rather than an exception (ADR 0040 decision 6) -- unlike every
+    other operation in this module, it must not raise.
+    """
+    monkeypatch.setattr(
+        engine, "get_engine_info", lambda: _engine_info(package_version="0.1.0")
+    )
+
+    info = engine.get_info()
+
+    assert info.package_version == "0.1.0"
 
 
 def test_discover_returns_the_real_production_catalogue() -> None:
@@ -191,10 +225,10 @@ def test_discover_preserves_public_component_descriptors(
     [
         (_engine_info(projectspec_protocols=(2,)), "ProjectSpec"),
         (
-            # 3 stays disjoint from SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS'S
-            # (1, 2) -- CF-08.02 widened that set, so a probe at 2 alone
-            # would no longer be a rejection case.
-            _engine_info(component_manifest_protocols=(3,)),
+            # 4 stays disjoint from SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS'S
+            # (1, 2, 3) -- ADR 0042 widened that set to include protocol 3
+            # (CF-18.01), so a probe at 3 alone is no longer a rejection case.
+            _engine_info(component_manifest_protocols=(4,)),
             "component manifest",
         ),
     ],
@@ -218,7 +252,7 @@ def test_discover_rejects_incompatible_protocols_before_catalogue_access(
         engine.discover()
 
     assert discovered is False
-    assert "forge-template 0.4.1" in str(excinfo.value)
+    assert "forge-template 0.5.0" in str(excinfo.value)
 
 
 def test_discover_propagates_structured_engine_failure_without_fallback(
@@ -263,9 +297,10 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.4.1",
+            package_version="0.5.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
+            metadata_version=1,
         ),
     )
 
@@ -336,32 +371,6 @@ def test_render_produces_files_without_writing_to_disk(
 
     assert any(file.target == "pyproject.toml" for file in rendered.files)
     assert list(tmp_path.iterdir()) == []
-
-
-def test_map_legacy_library_options_translates_the_real_engine_mapping() -> None:
-    """Thin wrapper over the public facade (CF-08.02) -- proves the real
-    mapping, not a monkeypatched stand-in.
-    """
-    options = engine.map_legacy_library_options(
-        {"build_backend": "hatchling", "versioning_resolved": "vcs"}
-    )
-
-    assert options == {"packaging_mode": "hatchling-vcs"}
-
-
-def test_map_legacy_library_options_negotiates_first(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        engine,
-        "get_engine_info",
-        lambda: _engine_info(package_version="0.5.0"),
-    )
-
-    with pytest.raises(engine.EngineCompatibilityError):
-        engine.map_legacy_library_options(
-            {"build_backend": "uv_build", "versioning_resolved": "static"}
-        )
 
 
 def test_explain_formats_code_and_located_details() -> None:

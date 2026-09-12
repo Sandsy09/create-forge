@@ -45,13 +45,20 @@ to `forge-template>=0.4,<0.5`, the 0.4 line whose lower bound `0.4.0` first
 ships the Data Science archetype and reusable capabilities. CF-14.01
 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 then adopted the reviewed `forge-template>=0.4.1,<0.5` release as the minimum
-for create-forge `0.3.x`. It is declared as
-the optional `engine` extra (`create-forge[engine]`) rather than a
-`[project.dependencies]` entry or a development-only pin. ProjectSpec
+for create-forge `0.3.x`, declared as the optional `engine` extra
+(`create-forge[engine]`). CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)) then
+adopted the reviewed `forge-template>=0.5,<0.6` engine-default cutover
+release: the range moved into `[project.dependencies]`, making the engine
+the default `new` architecture rather than a hidden development flag;
+`copier` moved into the optional `legacy` extra instead. ProjectSpec
 construction, component-discovery, validation, and rendering adapters are
-tested against that real, installed range, and are reachable — behind the
-hidden `new --engine-preview` flag, with a discovery-driven `--archetype`
-selection — for the production archetypes. **This is not the CLI cutover.**
+tested against that real, installed range, and are reachable by default,
+with a discovery-driven `--archetype` selection, for the production
+archetypes — `--legacy` reaches the prior Copier-backed path. **The
+integrated cross-repository cutover validation and the client release
+itself remain open** (CF-18.02 through CF-18.07).
 The released default `new` command remains a thin Copier wrapper with a
 bundled registry, and its current security and update invariants remain
 authoritative until the cutover replaces it. That cutover is now filed as
@@ -66,7 +73,18 @@ implementing release has shipped.
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Current architecture (ADR 0031) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Superseded by v0.4.x (ADR 0042) |
+| v0.4.x | `forge-template>=0.5,<0.6` | 1 (supported) | Current architecture (ADR 0042, CF-18.01) |
+
+CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
+`engine` extra into `[project.dependencies]`, making the engine the default
+`new` architecture; `copier` moved into the optional `legacy` extra. This is
+the engine-default cutover's client-side adoption step, not the full cutover
+-- `--engine-source`/`--engine-ref` (CF-18.02), the engine `new` Git/hook
+lifecycle (CF-18.03), engine-native `update` (CF-18.04), and the `0.4.0`
+release itself (CF-18.07) remain open. See
+[docs/engine-cutover-acceptance.md](https://github.com/Sandsy09/forge-template/blob/main/docs/engine-cutover-acceptance.md)
+in `forge-template` for the reviewed provider release this line pairs with.
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI
