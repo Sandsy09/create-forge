@@ -659,10 +659,10 @@ def test_every_discovered_archetype_generates_with_its_required_flags(
 ) -> None:
     """ADR 0027 compatibility clause, generalised by CF-13.05: every
     discovered archetype still generates from
-    `--engine-preview --archetype <id> --yes` once its own discovered
-    required capabilities are supplied -- no capability flag for `library`
-    and `cli`, `--capability jupyter` for Data Science, all derived from the
-    catalogue rather than named here.
+    `--archetype <id> --yes` (the default engine path since ADR 0040 /
+    CF-18.01) once its own discovered required capabilities are supplied --
+    no capability flag for `library` and `cli`, `--capability jupyter` for
+    Data Science, all derived from the catalogue rather than named here.
     """
     monkeypatch.setattr(questionary, "checkbox", lambda *_a, **_kw: _Reply([]))
 

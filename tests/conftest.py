@@ -105,11 +105,15 @@ def installed_client(
 
     `forge-template` is a required dependency since ADR 0040 (CF-18.01) --
     there is no more `[engine]` extra to opt into; `engine=` pins the exact
-    reviewed release alongside the wheel's own declared range.
+    reviewed release alongside the wheel's own declared range. `extras=
+    "[legacy]"` also installs `copier`, since several rollout regressions
+    (`tests/test_e2e_installed_rollout.py`) exercise `--legacy` against this
+    same environment alongside the now-default engine path.
     """
     with build_client(
         candidate_wheel,
         e2e_child_env,
+        extras="[legacy]",
         engine=f"forge-template=={ENGINE_VERSION}",
     ) as client:
         yield client

@@ -1,5 +1,5 @@
 """CF-13.05 / ADR 0030: the Data Science composition through the shared
-`--engine-preview` pipeline.
+engine pipeline (the default `new` path since ADR 0040 / CF-18.01).
 
 CF-13.01-13.04 built the discovery-driven preview path; this module proves the
 released Data Science archetype and its two capabilities actually traverse it
@@ -8,11 +8,12 @@ released Data Science archetype and its two capabilities actually traverse it
 `finalise_generation_request` as `library` and `cli`, and that every failure
 mode leaves nothing behind.
 
-Exercises the real installed `forge_template` engine (the `engine` extra,
-present under `uv sync --all-extras`), like `tests/test_component_selection.py`
-and `tests/test_pipeline.py`. The `data-science` / `jupyter` /
-`scientific-python` ids that appear are fixture data feeding the real engine,
-never selection logic -- `tests/test_archetype_parity.py`'s widened AST guard
+Exercises the real installed `forge_template` engine (a required dependency
+since ADR 0040 / CF-18.01, present in any `uv sync`), like
+`tests/test_component_selection.py` and `tests/test_pipeline.py`. The
+`data-science` / `jupyter` / `scientific-python` ids that appear are fixture
+data feeding the real engine, never selection logic --
+`tests/test_archetype_parity.py`'s widened AST guard
 enforces the shipped-module half of that rule. Assertions are derived from the
 engine's own `plan.files` owners and target list wherever possible; the two
 named path anchors exist only to prove each capability is contributing, not to

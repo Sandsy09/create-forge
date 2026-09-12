@@ -297,12 +297,13 @@ by
   replaced the exact development pin above with the first released,
   installable range. The cutover that makes the engine the default `new` path
   (removing `--engine-preview`, retaining `--template-url` under an explicit
-  `--legacy` route) is filed as
+  `--legacy` route) was filed as
   [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
   [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
   selection and source-resolution UX is fixed by
   [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), and
-  no implementing release has shipped.
+  CF-18.01 implemented it on `main` (see "Status" above) -- no tagged release
+  naming it has shipped yet.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) reviewed
   both archetypes for parity, confirmed the shared ProjectSpec/pipeline path
   and engine-owned discovery hold, and generalised the legacy `library`
@@ -392,18 +393,19 @@ by
   `command_name` anywhere, `repository_name` as the sole command identity,
   and an AST guard against any shipped module hardcoding a component id
   again.
-- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s outcomes
-  (dependency missing, a real generated project, exit `3` on an incompatible
-  engine, a pre-existing destination conflict), `--archetype`'s explicit,
-  `--yes`-without-one, unknown-id, and interactive-prompt paths, and that
-  omitting `--engine-preview` leaves `new` unchanged. Its engine-native-
-  prompting block (#91, [ADR 0025](adr/0025-engine-native-prompt-flow.md))
-  covers `cli` asking no Library question, `library` asking exactly its
-  declared options with the answered `packaging_mode` reaching
-  `component_options`, the registry never being loaded, the single "What are
-  you building?" prompt, `--template`/`--template-url`/`--ref` being
-  rejected with `--engine-preview`, and the legacy `--data`
-  `build_backend`/`versioning` fallback.
+- [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new`
+  path's outcomes (the engine failing to import, a real generated project,
+  exit `3` on an incompatible engine, a pre-existing destination conflict),
+  `--archetype`'s explicit, `--yes`-without-one, unknown-id, and
+  interactive-prompt paths, and that `--legacy` reaches the unchanged
+  direct-Copier route instead. Its engine-native-prompting block (#91,
+  [ADR 0025](adr/0025-engine-native-prompt-flow.md)) covers `cli` asking no
+  Library question, `library` asking exactly its declared options with the
+  answered `packaging_mode` reaching `component_options`, the registry never
+  being loaded on the default path, the single "What are you building?"
+  prompt, `--template`/`--template-url`/`--ref` being rejected without
+  `--legacy`, and the retired legacy `--data` `build_backend`/`versioning`
+  shim (CF-18.01).
 - [`tests/test_prompts.py`](../tests/test_prompts.py) — `ask_project_answers`
   and `ask_component_options` (ADR 0025): preset/defaults/cancellation
   parity with `ask_all`, one case per declared option `type`, and the

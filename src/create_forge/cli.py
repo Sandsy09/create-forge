@@ -1381,11 +1381,6 @@ def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gat
             from create_forge import engine as _engine  # noqa: PLC0415
 
             negotiated = _engine.get_info()
-        except Exception as exc:
-            # doctor must never crash; report whatever the engine raised as
-            # one failed check row instead.
-            check(False, "engine negotiation", str(exc).splitlines()[0])
-        else:
             projectspec_detected = ",".join(
                 str(p) for p in negotiated.projectspec_protocols
             )
@@ -1402,6 +1397,13 @@ def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gat
                 & set(SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS)
             )
             metadata_ok = metadata_detected in SUPPORTED_GENERATION_METADATA_VERSIONS
+        except Exception as exc:
+            # doctor must never crash; a too-old engine may not even have
+            # these attributes (e.g. `metadata_version` postdates 0.3.2) --
+            # report whatever the engine raised or a stale shape produced as
+            # one failed check row instead.
+            check(False, "engine negotiation", str(exc).splitlines()[0])
+        else:
             check(
                 projectspec_ok and manifest_ok and metadata_ok,
                 "engine negotiation",

@@ -156,17 +156,19 @@ engine internals to obtain them.
   dependency -- `forge-template>=0.3.1,<0.4` as the optional `engine`
   extra -- so this adapter now checks a real installable range rather than
   an exact development version. The cutover that replaces the default Copier
-  registry seam and `--engine-preview` with the engine as the default path is
+  registry seam and `--engine-preview` with the engine as the default path was
   filed as [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
   [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
   ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md));
-  no implementing release has shipped.
+  CF-18.01 implemented it on `main` (see the intro above) -- no tagged
+  release naming it has shipped yet.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
   reviewed both archetypes for parity and confirmed discovery stays fully
   engine-owned -- descriptors pass through this adapter unchanged, and
-  `pipeline._resolved_component_options` now gates its one derivation on a
-  discovered descriptor's declared options rather than a hardcoded archetype
-  id.
+  `pipeline._resolved_component_options` (retired by CF-18.01 when the legacy
+  `build_backend`/`versioning` shim it fed was removed; `component_options`
+  passes straight through now) gated its one derivation on a discovered
+  descriptor's declared options rather than a hardcoded archetype id.
 - **CF-13.01** ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md))
   moved the range to `forge-template>=0.4,<0.5`, so `engine.discover()`
   returns the 0.4 line's five descriptors; the adapter's pass-through and

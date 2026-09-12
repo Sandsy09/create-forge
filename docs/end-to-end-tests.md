@@ -54,8 +54,9 @@ and `uv run poe test:e2e` run each tier standalone. `pytest -m network` and
 ## The Copier path
 
 `tests/test_e2e_generation.py`'s session-scoped fixture scaffolds exactly one
-real project — every test in the module asserts against that one result
-rather than paying for its own clone:
+real project through `new --legacy` (the direct-Copier route since ADR 0040 /
+CF-18.01 made the engine the default) — every test in the module asserts
+against that one result rather than paying for its own clone:
 
 - **The command succeeds** against a real, unmocked destination.
 - **The generated tree has the expected shape**, including `.git/` and
@@ -82,21 +83,24 @@ running the full e2e suite there is a manual step before a PR touching
 
 ## The engine path
 
-`tests/test_e2e_engine_generation.py` covers `--engine-preview` against the
-real installed `forge-template>=0.4.1,<0.5` engine (CF-08.04,
+`tests/test_e2e_engine_generation.py` covers the default `new` path (no flag
+needed since ADR 0040 / CF-18.01; reachable only via the hidden
+`--engine-preview` flag before that) against the real installed
+`forge-template>=0.5,<0.6` engine (CF-08.04,
 [ADR 0020](adr/0020-engine-path-end-to-end-tests.md); range moved by
-[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), reviewed
-release adopted by
-[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)). It differs
-from the Copier suite in ways worth being explicit about:
+[ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), then by
+[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md), then
+to the cutover release by
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). It
+differs from the Copier suite in ways worth being explicit about:
 
 - **No `_tasks` run.** The engine path creates `uv.lock` as a client
   finalisation artefact before the atomic rename, then proves it with
   `uv lock --check` and `uv run --locked poe check`. It still creates no
   `.git`, `.venv`, hooks, or pre-commit installation. The suite asserts those
   boundaries explicitly rather than leaving them implicit.
-- **The happy path needs no network.** `forge-template` is an installed
-  package resolved once when `uv sync --all-extras` runs, not a template
+- **The happy path needs no network.** `forge-template` is a required,
+  installed package resolved once whenever `uv sync` runs, not a template
   cloned per test session — generating through it is as deterministic as any
   other in-process call.
 - **Every discovered archetype is covered**, each with a current lock and a
@@ -115,24 +119,30 @@ from the Copier suite in ways worth being explicit about:
   and are mapped to the epic acceptance checklist by the canonical
   [Data Science preview-pipeline validation](data-science-preview-validation.md)
   record.
-- **The "unsupported combination" proof uses two real isolated installs, not
-  a monkeypatched `EngineInfo`.** One installs `forge-template` from git tag
-  `v0.3.0` — a real release genuinely below
+- **The compatibility-boundary proof uses two real isolated venvs, not a
+  monkeypatched `EngineInfo`.** `test_an_out_of_range_engine_is_rejected_before_any_write`
+  installs this checkout normally, then force-reinstalls `forge-template`
+  from git tag `v0.3.0` — a real release genuinely below
   `compat.SUPPORTED_ENGINE_RANGE`'s lower bound, and one that stays out of
   bounds however far that bound is raised ([ADR 0020](adr/0020-engine-path-end-to-end-tests.md)
-  pre-authorised this; ADR 0026's move to `>=0.4,<0.5` is the first time it
-  applied) — and asserts exit status `3` with nothing written. The other
-  installs `create-forge` with no `engine` extra at all and asserts exit
-  status `1` with nothing written. Both need GitHub reachable to build the
-  isolated environment, so both skip (not fail) when it is not.
+  pre-authorised this) — and asserts exit status `3` with nothing written.
+  `test_a_broken_install_with_no_engine_is_rejected_before_any_write` installs
+  this checkout, then uninstalls `forge-template` (the only way to reach a
+  missing engine now that ADR 0040 / CF-18.01 made it a required dependency —
+  a single conflicting-pin install would fail the resolver outright) and
+  asserts exit status `3` with nothing written; it needs no network at all,
+  unlike the out-of-range test above, which needs GitHub reachable to fetch
+  the `v0.3.0` tag and so skips (not fails) when it is not.
 
 ## The installed Data Science path
 
 `tests/test_e2e_installed_data_science.py` closes the installed-distribution
 gap left deliberately by CF-13.05 and the provider's release audit. It builds
-a fresh create-forge `0.3.0` wheel, installs `wheel[engine]` plus exactly the
-published `forge-template 0.4.1` into a temporary Python 3.13 environment, and
-uses that environment's console script and `uv` executable throughout.
+a fresh create-forge candidate wheel, installs it into a temporary Python 3.13
+environment — `forge-template` resolves alongside it automatically as a
+required dependency (ADR 0040 / CF-18.01), pinned to exactly the published
+`forge-template 0.5.0` — and uses that environment's console script and `uv`
+executable throughout.
 
 Both accepted Data Science compositions generate twice. Every rendered file
 is matched byte-for-byte to the installed pipeline's Foundation/component
@@ -157,26 +167,33 @@ below covers those at the same boundary.
 [ADR 0033](adr/0033-complete-rollout-regression-validation.md)) closes the
 regression and failure matrix CF-14.02 deliberately deferred. It reuses
 `tests/conftest.py`'s session `candidate_wheel` — one `uv build` shared with
-the Data Science suite — and installs it three ways: with the `engine` extra
-and `forge-template 0.4.1`, with no engine at all, and with a real
-`forge-template 0.3.2` from PyPI that sits permanently below
-`compat.SUPPORTED_ENGINE_RANGE`.
+the Data Science suite — and installs it three ways: with the `legacy` extra
+and `forge-template 0.5.0` pinned alongside it, with the `legacy` extra but
+`forge-template` uninstalled afterward, and with a real `forge-template 0.3.2`
+from PyPI forced in afterward that sits permanently below
+`compat.SUPPORTED_ENGINE_RANGE` (ADR 0040 / CF-18.01 made `forge-template` a
+required dependency, so a plain install always resolves a compatible engine
+now — both broken states are reached by breaking a normal install
+afterward, not by omitting an extra).
 
 - **Library and CLI Application generate through the installed engine console**
   — project shape, a current lock, every rendered byte matched to the
   installed pipeline's own Foundation/component ownership plan, no Forge
   distribution anywhere, the `cli` console-script name, and
-  `uv run --locked poe check`.
-- **The default Copier path runs from a wheel with no engine installed** — one
-  real generation with `_tasks`, `.copier-answers.yml` round-tripping every
-  answer, `.git` and `uv.lock`, and `uv run poe check`. `--version`, `list`
-  (proving the bundled `templates.toml` shipped), `doctor --json`, and
-  `new --engine-preview`'s actionable rejection are checked in the same
-  environment.
+  `uv run --locked poe check`. The same environment's `--legacy` route is
+  exercised too, since both routes now share one install.
+- **The `--legacy` Copier path runs from a wheel with no engine installed** —
+  one real generation with `_tasks`, `.copier-answers.yml` round-tripping
+  every answer, `.git` and `uv.lock`, and `uv run poe check`. `--version`,
+  `list --legacy` (proving the bundled `templates.toml` shipped),
+  `doctor --json`, and the default `new` path's exit-`3` rejection with no
+  engine installed are checked in the same environment.
 - **The compatibility boundary uses the real out-of-range install** —
-  `new --engine-preview` exits `3` naming both `0.3.2` and the supported
+  `new --archetype library` exits `3` naming both `0.3.2` and the supported
   range, with nothing written; `doctor --json` reports the out-of-range
-  package.
+  package without crashing (a too-old `EngineInfo` is missing newer
+  attributes like `metadata_version`, so the negotiation check catches that
+  and reports one failed row rather than propagating the exception).
 - **The failure matrix runs through the installed console**, parametrised:
   every documented exit status (`docs/cli-conventions.md`'s table), an
   actionable message, the destination absent or byte-identical, and no

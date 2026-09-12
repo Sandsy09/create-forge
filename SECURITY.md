@@ -71,14 +71,16 @@ arbitrary `--template-url` execution. Unsupported engine or ProjectSpec
 protocol versions fail before discovery, template tasks or destination
 writes, exiting with a dedicated status (`3`) and no silent direct-Copier
 fallback; see the [engine resolution contract](docs/engine-resolution.md).
-The hidden `--engine-preview` path already performs package and protocol
-negotiation and uses exit status `3` for incompatibility. The default `new`
-path is still direct-Copier, however, and `--engine-source`/`--engine-ref` do
-not exist yet. Making the engine the default and adding those override flags
-remain one future, coordinated cutover.
+Since [ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md)
+(CF-18.01), the engine is the default `new` path — it performs package and
+protocol negotiation and uses exit status `3` for incompatibility; the
+direct-Copier route survives only behind the explicit `--legacy` flag.
+`--engine-source`/`--engine-ref` do not exist yet — that override, and the
+arbitrary-VCS-execution boundary it replaces, remain
+[CF-18.02](https://github.com/Sandsy09/create-forge/issues/159)'s.
 
 Automated dependency tooling cannot cross either compatibility line (`copier`
-for the default path or `forge-template` for the preview path) on its own —
+for the `--legacy` path or `forge-template` for the default path) on its own —
 [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md) restricts
 Dependabot to proposing updates within each declared range; crossing one
 requires a deliberate, human-authored pull request. See the

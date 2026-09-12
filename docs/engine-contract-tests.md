@@ -5,23 +5,27 @@ This is the canonical executable contract for the boundary between
 development-only pair, what CF-07.04 (ADR 0015) and CF-08.02 (ADR 0017)
 moved that pair to, what #9 (ADR 0018) then did -- assign the first
 *released* engine range -- what CF-13.01 (ADR 0026) did after that by moving
-the range to the `forge-template` 0.4 compatibility line, and what CF-14.01
-(ADR 0031) did by adopting its reviewed `0.4.1` release. This is what a
-released `create-forge[engine]` install actually resolves.
+the range to the `forge-template` 0.4 compatibility line, what CF-14.01
+(ADR 0031) did by adopting its reviewed `0.4.1` release, and what CF-18.01
+(ADR 0040/0042) did by adopting the `0.5.0` engine-default cutover release
+and making the engine a required dependency. This is what a released
+`create-forge` install actually resolves.
 
 ## Supported range
 
 | Surface | Supported value |
 | --- | --- |
-| `forge-template` distribution | PyPI, `create-forge`'s optional `engine` extra |
-| `forge-template` range | `>=0.4.1,<0.5` (current compatible release: `0.4.1`) |
+| `forge-template` distribution | PyPI, a required `create-forge` dependency (ADR 0040 / CF-18.01) |
+| `forge-template` range | `>=0.5,<0.6` (current compatible release: `0.5.0`) |
 | ProjectSpec protocol | `1` |
-| Component-manifest protocol | `1, 2` |
+| Component-manifest protocol | `1, 2, 3` |
 
-`pyproject.toml` declares `forge-template>=0.4.1,<0.5` in
-`[project.optional-dependencies].engine` -- an ordinary, index-resolved,
-range-bounded dependency, exactly like `copier`, `typer`, or `pydantic`, not
-a `[tool.uv.sources]`-pinned commit or tag. `src/create_forge/compat.py`
+`pyproject.toml` declares `forge-template>=0.5,<0.6` in
+`[project.dependencies]` -- an ordinary, index-resolved, range-bounded
+dependency, exactly like `typer`, `pydantic`, or (since ADR 0040) `uv`, not
+a `[tool.uv.sources]`-pinned commit or tag. It stopped being the optional
+`engine` extra at CF-18.01 -- `copier` is the optional one now, behind the
+`legacy` extra. `src/create_forge/compat.py`
 holds this range as `SUPPORTED_ENGINE_RANGE`; `src/create_forge/engine.py`
 checks an installed package against it with
 `packaging.specifiers.SpecifierSet` rather than the exact-equality check the
@@ -52,10 +56,10 @@ contract against it.
 then raises the lower bound within that line to the provider-reviewed `0.4.1`
 release and reruns this same contract against the PyPI artefact.
 
-Any package version outside the range fails closed. `0.4.1` is both the
-declared lower bound and the current compatible release; `0.4.0` is rejected.
-The [engine update policy](engine-updates.md)'s adoption rule governs later
-`0.4.x` patches.
+Any package version outside the range fails closed. `0.5.0` is both the
+declared lower bound and the current compatible release; `0.4.1` is now
+rejected. The [engine update policy](engine-updates.md)'s adoption rule
+governs later `0.5.x` patches.
 
 `forge-template 0.4.0` is
 [published](https://pypi.org/project/forge-template/0.4.0/) as the
@@ -65,7 +69,14 @@ public-facade coverage carried across the move without a signature change.
 The reviewed `0.4.1` package republishes that production catalogue, public
 facade, protocols, and rendered bytes unchanged; the provider's canonical
 [reviewed-release record](https://github.com/Sandsy09/forge-template/blob/main/docs/reviewed-engine-release.md)
-is the release evidence.
+is the release evidence. `forge-template 0.5.0` (adopted by CF-18.01) adds
+the `github` platform and eight tooling capabilities (fourteen components
+total), widens the component-manifest protocol to `(1, 2, 3)`, and publishes
+`metadata_version = 1` -- the first move that actually widens this contract's
+protocol/manifest coverage rather than republishing it unchanged; the
+provider's own
+[cutover-provider-release record](https://github.com/Sandsy09/forge-template/blob/main/docs/cutover-provider-release.md)
+is that release's evidence.
 
 ## What the executable contract proves
 
@@ -74,7 +85,7 @@ exercises the installed engine through `src/create_forge/engine.py`. Together
 with the focused adapter and guard suites, it proves that:
 
 - the installed package falls within the range above and advertises the
-  protocol pair above;
+  protocols above;
 - package and relevant protocol compatibility are checked before parsing,
   discovery, validation, or rendering calls reach the engine, at both edges
   of the range (below the lower bound, at the excluded upper bound);
@@ -111,13 +122,15 @@ This installable, range-assigned engine is what closed
 [end-to-end suite](end-to-end-tests.md)'s engine-path blocker:
 [CF-08.04 / #85](https://github.com/Sandsy09/create-forge/issues/85), under
 [CF-EPIC-08](https://github.com/Sandsy09/create-forge/issues/39), wrote that
-coverage against `create-forge[engine]` --
+coverage --
 [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py)
-(ADR 0020) drives the real `create-forge` console script's `--engine-preview`
-path in CI, generating both archetypes and proving the same package-range
-boundary this contract proves in-process. This file still proves the public
-facade compiles and negotiates correctly in isolation, distinct from -- and a
-cheaper complement to -- that end-to-end coverage.
+(ADR 0020) drives the real `create-forge` console script's engine path (the
+default `new` route since ADR 0040 / CF-18.01; reachable only via the hidden
+`--engine-preview` flag before that) in CI, generating every archetype and
+proving the same package-range boundary this contract proves in-process.
+This file still proves the public facade compiles and negotiates correctly
+in isolation, distinct from -- and a cheaper complement to -- that
+end-to-end coverage.
 
 ## Validate a sibling checkout
 
@@ -133,7 +146,7 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 Local path builds include current working-tree source, including uncommitted
 changes, and override the released PyPI resolution for that one run only --
 no `pyproject.toml` or `uv.lock` change is needed or made. The sibling
-package must satisfy `>=0.4.1,<0.5`; a version outside that range is
+package must satisfy `>=0.5,<0.6`; a version outside that range is
 unsupported and fails until the declared range, contract, and tests are moved
 together. The broader
 [cross-repository contributor workflow](cross-repository-workflow.md) defines
@@ -147,8 +160,8 @@ which silently tests against old sibling code rather than the one intended.
 
 ## Adopting a new compatible release
 
-A `forge-template` release inside the declared `>=0.4.1,<0.5` range (`0.4.1`
-today; a later `0.4.x` patch while `0.4.x` stays the compatibility line) may
+A `forge-template` release inside the declared `>=0.5,<0.6` range (`0.5.0`
+today; a later `0.5.x` patch while `0.5.x` stays the compatibility line) may
 be adopted once this contract passes against it, per the sibling-checkout
 validation above and the [engine update policy](engine-updates.md). A release
 that would require a minor bump -- pre-1.0, that is itself a new

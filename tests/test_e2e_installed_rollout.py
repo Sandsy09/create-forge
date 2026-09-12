@@ -115,12 +115,14 @@ _FORGE_DISTRIBUTIONS = FORGE_DISTRIBUTIONS
 def engineless_client(
     candidate_wheel: Path, e2e_child_env: dict[str, str]
 ) -> Iterator[InstalledClient]:
-    """The candidate wheel installed normally, then with `forge-template`
-    removed -- a broken environment, since ADR 0040 (CF-18.01) made the
-    engine a required dependency and a plain `pip install create-forge` now
-    always resolves it.
+    """The candidate wheel installed normally (with the `legacy` extra, so
+    `--legacy` still works here), then with `forge-template` removed -- a
+    broken environment, since ADR 0040 (CF-18.01) made the engine a required
+    dependency and a plain `pip install create-forge` now always resolves it.
     """
-    with build_client(candidate_wheel, e2e_child_env, omit="forge-template") as client:
+    with build_client(
+        candidate_wheel, e2e_child_env, extras="[legacy]", omit="forge-template"
+    ) as client:
         yield client
 
 

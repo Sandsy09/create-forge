@@ -176,12 +176,16 @@ first tag and updates to its second, against the real registry. Dropping the
 update path without a tested migration is not an acceptable adoption,
 whether proposed by a human or by automation.
 
-This rule binds the default `new` path, whose generated projects track a
-`forge-template` Copier tag. The `--engine-preview` path has no equivalent
-obligation yet: it is a hidden, dev-only flag that has never been the
-default and writes no engine answers file, so there are no released
-engine-generated projects to migrate. ADR 0026's move to the 0.4 line was
-therefore vacuously compliant here; the engine-first cutover
+This rule binds the `--legacy` path, whose generated projects track a
+`forge-template` Copier tag and update through `create-forge update --legacy`
+(`runner.update`). The default engine `new` path has no equivalent obligation
+yet: before CF-18.01 it was a hidden, dev-only `--engine-preview` flag that
+had never been the default and wrote no engine answers file, so there were
+no released engine-generated projects to migrate; CF-18.01 made it the
+default `new` path, but it still writes no `.forge/generation.json` and
+`create-forge update` still does not route to it (CF-18.03/CF-18.04). ADR
+0026's move to the 0.4 line was therefore vacuously compliant here; the
+engine-first cutover
 ([CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)) is what
 gives the engine path its own update contract.

@@ -22,8 +22,9 @@ issue — see "What `create-forge` does not own" below for why.
 ## The hook
 
 `pipeline.build_generation_request` is create-forge's "construct the
-effective ProjectSpec" step — the point every `--engine-preview` invocation
-already passes through on the way to `engine.build_project_spec`. A
+effective ProjectSpec" step — the point every `new` invocation on the default
+engine path already passes through on the way to `engine.build_project_spec`.
+A
 policy-aware client resolves organisation policy immediately before calling
 it:
 
