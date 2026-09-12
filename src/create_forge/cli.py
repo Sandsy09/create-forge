@@ -21,7 +21,9 @@ from rich.text import Text
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
     INTEGRATION_LINE,
+    SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
     SUPPORTED_ENGINE_RANGE,
+    SUPPORTED_GENERATION_METADATA_VERSIONS,
     SUPPORTED_PROJECTSPEC_PROTOCOLS,
 )
 from create_forge.config import (
@@ -44,14 +46,6 @@ from create_forge.prompts import (
     slugify,
 )
 from create_forge.registry import load_registry
-from create_forge.runner import (
-    ScaffoldError,
-    ScaffoldRequest,
-    cache_probe,
-    copier_cache_location,
-    scaffold,
-    update,
-)
 from create_forge.sources import SourceError, display_source, validate_source
 from create_forge.spec import (
     DESCRIPTOR_KIND,
@@ -70,6 +64,7 @@ if TYPE_CHECKING:
 
     from create_forge.models import Registry, Template
     from create_forge.pipeline import Catalogue
+    from create_forge.runner import ScaffoldRequest
 
 app = typer.Typer(
     name="create-forge",
@@ -105,11 +100,13 @@ def _optional_dist_version(name: str) -> str | None:
     """Installed version of an optional distribution, or `None` if absent.
 
     Distinct from `_dist_version`: `create-forge` always depends on `name`
-    there, so "unknown" signals a broken environment. Here `name` is the
-    `engine` extra's `forge-template` -- not installed is the normal,
-    expected default, and docs/engine-resolution.md's diagnostics
-    contract documents `integration.engine_package` as `null` for it, not
-    the string "unknown".
+    there, so "unknown" signals a broken environment. Here `name` is either
+    the optional `legacy` extra's `copier` -- not installed is the normal,
+    expected default -- or `forge-template`/`uv`, both required since ADR
+    0040 (CF-18.01), where a genuine absence signals a broken install.
+    docs/engine-resolution.md's diagnostics contract documents
+    `integration.copier`/`integration.engine_package` as `null` for either
+    case, never the string "unknown".
     """
     try:
         return version(name)
@@ -273,8 +270,38 @@ def _confirm_third_party(template_url: str | None, *, yes: bool) -> None:
         raise typer.Exit(130)
 
 
+def _ensure_legacy_available() -> None:
+    """Import `create_forge.runner`, failing closed if `copier` is absent.
+
+    ADR 0040 decision 2 (CF-18.01) moves `copier` from a required dependency
+    to the optional `legacy` extra: `runner.py` imports it at module scope
+    (invariant 4), so this is now the lazy, guarded import -- reached only
+    from `--legacy` and `update`, mirroring the shape `engine`/`pipeline`'s
+    import had before the cutover. Decision 12 widens exit `3`'s
+    provider-availability class to cover exactly this: a missing generator,
+    not a usage error, so callers exit `3` rather than raising a bare
+    `ImportError` traceback. Callers reached only after this succeeds import
+    `create_forge.runner`'s names directly -- the module is already cached in
+    `sys.modules`, so that second import is free.
+    """
+    try:
+        import create_forge.runner  # noqa: F401, PLC0415
+    except ImportError:
+        err.print(
+            "[red]The legacy Copier route isn't installed.[/red] Run "
+            "`pip install 'create-forge[legacy]'` (or `uv sync --all-extras` "
+            "in a create-forge checkout) to use --legacy."
+        )
+        raise typer.Exit(3) from None
+
+
 def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
-    """Scaffold, translating a ScaffoldError into a clean exit."""
+    """Scaffold, translating a ScaffoldError into a clean exit.
+
+    Only reached after `_ensure_legacy_available` has already succeeded.
+    """
+    from create_forge.runner import ScaffoldError, scaffold  # noqa: PLC0415
+
     try:
         with console.status(f"Scaffolding {slug}…"):
             scaffold(request)
@@ -285,7 +312,7 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class ComponentFlags:
-    """The `--engine-preview` component-selection flags, normalised.
+    """The engine `new` path's component-selection flags, normalised.
 
     `capabilities`/`platforms` are the *effective* value for one selectable
     kind: `tuple[str, ...]` from one or more `--capability`/`--platform`, `()`
@@ -406,7 +433,7 @@ def _resolve_selection(
     archetype_explicit: bool,
     yes: bool,
 ) -> SelectionRequest:
-    """Build the full `SelectionRequest` for a `--engine-preview` archetype.
+    """Build the full `SelectionRequest` for the chosen archetype.
 
     Runs `_resolve_kind` for each selectable kind in tier order and threads
     each kind's own explicitness into `SelectionRequest.of` -- so a kind whose
@@ -540,7 +567,7 @@ def _select_archetype(
 
     if yes:
         err.print(
-            "[red]--engine-preview with --yes requires --archetype. "
+            "[red]--yes requires --archetype. "
             f"Available: {', '.join(sorted(by_id))}[/red]"
         )
         raise typer.Exit(1)
@@ -623,7 +650,7 @@ def _collect_engine_answers(  # noqa: PLR0913 - project answers plus per-compone
     return project_answers, component_options
 
 
-def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own distinct input, and a linear discover->select->collect->build->finalise orchestration; see new()'s own justification
+def _run_engine(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own distinct input, and a linear discover->select->collect->build->finalise orchestration; see new()'s own justification
     preset: dict[str, object],
     cfg_answers: dict[str, object],
     path: Path | None,
@@ -633,13 +660,16 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
     dry_run: bool,
     yes: bool,
 ) -> None:
-    """The --engine-preview path: discover, select, prompt, build, render.
+    """The default engine `new` path: discover, select, prompt, build, render.
 
-    Stages and finalises exactly like the Copier path, just through the
-    engine (ADR 0015). `forge-template` is the optional `engine` extra
-    (ADR 0018) -- not installed by a plain `pip install create-forge` -- so
-    the import is lazy and guarded: every other command, and `new` without
-    this flag, must keep working with the dependency absent.
+    Stages and finalises exactly like the `--legacy` Copier path, just
+    through the engine (ADR 0015). ADR 0040 (CF-18.01) made this the default
+    architecture: `forge-template` is a required dependency, so a plain
+    `pip install create-forge` / `uvx create-forge` always resolves it. The
+    import here stays lazy and guarded even so -- a genuinely broken
+    environment (the dependency failed to install, or was removed) fails
+    closed at exit `3` rather than crashing with a raw traceback, matching
+    ADR 0040 decision 12's widened provider-availability class.
 
     #91 / ADR 0025: this path reads no registry data at all. It discovers
     the component catalogue once, resolves which archetype to build and which
@@ -661,7 +691,6 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
     checked again immediately before any construction, validation, or render
     begins -- still before every side effect that writes anything.
     """
-    err.print("[dim]--engine-preview is a hidden preview path (ADR 0014).[/dim]")
     if path is not None:
         try:
             ensure_available(path)
@@ -670,20 +699,17 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
             raise typer.Exit(1) from exc
 
     try:
-        # Lazy by necessity, not style: forge-template is the optional
-        # `engine` extra (ADR 0018), not installed by default, so this
-        # import must not run unless this branch is actually reached.
         # `engine` is imported directly here (rather than accessed as
         # `pipeline.engine`) so mypy's strict implicit-reexport check has a
         # real, direct import to type against.
         from create_forge import engine, pipeline  # noqa: PLC0415
     except ImportError:
         err.print(
-            "[red]The engine extra isn't installed.[/red] Run "
-            "`pip install 'create-forge[engine]'` (or `uv sync --all-extras` "
-            "in a create-forge checkout) to use it."
+            "[red]forge-template is not installed.[/red] create-forge "
+            f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
+            "reinstall create-forge to restore it."
         )
-        raise typer.Exit(1) from None
+        raise typer.Exit(3) from None
 
     try:
         catalogue = pipeline.discover_catalogue()
@@ -748,13 +774,21 @@ def _run_engine_preview(  # noqa: PLR0913, PLR0915 - one parameter per new()'s o
 
 
 def _report_created(project_name: object, dst: Path, *, updatable: bool = True) -> None:
-    """Print the success panel once a project has actually been written."""
+    """Print the one client-owned success panel, on either route.
+
+    ADR 0040 decision 13: the same shape regardless of whether `new` took the
+    default engine path or `--legacy`'s Copier path -- project name,
+    destination, the `cd` line, the check command, and one update-eligibility
+    line. The `--legacy` route additionally prints Copier's own
+    `_message_after_copy` (via `runner.scaffold`/Copier itself); the engine
+    route has no equivalent template-authored hook.
+    """
     check_command = "uv run poe check" if updatable else "uv run --locked poe check"
     update_line = (
-        "[dim]Pull later template changes with: uvx create-forge update[/dim]"
+        "[dim]Pull later changes with: create-forge update[/dim]"
         if updatable
-        else "[dim]Built via --engine-preview -- create-forge update does not "
-        "apply.[/dim]"
+        else "[dim]Not yet update-eligible -- create-forge update does not "
+        "apply to this project.[/dim]"
     )
     console.print(
         Panel(
@@ -805,88 +839,63 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
         bool,
         typer.Option("--dry-run", help="Show what would be written, write nothing."),
     ] = False,
-    engine_preview: Annotated[
+    legacy: Annotated[
         bool,
         typer.Option(
-            "--engine-preview",
-            hidden=True,
-            help="Development-only: build via the public forge-template engine "
-            "instead of Copier. Combine with --archetype to pick a "
-            "component; omit it to be prompted.",
+            "--legacy",
+            help="Build via the bundled Copier template registry instead of "
+            "the default forge-template engine. Requires the `legacy` extra "
+            "(pip install 'create-forge[legacy]').",
         ),
     ] = False,
     archetype: Annotated[
         str | None,
-        typer.Option(
-            "--archetype",
-            hidden=True,
-            help="Development-only: the engine archetype to build. Requires "
-            "--engine-preview.",
-        ),
+        typer.Option("--archetype", help="The engine archetype to build."),
     ] = None,
     capability: Annotated[
         list[str] | None,
         typer.Option(
-            "--capability",
-            hidden=True,
-            help="Development-only: a discovered capability to select. "
-            "Repeatable. Requires --engine-preview.",
+            "--capability", help="A discovered capability to select. Repeatable."
         ),
     ] = None,
     no_capabilities: Annotated[
         bool,
-        typer.Option(
-            "--no-capabilities",
-            hidden=True,
-            help="Development-only: select no capabilities, explicitly. "
-            "Requires --engine-preview.",
-        ),
+        typer.Option("--no-capabilities", help="Select no capabilities, explicitly."),
     ] = False,
     platform: Annotated[
         list[str] | None,
-        typer.Option(
-            "--platform",
-            hidden=True,
-            help="Development-only: a discovered platform to select. "
-            "Repeatable. Requires --engine-preview.",
-        ),
+        typer.Option("--platform", help="A discovered platform to select. Repeatable."),
     ] = None,
     no_platforms: Annotated[
         bool,
-        typer.Option(
-            "--no-platforms",
-            hidden=True,
-            help="Development-only: select no platforms, explicitly. "
-            "Requires --engine-preview.",
-        ),
+        typer.Option("--no-platforms", help="Select no platforms, explicitly."),
     ] = False,
     component_option: Annotated[
         list[str] | None,
         typer.Option(
             "--component-option",
-            hidden=True,
-            help="Development-only: set a selected component's option, "
-            "ID.OPTION=VALUE. Repeatable. Requires --engine-preview.",
+            help="Set a selected component's option, ID.OPTION=VALUE. Repeatable.",
         ),
     ] = None,
 ) -> None:
     """Create a new project."""
-    if template_url is not None:
+    if legacy and template_url is not None:
         try:
             validate_source(template_url)
         except SourceError as exc:
             err.print(str(exc), style="red", markup=False)
             raise typer.Exit(1) from None
-    if archetype is not None and not engine_preview:
-        err.print("[red]--archetype requires --engine-preview.[/red]")
+    if archetype is not None and legacy:
+        err.print("[red]--archetype and --legacy are contradictory.[/red]")
         raise typer.Exit(1)
     _any_component_flag = bool(
         capability or no_capabilities or platform or no_platforms or component_option
     )
-    if _any_component_flag and not engine_preview:
+    if _any_component_flag and legacy:
         err.print(
             "[red]--capability/--no-capabilities/--platform/--no-platforms/"
-            "--component-option require --engine-preview.[/red]"
+            "--component-option require the default engine path and have no "
+            "effect with --legacy.[/red]"
         )
         raise typer.Exit(1)
     if capability and no_capabilities:
@@ -895,12 +904,11 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     if platform and no_platforms:
         err.print("[red]--platform and --no-platforms are contradictory.[/red]")
         raise typer.Exit(1)
-    if engine_preview and (template_id or template_url or ref):
+    if not legacy and (template_id or template_url or ref):
         err.print(
-            "[red]--template/--template-url/--ref require the Copier path "
-            "and have no effect with --engine-preview, which selects an "
-            "engine archetype instead of a Copier template (#91, "
-            "ADR 0025).[/red]"
+            "[red]--template/--template-url/--ref require --legacy and have "
+            "no effect on the default engine path, which selects an archetype "
+            "instead of a Copier template (ADR 0040).[/red]"
         )
         raise typer.Exit(1)
 
@@ -911,42 +919,44 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     config = _load_config_or_exit()
     cfg_answers = config.as_answers()
 
-    if engine_preview:
-        flags = ComponentFlags(
-            capabilities=_normalise_kind_flag(capability, none_flag=no_capabilities),
-            platforms=_normalise_kind_flag(platform, none_flag=no_platforms),
-            options=_parse_component_options(component_option or []),
+    if legacy:
+        _ensure_legacy_available()
+        from create_forge.runner import ScaffoldRequest  # noqa: PLC0415
+
+        registry = load_registry()
+        template = _select_template(registry, config, template_id, yes=yes)
+        answers = _collect_answers(template, preset, cfg_answers, yes=yes)
+
+        slug = slugify(str(answers["project_name"]))
+        dst = (path or Path.cwd() / slug).resolve()
+
+        src = template_url or str(template.url)
+
+        _confirm_third_party(template_url, yes=yes)
+        _run_scaffold(
+            ScaffoldRequest(
+                src=src, dst=dst, data=answers, vcs_ref=ref, dry_run=dry_run
+            ),
+            slug,
         )
-        _run_engine_preview(
-            preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes
-        )
+
+        if dry_run:
+            console.print("[dim]Dry run — nothing written.[/dim]")
+            return
+
+        _report_created(answers["project_name"], dst)
         return
 
-    registry = load_registry()
-    template = _select_template(registry, config, template_id, yes=yes)
-    answers = _collect_answers(template, preset, cfg_answers, yes=yes)
-
-    slug = slugify(str(answers["project_name"]))
-    dst = (path or Path.cwd() / slug).resolve()
-
-    src = template_url or str(template.url)
-
-    _confirm_third_party(template_url, yes=yes)
-    _run_scaffold(
-        ScaffoldRequest(src=src, dst=dst, data=answers, vcs_ref=ref, dry_run=dry_run),
-        slug,
+    flags = ComponentFlags(
+        capabilities=_normalise_kind_flag(capability, none_flag=no_capabilities),
+        platforms=_normalise_kind_flag(platform, none_flag=no_platforms),
+        options=_parse_component_options(component_option or []),
     )
-
-    if dry_run:
-        console.print("[dim]Dry run — nothing written.[/dim]")
-        return
-
-    _report_created(answers["project_name"], dst)
+    _run_engine(preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes)
 
 
-@app.command("list")
-def list_templates() -> None:
-    """Show the available templates."""
+def _list_legacy_registry() -> None:
+    """Print the bundled Copier template registry (`list --legacy`)."""
     registry = load_registry()
     table = Table(box=None, pad_edge=False)
     table.add_column("ID", style="bold")
@@ -966,6 +976,65 @@ def list_templates() -> None:
     console.print(table)
 
 
+@app.command("list")
+def list_templates(
+    legacy: Annotated[
+        bool,
+        typer.Option(
+            "--legacy", help="List the bundled Copier template registry instead."
+        ),
+    ] = False,
+) -> None:
+    """Show the discovered engine catalogue, or the legacy template registry.
+
+    ADR 0040 decisions 7/9 (CF-18.01): the default view is the engine's own
+    discovered catalogue, grouped archetypes-then-capabilities-then-platforms
+    and built only from `discover_components()` -- reading no component
+    resource and naming no component id in shipped code. `list --legacy` is
+    the pre-cutover registry table, the only place it is listed after the
+    cutover.
+    """
+    if legacy:
+        _list_legacy_registry()
+        return
+
+    try:
+        from create_forge import engine, pipeline  # noqa: PLC0415
+    except ImportError:
+        err.print(
+            "[red]forge-template is not installed.[/red] create-forge "
+            f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
+            "reinstall create-forge to restore it."
+        )
+        raise typer.Exit(3) from None
+
+    try:
+        catalogue = pipeline.discover_catalogue()
+    except engine.EngineCompatibilityError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(3) from exc
+    except engine.ForgeEngineError as exc:
+        err.print(f"[red]{engine.explain(exc)}[/red]")
+        raise typer.Exit(1) from exc
+
+    table = Table(box=None, pad_edge=False)
+    table.add_column("ID", style="bold")
+    table.add_column("Kind")
+    table.add_column("Name")
+    table.add_column("Description", style="dim")
+
+    for kind in DESCRIPTOR_KIND:
+        for descriptor in catalogue.of_kind(kind):
+            table.add_row(
+                descriptor.id,
+                DESCRIPTOR_KIND[kind],
+                descriptor.name,
+                descriptor.description,
+            )
+
+    console.print(table)
+
+
 @app.command("update")
 def update_project(
     project: Annotated[Path, typer.Argument(help="Project directory.")] = Path(),
@@ -979,7 +1048,16 @@ def update_project(
         ),
     ] = False,
 ) -> None:
-    """Pull template changes into an existing project."""
+    """Pull template changes into an existing project.
+
+    Dispatches only to the Copier update route today -- engine-native update
+    dispatch against the recorded generation-metadata file is CF-18.04's job.
+    `copier` is the optional `legacy` extra now (ADR 0040 decision 2), so this
+    command's own import of it is lazy and guarded, matching `new --legacy`'s.
+    """
+    _ensure_legacy_available()
+    from create_forge.runner import ScaffoldError, update  # noqa: PLC0415
+
     try:
         status = "Checking update…" if dry_run else "Updating…"
         with console.status(status):
@@ -1032,21 +1110,28 @@ class Check:
 class Integration:
     """The active create-forge/forge-template integration line and its
     versions -- see docs/engine-resolution.md for what each field means and
-    when it is populated. Since ADR 0018, `engine_range` and
-    `projectspec_supported` are always populated: a released range and
-    supported protocol are now declared regardless of whether the `engine`
-    extra is installed. `engine_package` is `None` until it is;
-    `projectspec_detected` stays `None` until a command actually imports and
-    negotiates with the engine (`doctor` never does -- see its own
-    docstring).
+    when it is populated. `engine_range` and every `*_supported` field are
+    always populated: the declared range and supported protocols are fixed by
+    this create-forge release, independent of the environment.
+    `engine_package` is `None` only in a broken install -- `forge-template`
+    is a required dependency since ADR 0040 (CF-18.01). `copier` is `None`
+    when the optional `legacy` extra is absent. Since ADR 0040 decision 6,
+    `doctor` negotiates against the real engine (`engine.get_info()`, which
+    performs no compatibility check itself), so every `*_detected` field is
+    populated whenever the engine is importable at all -- `None` only when it
+    is not.
     """  # noqa: D205
 
     line: str
-    copier: str
+    copier: str | None
     engine_package: str | None
-    engine_range: str | None
-    projectspec_supported: str | None
+    engine_range: str
+    projectspec_supported: str
     projectspec_detected: str | None
+    component_manifest_supported: str
+    component_manifest_detected: str | None
+    metadata_version_supported: str
+    metadata_version_detected: int | None
     template_source: str | None
     template_ref: str | None
 
@@ -1094,7 +1179,7 @@ class Diagnostics:
     platform: str
     integration: Integration
     config: ConfigSummary
-    copier_cache: CopierCache
+    copier_cache: CopierCache | None
     uv: UvStatus
     checks: list[Check]
 
@@ -1104,11 +1189,16 @@ class Diagnostics:
         return all(check.passed for check in self.checks if not check.informational)
 
 
-def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache, UvStatus]:
+def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache | None, UvStatus]:
     """Append the tooling rows and return the structured facts.
 
-    The git / uv / Copier-cache rows land in `checks`; the cache and uv facts
-    `doctor --json` reports alongside them come back as dataclasses.
+    The git / uv rows land in `checks` unconditionally; the Copier-cache rows
+    only when `copier` -- the optional `legacy` extra since ADR 0040 decision
+    2 -- is actually importable, reporting `None`/an informational row
+    instead of raising when it is not (decision 6's "`integration.copier`
+    becomes `null` when the `legacy` extra is absent", applied to the cache
+    facts alongside it). The cache and uv facts `doctor --json` reports
+    alongside the checks come back as dataclasses.
     """
     git_found = shutil.which("git")
     checks.append(
@@ -1130,6 +1220,24 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache, UvStatus]:
             else uv_found or "not on PATH — required by generated projects",
         )
     )
+
+    try:
+        from create_forge.runner import (  # noqa: PLC0415
+            cache_probe,
+            copier_cache_location,
+        )
+    except ImportError:
+        checks.append(
+            Check(
+                "copier cache",
+                True,
+                "not applicable — install with pip install 'create-forge[legacy]'",
+                informational=True,
+            )
+        )
+        return None, UvStatus(
+            path=uv_found, version=uv_version, package=_optional_dist_version("uv")
+        )
 
     cache = copier_cache_location()
     probe = cache_probe(cache)
@@ -1171,15 +1279,19 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache, UvStatus]:
     )
 
 
-def _gather_diagnostics() -> Diagnostics:
+def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gathering every doctor fact and check, mirroring `_run_engine`'s own justification for a single unbroken flow rather than an arbitrary split
     """Run every doctor check and collect every reportable fact.
 
     `doctor` stays offline: it reports the registry's bundled template source
     but never resolves a ref, since that would mean a network call for what
-    is meant to be a fast local health check. For the same reason, engine
-    presence is read via `importlib.metadata` only -- never imported -- so
-    `projectspec_detected` (which needs a real `get_engine_info()` call) stays
-    `None` here regardless of whether the `engine` extra is installed.
+    is meant to be a fast local health check. Since ADR 0040 decision 6,
+    engine presence is checked via `importlib.metadata` (informational,
+    matching every other tool row) *and* a real negotiation through
+    `engine.get_info()`, which performs no compatibility check of its own --
+    a protocol/`metadata_version` mismatch surfaces as one failed check row
+    here rather than raising `EngineCompatibilityError` and crashing `doctor`
+    outright. `*_detected` fields stay `None` only when the engine cannot be
+    imported at all.
     """
     checks: list[Check] = []
 
@@ -1235,24 +1347,69 @@ def _gather_diagnostics() -> Diagnostics:
 
     engine_range = f"{ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}"
     engine_package = _optional_dist_version(ENGINE_DISTRIBUTION)
+    copier_package = _optional_dist_version("copier")
     projectspec_supported = ",".join(str(p) for p in SUPPORTED_PROJECTSPEC_PROTOCOLS)
+    manifest_supported = ",".join(
+        str(p) for p in SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS
+    )
+    metadata_supported = ",".join(
+        str(v) for v in SUPPORTED_GENERATION_METADATA_VERSIONS
+    )
 
     info("create-forge", _dist_version("create-forge"))
-    info("copier", _dist_version("copier"))
+    info(
+        "copier",
+        copier_package
+        if copier_package is not None
+        else "not installed — install with pip install 'create-forge[legacy]'",
+    )
     info("template source", source_detail)
     info("integration line", INTEGRATION_LINE)
-    info(
+    check(
+        engine_package is not None,
         "engine",
-        f"{ENGINE_DISTRIBUTION} {engine_package} installed (supports {engine_range})"
+        f"{ENGINE_DISTRIBUTION} {engine_package} (supports {engine_range})"
         if engine_package is not None
-        else f"not installed (supports {engine_range}) — "
-        "install with pip install 'create-forge[engine]'",
+        else f"not installed (supports {engine_range}) — reinstall create-forge",
     )
-    info(
-        "ProjectSpec protocol",
-        f"supported: {projectspec_supported} (detected: requires the "
-        "engine extra and a real negotiation, not performed by doctor)",
-    )
+
+    projectspec_detected: str | None = None
+    manifest_detected: str | None = None
+    metadata_detected: int | None = None
+    if engine_package is not None:
+        try:
+            from create_forge import engine as _engine  # noqa: PLC0415
+
+            negotiated = _engine.get_info()
+            projectspec_detected = ",".join(
+                str(p) for p in negotiated.projectspec_protocols
+            )
+            manifest_detected = ",".join(
+                str(p) for p in negotiated.component_manifest_protocols
+            )
+            metadata_detected = negotiated.metadata_version
+            projectspec_ok = bool(
+                set(negotiated.projectspec_protocols)
+                & set(SUPPORTED_PROJECTSPEC_PROTOCOLS)
+            )
+            manifest_ok = bool(
+                set(negotiated.component_manifest_protocols)
+                & set(SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS)
+            )
+            metadata_ok = metadata_detected in SUPPORTED_GENERATION_METADATA_VERSIONS
+        except Exception as exc:
+            # doctor must never crash; a too-old engine may not even have
+            # these attributes (e.g. `metadata_version` postdates 0.3.2) --
+            # report whatever the engine raised or a stale shape produced as
+            # one failed check row instead.
+            check(False, "engine negotiation", str(exc).splitlines()[0])
+        else:
+            check(
+                projectspec_ok and manifest_ok and metadata_ok,
+                "engine negotiation",
+                f"ProjectSpec {projectspec_detected}, component manifest "
+                f"{manifest_detected}, metadata {metadata_detected}",
+            )
 
     return Diagnostics(
         create_forge=_dist_version("create-forge"),
@@ -1260,11 +1417,15 @@ def _gather_diagnostics() -> Diagnostics:
         platform=sys.platform,
         integration=Integration(
             line=INTEGRATION_LINE,
-            copier=_dist_version("copier"),
+            copier=copier_package,
             engine_package=engine_package,
             engine_range=engine_range,
             projectspec_supported=projectspec_supported,
-            projectspec_detected=None,
+            projectspec_detected=projectspec_detected,
+            component_manifest_supported=manifest_supported,
+            component_manifest_detected=manifest_detected,
+            metadata_version_supported=metadata_supported,
+            metadata_version_detected=metadata_detected,
             template_source=template_source,
             template_ref=None,
         ),
@@ -1341,16 +1502,28 @@ def _diagnostics_payload(diagnostics: Diagnostics) -> dict[str, object]:
                 "supported": integration.projectspec_supported,
                 "detected": integration.projectspec_detected,
             },
+            "component_manifest_protocol": {
+                "supported": integration.component_manifest_supported,
+                "detected": integration.component_manifest_detected,
+            },
+            "metadata_version": {
+                "supported": integration.metadata_version_supported,
+                "detected": integration.metadata_version_detected,
+            },
             "template_source": integration.template_source,
             "template_ref": integration.template_ref,
         },
         "config": {"path": diagnostics.config.path, "keys": diagnostics.config.keys},
-        "copier_cache": {
-            "path": diagnostics.copier_cache.path,
-            "override": diagnostics.copier_cache.override,
-            "exists": diagnostics.copier_cache.exists,
-            "writable": diagnostics.copier_cache.writable,
-        },
+        "copier_cache": (
+            {
+                "path": diagnostics.copier_cache.path,
+                "override": diagnostics.copier_cache.override,
+                "exists": diagnostics.copier_cache.exists,
+                "writable": diagnostics.copier_cache.writable,
+            }
+            if diagnostics.copier_cache is not None
+            else None
+        ),
         "uv": {
             "path": diagnostics.uv.path,
             "version": diagnostics.uv.version,

@@ -42,7 +42,7 @@ either key -- they're on the deliberately-unasked list in this file's
 sibling `templates.toml` header, same as every other question the Copier
 path lets fall through to its own default. The engine path has no template
 default to fall through to, so create-forge supplies the same values itself
-here rather than leaving `--engine-preview` unusable without `--data`.
+here rather than leaving the default `new` route unusable without `--data`.
 """
 
 
@@ -78,7 +78,7 @@ SELECTABLE_KINDS: tuple[SelectionKind, ...] = (
     SelectionKind.CAPABILITIES,
     SelectionKind.PLATFORMS,
 )
-"""The kinds `--engine-preview` selects *alongside* the single archetype —
+"""The kinds `new` selects *alongside* the single archetype —
 `components.capabilities` and `components.platforms`. Same tier order as
 `DESCRIPTOR_KIND`.
 """
@@ -280,27 +280,6 @@ def _python_selection(answers: Mapping[str, object]) -> dict[str, object]:
         _string_answer(answers, "python_version") or DEFAULT_PYTHON_DEVELOPMENT
     )
     return {"minimum": minimum, "development": development}
-
-
-def legacy_library_answers(answers: Mapping[str, object]) -> dict[str, str] | None:
-    """Resolve the legacy Library answer pair for `map_legacy_library_options`.
-
-    Returns `None` if `build_backend` was never answered. Mirrors
-    `copier.yml`'s own `versioning_resolved` computation: `static`
-    when `build_backend` is `uv_build`, else whatever `versioning` says,
-    defaulting to `static` when that question was skipped (CF-08.02). This
-    stays pure and engine-free -- `engine.map_legacy_library_options` is the
-    only caller that hands the result to `forge_template`.
-    """
-    build_backend = _string_answer(answers, "build_backend")
-    if build_backend is None:
-        return None
-    versioning = _string_answer(answers, "versioning") or "static"
-    versioning_resolved = "static" if build_backend == "uv_build" else versioning
-    return {
-        "build_backend": build_backend,
-        "versioning_resolved": versioning_resolved,
-    }
 
 
 def build_spec_payload(  # noqa: PLR0913 - each keyword maps to one distinct ProjectSpec field; ~20 existing call sites already rely on archetype/capabilities/platforms staying separate rather than collapsing into one object here

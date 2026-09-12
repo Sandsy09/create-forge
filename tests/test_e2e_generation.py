@@ -1,4 +1,5 @@
-"""Real end-to-end `create-forge new`, generated project and all (CF-07.06).
+"""Real end-to-end `create-forge new --legacy`, generated project and all
+(CF-07.06).
 
 Every other test module proves this CLI resolves the right `ScaffoldRequest`
 or stages/finalises the right bytes; none of them ever run the actual
@@ -13,13 +14,14 @@ then the generated project's own `uv run poe check`), so it must stay
 separable from the drift guard's CI job. Like the other network-touching
 suites, it skips rather than fails when GitHub is unreachable.
 
-The `--engine-preview` path is deliberately out of scope here: it is a
+The default engine path is deliberately out of scope here: it is a
 materially different generation path (no `copier.yml` `_tasks`, a different
-answer set, archetype selection). See
+answer set, archetype selection) that only runs behind `--legacy` now (ADR
+0040 / CF-18.01) -- this module drives that flag on every invocation. See
 [`tests/test_e2e_engine_generation.py`](test_e2e_engine_generation.py)
-(CF-08.04, ADR 0020) for its own end-to-end coverage; the two modules share
-subprocess helpers via `tests/conftest.py`'s `create_forge_command` and
-`e2e_child_env` fixtures.
+(CF-08.04, ADR 0020) for the engine path's own end-to-end coverage; the two
+modules share subprocess helpers via `tests/conftest.py`'s
+`create_forge_command` and `e2e_child_env` fixtures.
 """
 
 from __future__ import annotations
@@ -56,6 +58,7 @@ def _run_new(
         command,
         "new",
         _ANSWERS["project_name"],
+        "--legacy",
         "--yes",
         "--path",
         str(dest),

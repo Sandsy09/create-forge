@@ -1,19 +1,20 @@
 """The shared create pipeline: discover, build, validate, render -- in memory.
 
-This is the one internal generation path CF-07.01 introduces (ADR 0014).
-It depends on `create_forge.engine` -- and therefore, transitively, on the
-optional `forge-template` engine extra (ADR 0018) -- but its own source never
-imports `forge_template` directly: type annotations that need engine-owned
-types import them only under `TYPE_CHECKING`, so this module's runtime
-behaviour never requires the engine to be *type-checkable*, only to be
-*installed* when one of its functions is actually called. `engine.py` remains
-the only module whose source touches `forge_template` at runtime, per ADR
-0013 and invariant 4.
+This is the one internal generation path CF-07.01 introduces (ADR 0014). It
+depends on `create_forge.engine` -- and therefore, transitively, on
+`forge-template`, a required dependency since ADR 0040 (CF-18.01) made the
+engine the default `new` architecture -- but its own source never imports
+`forge_template` directly: type annotations that need engine-owned types
+import them only under `TYPE_CHECKING`, so this module's runtime behaviour
+never requires the engine to be *type-checkable* in isolation. `engine.py`
+remains the only module whose source touches `forge_template` at runtime, per
+ADR 0013 and invariant 4.
 
-`create_forge.cli` imports this module lazily, inside `--engine-preview`'s
-branch only, guarded by `try/except ImportError` -- see ADR 0014 for why:
-`forge-template` is not installed by a plain `pip install create-forge`, so
-no module reachable at `cli.py`'s own import time may depend on it.
+`create_forge.cli` imports this module eagerly at module scope: unlike
+`runner.py`'s Copier-touching calls, which now need the guarded, lazy import
+`--legacy` requires (ADR 0040 inverts ADR 0014's old guard, since `copier` is
+the optional dependency after the cutover), this module's only dependency is
+the now-required engine.
 """
 
 from __future__ import annotations
@@ -28,11 +29,10 @@ from create_forge.spec import (
     SelectionProvenance,
     SelectionRequest,
     build_spec_payload,
-    legacy_library_answers,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
     from pathlib import Path
 
     from forge_template import ComponentDescriptor, ProjectSpec, RenderedProject
@@ -63,8 +63,8 @@ class Catalogue:
     `cli.py` reads component ids and human text off descriptors but never
     inspects `ComponentDescriptor.kind` or `.requires` itself -- it asks a
     `Catalogue` instead. `build_generation_request` accepts a `Catalogue` so a
-    caller that has already discovered (the `--engine-preview` flow) does not
-    scan the installed catalogue a second time (ADR 0028).
+    caller that has already discovered (`cli.py`'s default `new` flow) does
+    not scan the installed catalogue a second time (ADR 0028).
     """
 
     descriptors: tuple[ComponentDescriptor, ...]
@@ -133,15 +133,15 @@ class Catalogue:
 def discover_catalogue() -> Catalogue:
     """The full discovered catalogue, after protocol negotiation (ADR 0028).
 
-    `engine.discover()` -- the one call per `--engine-preview` invocation --
-    wrapped for kind-grouped access. `discover_archetypes()` is the
-    archetype-only view of the same result.
+    `engine.discover()` -- the one call per `new` invocation -- wrapped for
+    kind-grouped access. `discover_archetypes()` is the archetype-only view
+    of the same result.
     """
     return Catalogue(engine.discover())
 
 
 def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
-    """Engine-owned archetype descriptors, for `--engine-preview` selection.
+    """Engine-owned archetype descriptors, for the engine `new` path's selection.
 
     The `kind == "archetype"` view of `discover_catalogue()`, kept as a named
     entry point because ADR 0017 and ADR 0019 refer to it. `cli.py` now
@@ -149,81 +149,6 @@ def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
     two never run back to back.
     """
     return discover_catalogue().archetypes
-
-
-def _legacy_archetype_options(
-    answers: Mapping[str, object], descriptor: ComponentDescriptor | None
-) -> Mapping[str, object] | None:
-    """The legacy `build_backend`/`versioning` -> `packaging_mode` mapping,
-    or `None` when it does not apply.
-
-    `library` predates the engine, so its legacy answers need translating into
-    the production `packaging_mode` option or a user's choice silently reverts
-    to the engine's own default. CF-08.03's archetype-parity review
-    (ADR 0019) generalised the gate off a hardcoded `archetype == "library"`
-    check: `engine.map_legacy_library_options` names the option it produces,
-    and the selected archetype's own discovered `ComponentDescriptor.options`
-    declares whether it accepts that name -- so no archetype id appears here,
-    and a future archetype that wants the mapping (or `library` renamed) needs
-    no change. An archetype that declares no options at all (`cli`) never
-    reaches `map_legacy_library_options`.
-    """  # noqa: D205
-    if descriptor is None or not descriptor.options:
-        return None
-    legacy = legacy_library_answers(answers)
-    if legacy is None:
-        return None
-    mapped = engine.map_legacy_library_options(legacy)
-    if not mapped:
-        return None
-    declared = {option.name for option in descriptor.options}
-    if not set(mapped) <= declared:
-        return None
-    return mapped
-
-
-def _resolved_component_options(
-    answers: Mapping[str, object],
-    archetype: str,
-    component_options: Mapping[str, Mapping[str, object]] | None,
-    descriptors: Sequence[ComponentDescriptor],
-) -> Mapping[str, Mapping[str, object]] | None:
-    """Merge the legacy archetype-option fallback beneath the caller's map.
-
-    CF-13.04 (ADR 0029) makes the legacy derivation *per option name* rather
-    than all-or-nothing: it fills a declared archetype option the caller left
-    unset, and never overrides one they did supply -- rule 3 of
-    docs/component-selection.md's precedence (`--component-option` > `--data` >
-    legacy > default). Before CF-13.04 the whole derivation was skipped the
-    moment `component_options` was non-`None`, which a selected capability's
-    namespace alone would trigger -- silently defeating the archetype's own
-    `--data build_backend=...` fallback.
-
-    `map_legacy_library_options` is only consulted when the archetype declares
-    an option name the caller has not filled, so the caller-supplies-everything
-    and no-options (`cli`) cases still never call it.
-    """
-    supplied = component_options or {}
-    supplied_archetype = dict(supplied.get(archetype, {}))
-    descriptor = next((d for d in descriptors if d.id == archetype), None)
-    declared = {option.name for option in descriptor.options} if descriptor else set()
-
-    unset = declared - supplied_archetype.keys()
-    if not unset:
-        return component_options
-
-    legacy = _legacy_archetype_options(answers, descriptor)
-    if legacy is None:
-        return component_options
-    additions = {name: value for name, value in legacy.items() if name in unset}
-    if not additions:
-        return component_options
-
-    result: dict[str, Mapping[str, object]] = {
-        component_id: dict(options) for component_id, options in supplied.items()
-    }
-    result[archetype] = {**additions, **supplied_archetype}
-    return result
 
 
 def build_generation_request(
@@ -248,20 +173,18 @@ def build_generation_request(
     identifiers of its own, and today's only caller (`cli.py`) always marks
     its archetype explicit. `provenance`, when given, is threaded straight
     through to `build_spec_payload` -- this function resolves no policy and
-    merges no policy itself. `component_options` the caller supplies is kept
-    as given; `_resolved_component_options` only fills a declared archetype
-    option the caller left unset, from the legacy `build_backend`/`versioning`
-    fallback this repository still owns -- per option name since CF-13.04
-    (ADR 0029), gated on the selected archetype's own discovered descriptor
-    rather than a hardcoded id (CF-08.03, ADR 0019).
+    merges no policy itself. `component_options` the caller supplies is passed
+    through unchanged: ADR 0040 decision 10 (CF-18.01) retires the legacy
+    `build_backend`/`versioning` -> `packaging_mode` `--data` fallback this
+    function used to fill in; `library.packaging_mode` is now set only through
+    `--component-option library.packaging_mode=<value>`, like any other
+    component option.
 
     `catalogue`, when supplied, is the already-discovered `Catalogue` the
-    caller holds (`cli.py`'s `--engine-preview` flow discovers once for
-    archetype and capability/platform selection, then hands it straight
-    here); omitted, this function discovers its own. Either way
-    `engine.discover()` runs exactly once per invocation (ADR 0028). The
-    catalogue is used only for the legacy-option gate above -- selection
-    itself is already resolved into `selection` upstream.
+    caller holds (`cli.py`'s `new` flow discovers once for archetype and
+    capability/platform selection, then hands it straight here); omitted,
+    this function discovers its own. Either way `engine.discover()` runs
+    exactly once per invocation (ADR 0028).
 
     Every downstream call (`build_project_spec`, `validate`, `render`)
     independently re-checks package/protocol compatibility before doing its
@@ -270,15 +193,12 @@ def build_generation_request(
     """
     if catalogue is None:
         catalogue = discover_catalogue()
-    resolved_options = _resolved_component_options(
-        answers, selection.archetype, component_options, catalogue.descriptors
-    )
     payload = build_spec_payload(
         answers,
         archetype=selection.archetype,
         capabilities=selection.capabilities,
         platforms=selection.platforms,
-        component_options=resolved_options,
+        component_options=component_options,
         provenance=provenance,
     )
     spec = engine.build_project_spec(payload)

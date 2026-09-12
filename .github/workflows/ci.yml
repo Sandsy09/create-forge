@@ -216,23 +216,25 @@ jobs:
   # here. Skips (not fails) if GitHub is unreachable, and also runs on the
   # Monday cron alongside `network` for the same reason.
   #
-  # Four suites: `test_e2e_generation.py` (CF-07.06, ADR 0016) is the Copier
-  # path -- forge-template's latest released tag, its post-generation
-  # `_tasks` (git init, uv sync, pre-commit install). `test_e2e_engine_generation.py`
-  # (CF-08.04, ADR 0020) is the public-engine path via `--engine-preview` --
-  # every discovered archetype, plus a real released-install compatibility
-  # boundary (an out-of-range engine, and no engine extra at all), each
-  # rejected with nothing written. CF-13.05 (ADR 0030) added the Data Science
-  # composition there. `test_e2e_installed_data_science.py` (CF-14.02,
-  # ADR 0032) additionally builds and installs the client candidate wheel,
-  # exercises both Data Science compositions, and checks the full composition
-  # at the Python window edges. `test_e2e_installed_rollout.py` (CF-14.03,
-  # ADR 0033) reuses that wheel for the Library / CLI Application engine
-  # paths, the default Copier path in a wheel with no engine installed, a real
-  # out-of-range engine, and the full selection / option / destination / lock
-  # / cleanup failure matrix. Those scientific-Python/Jupyter dependency
-  # trees, live notebooks, and the three extra installed environments hold
-  # the 60-minute budget.
+  # Four suites: `test_e2e_generation.py` (CF-07.06, ADR 0016) is the
+  # `--legacy` Copier path -- forge-template's latest released tag, its
+  # post-generation `_tasks` (git init, uv sync, pre-commit install).
+  # `test_e2e_engine_generation.py` (CF-08.04, ADR 0020) is the default
+  # engine path (ADR 0040 / CF-18.01; reachable only via the hidden
+  # `--engine-preview` flag before that) -- every discovered archetype, plus
+  # a real released-install compatibility boundary (an out-of-range engine,
+  # and a broken install with no engine at all, now that it is a required
+  # dependency), each rejected with nothing written. CF-13.05 (ADR 0030)
+  # added the Data Science composition there. `test_e2e_installed_data_science.py`
+  # (CF-14.02, ADR 0032) additionally builds and installs the client
+  # candidate wheel, exercises both Data Science compositions, and checks the
+  # full composition at the Python window edges. `test_e2e_installed_rollout.py`
+  # (CF-14.03, ADR 0033) reuses that wheel for the Library / CLI Application
+  # default engine paths, the `--legacy` Copier path in a wheel with no
+  # engine installed, a real out-of-range engine, and the full selection /
+  # option / destination / lock / cleanup failure matrix. Those
+  # scientific-Python/Jupyter dependency trees, live notebooks, and the three
+  # extra installed environments hold the 60-minute budget.
   # ---------------------------------------------------------------------------
   e2e:
     name: End-to-end generation

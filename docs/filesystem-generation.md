@@ -135,12 +135,13 @@ by the time either can occur.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) —
   `finalise_generation_request` against a real `RenderedProject`, command
   ordering before rename, and write/lock failures leaving nothing behind.
-- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview` against a
+- [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new` path
+  (`test_new_rejects_a_non_empty_destination_before_the_engine`) against a
   non-empty destination exits before the engine is touched;
-  `--engine-preview --dry-run` neither writes nor resolves; a lock failure
-  exits `1` and writes nothing; the existing
-  `test_new_engine_preview_*` characterized-failure cases assert no
-  destination and no leftover staging directory.
+  `test_new_dry_run_lists_targets_and_writes_nothing` neither writes nor
+  resolves; `test_new_reports_lock_failure_and_writes_nothing` exits `1` and
+  writes nothing; the characterized-failure cases assert no destination and
+  no leftover staging directory.
 - [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
   (CF-13.05) — the same guarantees for the multi-component Data Science
   composition: a full staged/locked/finalised project on disk, dry-run

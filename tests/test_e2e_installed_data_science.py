@@ -1,9 +1,11 @@
 """Installed-client Data Science end-to-end validation (CF-14.02).
 
-Builds the create-forge 0.3.0 candidate wheel, installs that wheel with its
-``engine`` extra and the reviewed PyPI ``forge-template 0.4.1`` release into a
-clean virtual environment, then drives the real installed ``create-forge``
-console script. Both accepted Data Science compositions are generated twice,
+Builds the create-forge candidate wheel, installs it alongside the reviewed
+PyPI ``forge-template 0.5.0`` release into a clean virtual environment --
+`forge-template` is a required dependency since ADR 0040 (CF-18.01), so no
+extra is needed to pull it in -- then drives the real installed
+``create-forge`` console script through its default (engine) `new` path.
+Both accepted Data Science compositions are generated twice,
 byte-compared including their client-finalised locks, restored, checked,
 built, installed, and audited without importing either working tree.
 
@@ -109,16 +111,19 @@ print(json.dumps({
 """
 
 
-def _engine_extra_requirement(
+def _legacy_extra_requirement(
     raw_requirements: Sequence[str], name: str
 ) -> Requirement:
+    """The `legacy` extra's requirement for ``name`` (ADR 0040 decision 2:
+    `copier` moved out of the unconditional requirements and into this extra).
+    """
     matches = []
     for raw in raw_requirements:
         requirement = Requirement(raw)
         if canonicalize_name(requirement.name) != canonicalize_name(name):
             continue
         if requirement.marker is None or not requirement.marker.evaluate(
-            {"extra": "engine"}
+            {"extra": "legacy"}
         ):
             continue
         matches.append(requirement)
@@ -167,17 +172,18 @@ def test_candidate_wheel_installs_the_reviewed_pair(
     assert payload["engine_direct_url"] is None
 
     requirements: list[str] = payload["client_requirements"]
-    engine = _engine_extra_requirement(requirements, "forge-template")
-    uv = _engine_extra_requirement(requirements, "uv")
-    assert {str(specifier) for specifier in engine.specifier} == {">=0.4.1", "<0.5"}
+    # ADR 0040 (CF-18.01): forge-template and uv are required dependencies
+    # now -- there is no more `engine` extra to gate them behind.
+    engine = _base_requirement(requirements, "forge-template")
+    uv = _base_requirement(requirements, "uv")
+    assert {str(specifier) for specifier in engine.specifier} == {">=0.5", "<0.6"}
     assert {str(specifier) for specifier in uv.specifier} == {">=0.12", "<0.13"}
-    assert str(engine.marker) == 'extra == "engine"'
-    assert str(uv.marker) == 'extra == "engine"'
     assert Version(payload["uv_version"]) in uv.specifier
 
     # ADR 0038 / ADR 0039: the reviewed Copier floor is carried through into
-    # the built wheel's own metadata, not just pyproject.toml.
-    copier = _base_requirement(requirements, "copier")
+    # the built wheel's own metadata, not just pyproject.toml -- now behind
+    # the `legacy` extra (ADR 0040 decision 2) rather than unconditional.
+    copier = _legacy_extra_requirement(requirements, "copier")
     assert {str(specifier) for specifier in copier.specifier} == {">=9.16", "<10"}
 
     path_probe = _run(
@@ -217,7 +223,6 @@ def _generate(
         str(client.console),
         "new",
         composition.project_name,
-        "--engine-preview",
         "--archetype",
         "data-science",
         "--yes",

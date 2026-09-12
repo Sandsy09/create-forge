@@ -1,9 +1,9 @@
 """Executable create-forge/forge-template engine contract (ADR 0018).
 
-The normal suite exercises the released `forge-template>=0.4.1,<0.5` range
-(ADR 0031) resolved into ``uv.lock`` from PyPI. The sibling-checkout command in
-``docs/cross-repository-workflow.md`` installs both working trees in
-isolation and runs this same file against pending local changes without
+The normal suite exercises the released `forge-template>=0.5,<0.6` range
+(ADR 0042, CF-18.01) resolved into ``uv.lock`` from PyPI. The sibling-checkout
+command in ``docs/cross-repository-workflow.md`` installs both working trees
+in isolation and runs this same file against pending local changes without
 exposing forge-template's private fixture-catalogue seam.
 """
 
@@ -55,24 +55,27 @@ def _spec() -> ProjectSpec:
 
 def _info(
     *,
-    package_version: str = "0.4.1",
+    package_version: str = "0.5.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
+    metadata_version: int = 1,
 ) -> EngineInfo:
     return EngineInfo(
         package_version=package_version,
         projectspec_protocols=projectspec_protocols,
         component_manifest_protocols=component_manifest_protocols,
+        metadata_version=metadata_version,
     )
 
 
 def test_real_engine_matches_the_supported_range() -> None:
     """ADR 0018 assigned the first released range; ADR 0026 moved it to the
-    `forge-template` 0.4 line. The installed engine must fall within the
+    `forge-template` 0.4 line; ADR 0042 (CF-18.01) adopts the reviewed 0.5.0
+    engine-default cutover release. The installed engine must fall within the
     declared range and advertise a compatible protocol pair."""
     info = get_engine_info()
 
-    assert info.package_version == "0.4.1"
+    assert info.package_version == "0.5.0"
     assert Version(info.package_version) in SpecifierSet(compat.SUPPORTED_ENGINE_RANGE)
     assert set(info.projectspec_protocols) & set(compat.SUPPORTED_PROJECTSPEC_PROTOCOLS)
     assert set(info.component_manifest_protocols) & set(
@@ -154,7 +157,7 @@ def test_selection_model_matches_the_documented_contract() -> None:
     assert re.match(option_pattern, "a-b") is None
 
 
-@pytest.mark.parametrize("package_version", ["0.4.0", "0.5.0"])
+@pytest.mark.parametrize("package_version", ["0.4.1", "0.6.0"])
 def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch: pytest.MonkeyPatch,
     package_version: str,
@@ -200,10 +203,10 @@ def test_untested_package_is_rejected_before_every_public_engine_call(
     ("info", "message"),
     [
         (_info(projectspec_protocols=(2,)), "ProjectSpec"),
-        # 3 stays disjoint from SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS's
-        # (1, 2) -- CF-08.02 widened that set, so a probe at 2 alone would no
-        # longer be a rejection case.
-        (_info(component_manifest_protocols=(3,)), "component manifest"),
+        # 4 stays disjoint from SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS's
+        # (1, 2, 3) -- ADR 0042 (CF-18.01) widened that set to include
+        # protocol 3, so a probe at 3 alone is no longer a rejection case.
+        (_info(component_manifest_protocols=(4,)), "component manifest"),
     ],
 )
 def test_render_rejects_unsupported_protocol_before_public_engine_call(

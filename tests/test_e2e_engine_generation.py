@@ -1,6 +1,7 @@
-"""Real end-to-end `create-forge new --engine-preview` (CF-08.04, ADR 0020).
+"""Real end-to-end `create-forge new` on the default engine path (CF-08.04,
+ADR 0020; the default architecture since ADR 0040 / CF-18.01).
 
-`tests/test_e2e_generation.py` proves the default Copier path end to end;
+`tests/test_e2e_generation.py` proves the `--legacy` Copier path end to end;
 this module is its engine-path counterpart, kept separate rather than folded
 in because the two paths differ in almost everything but the console script
 they invoke:
@@ -8,13 +9,14 @@ they invoke:
 - no `copier.yml` `_tasks` run here -- a rendered project has no `.git`,
   `.venv`, or `pre-commit` hooks installed. Client finalisation creates
   `uv.lock`; `uv run --locked poe check` restores and checks from that lock.
-- the happy path below needs **no network at all**: `forge-template` is an
-  installed package (the optional `engine` extra, ADR 0018), not a cloned
-  template, so generating through it is as deterministic as any other
-  in-process call. Only the two negative tests at the bottom, which install a
-  *different* engine version to prove a compatibility boundary, touch GitHub
-  -- and they skip, rather than fail, when it is unreachable.
-- `--engine-preview` selects an archetype; every one this catalogue
+- the happy path below needs **no network at all**: `forge-template` is a
+  required, installed package (ADR 0040 decision 1), not a cloned template,
+  so generating through it is as deterministic as any other in-process call.
+  Only the two negative tests at the bottom, which build a real virtual
+  environment against a different engine version to prove a compatibility
+  boundary, touch GitHub -- and they skip, rather than fail, when it is
+  unreachable.
+- `--archetype` selects which one to build; every archetype this catalogue
   discovers is covered here -- `library` and `cli` (CF-08.03's
   archetype-parity review, ADR 0019) and, since CF-13.05 (ADR 0030), Data
   Science with its `jupyter` and `scientific-python` capabilities. Adding an
@@ -23,8 +25,8 @@ they invoke:
 
 Marked `e2e`, sharing `create_forge_command`/`e2e_child_env` with
 `test_e2e_generation.py` via `tests/conftest.py`. Skips the whole module,
-rather than failing it, when the `engine` extra is not installed at all --
-`uv run poe test:e2e` after a plain `uv sync` should say why, not error.
+rather than failing it, when the engine is not importable at all --
+`uv run poe test:e2e` should say why, not error.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ pytestmark = pytest.mark.e2e
 
 pytest.importorskip(
     "forge_template",
-    reason="the optional 'engine' extra isn't installed -- run `uv sync --all-extras`",
+    reason="forge-template is not importable -- run `uv sync`",
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -123,7 +125,6 @@ def _run_engine_new(
         command,
         "new",
         answers["project_name"],
-        "--engine-preview",
         "--archetype",
         archetype,
         "--yes",
@@ -166,7 +167,7 @@ def generated_engine_projects(
         result = _run_engine_new(create_forge_command, e2e_child_env, archetype, dest)
         if result.returncode != 0:
             pytest.fail(
-                f"create-forge new --engine-preview --archetype {archetype} "
+                f"create-forge new --archetype {archetype} "
                 f"failed (exit {result.returncode}):\n"
                 f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}"
             )
@@ -327,6 +328,18 @@ def _forge_template_reachable() -> None:
         pytest.skip(f"could not reach forge-template on GitHub: {exc}")
 
 
+def _venv_python(venv: Path) -> Path:
+    return venv / (
+        "Scripts/python.exe" if (venv / "Scripts").is_dir() else "bin/python"
+    )
+
+
+def _venv_console(venv: Path, name: str) -> Path:
+    if (venv / "Scripts").is_dir():
+        return venv / "Scripts" / f"{name}.exe"
+    return venv / "bin" / name
+
+
 def test_an_out_of_range_engine_is_rejected_before_any_write(
     _forge_template_reachable: None, tmp_path: Path
 ) -> None:
@@ -334,26 +347,62 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
     `compat.SUPPORTED_ENGINE_RANGE` at exit status 3 (ADR 0011), with nothing
     written -- against a real, isolated install of a genuinely incompatible
     engine version, not a monkeypatched `EngineInfo`
-    (`test_cli.py::test_new_engine_preview_exits_3_on_incompatible_engine`
-    proves the same boundary cheaply, in the fast suite).
+    (`test_cli.py::test_new_exits_3_on_incompatible_engine` proves the same
+    boundary cheaply, in the fast suite).
+
+    Since ADR 0040 (CF-18.01) made the engine a required dependency, a single
+    `uv run --with <this checkout> --with <out-of-range pin>` would now
+    conflict with the checkout's own declared `>=0.5,<0.6` range and fail the
+    resolver outright rather than installing the out-of-range version. A real
+    venv plus a second, targeted `--reinstall` step reaches the same broken
+    state deliberately instead.
     """
     del _forge_template_reachable
     dest = tmp_path / "proj"
+    venv = tmp_path / "venv"
 
-    result = subprocess.run(  # noqa: S603
+    created = subprocess.run(  # noqa: S603
+        ["uv", "venv", "--python", "3.13", str(venv)],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+
+    python_path = _venv_python(venv)
+    installed = subprocess.run(  # noqa: S603
+        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=900,
+        check=False,
+    )
+    assert installed.returncode == 0, installed.stdout + installed.stderr
+
+    forced = subprocess.run(  # noqa: S603
         [  # noqa: S607
             "uv",
-            "run",
-            "--no-project",
-            "--isolated",
-            "--with",
-            str(REPO_ROOT),
-            "--with",
+            "pip",
+            "install",
+            "--python",
+            str(python_path),
+            "--reinstall",
             _OUT_OF_RANGE_ENGINE,
-            "create-forge",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=900,
+        check=False,
+    )
+    assert forced.returncode == 0, forced.stdout + forced.stderr
+
+    console = _venv_console(venv, "create-forge")
+    result = subprocess.run(  # noqa: S603
+        [
+            str(console),
             "new",
             "Out Of Range",
-            "--engine-preview",
             "--archetype",
             "library",
             "--yes",
@@ -362,7 +411,7 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
         ],
         capture_output=True,
         text=True,
-        timeout=900,
+        timeout=120,
         check=False,
     )
 
@@ -373,30 +422,53 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
     assert not dest.exists()
 
 
-def test_a_missing_engine_extra_is_rejected_before_any_write(
-    _forge_template_reachable: None, tmp_path: Path
+def test_a_broken_install_with_no_engine_is_rejected_before_any_write(
+    tmp_path: Path,
 ) -> None:
-    """The other released-install boundary: `create-forge` alone, with no
-    `engine` extra resolved at all, refuses `--engine-preview` at exit 1 with
-    an actionable message rather than a raw `ImportError` -- exercising for
-    real what `test_cli.py`'s monkeypatched `builtins.__import__` proves
-    cheaply in the fast suite.
+    """ADR 0040 decision 12 (CF-18.01): a broken environment where the
+    required engine cannot be imported at all fails closed at exit `3` with
+    an actionable message, not a raw `ImportError` traceback -- exercising
+    for real what `test_cli.py`'s monkeypatched `builtins.__import__` proves
+    cheaply in the fast suite. Needs no network: installing this checkout
+    then removing `forge-template` affords no GitHub round trip.
     """
-    del _forge_template_reachable
     dest = tmp_path / "proj"
+    venv = tmp_path / "venv"
 
+    created = subprocess.run(  # noqa: S603
+        ["uv", "venv", "--python", "3.13", str(venv)],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+
+    python_path = _venv_python(venv)
+    installed = subprocess.run(  # noqa: S603
+        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=900,
+        check=False,
+    )
+    assert installed.returncode == 0, installed.stdout + installed.stderr
+
+    removed = subprocess.run(  # noqa: S603
+        ["uv", "pip", "uninstall", "--python", str(python_path), "forge-template"],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert removed.returncode == 0, removed.stdout + removed.stderr
+
+    console = _venv_console(venv, "create-forge")
     result = subprocess.run(  # noqa: S603
-        [  # noqa: S607
-            "uv",
-            "run",
-            "--no-project",
-            "--isolated",
-            "--with",
-            str(REPO_ROOT),
-            "create-forge",
+        [
+            str(console),
             "new",
             "Engine Absent",
-            "--engine-preview",
             "--archetype",
             "library",
             "--yes",
@@ -405,11 +477,11 @@ def test_a_missing_engine_extra_is_rejected_before_any_write(
         ],
         capture_output=True,
         text=True,
-        timeout=900,
+        timeout=120,
         check=False,
     )
 
-    assert result.returncode == 1, result.stdout + result.stderr
+    assert result.returncode == 3, result.stdout + result.stderr
     normalised = " ".join((result.stdout + result.stderr).split())
-    assert "engine extra isn't installed" in normalised
+    assert "forge-template is not installed" in normalised
     assert not dest.exists()

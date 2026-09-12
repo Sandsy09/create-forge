@@ -147,12 +147,17 @@ def test_supported_python_window_is_unchanged() -> None:
     assert minors == [11, 12, 13, 14], minors
 
 
-def test_engine_is_still_the_optional_extra_and_there_is_no_legacy_extra() -> None:
+def test_engine_is_required_and_copier_is_the_legacy_extra() -> None:
+    """CF-18.01 adopted the `>=0.5,<0.6` cutover line: `forge-template` is a
+    required dependency now, and `copier` moved into the optional `legacy`
+    extra (ADR 0040 decisions 1/2).
+    """
     project = _project()
-    assert "forge-template" not in " ".join(project["dependencies"])
+    required = " ".join(project["dependencies"])
+    assert "forge-template" in required
+    assert "copier" not in required
     extras = project["optional-dependencies"]
-    assert any("forge-template" in dep for dep in extras.get("engine", []))
-    assert "legacy" not in extras
+    assert any(str(dep).startswith("copier") for dep in extras.get("legacy", []))
 
 
 def test_adr_and_contract_exist_and_name_their_review_obligations_literally() -> None:
@@ -216,18 +221,6 @@ def test_every_stage_18_child_owns_at_least_one_matrix_row() -> None:
 # --------------------------------------------------------------------------- #
 # Tripwires -- fail deliberately when the cutover lands                        #
 # --------------------------------------------------------------------------- #
-
-
-def test_tripwire_engine_stays_out_of_required_dependencies() -> None:
-    """Flips when CF-18.01 (#158) moves forge-template into
-    [project.dependencies] and copier into a `legacy` extra. Shared signal with
-    tests/test_engine_default_contract.py; kept here because the acceptance
-    matrix's "default engine generation" and "legacy Copier route" sections
-    both assume today's arrangement.
-    """
-    dependencies = _project()["dependencies"]
-    assert "forge-template" not in " ".join(dependencies)
-    assert any(str(dep).startswith("copier") for dep in dependencies)
 
 
 def test_tripwire_version_is_not_yet_the_cutover_release() -> None:

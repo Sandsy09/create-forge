@@ -5,24 +5,22 @@ overrides, diagnoses, and rejects the `forge-template` template engine.
 [ADR 0010](adr/0010-public-engine-integration-contract.md) accepted the
 public-engine target and the [integration contract](integration-contract.md)
 records its compatibility rules; [ADR 0011](adr/0011-engine-source-and-version-resolution.md)
-records the resolution decision this document keeps current. Like
-[`docs/cli-conventions.md`](cli-conventions.md), this file is expected to
-change as the engine cutover approaches — the *rules* below are the
-contract; today's mechanisms are not.
+records the resolution decision this document keeps current.
 
 ## Status
 
-The public engine is the accepted target architecture. Strict
+The public engine is the accepted target architecture, and CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)) has
+made it the *default* `new` architecture. Strict
 [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
 and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 are implemented by the
 [stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
 under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
-`forge-template` ships both Library and the
-[CLI Application archetype](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-as of its `0.3.0` release, exposed here (CF-08.02,
-[ADR 0017](adr/0017-cli-application-archetype-exposure.md)) through the
-hidden `--engine-preview` flag's `--archetype` option.
+`forge-template` ships `library`, `cli`, and `data-science` archetypes (plus
+the `github` platform and eight tooling capabilities), exposed here (CF-08.02,
+[ADR 0017](adr/0017-cli-application-archetype-exposure.md)) through `new`'s
+`--archetype` option — visible and default-path, not a hidden flag.
 
 [#9](https://github.com/Sandsy09/create-forge/issues/9) and
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md) then
@@ -35,31 +33,30 @@ declared its first real, installable, range-bounded engine dependency,
 then moved that range to `forge-template>=0.4,<0.5` — the 0.4 line whose
 lower bound `0.4.0` first ships the Data Science archetype and reusable
 capabilities. [CF-14.01 / ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
-adopts the reviewed `forge-template>=0.4.1,<0.5` release as the lower bound
-for create-forge `0.3.x`. **This is not yet the CLI cutover.** The released default `new`
-command remains a thin Copier wrapper with a bundled registry
-(`src/create_forge/templates.toml`), calling Copier directly through
-`src/create_forge/runner.py`. The engine range below is reachable only
-through `--engine-preview`; nothing about the default path, its
-`--template-url` escape hatch, or `--ref` changed. The full cutover this
-document otherwise describes — the engine as the default `new` path, with
-`--engine-source`/`--engine-ref` alongside a retained `--template-url` — is
-the subject of
-[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152); its
-selection and source-resolution UX is fixed by
-[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) and
-[`docs/engine-default-cli.md`](engine-default-cli.md), and implemented by
-[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153), none of
-which has shipped.
+adopted the reviewed `forge-template>=0.4.1,<0.5` release as the lower bound
+for create-forge `0.3.x`, still the optional `engine` extra. CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)) then
+adopted the reviewed `forge-template>=0.5,<0.6` engine-default cutover
+release as a **required** dependency: `new` with no route flag is now the
+engine path, calling `forge-template` directly through
+`src/create_forge/engine.py`; `copier` moved into the optional `legacy`
+extra, reached through `new --legacy` (thin Copier wrapper, bundled
+registry, `src/create_forge/runner.py`, unchanged). The full cutover this
+document otherwise describes — `--engine-source`/`--engine-ref` alongside a
+retained `--template-url` under `--legacy` — remains
+[CF-18.02](https://github.com/Sandsy09/create-forge/issues/159)'s, part of
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 
-`forge-template 0.4.1` is the lower bound of the current line and its current
-compatible release. It republishes the reviewed `0.4.0` production source and
-rendered bytes unchanged, so the adoption changes no protocol. `create-forge 0.2.1` adds
-`uv>=0.12,<0.13` to the same optional extra so the client can create the
-engine-generated project's lock before finalisation.
+`forge-template 0.5.0` is the lower bound of the current line and its current
+compatible release — the first to publish `metadata_version` and
+component-manifest protocol `3`. `create-forge 0.2.1` added
+`uv>=0.12,<0.13` to the same dependency set so the client can create the
+engine-generated project's lock before finalisation; it is now required
+alongside the engine rather than bundled in its extra.
 
-Adopting the 0.4 line makes the Data Science components discoverable through
-`--engine-preview`. CF-13.02
+Adopting the 0.5 line keeps the Data Science components discoverable through
+`--archetype data-science`. CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting them — capabilities, platforms, component options —
 in the canonical [component selection contract](component-selection.md);
@@ -69,26 +66,28 @@ it, and CF-13.05
 ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) proved the
 Data Science composition traverses the shared pipeline against the released
 engine. Normal
-resolution now rejects any engine below `0.4.1`, and later `0.4.x` releases
-inside the range are adopted per the canonical [engine update policy](engine-updates.md).
+resolution now rejects any engine below `0.5.0` or at/above `0.6.0`, and later
+`0.5.x` releases inside the range are adopted per the canonical
+[engine update policy](engine-updates.md).
 
 ## Normal installed resolution
 
-`create-forge[engine]` depends on the engine package the same way it depends
-on `copier`, `typer`, or `pydantic`: a bounded version range in
+`create-forge` depends on the engine package the same way it depends
+on `typer` or `pydantic`: a bounded version range in
 `pyproject.toml`, resolved by the installer at install time. There is no
 runtime fetch — the CLI never clones or downloads executable content to
-satisfy normal operation. Because it is an optional extra rather than a
-`[project.dependencies]` entry, installing plain `create-forge` (the default
-`new` path) never resolves it at all; only `pip install 'create-forge[engine]'`
-or `uv sync --all-extras` does, matching ADR 0014's guarded
-`try/except ImportError` in `cli.py`.
+satisfy normal operation. It is a required `[project.dependencies]` entry
+since CF-18.01 (ADR 0040 decision 1): a plain `pip install create-forge` /
+`uvx create-forge` resolves it, so the default `new` path always has it.
+`copier` is the one now behind an extra — `pip install 'create-forge[legacy]'`
+or `uv sync --all-extras` — for `new --legacy` and `update`'s Copier route.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Current architecture (ADR 0031) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Superseded by v0.4.x (ADR 0042) |
+| v0.4.x (required) | `forge-template>=0.5,<0.6` | `1` (supported) | Current architecture (ADR 0042, CF-18.01) |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —
@@ -133,20 +132,18 @@ an `--engine-source` project is not `create-forge update`-able, and its
 post-generation message says so.
 
 `--engine-source`/`--engine-ref` select an engine *distribution*; they are
-orthogonal to the retained `--template-url`/`--ref`, which stay scoped to the
-`--legacy` Copier route rather than being replaced (ADR 0040 supersedes ADR
-0011's "no dual direct-Copier path afterward" clause only —
-[CF-16.01 / #155](https://github.com/Sandsy09/create-forge/issues/155),
-a Stage 16 contract, not yet implemented).
+orthogonal to the retained `--template-url`/`--ref`, which CF-18.01 scoped to
+the explicit `--legacy` Copier route rather than replacing them (ADR 0040
+supersedes ADR 0011's "no dual direct-Copier path afterward" clause only).
 
-**These flags do not exist yet.** Until the cutover,
+**These flags do not exist yet.** Until
 [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) implements
-them, and the sanctioned development path is today's `--template-url`, exactly
-as [`docs/cross-repository-workflow.md`](cross-repository-workflow.md)
+them, the sanctioned development path is `--legacy`'s `--template-url`,
+exactly as [`docs/cross-repository-workflow.md`](cross-repository-workflow.md)
 describes:
 
 ```bash
-uv run create-forge new "Cross Repo Smoke" --yes \
+uv run create-forge new --legacy "Cross Repo Smoke" --yes \
   --template-url ../forge-template --ref HEAD \
   --path ../create-forge-cross-repo-smoke \
   --data github_org=test-org --data "author_name=Test User" \
@@ -175,29 +172,38 @@ major version.
 | --- | --- | --- |
 | `create_forge` | CLI version | always |
 | `python`, `platform` | interpreter version and OS | always |
-| `integration.line` | `"v0.3.x-copier"` | always — the CLI release line and default generation architecture; installing the engine extra does not change it |
-| `integration.copier` | installed Copier version | always -- Copier remains a direct dependency |
-| `integration.engine_package` | installed `forge-template` version, `null` if the `engine` extra isn't installed | `importlib.metadata`, never an import of the engine itself |
-| `integration.engine_range` | `"forge-template>=0.4.1,<0.5"` | always -- this is what this CLI release declares, independent of what's installed |
+| `integration.line` | `"v0.3.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
+| `integration.copier` | installed Copier version, `null` if the `legacy` extra isn't installed | `importlib.metadata`, never an import of Copier itself |
+| `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine fails closed at exit `1`, since it is a required dependency (ADR 0040 decision 1) |
+| `integration.engine_range` | `"forge-template>=0.5,<0.6"` | always -- this is what this CLI release declares, independent of what's installed |
 | `integration.projectspec_protocol.supported` | `"1"` | always, from `src/create_forge/compat.py` |
-| `integration.projectspec_protocol.detected` | `null` | never by `doctor` -- see below |
+| `integration.projectspec_protocol.detected` | the installed engine's advertised tuple, joined by commas | via a real `engine.get_info()` call whenever `engine_package` is not `null` -- see below |
+| `integration.component_manifest_protocol.supported` | `"1,2,3"` | always, from `src/create_forge/compat.py` |
+| `integration.component_manifest_protocol.detected` | the installed engine's advertised tuple | same negotiation as `projectspec_protocol.detected` |
+| `integration.metadata_version.supported` | `"1"` | always, from `src/create_forge/compat.py` |
+| `integration.metadata_version.detected` | the installed engine's advertised value | same negotiation |
 | `integration.template_source` | bundled registry URL | always |
 | `integration.template_ref` | `null` (doctor stays offline; it does not resolve a ref) | never |
-| `copier_cache.path` | Copier's resolved git-mirror cache directory | always, from `runner.copier_cache_location()` — Copier's documented `COPIER_CACHE_DIR`-else-platformdirs rule ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) |
-| `copier_cache.override` | `true` when `COPIER_CACHE_DIR` selected the path | always |
-| `copier_cache.exists` | whether that directory exists yet | always |
-| `copier_cache.writable` | whether create-forge could write there (or into its deepest existing ancestor) without creating or altering it | always — the one new field that can fail a check and set `ok` to `false` |
+| `copier_cache.path` | Copier's resolved git-mirror cache directory, or an informational "not applicable" row when the `legacy` extra is absent | `runner.copier_cache_location()` — Copier's documented `COPIER_CACHE_DIR`-else-platformdirs rule ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) |
+| `copier_cache.override` | `true` when `COPIER_CACHE_DIR` selected the path | when the `legacy` extra is installed |
+| `copier_cache.exists` | whether that directory exists yet | when the `legacy` extra is installed |
+| `copier_cache.writable` | whether create-forge could write there (or into its deepest existing ancestor) without creating or altering it | when the `legacy` extra is installed — the one field that can fail a check and set `ok` to `false` |
 | `uv.path` | `shutil.which("uv")` — the binary `staging.create_uv_lock` would run | always, `null` when `uv` is not on `PATH` |
 | `uv.version` | the version token parsed from `uv --version`, or `null` if it can't be trusted | always; a subprocess, never a network call |
-| `uv.package` | the `engine` extra's declared `uv` distribution version | `importlib.metadata`, `null` when the extra isn't installed — a distinct fact from `uv.path` |
+| `uv.package` | the (now required) `uv` distribution version | `importlib.metadata`, `null` only in a broken install |
 
-`doctor` performs no network calls and, deliberately, no engine import: it
-reads `engine_package`/`engine_range`/`projectspec_protocol.supported` via
-`importlib.metadata` and `src/create_forge/compat.py` alone, both engine-free
-by construction (`tests/test_engine_contract.py`'s `_SHIPPED_MODULES` guard
-covers `compat.py` for exactly this reason). `projectspec_protocol.detected`
-therefore stays `null` even with the engine installed -- populating it needs
-a real `get_engine_info()` call, which only `--engine-preview` makes.
+`doctor` performs no network calls. Engine presence and the declared range
+are read via `importlib.metadata` and `src/create_forge/compat.py` alone,
+both engine-free by construction (`tests/test_engine_contract.py`'s
+`_SHIPPED_MODULES` guard covers `compat.py` for exactly this reason). Since
+ADR 0040 decision 6 (CF-18.01), `doctor` additionally calls
+`engine.get_info()` — a real negotiation, still offline and still no
+destination write — whenever the engine package is installed, populating
+every `*.detected` field above and reporting a protocol/`metadata_version`
+mismatch as one failed check that fails `ok` (exit `1`), rather than raising
+`EngineCompatibilityError` and crashing `doctor` outright. `integration.copier`
+and the `copier_cache.*` fields become `null`/informational when the
+`legacy` extra is absent, since `copier` moved there at the same cutover.
 `integration.template_ref` stays `null` for the same "no network, no
 cutover-scoped work" reason -- that resolution belongs to `scaffold`/`update`,
 not to a health check.
@@ -207,23 +213,6 @@ It is not a health check and cannot change the exit status. The explicit value
 lives in engine-free `compat.py`; a fast regression test compares its major and
 minor components with `pyproject.toml`, so a future release-line change must
 review the identifier deliberately while patch releases leave it unchanged.
-The corrected `v0.3.x-copier` value is unreleased and will first appear in an
-installed package with the next create-forge release after `0.3.2`.
-
-At the engine-default cutover
-([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
-[`docs/engine-default-cli.md`](engine-default-cli.md)) `doctor` starts
-negotiating against the real engine: it calls `get_engine_info()` — still
-offline, still no destination write — and populates
-`projectspec_protocol.detected`, the component-manifest protocol tuple and
-`metadata_version`, reporting a mismatch as a failed check that exits `1`.
-`integration.copier` becomes `null` when the `legacy` extra is absent,
-`integration.engine_package` becomes a required field, and `integration.line`
-takes an identifier of the form `v<major>.<minor>.x-engine`. `compat.py` stays
-engine-free; the `get_engine_info()` call lives in `engine.py`. This is a
-Stage 16 contract ([CF-16.01 / #155](https://github.com/Sandsy09/create-forge/issues/155)),
-implemented by [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158),
-not yet shipped.
 
 The `copier_cache.writable` probe is non-destructive: it writes and deletes one
 uniquely named file in the cache directory, or -- when that directory does not
@@ -244,14 +233,12 @@ remediation. There is no fallback to the bundled registry or direct Copier.
 
 This failure class uses exit status **`3`**, reserved exclusively for it
 (see [`docs/cli-conventions.md`](cli-conventions.md)'s exit-status table).
-It is reachable today only via `--engine-preview` -- the default `new` path
-still cannot raise it, since it never touches the engine at all. The
-engine-default cutover contract
-([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
-widens what `3` covers -- an engine that cannot be imported at all, an
-out-of-range component-manifest protocol or `metadata_version`, and `--legacy`
-without the `legacy` extra -- keeping one status for "the required generator
-is missing or unusable" with no silent fallback.
+It is reachable on the now-default `new` path, since the engine is what it
+calls unconditionally. ADR 0040 decision 12 (CF-18.01) widened what `3`
+covers -- an engine that cannot be imported at all, an out-of-range
+component-manifest protocol or `metadata_version`, and `--legacy` without the
+`legacy` extra installed -- keeping one status for "the required generator is
+missing or unusable" with no silent fallback.
 
 `src/create_forge/engine.py` applies this ordering against the range in the
 table above: package and protocol mismatches fail before parsing, discovery,
@@ -262,8 +249,8 @@ Stage 06 development contract used before a real release existed.
 ## Executable examples
 
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py) --
-  guards that the engine dependency is declared exactly as the optional
-  `engine` extra, at the range this document's table states, and that this
+  guards that the engine dependency is declared exactly as a required
+  dependency, at the range this document's table states, and that this
   document stays linked from `CLAUDE.md`, `CONTRIBUTING.md`, and the
   integration contract.
 - [`tests/test_engine_adapter.py`](../tests/test_engine_adapter.py) --
@@ -271,12 +258,12 @@ Stage 06 development contract used before a real release existed.
   characterizes both edges of the range (below the lower bound, at the
   excluded upper bound) against the real installed engine.
 - [`tests/test_cli.py`](../tests/test_cli.py) --
-  `test_doctor_reports_versions_and_the_engine_range`,
-  `test_doctor_json_emits_the_documented_shape`, and
-  `test_doctor_json_exits_1_when_a_check_fails` characterize the diagnostics
+  `test_doctor_fails_when_the_engine_is_not_installed`,
+  `test_doctor_reports_the_installed_engine_package_when_present`, and
+  `test_doctor_json_emits_the_documented_shape` characterize the diagnostics
   contract's table and `--json` output above, including `engine_package`
-  and `projectspec_protocol.detected` staying `null` when the extra isn't
-  installed or doctor hasn't negotiated, respectively.
+  failing the check when absent and every `*.detected` field being populated
+  by a real negotiation against the installed engine.
   `test_doctor_reports_the_copier_cache_and_uv` and
   `test_doctor_fails_when_the_copier_cache_is_unwritable` cover the
   `copier_cache.*` / `uv.*` objects and the unwritable-cache check flipping

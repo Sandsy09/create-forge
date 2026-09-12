@@ -288,19 +288,24 @@ def _selection(captured: dict[str, object]) -> SelectionRequest:
     "flag",
     ["--capability", "--platform"],
 )
-def test_selection_flag_without_engine_preview_is_rejected(flag: str) -> None:
-    result = runner.invoke(app, ["new", "X", *_YES_DATA, flag, "jupyter"])
+def test_selection_flag_with_legacy_is_rejected(flag: str) -> None:
+    """ADR 0040 (CF-18.01): the five selection flags select engine
+    components -- combined with `--legacy`'s Copier path they are
+    contradictory, the mirror image of the pre-cutover
+    `requires --engine-preview` rejection.
+    """
+    result = runner.invoke(app, ["new", "--legacy", "X", *_YES_DATA, flag, "jupyter"])
 
     assert result.exit_code == 1, result.output
-    assert "require --engine-preview" in " ".join(result.output.split())
+    assert "have no effect with --legacy" in " ".join(result.output.split())
 
 
 @pytest.mark.parametrize("flag", ["--no-capabilities", "--no-platforms"])
-def test_explicit_none_flag_without_engine_preview_is_rejected(flag: str) -> None:
-    result = runner.invoke(app, ["new", "X", *_YES_DATA, flag])
+def test_explicit_none_flag_with_legacy_is_rejected(flag: str) -> None:
+    result = runner.invoke(app, ["new", "--legacy", "X", *_YES_DATA, flag])
 
     assert result.exit_code == 1, result.output
-    assert "require --engine-preview" in " ".join(result.output.split())
+    assert "have no effect with --legacy" in " ".join(result.output.split())
 
 
 def test_contradictory_capability_flags_are_rejected(
@@ -314,7 +319,6 @@ def test_contradictory_capability_flags_are_rejected(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
             "--capability",
@@ -339,7 +343,6 @@ def test_unknown_capability_id_is_rejected_before_any_effect(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
             "--capability",
@@ -364,7 +367,6 @@ def test_wrong_kind_id_for_a_flag_is_rejected(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
             "--capability",
@@ -393,7 +395,6 @@ def test_yes_without_a_flag_leaves_the_kind_absent(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
         ],
@@ -417,7 +418,6 @@ def test_no_capabilities_flag_records_an_explicit_empty_choice(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
             "--no-capabilities",
@@ -440,7 +440,6 @@ def test_a_supplied_capability_is_explicit_and_deduplicated(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
             "--capability",
@@ -477,7 +476,6 @@ def test_zero_platform_descriptors_are_never_prompted(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
             "--capability",
@@ -530,7 +528,6 @@ def test_a_kind_with_only_required_descriptors_is_not_prompted(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "arch-x",
         ],
@@ -584,14 +581,16 @@ def test_all_selection_precedes_all_answer_collection(
             "new",
             "--path",
             str(tmp_path / "p"),
-            "--engine-preview",
             "--archetype",
             "data-science",
         ],
     )
 
+    # The `github` platform shipped at FT-17.02 / ADR 0063, so both
+    # multi-selects are offered before any project answer is collected.
     assert order[0] == "Which capabilities?"
-    assert order[1:4] == ["Project name", "Short description", "License"]
+    assert order[1] == "Which platforms?"
+    assert order[2:5] == ["Project name", "Short description", "License"]
     assert "selection" in captured_selection
 
 
@@ -606,7 +605,6 @@ def test_missing_hard_requirement_under_yes_prints_the_flag_hint(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
         ],
@@ -645,7 +643,6 @@ def test_engine_discovery_runs_exactly_once_per_invocation(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
             "--capability",
@@ -662,10 +659,10 @@ def test_every_discovered_archetype_generates_with_its_required_flags(
 ) -> None:
     """ADR 0027 compatibility clause, generalised by CF-13.05: every
     discovered archetype still generates from
-    `--engine-preview --archetype <id> --yes` once its own discovered
-    required capabilities are supplied -- no capability flag for `library`
-    and `cli`, `--capability jupyter` for Data Science, all derived from the
-    catalogue rather than named here.
+    `--archetype <id> --yes` (the default engine path since ADR 0040 /
+    CF-18.01) once its own discovered required capabilities are supplied --
+    no capability flag for `library` and `cli`, `--capability jupyter` for
+    Data Science, all derived from the catalogue rather than named here.
     """
     monkeypatch.setattr(questionary, "checkbox", lambda *_a, **_kw: _Reply([]))
 
@@ -688,7 +685,6 @@ def test_every_discovered_archetype_generates_with_its_required_flags(
                 "--path",
                 str(tmp_path / descriptor.id),
                 *_YES_DATA,
-                "--engine-preview",
                 "--archetype",
                 descriptor.id,
                 *capability_flags,
@@ -702,11 +698,13 @@ def test_every_discovered_archetype_generates_with_its_required_flags(
 # --------------------------------------------------------------------------
 
 
-def test_component_option_without_engine_preview_is_rejected() -> None:
-    result = runner.invoke(app, ["new", "X", *_YES_DATA, "--component-option", "a.b=c"])
+def test_component_option_with_legacy_is_rejected() -> None:
+    result = runner.invoke(
+        app, ["new", "--legacy", "X", *_YES_DATA, "--component-option", "a.b=c"]
+    )
 
     assert result.exit_code == 1, result.output
-    assert "require --engine-preview" in " ".join(result.output.split())
+    assert "have no effect with --legacy" in " ".join(result.output.split())
 
 
 @pytest.mark.parametrize(
@@ -723,7 +721,6 @@ def test_malformed_component_option_is_a_usage_error(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "library",
             "--component-option",
@@ -747,7 +744,6 @@ def test_component_option_value_reaches_projectspec_under_the_declaring_id(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "library",
             "--component-option",
@@ -771,7 +767,6 @@ def test_repeated_component_option_takes_the_last_value(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "library",
             "--component-option",
@@ -797,7 +792,6 @@ def test_unknown_component_option_owner_is_rejected_before_any_effect(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
             "--component-option",
@@ -822,7 +816,6 @@ def test_component_option_for_an_unselected_owner_is_rejected(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "cli",
             "--component-option",
@@ -847,7 +840,6 @@ def test_undeclared_option_name_reaches_the_engine(tmp_path: Path) -> None:
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "library",
             "--component-option",
@@ -874,7 +866,6 @@ def test_a_selected_optionless_component_serialises_no_namespace(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "data-science",
             "--capability",
@@ -907,7 +898,6 @@ def test_colliding_option_names_stay_unambiguous(
             "--path",
             str(tmp_path / "p"),
             *_YES_DATA,
-            "--engine-preview",
             "--archetype",
             "arch-x",
             "--capability",
@@ -957,18 +947,20 @@ def test_component_options_are_collected_after_all_other_prompts(
             "new",
             "--path",
             str(tmp_path / "p"),
-            "--engine-preview",
             "--archetype",
             "library",
         ],
     )
 
-    assert order[:4] == [
+    # The `github` platform shipped at FT-17.02 / ADR 0063, so both
+    # multi-selects are offered before any project answer is collected.
+    assert order[:5] == [
         "Which capabilities?",
+        "Which platforms?",
         "Project name",
         "Short description",
         "License",
     ]
     # `library`'s own two declared options are prompted last, after everything.
-    assert len(order) == 6
+    assert len(order) == 7
     assert "component_options" in captured_selection

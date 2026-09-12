@@ -8,14 +8,21 @@ selection / option / destination / lock / cleanup failure matrix -- all through
 the same freshly built `create_forge-0.3.0` wheel, not the editable
 development console the `tests/test_e2e_*` suites otherwise resolve.
 
-Three environments are built from the one `candidate_wheel`:
+Three environments are built from the one `candidate_wheel`. Since ADR 0040
+(CF-18.01) made `forge-template` a required dependency, a plain wheel install
+always resolves a compatible engine now -- `engineless_client` and
+`out_of_range_client` each force a *broken* state afterward rather than
+reaching one through a normal install:
 
-* `installed_client` (conftest) -- `wheel[engine]` + `forge-template 0.4.1`;
-  the engine-path regressions and the failure matrix.
-* `engineless_client` -- `wheel` alone; the default Copier path and the
-  commands that must work with no engine installed (CLAUDE.md invariant 5).
-* `out_of_range_client` -- `wheel` + a real `forge-template 0.3.2` from PyPI,
-  genuinely below `SUPPORTED_ENGINE_RANGE`; the exit-3 boundary.
+* `installed_client` (conftest) -- `wheel` + `forge-template 0.5.0` pinned
+  alongside it; the engine-path (now default) regressions and the failure
+  matrix.
+* `engineless_client` -- `wheel`, then `forge-template` uninstalled; the
+  `--legacy` Copier path and the commands that must work with no engine
+  installed (CLAUDE.md invariant 5).
+* `out_of_range_client` -- `wheel`, then a real `forge-template 0.3.2` from
+  PyPI forced in, genuinely below `SUPPORTED_ENGINE_RANGE`; the exit-3
+  boundary.
 
 See ADR 0033 and `docs/rollout-regression-validation.md`. The archetype and
 component ids here are fixture data feeding the real installed engine, never
@@ -95,7 +102,7 @@ _COPIER_ANSWERS = {
 }
 _COPIER_PACKAGE_NAME = "rollout_copier_smoke"
 
-_OUT_OF_RANGE_ENGINE = "forge-template==0.3.2"
+_OUT_OF_RANGE_ENGINE = "0.3.2"
 _FORGE_DISTRIBUTIONS = FORGE_DISTRIBUTIONS
 
 
@@ -108,10 +115,14 @@ _FORGE_DISTRIBUTIONS = FORGE_DISTRIBUTIONS
 def engineless_client(
     candidate_wheel: Path, e2e_child_env: dict[str, str]
 ) -> Iterator[InstalledClient]:
-    """The candidate wheel installed with no `engine` extra -- the shape a
-    plain `pip install create-forge` produces.
+    """The candidate wheel installed normally (with the `legacy` extra, so
+    `--legacy` still works here), then with `forge-template` removed -- a
+    broken environment, since ADR 0040 (CF-18.01) made the engine a required
+    dependency and a plain `pip install create-forge` now always resolves it.
     """
-    with build_client(candidate_wheel, e2e_child_env) as client:
+    with build_client(
+        candidate_wheel, e2e_child_env, extras="[legacy]", omit="forge-template"
+    ) as client:
         yield client
 
 
@@ -120,10 +131,12 @@ def out_of_range_client(
     candidate_wheel: Path, e2e_child_env: dict[str, str]
 ) -> Iterator[InstalledClient]:
     """The candidate wheel with a real `forge-template` release below the
-    supported range resolved alongside it.
+    supported range forced in afterward -- passing it to the main install
+    would conflict with the wheel's own declared `>=0.5,<0.6` requirement and
+    fail the resolver outright, so this is a second, targeted reinstall.
     """
     with build_client(
-        candidate_wheel, e2e_child_env, engine=_OUT_OF_RANGE_ENGINE
+        candidate_wheel, e2e_child_env, force_version=_OUT_OF_RANGE_ENGINE
     ) as client:
         yield client
 
@@ -161,7 +174,6 @@ def _engine_new_args(archetype: str, dest: Path) -> list[str]:
     args = [
         "new",
         answers["project_name"],
-        "--engine-preview",
         "--archetype",
         archetype,
         "--yes",
@@ -331,8 +343,8 @@ def engineless_copier_project(
     del _forge_template_reachable
     dest = engineless_client.root / "copier-project" / "rollout-copier-smoke"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    args = [str(engineless_client.console), "new", _COPIER_ANSWERS["project_name"]]
-    args += ["--yes", "--path", str(dest)]
+    args = [str(engineless_client.console), "new", "--legacy"]
+    args += [_COPIER_ANSWERS["project_name"], "--yes", "--path", str(dest)]
     for key, value in _COPIER_ANSWERS.items():
         if key != "project_name":
             args += ["--data", f"{key}={value}"]
@@ -387,8 +399,9 @@ def test_engineless_copier_generation_rejects_a_non_empty_destination(
     dest.mkdir()
     (dest / "keep.txt").write_text("hi", encoding="utf-8")
 
-    args = [str(engineless_client.console), "new", "Blocked", "--yes", "--path"]
-    args += [str(dest), "--data", "project_description=x", "--data", "github_org=o"]
+    args = [str(engineless_client.console), "new", "--legacy", "Blocked", "--yes"]
+    args += ["--path", str(dest)]
+    args += ["--data", "project_description=x", "--data", "github_org=o"]
     result = run(args, tmp_path, env=engineless_client.env)
 
     assert result.returncode == 1, result.stdout + result.stderr
@@ -420,11 +433,11 @@ def test_engineless_list_shows_the_bundled_registry(
 ) -> None:
     """`templates.toml` really shipped in the wheel (CLAUDE.md invariant 5)."""
     result = run(
-        [str(engineless_client.console), "list"],
+        [str(engineless_client.console), "list", "--legacy"],
         engineless_client.root,
         env=engineless_client.env,
     )
-    assert_success(result, "engine-less list")
+    assert_success(result, "engine-less list --legacy")
     # The bundled registry's default template really loaded from the wheel.
     assert "(default)" in result.stdout
 
@@ -432,32 +445,40 @@ def test_engineless_list_shows_the_bundled_registry(
 def test_engineless_doctor_json_reports_the_absent_engine(
     engineless_client: InstalledClient,
 ) -> None:
+    """ADR 0040 decision 1 (CF-18.01): the engine is required now, so its
+    absence is a genuinely broken environment -- a failing, non-informational
+    check, unlike the pre-cutover optional extra's informational row.
+    """
     result = run(
         [str(engineless_client.console), "doctor", "--json"],
         engineless_client.root,
         env=engineless_client.env,
     )
-    # doctor's own git / uv / identity rows describe the host, not the
-    # candidate, so its overall status is not asserted here.
     payload = json.loads(result.stdout)
     integration = payload["integration"]
     assert integration["engine_package"] is None
     assert integration["engine_range"] == f"forge-template{SUPPORTED_ENGINE_RANGE}"
     by_name = {check["name"]: check for check in payload["checks"]}
+    assert by_name["engine"]["ok"] is False
     assert by_name["registry"]["ok"] is True
     assert by_name["config"]["ok"] is True
+    assert payload["ok"] is False
 
 
-def test_engineless_engine_preview_is_rejected_with_guidance(
+def test_engineless_new_fails_closed_at_exit_3(
     engineless_client: InstalledClient, tmp_path: Path
 ) -> None:
+    """ADR 0040 decision 12 (CF-18.01): a broken environment where the
+    required engine cannot be imported fails closed at exit `3`, not a raw
+    traceback or a silent fallback -- reachable on the now-default `new`
+    path, no flag required.
+    """
     dest = tmp_path / "proj"
     result = run(
         [
             str(engineless_client.console),
             "new",
             "Engine Absent",
-            "--engine-preview",
             "--archetype",
             "library",
             "--yes",
@@ -467,8 +488,8 @@ def test_engineless_engine_preview_is_rejected_with_guidance(
         tmp_path,
         env=engineless_client.env,
     )
-    assert result.returncode == 1, result.stdout + result.stderr
-    assert "engine extra isn't installed" in " ".join(
+    assert result.returncode == 3, result.stdout + result.stderr
+    assert "forge-template is not installed" in " ".join(
         (result.stdout + result.stderr).split()
     )
     assert not dest.exists()
@@ -489,7 +510,6 @@ def test_out_of_range_engine_is_rejected_before_any_write(
             str(out_of_range_client.console),
             "new",
             "Out Of Range",
-            "--engine-preview",
             "--archetype",
             "library",
             "--yes",
@@ -542,8 +562,8 @@ class FailureCase:
     fragment: str
 
 
-_DS = "--engine-preview --archetype data-science"
-_LIB = "--engine-preview --archetype library"
+_DS = "--archetype data-science"
+_LIB = "--archetype library"
 # The minimal answer set an engine-path ProjectSpec needs when a case gets
 # far enough to be built rather than rejected at the CLI surface.
 _DATA = "--data license=mit --data project_description=x"
@@ -551,19 +571,19 @@ _DATA = "--data license=mit --data project_description=x"
 _FAILURE_CASES = (
     FailureCase(
         "unknown-archetype",
-        "new X --engine-preview --archetype nope --yes",
+        "new X --archetype nope --yes",
         1,
         "Unknown archetype 'nope'",
     ),
     FailureCase(
-        "archetype-without-engine-preview",
-        "new X --archetype library --yes",
+        "archetype-with-legacy",
+        "new X --legacy --archetype library --yes",
         1,
-        "--archetype requires --engine-preview",
+        "--archetype and --legacy are contradictory",
     ),
     FailureCase(
-        "engine-preview-yes-without-archetype",
-        "new X --engine-preview --yes",
+        "yes-without-archetype",
+        "new X --yes",
         1,
         "requires --archetype",
     ),
@@ -586,10 +606,10 @@ _FAILURE_CASES = (
         "contradictory",
     ),
     FailureCase(
-        "capability-without-engine-preview",
-        "new X --capability jupyter --yes",
+        "capability-with-legacy",
+        "new X --legacy --capability jupyter --yes",
         1,
-        "require --engine-preview",
+        "have no effect with --legacy",
     ),
     FailureCase(
         "missing-hard-requirement",
@@ -622,10 +642,10 @@ _FAILURE_CASES = (
         "not_a_real_option",
     ),
     FailureCase(
-        "engine-preview-with-copier-flag",
+        "engine-path-with-copier-flag",
         f"new X {_LIB} --template python-lib --yes",
         1,
-        "require the Copier path",
+        "require --legacy",
     ),
     FailureCase("malformed-data", f"new X {_LIB} --data oops --yes", 2, "key=value"),
     FailureCase(
@@ -654,9 +674,9 @@ def test_installed_failure_case_is_rejected_cleanly(
     assert _staging_siblings(dest) == []
 
 
-@pytest.mark.parametrize("engine_preview", [True, False])
+@pytest.mark.parametrize("route", ["engine", "legacy"])
 def test_installed_non_empty_destination_is_preserved(
-    installed_client: InstalledClient, tmp_path: Path, *, engine_preview: bool
+    installed_client: InstalledClient, tmp_path: Path, *, route: str
 ) -> None:
     dest = tmp_path / "proj"
     dest.mkdir()
@@ -671,8 +691,7 @@ def test_installed_non_empty_destination_is_preserved(
         str(dest),
     ]
     args += ["--data", "project_description=x", "--data", "github_org=o"]
-    if engine_preview:
-        args += ["--engine-preview", "--archetype", "library"]
+    args += ["--archetype", "library"] if route == "engine" else ["--legacy"]
     result = run(args, tmp_path, env=installed_client.env)
 
     assert result.returncode == 1, result.stdout + result.stderr

@@ -154,6 +154,7 @@ def test_documented_local_source_through_console(
         [
             create_forge_command,
             "new",
+            "--legacy",
             "Local Template Trial",
             "--yes",
             "--template-url",

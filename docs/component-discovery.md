@@ -10,28 +10,27 @@ this document defines only the client adapter and its compatibility boundary.
 
 `src/create_forge/engine.py` exposes a tested `discover()` adapter, called
 by the shared pipeline (`src/create_forge/pipeline.py`) as of CF-07.01 --
-reachable today only via the hidden `new --engine-preview` flag
-([ADR 0014](adr/0014-lazy-engine-reachability.md)), which CF-07.04
-([ADR 0015](adr/0015-staged-filesystem-generation.md)) completed with real
-filesystem staging and finalisation -- see the canonical
-[filesystem generation contract](filesystem-generation.md). The default `new`
-path continues to use the bundled registry and direct-Copier integration
-unchanged; the cutover away from it is filed as
-[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
-[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153) — its
-selection and source-resolution UX fixed by
-[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) — and
-no implementing release has shipped, now that
-[#9](https://github.com/Sandsy09/create-forge/issues/9) has resolved the
-narrower question of an installable engine range.
+reachable from `new`'s default engine path since CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)),
+which superseded the hidden `new --engine-preview` flag
+([ADR 0014](adr/0014-lazy-engine-reachability.md)) it was first reachable
+through, completed by CF-07.04
+([ADR 0015](adr/0015-staged-filesystem-generation.md)) with real filesystem
+staging and finalisation -- see the canonical
+[filesystem generation contract](filesystem-generation.md). `--legacy` reaches
+the bundled registry and direct-Copier integration this path replaced as the
+default, unchanged. `--engine-source`/`--engine-ref`, the engine `new`
+Git/hook lifecycle, and engine-native `update` remain open, filed as
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 
-The `forge-template` dependency -- the optional `engine` extra since #9
-([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
-is range-bound to `>=0.4.1,<0.5`
-([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)). That
-production catalogue ships five descriptors, including `library` and the
-optionless `cli` archetype; the 0.4 line also adds capability-kind
-descriptors and a catalogue relationship, which discovery returns unchanged.
+The `forge-template` dependency -- required since CF-18.01, previously the
+optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
+[ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) -- is
+range-bound to `>=0.5,<0.6`
+([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). That
+production catalogue ships fourteen descriptors, including `library`, the
+optionless `cli` archetype, and `data-science`, plus the `github` platform
+and eight tooling capabilities, which discovery returns unchanged.
 `pipeline.discover_catalogue()` wraps one `engine.discover()` call in a frozen
 `Catalogue` with kind-grouped access (`archetypes`, `of_kind`, `get`,
 `kind_of`, `required_ids`), so `cli.py` selects every component kind from a
@@ -157,17 +156,19 @@ engine internals to obtain them.
   dependency -- `forge-template>=0.3.1,<0.4` as the optional `engine`
   extra -- so this adapter now checks a real installable range rather than
   an exact development version. The cutover that replaces the default Copier
-  registry seam and `--engine-preview` with the engine as the default path is
+  registry seam and `--engine-preview` with the engine as the default path was
   filed as [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
   [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
   ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md));
-  no implementing release has shipped.
+  CF-18.01 implemented it on `main` (see the intro above) -- no tagged
+  release naming it has shipped yet.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
   reviewed both archetypes for parity and confirmed discovery stays fully
   engine-owned -- descriptors pass through this adapter unchanged, and
-  `pipeline._resolved_component_options` now gates its one derivation on a
-  discovered descriptor's declared options rather than a hardcoded archetype
-  id.
+  `pipeline._resolved_component_options` (retired by CF-18.01 when the legacy
+  `build_backend`/`versioning` shim it fed was removed; `component_options`
+  passes straight through now) gated its one derivation on a discovered
+  descriptor's declared options rather than a hardcoded archetype id.
 - **CF-13.01** ([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md))
   moved the range to `forge-template>=0.4,<0.5`, so `engine.discover()`
   returns the 0.4 line's five descriptors; the adapter's pass-through and

@@ -45,28 +45,49 @@ to `forge-template>=0.4,<0.5`, the 0.4 line whose lower bound `0.4.0` first
 ships the Data Science archetype and reusable capabilities. CF-14.01
 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 then adopted the reviewed `forge-template>=0.4.1,<0.5` release as the minimum
-for create-forge `0.3.x`. It is declared as
-the optional `engine` extra (`create-forge[engine]`) rather than a
-`[project.dependencies]` entry or a development-only pin. ProjectSpec
+for create-forge `0.3.x`, declared as the optional `engine` extra
+(`create-forge[engine]`). CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)) then
+adopted the reviewed `forge-template>=0.5,<0.6` engine-default cutover
+release: the range moved into `[project.dependencies]`, making the engine
+the default `new` architecture rather than a hidden development flag;
+`copier` moved into the optional `legacy` extra instead. ProjectSpec
 construction, component-discovery, validation, and rendering adapters are
-tested against that real, installed range, and are reachable — behind the
-hidden `new --engine-preview` flag, with a discovery-driven `--archetype`
-selection — for the production archetypes. **This is not the CLI cutover.**
-The released default `new` command remains a thin Copier wrapper with a
-bundled registry, and its current security and update invariants remain
-authoritative until the cutover replaces it. That cutover is now filed as
+tested against that real, installed range, and are reachable by default,
+with a discovery-driven `--archetype` selection, for the production
+archetypes — `--legacy` reaches the prior Copier-backed path. **The
+integrated cross-repository cutover validation and the client release
+itself remain open** (CF-18.02 through CF-18.07).
+The **released** default `new` command (`create-forge 0.3.2` on PyPI) remains
+a thin Copier wrapper with a bundled registry, and its current security and
+update invariants remain authoritative for that release until the cutover
+ships. That cutover is filed as
 [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) and
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
 selection and source-resolution UX is fixed by
 [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) and the
-canonical [engine-default CLI contract](engine-default-cli.md), and no
-implementing release has shipped.
+canonical [engine-default CLI contract](engine-default-cli.md). CF-18.01 has
+implemented the default-path flip on `main` (see the paragraph above and the
+table below) — no tagged release naming it has shipped yet; that is
+CF-18.07's job.
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
-| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Current architecture (ADR 0031) |
+| v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Superseded by v0.4.x (ADR 0042) |
+| v0.4.x | `forge-template>=0.5,<0.6` | 1 (supported) | Current architecture (ADR 0042, CF-18.01) |
+
+CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
+`engine` extra into `[project.dependencies]`, making the engine the default
+`new` architecture; `copier` moved into the optional `legacy` extra. This is
+the engine-default cutover's client-side adoption step, not the full cutover
+-- `--engine-source`/`--engine-ref` (CF-18.02), the engine `new` Git/hook
+lifecycle (CF-18.03), engine-native `update` (CF-18.04), and the `0.4.0`
+release itself (CF-18.07) remain open. See
+[docs/engine-cutover-acceptance.md](https://github.com/Sandsy09/forge-template/blob/main/docs/engine-cutover-acceptance.md)
+in `forge-template` for the reviewed provider release this line pairs with.
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI
@@ -117,14 +138,17 @@ the [filesystem generation contract](filesystem-generation.md) under
 
 Protocol 1 is assigned by
 [forge-template ADR 0023](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0023-projectspec-protocol-v1.md).
-It is the protocol every released `create-forge` line supports through the
-`engine` extra — unchanged across the `0.3.x` and `0.4.x` engine lines.
+It is the protocol every `create-forge` line supports — unchanged across the
+`0.2.x` through `0.4.x` engine lines, whether resolved through the `0.3.x`
+line's optional `engine` extra or the `0.4.x` line's required dependency.
 
 [Forge-template ADR 0024](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0024-component-manifest-protocol-v1.md)
 assigns component manifest protocol `1`; forge-template ADR 0031 later added
-protocol `2` for the production manifests this range consumes. Component
-discovery is available behind `--engine-preview`, not yet from the default
-`new` path.
+protocol `2` for the production manifests the `0.3.x` range consumes, and
+FT-17.01 added protocol `3` for the `0.4.x` range's rename/regeneration
+records. Component discovery is available by default on `main` since CF-18.01
+(`--legacy` reaches the unchanged direct-Copier registry instead); the
+released `0.3.x` line still gates it behind `--engine-preview`.
 
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), and the
@@ -136,8 +160,9 @@ committed pin.
 [ADR 0013](adr/0013-projectspec-construction-boundary.md) added the
 ProjectSpec-building boundary (`src/create_forge/spec.py` and
 `src/create_forge/engine.py`) ahead of this row being filled in; ADR 0018
-fills it. `create-forge new` (the default path) still does not call it; see
-the canonical [ProjectSpec construction contract](project-spec-construction.md).
+fills it. `create-forge new` (the default path) calls it unconditionally
+since CF-18.01; see the canonical
+[ProjectSpec construction contract](project-spec-construction.md).
 
 The canonical [component discovery contract](component-discovery.md) adds a
 second operation to that same boundary. It negotiates both the ProjectSpec
@@ -159,8 +184,8 @@ validation, component manifests, discovery and compatibility, composition,
 rendering, Copier integration, and generated content. The canonical
 [filesystem generation contract](filesystem-generation.md) records the
 client-side staging, finalisation, and cleanup rules that safe filesystem
-orchestration implies, behind the same hidden `--engine-preview` flag as the
-rest of this boundary; the canonical
+orchestration implies, on the same default engine path as the rest of this
+boundary since CF-18.01; the canonical
 [engine project lifecycle contract](engine-project-lifecycle.md) (CF-16.02,
 [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md)) records
 the command-execution half the cutover adds — `git init` and the initial

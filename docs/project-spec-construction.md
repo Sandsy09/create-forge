@@ -12,17 +12,17 @@ contract — today's mechanisms will change as the engine cutover approaches.
 
 ## Status
 
-The construction boundary is reachable from a real command, but only behind
-a hidden, opt-in flag: `create-forge new --engine-preview`. Without that
-flag, `new` keeps its default direct-Copier path completely unchanged. [ADR
-0014](adr/0014-lazy-engine-reachability.md) records why a hidden flag with a
-lazy import, rather than a default-path cutover, is what CF-07.01 shipped —
-`forge-template` is the optional `engine` extra (ADR 0018), not installed by
-a plain `pip install create-forge`, so `cli.py` cannot import the engine
-unconditionally without breaking every real `uvx create-forge` install. That
-reasoning is unaffected by the extra now having a real released range rather
-than a development-only pin: it is still optional, still absent by default.
-CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
+The construction boundary is reachable from `new`'s default engine path since
+CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)):
+`forge-template` is a required dependency now, so `cli.py` imports the engine
+unconditionally on that route (still lazily, guarding only against a broken
+install, not an optional extra). Before that cutover, CF-07.01 shipped this
+boundary behind a hidden, opt-in flag, `create-forge new --engine-preview`
+— [ADR 0014](adr/0014-lazy-engine-reachability.md) records why a hidden flag
+with a lazy import, rather than a default-path cutover, was the right call
+while `forge-template` was still the optional `engine` extra (ADR 0018); that
+flag is now removed, with `--legacy` reaching the direct-Copier path it left
+unchanged instead. CF-07.04 ([ADR 0015](adr/0015-staged-filesystem-generation.md))
 completed the flag: it now stages a successful render adjacent to the
 computed destination and finalises it by atomic rename, exactly like the
 Copier path, through `src/create_forge/pipeline.py`'s
@@ -94,54 +94,36 @@ boundary, not a gap, recorded in full by the canonical
 | `author_name`, `author_email` | `project.authors` | Zero or one author. An email without a name is dropped: `Author` requires a name, so a lone email cannot form a valid entry. |
 | `python_min_version` | `python.minimum` | Not currently prompted by `templates.toml`; see "Unmapped answers" below. Falls back to `spec.DEFAULT_PYTHON_MINIMUM` (`"3.11"`, mirroring `copier.yml`'s own default) when absent (CF-08.02). |
 | `python_version` | `python.development` | Same, falling back to `spec.DEFAULT_PYTHON_DEVELOPMENT` (`"3.13"`). Each bound resolves independently — `python` is a required ProjectSpec field, so it is always present in the payload, never omitted. |
-| *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; `--engine-preview` drives archetype selection from discovery today, via a hidden `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). The `>=0.4,<0.5` line (ADR 0026) ships two capability descriptors and zero platform descriptors; CF-13.03 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) added the `--capability`/`--no-capabilities`/`--platform`/`--no-platforms` flags and interactive multi-selects, resolved through `pipeline.Catalogue`, per the canonical [component selection contract](component-selection.md). `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
-| *caller-supplied, for every selected component* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) `--engine-preview` prompts directly for declared `ComponentDescriptor.options`; CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)) does so for *every* selected component (not just the archetype), owner-namespaced, via `prompts.resolve_component_options` over `pipeline.Catalogue.selected()`, plus the owner-qualified `--component-option ID.OPTION=VALUE` flag and `prompts.coerce_option_value` typing. A component whose namespace stays empty is omitted. `pipeline._resolved_component_options` then fills a *declared archetype option the caller left unset* from the legacy `build_backend`/`versioning` `--data` answers via `spec.legacy_library_answers` and `engine.map_legacy_library_options` (CF-08.02) — per option name (ADR 0029), and only when the selected archetype's own descriptor declares that name (CF-08.03, [ADR 0019](adr/0019-cli-archetype-parity-review.md)) — see "Unmapped answers" below. |
+| *discovered, then user- or caller-selected, via* `SelectionRequest` | `components.archetype`, `.capabilities`, `.platforms` | `create-forge` mints no component identifiers of its own (ADR 0013). The [component discovery adapter](component-discovery.md) supplies engine-owned descriptors; the default engine `new` path drives archetype selection from discovery, via a visible `--archetype` option or an interactive prompt over `pipeline.discover_archetypes()` (CF-08.02, [ADR 0017](adr/0017-cli-application-archetype-exposure.md)). The `>=0.5,<0.6` line (ADR 0042) ships nine capability descriptors and one platform descriptor (`github`, FT-17.02); CF-13.03 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) added the `--capability`/`--no-capabilities`/`--platform`/`--no-platforms` flags and interactive multi-selects, resolved through `pipeline.Catalogue`, per the canonical [component selection contract](component-selection.md). `spec.SelectionRequest` (CF-09.01, [ADR 0022](adr/0022-downstream-organisation-policy-hook.md)) additionally carries whether each kind was an explicit choice, for a policy-aware caller; that fact never reaches the wire payload itself. |
+| *caller-supplied, for every selected component* | `component_options` | Since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) the default engine path prompts directly for declared `ComponentDescriptor.options`; CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)) does so for *every* selected component (not just the archetype), owner-namespaced, via `prompts.resolve_component_options` over `pipeline.Catalogue.selected()`, plus the owner-qualified `--component-option ID.OPTION=VALUE` flag and `prompts.coerce_option_value` typing. A component whose namespace stays empty is omitted, and `component_options` the caller supplies passes straight through unchanged — see "Unmapped answers" below for the legacy fallback this retires. |
 | *caller-supplied* `SelectionProvenance` | `provenance` | Left empty by `cli.py` today, since it resolves no policy. A policy-aware client passes a `SelectionProvenance` built after resolving the canonical organisation-policy protocol; ProjectSpec never carries the policy document itself — see the canonical [downstream policy-consumption contract](organisation-policy-consumption.md). |
 
 ## Unmapped answers
 
 `templates.toml` collects several answers with no ProjectSpec home:
-`github_org`, `type_checking`, `use_docs`, `codeowners_team` remain
-genuinely unmapped today — no component manifest declares them as options
-yet, and since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)) the
-engine path does not even read them from a registry; a `--data` value for one
-of them is simply preset data with no declared option name to match, and
-flows through unused. `build_backend`/`versioning` are the one pair with a
-real mapping, and CF-08.02 closes that gap on the engine path — reachable
-today only as a `--data`-only fallback (see "Field mapping" above), since the
-engine path prompts `library`'s `packaging_mode`/`initial_version` options
-directly. The canonical
-[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-fixes the packaging mapping, and `forge-template`'s public
-`map_legacy_library_answers()` facade implements it:
+`github_org`, `type_checking`, `use_docs`, `codeowners_team`, `build_backend`,
+`versioning` remain genuinely unmapped — no component manifest declares them
+as options, and since #91 ([ADR 0025](adr/0025-engine-native-prompt-flow.md))
+the engine path does not read them from a registry at all; a `--data` value
+for one of them is simply preset data with no declared option name to match,
+and flows through unused. `library.packaging_mode`/`initial_version` are
+prompted directly from `library`'s own descriptor on the engine path instead
+(see "Field mapping" above), and set non-interactively only through
+`--component-option library.packaging_mode=<value>`, exactly like any other
+component option.
 
-- `build_backend=uv_build` becomes
-  `component_options.library.packaging_mode=uv-build-static`;
-- `build_backend=hatchling` with absent or static versioning becomes
-  `hatchling-static`; and
-- `build_backend=hatchling` with VCS versioning becomes `hatchling-vcs`.
-
-`spec.legacy_library_answers()` resolves the same `versioning_resolved`
-value `copier.yml` itself computes (`static` when `build_backend ==
-"uv_build"`, else `versioning`, defaulting to `static`), and
-`engine.map_legacy_library_options()` is a thin, compatibility-checked
-wrapper over the facade. `pipeline._resolved_component_options` calls both,
-but only for a *declared archetype option the caller left unset* — per option
-name since CF-13.04 ([ADR 0029](adr/0029-per-component-option-collection.md)),
-so a selected capability contributing its own `component_options` namespace no
-longer defeats the archetype's `--data build_backend=…` fallback — and only
-when the selected archetype's own discovered `ComponentDescriptor.options`
-declares `packaging_mode`. `library`'s manifest does, so it applies there;
-`cli` declares no options at all, so the derivation is skipped before
-`map_legacy_library_options` is even called. CF-08.03's archetype-parity
-review ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) generalised this
-from an earlier `archetype != "library"` check to this descriptor-gated form,
-so no archetype id is hardcoded here or anywhere else in `src/create_forge/`
-— a future archetype that also declares `packaging_mode` (or `library` being
-renamed) needs no change to this function, only to the engine's own
-manifest. The remaining unmapped answers retain the owner assigned by their
-eventual component, such as a GitHub platform or optional capability, and
-stay unmapped until that component exists.
+ADR 0040 decision 10 (CF-18.01) retired the legacy fallback this section used
+to describe: `pipeline.build_generation_request` no longer derives
+`packaging_mode` from `build_backend`/`versioning` `--data` answers via
+`spec.legacy_library_answers`/`engine.map_legacy_library_options` (CF-08.02,
+generalised by CF-08.03's archetype-parity review,
+[ADR 0019](adr/0019-cli-archetype-parity-review.md), to a descriptor-gated
+form rather than a hardcoded `archetype == "library"` check). Both functions
+are removed; `forge_template.map_legacy_library_answers` remains part of the
+engine's public facade for any caller that still wants it, but this CLI no
+longer calls it. The remaining unmapped answers retain the owner assigned by
+their eventual component, such as an optional capability, and stay unmapped
+until that component exists.
 
 The accepted
 [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
@@ -227,17 +209,19 @@ everything else there.
 
 Before that protocol comparison, `engine._require_supported_package` checks
 the installed package version against `compat.SUPPORTED_ENGINE_RANGE`
-(`forge-template>=0.4.1,<0.5` as of
-[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md);
-`>=0.4,<0.5` under ADR 0026 and `>=0.3.1,<0.4`
-under ADR 0018 before it) with `packaging.specifiers.SpecifierSet` — a real,
-released, bounded range, not the exact-equality development pin `0.3.0` that
-preceded both; see the
+(`forge-template>=0.5,<0.6` as of
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)
+(CF-18.01); `>=0.4.1,<0.5` under ADR 0031, `>=0.4,<0.5` under ADR 0026, and
+`>=0.3.1,<0.4` under ADR 0018 before it) with `packaging.specifiers.SpecifierSet`
+— a real, released, bounded range, not the exact-equality development pin
+`0.3.0` that preceded all of them; see the
 [cross-repository engine contract tests](engine-contract-tests.md).
 
-This is reachable from a real command as of CF-07.01, but only behind
-`new --engine-preview` — see [ADR 0014](adr/0014-lazy-engine-reachability.md).
-`docs/cli-conventions.md`'s exit-status table reflects this precisely.
+This has been reachable from a real command since CF-07.01, first only
+behind `new --engine-preview` (see
+[ADR 0014](adr/0014-lazy-engine-reachability.md)), and by default since
+CF-18.01. `docs/cli-conventions.md`'s exit-status table reflects this
+precisely.
 
 ## Validation
 
@@ -313,12 +297,13 @@ by
   replaced the exact development pin above with the first released,
   installable range. The cutover that makes the engine the default `new` path
   (removing `--engine-preview`, retaining `--template-url` under an explicit
-  `--legacy` route) is filed as
+  `--legacy` route) was filed as
   [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
   [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
   selection and source-resolution UX is fixed by
   [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), and
-  no implementing release has shipped.
+  CF-18.01 implemented it on `main` (see "Status" above) -- no tagged release
+  naming it has shipped yet.
 - **CF-08.03** ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) reviewed
   both archetypes for parity, confirmed the shared ProjectSpec/pipeline path
   and engine-owned discovery hold, and generalised the legacy `library`
@@ -408,18 +393,19 @@ by
   `command_name` anywhere, `repository_name` as the sole command identity,
   and an AST guard against any shipped module hardcoding a component id
   again.
-- [`tests/test_cli.py`](../tests/test_cli.py) — `--engine-preview`'s outcomes
-  (dependency missing, a real generated project, exit `3` on an incompatible
-  engine, a pre-existing destination conflict), `--archetype`'s explicit,
-  `--yes`-without-one, unknown-id, and interactive-prompt paths, and that
-  omitting `--engine-preview` leaves `new` unchanged. Its engine-native-
-  prompting block (#91, [ADR 0025](adr/0025-engine-native-prompt-flow.md))
-  covers `cli` asking no Library question, `library` asking exactly its
-  declared options with the answered `packaging_mode` reaching
-  `component_options`, the registry never being loaded, the single "What are
-  you building?" prompt, `--template`/`--template-url`/`--ref` being
-  rejected with `--engine-preview`, and the legacy `--data`
-  `build_backend`/`versioning` fallback.
+- [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new`
+  path's outcomes (the engine failing to import, a real generated project,
+  exit `3` on an incompatible engine, a pre-existing destination conflict),
+  `--archetype`'s explicit, `--yes`-without-one, unknown-id, and
+  interactive-prompt paths, and that `--legacy` reaches the unchanged
+  direct-Copier route instead. Its engine-native-prompting block (#91,
+  [ADR 0025](adr/0025-engine-native-prompt-flow.md)) covers `cli` asking no
+  Library question, `library` asking exactly its declared options with the
+  answered `packaging_mode` reaching `component_options`, the registry never
+  being loaded on the default path, the single "What are you building?"
+  prompt, `--template`/`--template-url`/`--ref` being rejected without
+  `--legacy`, and the retired legacy `--data` `build_backend`/`versioning`
+  shim (CF-18.01).
 - [`tests/test_prompts.py`](../tests/test_prompts.py) — `ask_project_answers`
   and `ask_component_options` (ADR 0025): preset/defaults/cancellation
   parity with `ask_all`, one case per declared option `type`, and the

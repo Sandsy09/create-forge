@@ -2,21 +2,19 @@
 
 Mirrors `runner.py`'s role for Copier's Python API (invariant 4): the engine
 is imported in exactly one place, so it evolves without every module needing
-attention. Importing this module requires the `engine` extra
-(`uv sync --all-extras`, or `pip install 'create-forge[engine]'`) -- since
-[ADR 0018](../../docs/adr/0018-pypi-distribution-and-the-first-engine-range.md),
-`forge-template` is a real, PyPI-installable, range-bounded optional
-dependency rather than a `[tool.uv.sources]`-pinned development-only one. No
-module reachable from create-forge's shipped CLI entry point may import this
-module;
-`tests/test_engine_contract.py::test_shipped_cli_modules_do_not_import_the_engine`
-enforces that. `compat.py` holds the range and protocol constants this
-module checks against -- it is engine-free, so `cli.py`'s `doctor` command
-can report them without importing this module at all.
+attention. Since ADR 0040 (CF-18.01) made the engine the default `new` path,
+`forge-template` is a required dependency
+([ADR 0018](../../docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)
+first published it to PyPI as a range-bounded package; ADR 0040 moved it out
+of the optional `engine` extra) -- a plain `pip install create-forge` /
+`uvx create-forge` resolves it, so this module is reachable from `cli.py`'s
+default `new` path, not only a hidden development flag. `compat.py` holds the
+range and protocol constants this module checks against -- it is engine-free,
+so `cli.py`'s `doctor` command can report them without a negotiation
+round-trip through this module.
 
 `spec.py` builds the wire payload this module parses and validates, while this
-module also exposes the discovery adapter `pipeline.py` uses, reachable today
-via the hidden `new --engine-preview` flag -- see ADR 0013,
+module also exposes the discovery adapter `pipeline.py` uses -- see ADR 0013,
 docs/project-spec-construction.md, and docs/component-discovery.md for the
 full contracts.
 """
@@ -34,12 +32,11 @@ from forge_template import (
 )
 
 # Explicit self-reexport: mypy strict's no_implicit_reexport otherwise blocks
-# `cli.py`'s lazy `except engine.ForgeEngineError` (a direct import of this
+# `cli.py`'s `except engine.ForgeEngineError` (a direct import of this
 # module, not merely an attribute chain) from typing against a name this
 # module only imported rather than defined.
 from forge_template import ForgeEngineError as ForgeEngineError  # noqa: PLC0414
 from forge_template import discover_components as _discover_components
-from forge_template import map_legacy_library_answers as _map_legacy_library_answers
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import render_project as _render_project
 from forge_template import validate_project_spec as _validate_project_spec
@@ -50,6 +47,7 @@ from create_forge.compat import (
     ENGINE_DISTRIBUTION,
     SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
     SUPPORTED_ENGINE_RANGE,
+    SUPPORTED_GENERATION_METADATA_VERSIONS,
     SUPPORTED_PROJECTSPEC_PROTOCOLS,
 )
 
@@ -63,9 +61,10 @@ class EngineCompatibilityError(Exception):
     """An installed engine is outside the supported package/protocol range.
 
     Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
-    ADR 0011 for exactly this failure class. Reachable today only via the
-    hidden `new --engine-preview` flag (ADR 0014); the default `new` path
-    still cannot produce it.
+    ADR 0011 for exactly this failure class and widened by ADR 0040 decision
+    12 to cover an out-of-range component-manifest protocol or
+    `metadata_version` too. Reachable from the default `new` path since ADR
+    0040 (CF-18.01) made the engine the default architecture.
     """
 
 
@@ -126,6 +125,23 @@ def _require_component_manifest_protocol(info: EngineInfo) -> None:
     )
 
 
+def _require_metadata_version(info: EngineInfo) -> None:
+    """Require a supported generation-metadata schema version.
+
+    ADR 0040 decision 11/12 widens exit `3` to cover an out-of-range
+    `metadata_version`, the ninth versioned compatibility axis (ADR 0059,
+    published by the `0.5.0` engine cutover) -- checked the same way as the
+    two protocol tuples, via set overlap against a single-element "detected"
+    tuple so `_require_protocol_overlap`'s message shape is reused as-is.
+    """
+    _require_protocol_overlap(
+        info,
+        protocol_name="generation-metadata",
+        supported=SUPPORTED_GENERATION_METADATA_VERSIONS,
+        detected=(info.metadata_version,),
+    )
+
+
 def negotiate_protocol() -> None:
     """Confirm the engine matches the supported package/ProjectSpec range.
 
@@ -139,15 +155,17 @@ def negotiate_protocol() -> None:
 def discover() -> tuple[ComponentDescriptor, ...]:
     """Return engine-owned component descriptors after protocol negotiation.
 
-    ProjectSpec and component-manifest compatibility are checked before the
-    engine scans its installed catalogue. The descriptors are returned
-    unchanged: their identifiers, presentation metadata, compatibility,
-    relationships, and options remain owned and validated by `forge-template`.
+    ProjectSpec, component-manifest, and generation-metadata compatibility
+    are checked before the engine scans its installed catalogue. The
+    descriptors are returned unchanged: their identifiers, presentation
+    metadata, compatibility, relationships, and options remain owned and
+    validated by `forge-template`.
     """
     info = get_engine_info()
     _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
+    _require_metadata_version(info)
     return _discover_components()
 
 
@@ -165,13 +183,14 @@ def build_project_spec(payload: Mapping[str, object]) -> ProjectSpec:
 def validate(spec: ProjectSpec) -> ProjectSpec:
     """Validate a parsed ProjectSpec against the installed component catalogue.
 
-    The installed `forge-template` catalogue is production: `library` and
-    `cli` are both real, validated archetypes.
+    The installed `forge-template` catalogue is production: `library`, `cli`,
+    and `data-science` are all real, validated archetypes.
     """
     info = get_engine_info()
     _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
+    _require_metadata_version(info)
     return _validate_project_spec(spec)
 
 
@@ -189,28 +208,20 @@ def render(spec: ProjectSpec) -> RenderedProject:
     _require_supported_package(info)
     _require_projectspec_protocol(info)
     _require_component_manifest_protocol(info)
+    _require_metadata_version(info)
     return _render_project(spec)
 
 
-def map_legacy_library_options(
-    legacy_answers: Mapping[str, str],
-) -> Mapping[str, object]:
-    """Translate legacy Library answers into the `library` component option.
+def get_info() -> EngineInfo:
+    """Return the installed engine's version/protocol facts, unchecked.
 
-    Thin wrapper around the public `map_legacy_library_answers` facade after
-    the same compatibility checks every other operation here runs, so this
-    stays the only module that touches the mapping's implementation. The
-    mapping itself -- `build_backend`/`versioning_resolved` to
-    `packaging_mode` -- is engine-owned; see
-    docs/library-archetype.md#legacy-copier-answer-mapping in forge-template.
-    `pipeline.build_generation_request` is the only caller, and only for the
-    `library` archetype (CF-08.02).
+    Unlike every operation above, this performs no compatibility check --
+    `doctor` uses it to report what is installed and detected even when it
+    falls outside the supported range, surfacing the mismatch as one failed
+    diagnostic row instead of raising `EngineCompatibilityError`
+    (ADR 0040 decision 6).
     """
-    info = get_engine_info()
-    _require_supported_package(info)
-    _require_projectspec_protocol(info)
-    _require_component_manifest_protocol(info)
-    return _map_legacy_library_answers(legacy_answers)
+    return get_engine_info()
 
 
 def explain(exc: ForgeEngineError) -> str:

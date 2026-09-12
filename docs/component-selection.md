@@ -17,7 +17,7 @@ It is a sibling of the [component discovery contract](component-discovery.md)
 (how the descriptors this document selects from are obtained) and the
 [ProjectSpec construction contract](project-spec-construction.md) (how the
 resulting selection is mapped onto the wire payload), and it extends
-[`docs/cli-conventions.md`](cli-conventions.md)'s `--engine-preview` section.
+[`docs/cli-conventions.md`](cli-conventions.md)'s default-engine-path section.
 
 ## Status
 
@@ -31,8 +31,7 @@ absent-versus-empty encoding, and required pre-locking. CF-13.04
 [ADR 0029](adr/0029-per-component-option-collection.md)) implemented the rest:
 `--component-option`, per-component option collection and typing for every
 *selected* component (not just the archetype), the owner-qualified parsing,
-and the shape-only client-side checks below — all live behind
-`--engine-preview`. CF-13.05
+and the shape-only client-side checks below. CF-13.05
 ([#110](https://github.com/Sandsy09/create-forge/issues/110),
 [ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) then proved
 the whole path against the released engine for the Data Science composition —
@@ -40,29 +39,22 @@ see the canonical
 [Data Science preview-pipeline validation](data-science-preview-validation.md)
 record — closing CF-EPIC-13.
 
-This is **not** the CLI cutover. Every flag below is hidden and reachable only
-via `new --engine-preview`; the default `new` path stays direct-Copier with a
-bundled registry, exactly as [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)
-left it.
-
-At the engine-default cutover the five flags become the visible primary
-selection surface with their names unchanged — they lose the
-`"Development-only: "` help prefix and the exit-`1` *requires
-`--engine-preview`* rejection, and `--engine-preview` itself is removed. Every
-rule in this document carries over verbatim; only the flags' visibility
-changes. That is fixed by the
-[engine-default CLI contract](engine-default-cli.md)
-([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), a
-Stage 16 decision), implemented by
-[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) — not yet
-shipped.
+CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
+implemented the engine-default cutover's selection half: the five flags below
+are now the visible primary selection surface on the default `new` path, with
+names unchanged from when they were hidden and `--engine-preview`-only — they
+lost the `"Development-only: "` help prefix and the exit-`1` *requires
+`--engine-preview`* rejection (now *contradicts `--legacy`* instead), and
+`--engine-preview` itself is removed. Every rule in this document carries
+over verbatim; only the flags' visibility and the exit-`1` pairing changed.
+`--engine-source`/`--engine-ref`, the engine `new` Git/hook lifecycle, and
+engine-native `update` remain open (CF-18.02 through CF-18.04).
 
 ## The selection surface
 
-`new` gains five hidden options, each carrying the `"Development-only: "` help
-prefix that `--archetype` already uses and each rejected with exit `1` when
-supplied without `--engine-preview` — byte-for-byte the treatment
-`--archetype` gets today:
+`new` has five visible options, resolved against the default engine path and
+rejected with exit `1` when combined with `--legacy` — byte-for-byte the
+treatment `--archetype` gets:
 
 | Flag | Repeatable | Effect |
 | --- | --- | --- |
@@ -72,7 +64,7 @@ supplied without `--engine-preview` — byte-for-byte the treatment
 | `--no-platforms` | no | Records an explicit *empty* platform selection. |
 | `--component-option ID.OPTION=VALUE` | yes | Sets `component_options[ID][OPTION]`. |
 
-`--archetype` is unchanged: still hidden, still resolved against
+`--archetype` is unchanged: still visible, still resolved against
 `pipeline.discover_archetypes()`, still the single "What are you building?"
 prompt when omitted interactively.
 
@@ -184,12 +176,12 @@ Highest wins:
    own descriptor declares — the unqualified archetype-inferred preset split
    ADR 0025 already performs. Never applies to a capability or platform
    option.
-3. The legacy `--data build_backend` / `--data versioning` →
-   `packaging_mode` derivation via `engine.map_legacy_library_options`, gated
-   by the selected archetype descriptor declaring `packaging_mode`
-   (ADR 0019, ADR 0025). Archetype-only, and only when 1 and 2 supplied
-   nothing for that name.
-4. The descriptor's own declared default.
+3. The descriptor's own declared default.
+
+ADR 0040 decision 10 (CF-18.01) retired the legacy `--data build_backend` /
+`--data versioning` → `packaging_mode` derivation (ADR 0019, ADR 0025) this
+list used to carry as rule 3: `library.packaging_mode` is now set only
+through rule 1 or 2 above, never a `build_backend`/`versioning` answer key.
 
 An interactive prompt for an option occupies the same slot as rule 1 — a
 prompted value and a `--component-option` value never both apply, because a
@@ -220,7 +212,7 @@ than `create-forge` inventing a parallel one.
 
 | `create-forge` rejects, before any engine call | `forge-template` rejects, translated via `engine.explain` |
 | --- | --- |
-| any of the five flags without `--engine-preview` — exit `1` | a missing hard `requires` |
+| any of the five flags combined with `--legacy` — exit `1` | a missing hard `requires` |
 | `--capability` with `--no-capabilities` (or the platform pair) — exit `1` | a `conflicts` violation |
 | `--component-option` with no `.` or no `=` — exit `2`, `typer.BadParameter`, as malformed `--data` | an option name no `options_schema` declares |
 | `--capability` / `--platform` / `--component-option` naming an id absent from the discovered catalogue — exit `1`, listing the valid ids as `--archetype` already does | an option value outside `choices`, of the wrong type, or a missing `required` one |
@@ -248,22 +240,24 @@ scripting artefact, not a semantic statement.
 A kind for which discovery returns nothing is never prompted, and
 `--capability` / `--platform` naming an id of that kind produces the
 unknown-id rejection. `--no-capabilities` / `--no-platforms` stay legal and
-record an explicit empty selection. This is the real state of `platform` in
+record an explicit empty selection. This was the real state of `platform` in
 `forge-template 0.4.0` — the kind, the `components.platforms` array, and the
-composition tier all exist, but the catalogue ships zero platform components —
-and the contract treats it as the ordinary zero case, not a special one.
+composition tier all existed, but the catalogue shipped zero platform
+components; FT-17.02 shipped the first one, `github`
+([forge-template ADR 0063](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0063-implement-the-github-platform.md)).
+The contract still treats an empty kind as the ordinary zero case, not a
+special one, for whichever kind next has none discovered.
 
 ## Compatibility with the shipped archetypes
 
-`--engine-preview --archetype library` and `--archetype cli` behave
-identically before and after CF-13.03 / CF-13.04 / CF-13.05: no new required
-flag, and no new prompt for `cli` (which declares no options) or beyond
-`packaging_mode` / `initial_version` for `library`.
+`--archetype library` and `--archetype cli` behave identically before and
+after CF-13.03 / CF-13.04 / CF-13.05: no new required flag, and no new prompt
+for `cli` (which declares no options) or beyond `packaging_mode` /
+`initial_version` for `library`.
 `tests/test_component_selection.py::test_every_discovered_archetype_generates_with_its_required_flags`
 proves it — every discovered archetype still generates from
-`--engine-preview --archetype <id> --yes` once its own discovered
-requirements are supplied. The Copier default `new` path and a `create-forge`
-install without the `engine` extra are untouched.
+`--archetype <id> --yes` once its own discovered requirements are supplied.
+The `--legacy` Copier path is untouched.
 
 ## Worked examples
 
@@ -273,15 +267,15 @@ them; no shipped module or test may name one.
 
 ```bash
 # archetype with its one required capability, non-interactive
-create-forge new "Risk Models" --engine-preview \
+create-forge new "Risk Models" \
     --archetype data-science --capability jupyter --yes
 
 # add an independently optional capability
-create-forge new "Risk Models" --engine-preview --archetype data-science \
+create-forge new "Risk Models" --archetype data-science \
     --capability jupyter --capability scientific-python --yes
 
 # explicit "no capabilities", plus an owner-qualified archetype option
-create-forge new "Credit Risk Utils" --engine-preview --archetype library \
+create-forge new "Credit Risk Utils" --archetype library \
     --no-capabilities \
     --component-option library.packaging_mode=hatchling-vcs --yes
 ```

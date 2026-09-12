@@ -40,11 +40,13 @@ CF-16.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)
 all merged.
 
 **This contract is not the cutover.** No `create-forge` release named here
-exists yet. Until [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
-onward implement it, the engine path is reachable only through the hidden
-`new --engine-preview` flag — which writes no `.git`, installs no hooks, and
-writes no generation metadata — and `create-forge update` handles only
-direct-Copier projects through `runner.update`.
+exists yet. CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
+made the engine path the default `new` route (no flag needed), but until
+[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
+implement this contract, that default path still writes no `.git`, installs
+no hooks, and writes no generation metadata — and `create-forge update`
+handles only direct-Copier projects, now reached through `--legacy`, through
+`runner.update`.
 [`docs/filesystem-generation.md`](filesystem-generation.md) and
 [`docs/cli-conventions.md`](cli-conventions.md) remain authoritative for
 actual behaviour.

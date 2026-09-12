@@ -100,13 +100,20 @@ def candidate_wheel(e2e_child_env: dict[str, str]) -> Iterator[Path]:
 def installed_client(
     candidate_wheel: Path, e2e_child_env: dict[str, str]
 ) -> Iterator[InstalledClient]:
-    """The candidate wheel installed with its `engine` extra and the reviewed
-    `forge-template 0.4.1` release in one isolated virtual environment.
+    """The candidate wheel installed with the reviewed
+    `forge-template 0.5.0` engine release in one isolated virtual environment.
+
+    `forge-template` is a required dependency since ADR 0040 (CF-18.01) --
+    there is no more `[engine]` extra to opt into; `engine=` pins the exact
+    reviewed release alongside the wheel's own declared range. `extras=
+    "[legacy]"` also installs `copier`, since several rollout regressions
+    (`tests/test_e2e_installed_rollout.py`) exercise `--legacy` against this
+    same environment alongside the now-default engine path.
     """
     with build_client(
         candidate_wheel,
         e2e_child_env,
-        extras="[engine]",
+        extras="[legacy]",
         engine=f"forge-template=={ENGINE_VERSION}",
     ) as client:
         yield client

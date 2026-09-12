@@ -93,12 +93,13 @@ def test_new_rejects_before_prompts_or_effects(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    for name in ("_select_template", "_collect_answers", "scaffold"):
+    for name in ("_select_template", "_collect_answers"):
         monkeypatch.setattr(cli, name, _unexpected)
+    monkeypatch.setattr(runner, "scaffold", _unexpected)
     monkeypatch.setattr(typer, "confirm", _unexpected)
     monkeypatch.setattr(runner, "run_copy", _unexpected)
     dst = tmp_path / "untouched"
-    args = ["new", "Example", "--template-url", source, "--path", str(dst)]
+    args = ["new", "--legacy", "Example", "--template-url", source, "--path", str(dst)]
     if mode in {"yes", "dry-run"}:
         args.append("--yes")
     if mode == "dry-run":
@@ -140,8 +141,17 @@ def test_safe_sources_keep_warning_and_forwarding(
     )
     monkeypatch.setattr(cli, "_select_template", lambda *_a, **_k: None)
     calls: list[runner.ScaffoldRequest] = []
-    monkeypatch.setattr(cli, "scaffold", calls.append)
-    args = ["new", "Example", "--template-url", source, "--ref", "HEAD", "--dry-run"]
+    monkeypatch.setattr(runner, "scaffold", calls.append)
+    args = [
+        "new",
+        "--legacy",
+        "Example",
+        "--template-url",
+        source,
+        "--ref",
+        "HEAD",
+        "--dry-run",
+    ]
     if mode == "yes":
         args.append("--yes")
     result = CliRunner().invoke(
@@ -235,6 +245,7 @@ def test_downstream_failure_text_is_not_rendered(
     if operation == "new":
         args = [
             "new",
+            "--legacy",
             "Example",
             "--yes",
             "--path",
@@ -262,6 +273,7 @@ def test_real_console_does_not_render_rejected_sources(
     if operation == "new":
         args = [
             "new",
+            "--legacy",
             "Example",
             "--yes",
             "--template-url",

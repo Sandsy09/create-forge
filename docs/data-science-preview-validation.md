@@ -21,9 +21,11 @@ Accepted as a contract under
 [ADR 0030](adr/0030-data-science-preview-pipeline-validation.md). CF-13.05 is
 implemented; CF-EPIC-13 is complete. CF-14.02 now extends this evidence through
 the installed create-forge `0.3.0` candidate and reviewed engine under
-[ADR 0032](adr/0032-validate-installed-data-science-generation.md). This is
-**not** the CLI cutover: `--engine-preview` stays hidden and dev-only, and the
-default `new` path is unchanged. CF-14.04
+[ADR 0032](adr/0032-validate-installed-data-science-generation.md). At the
+time, this was **not** the CLI cutover: `--engine-preview` stayed hidden and
+dev-only, and the default `new` path was unchanged — CF-18.01 later made the
+engine path the default (see [`docs/cli-conventions.md`](cli-conventions.md)
+for current behaviour). CF-14.04
 ([ADR 0034](adr/0034-publish-0-3-0-and-close-roadmap-v2.md)) published
 create-forge `0.3.0` and closed the roadmap.
 

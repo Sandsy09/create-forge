@@ -4,12 +4,17 @@ This is the living contributor contract for `create-forge` commands, prompts,
 errors, and exit statuses. It records the user experience that future CLI work
 must preserve deliberately.
 
-The released v0.3.x default path gathers answers from a bundled registry and
-calls Copier directly. The accepted target in [ADR 0010](adr/0010-public-engine-integration-contract.md)
-replaces that boundary with the public `forge-template` engine and ProjectSpec.
-The implementation-specific mechanisms below will change at that cutover; the
-input, parity, cancellation, and error-presentation conventions remain in
-force unless a later decision explicitly revises them.
+CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
+implemented the accepted target in
+[ADR 0010](adr/0010-public-engine-integration-contract.md): `new` with no
+route flag now gathers answers directly against the public `forge-template`
+engine and ProjectSpec, replacing the released v0.3.x default's registry +
+Copier boundary. `--legacy` reaches that prior boundary unchanged. The
+input, parity, cancellation, and error-presentation conventions below remain
+in force on both routes unless a later decision explicitly revises them;
+`--engine-source`/`--engine-ref`, the engine `new` Git/hook lifecycle, and
+engine-native `update` dispatch remain undelivered (CF-18.02 through
+CF-18.04).
 
 ## Input resolution and prompt defaults
 
@@ -40,92 +45,93 @@ passes the value as text. Repeated keys use the last `--data` value.
 
 Prompting is omitted only when the answer or decision is already explicit:
 
-- `--yes` disables interactive questions and requires a project name. Resolved
-  config values and explicit presets are still applied; remaining values use
-  template defaults.
-- `--template` suppresses template selection. Without it, a single selectable
-  template is chosen without asking; otherwise the configured or bundled
-  default is offered first.
+- `--yes` disables interactive questions. On the default engine path it
+  requires a project name **and** `--archetype` (the engine declares no
+  default); on `--legacy` it requires a project name. Resolved config values
+  and explicit presets are still applied; remaining values use template or
+  engine defaults.
+- `--template`/`--template-url`/`--ref` are `--legacy`-only: they suppress
+  template selection there exactly as before, and are rejected outright
+  without `--legacy`. Without `--template`, a single selectable template is
+  chosen without asking; otherwise the configured or bundled default is
+  offered first.
 - A positional argument or `--data` preset suppresses the matching question.
 - A conditional question is skipped when its declared prerequisite is not
-  satisfied.
+  satisfied (`--legacy` only — the default engine path has no conditional
+  registry questions).
 - Questions intentionally absent from the CLI prompt catalogue are left to
-  template defaults.
-- On `--engine-preview`, an explicit `--capability`/`--no-capabilities` (or the
-  platform pair) suppresses that kind's selection prompt, and a
+  template or engine defaults.
+- On the default engine path, an explicit `--capability`/`--no-capabilities`
+  (or the platform pair) suppresses that kind's selection prompt, and a
   `--component-option` preset suppresses that option's prompt — see the
   canonical [component selection contract](component-selection.md).
-- On `--engine-preview`, a component kind with no discovered descriptors is
-  never prompted.
+- On the default engine path, a component kind with no discovered
+  descriptors is never prompted.
 
-The current `--template-url` escape hatch always prints its code-execution
-warning. It asks for confirmation unless `--yes` was supplied. This behavior
-remains authoritative for the current default path.
+`--legacy`'s `--template-url` escape hatch always prints its code-execution
+warning. It asks for confirmation unless `--yes` was supplied.
 
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md) specifies the
 `--engine-source`/`--engine-ref` engine-package override, and the
-[engine resolution contract](engine-resolution.md) records it in full. The
-engine-default cutover contract
-([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
-[`docs/engine-default-cli.md`](engine-default-cli.md)) supersedes ADR 0011 on
-one point: at the cutover `--template-url`/`--ref` are *retained*, scoped to
-the explicit `--legacy` route, rather than replaced — the direct-Copier path
-stays supported. `--engine-source`/`--engine-ref` are a new, orthogonal pair.
-Until the cutover ships, `--template-url`/`--ref` above are the only source and
-version options this CLI accepts; the new names are not yet implemented.
+[engine resolution contract](engine-resolution.md) records it in full.
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)
+supersedes ADR 0011 on one point: `--template-url`/`--ref` are *retained*,
+scoped to the explicit `--legacy` route, rather than replaced — the
+direct-Copier path stays supported. `--engine-source`/`--engine-ref` are a
+new, orthogonal pair that select the engine *distribution* itself, not yet
+implemented (CF-18.02).
 
-## The `--engine-preview` development flag
+## The default engine `new` path
 
-`new --engine-preview` is a hidden, development-only option (absent from
-`--help`) that builds, validates, renders, and finalises through the public
-`forge-template` engine instead of Copier — see
-[ADR 0014](adr/0014-lazy-engine-reachability.md),
+`new` with no route flag builds, validates, renders, and finalises through
+the public `forge-template` engine instead of Copier — see
+[ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)
+(CF-18.01, which made this the default architecture),
+[ADR 0014](adr/0014-lazy-engine-reachability.md) (superseded on the
+default-vs-hidden point; its guarded-import *shape* now protects `--legacy`'s
+Copier-touching modules instead),
 [ADR 0015](adr/0015-staged-filesystem-generation.md),
 [ADR 0017](adr/0017-cli-application-archetype-exposure.md),
 [ADR 0025](adr/0025-engine-native-prompt-flow.md), and the canonical
 [ProjectSpec construction](project-spec-construction.md) and
-[filesystem generation](filesystem-generation.md) contracts. It always
-prints an informational note that it is a hidden preview path, unconditionally
-and regardless of `--yes` — but unlike `--template-url`'s warning, this is
-not a confirmation gate: `forge-template` is a reviewed dependency (the
-optional `engine` extra, ADR 0018), not arbitrary user-supplied code, so
-there is no code-execution trust question to ask. Since #91
+[filesystem generation](filesystem-generation.md) contracts. `forge-template`
+is a required dependency (ADR 0040 decision 1) — a plain
+`pip install create-forge` / `uvx create-forge` resolves it, so this is the
+route reached with no extra install step at all. Since #91
 ([ADR 0025](adr/0025-engine-native-prompt-flow.md)), it reads no registry
 data at all: it discovers the archetype catalogue, resolves which archetype
 to build, then prompts directly for that archetype's own ProjectSpec-identity
 answers and declared `ComponentDescriptor.options` — a genuinely separate
-prompt flow from the Copier path's, not a shared one. `--template`,
-`--template-url`, and `--ref` are therefore rejected outright in combination
-with `--engine-preview`, mirroring `--archetype` without `--engine-preview`'s
-existing rejection in reverse. It stages and moves a successful render into
-place exactly as the Copier path does — `--dry-run` lists the planned targets
-and writes nothing, on both paths alike. Since CF-08.02, `forge-template`'s
-production catalogue ships both `library` and `cli`, so `--engine-preview`
-generates a real project when given a valid archetype -- reachable since
-#9/ADR 0018 with nothing more than `pip install 'create-forge[engine]'`, not
-a source checkout. `--engine-source`/`--engine-ref` above remain the names
-reserved for the eventual public override; `--engine-preview` is a distinct,
-temporary flag retired at the coordinated cutover, not renamed into that
-pair. A project it does create is not `create-forge update`-able — it writes
-no `.copier-answers.yml`.
+prompt flow from `--legacy`'s, not a shared one. `--template`,
+`--template-url`, and `--ref` are therefore rejected outright without
+`--legacy`, mirroring `--archetype`'s rejection under `--legacy` in reverse.
+It stages and moves a successful render into place exactly as `--legacy`
+does — `--dry-run` lists the planned targets and writes nothing, on both
+routes alike. `forge-template`'s production catalogue ships `library`, `cli`,
+and `data-science` (plus the `github` platform and eight tooling
+capabilities), so this route generates a real project when given a valid
+archetype. A project it creates today is not yet `create-forge
+update`-able — the committed generation-metadata file and engine-native
+update dispatch are CF-18.03/CF-18.04's job; it is not eligible for the
+`--legacy` Copier update path either, since it writes no
+`.copier-answers.yml`.
 
-At the engine-default cutover
-([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)),
-`--engine-preview` is removed and the five hidden selection flags below become
-the visible primary surface, names unchanged — see
-[`docs/engine-default-cli.md`](engine-default-cli.md).
+`--engine-preview` — the hidden, development-only precursor to this route —
+was removed outright at the cutover, with no deprecation window: it was
+hidden and undocumented, so it carried no compatibility promise. An unknown
+`--engine-preview` today is a plain Typer usage error, exit `2`.
 
-A hidden `--archetype` option selects which engine archetype to build,
-resolved against `pipeline.discover_archetypes()` — the real, discovered
-catalogue, filtered to `kind == "archetype"`. An explicit `--archetype` not
-present in that catalogue is rejected before any engine call. Omitting it
-with `--yes` is rejected outright, naming the available ids: the engine
-declares no default archetype, and `templates.toml`'s `default_template` is
-a Copier-path concept this selection does not inherit. Omitting it
+An `--archetype` option selects which engine archetype to build, resolved
+against `pipeline.discover_archetypes()` — the real, discovered catalogue,
+filtered to `kind == "archetype"`. An explicit `--archetype` not present in
+that catalogue is rejected before any engine call. Omitting it with `--yes`
+is rejected outright, naming the available ids: the engine declares no
+default archetype, and `templates.toml`'s `default_template` is a
+`--legacy`-path concept this selection does not inherit. Omitting it
 interactively falls to a prompt (`prompts.choose_archetype`), the *only*
 "What are you building?" prompt on this path since #91 — there is no longer
-a separate Copier-template selection ahead of it. `--archetype` without
-`--engine-preview` is rejected rather than silently ignored.
+a separate template selection ahead of it. `--archetype` combined with
+`--legacy` is rejected as contradictory rather than silently ignored.
 
 Once an archetype is resolved, CF-13.03
 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) resolves the
@@ -141,30 +147,32 @@ CLI-collected answers that reach `ProjectSpec.project`
 component's own discovered descriptor declares (CF-13.04,
 [ADR 0029](adr/0029-per-component-option-collection.md)) — in composition-tier
 then lexical order, and omitting a component whose namespace stays empty.
-Against `0.4.0` only `library` declares options
-(`packaging_mode`/`initial_version`); `cli`, `data-science`, `jupyter`, and
-`scientific-python` declare none, so a selected optionless component is never
+`library` declares options (`packaging_mode`/`initial_version`); `cli` and
+`data-science` declare none, so a selected optionless component is never
 prompted and serialises no namespace:
 
 | Registry question | Reaches ProjectSpec for `library`? | for `cli` / `data-science` (+ capabilities)? |
 | --- | --- | --- |
 | `project_name`, `project_description`, `license` | asked directly | asked directly |
 | `packaging_mode`, `initial_version` | asked directly, from `library`'s own descriptor | n/a — no options declared |
-| `--data build_backend`/`versioning` | still reaches `packaging_mode` via `map_legacy_library_options`, per option name, as a fallback when that option was not answered directly (ADR 0019, ADR 0025, ADR 0029) | discarded |
 | `github_org`, `type_checking`, `use_docs` | discarded | discarded |
 
-CF-08.03's archetype-parity review ([ADR 0019](adr/0019-cli-archetype-parity-review.md))
-recorded the version of this table where the engine path instead reused the
-Copier registry's Library-shaped questions for every archetype, and the
-double "What are you building?" prompt that came with it, as a known
-limitation tracked by [#91](https://github.com/Sandsy09/create-forge/issues/91)
-rather than fixed in that review. [ADR 0025](adr/0025-engine-native-prompt-flow.md)
-closes it: the destination is now only fully known once a project name has
-been collected, so the non-empty-destination check splits in two — an
-explicit `--path` is still checked before the engine is imported at all,
-preserving that guarantee for the common case; the final destination is
-checked again immediately before any ProjectSpec construction, validation, or
-render begins, still before every side effect that writes anything.
+ADR 0040 decision 10 (CF-18.01) retired the legacy `build_backend`/
+`versioning` → `packaging_mode` `--data` fallback CF-08.03's archetype-parity
+review ([ADR 0019](adr/0019-cli-archetype-parity-review.md)) had added: a
+caller now sets `library.packaging_mode` only through
+`--component-option library.packaging_mode=<value>`, like any other
+component option — never a `build_backend`/`versioning` answer key.
+
+Separately, [ADR 0025](adr/0025-engine-native-prompt-flow.md) fixed the
+double "What are you building?" prompt CF-08.03's review had tracked as a
+known limitation ([#91](https://github.com/Sandsy09/create-forge/issues/91)):
+the destination is now only fully known once a project name has been
+collected, so the non-empty-destination check splits in two — an explicit
+`--path` is still checked before the engine is imported at all, preserving
+that guarantee for the common case; the final destination is checked again
+immediately before any ProjectSpec construction, validation, or render
+begins, still before every side effect that writes anything.
 `discover_components()` itself reads the installed catalogue and writes
 nothing, so running it ahead of a not-yet-knowable destination introduces no
 new filesystem risk.
@@ -183,11 +191,11 @@ itself. See the canonical
 ## Component selection
 
 The canonical [component selection contract](component-selection.md) defines
-how `--engine-preview` turns flags and prompts into a ProjectSpec's
+how the default engine path turns flags and prompts into a ProjectSpec's
 `components` and `component_options`: `--capability`/`--platform` (repeatable),
 `--no-capabilities`/`--no-platforms`, and
-`--component-option ID.OPTION=VALUE`. All five are hidden and
-`--engine-preview`-only, rejected with exit `1` otherwise, exactly as
+`--component-option ID.OPTION=VALUE`. All five are visible, engine-path-only
+flags — rejected with exit `1` in combination with `--legacy`, exactly as
 `--archetype` is. CF-13.03
 ([ADR 0028](adr/0028-discovery-driven-component-selection.md)) implemented the
 four capability/platform flags and their interactive multi-selects; CF-13.04
@@ -198,46 +206,54 @@ component, and CLI-string-to-declared-type coercion. CF-13.05
 the whole pipeline against the released engine for the Data Science
 composition — see the canonical
 [Data Science preview-pipeline validation](data-science-preview-validation.md).
+ADR 0040 decision 8 (CF-18.01) un-hid all five with their names unchanged and
+removed `--engine-preview`, making this the default `new` path's own surface.
 
 For this document's purposes: a malformed `--component-option` (missing `.` or
 `=`) is a `typer.BadParameter` usage rejection, exit `2`, like a malformed
-`--data`. Every other selection failure `create-forge` raises itself — a flag
-without `--engine-preview`, a contradictory `--capability`/`--no-capabilities`
-pair, an unknown or wrong-kind component id, an option for an unselected
-component — is exit `1`. Cancelling a selection prompt is exit `130` with
-nothing written. Missing requirements, conflicts, and invalid option values
-stay engine-owned and are translated through `engine.explain`.
+`--data`. Every other selection failure `create-forge` raises itself — one of
+these five flags combined with `--legacy`, a contradictory
+`--capability`/`--no-capabilities` pair, an unknown or wrong-kind component
+id, an option for an unselected component — is exit `1`. Cancelling a
+selection prompt is exit `130` with nothing written. Missing requirements,
+conflicts, and invalid option values stay engine-owned and are translated
+through `engine.explain`.
 
 ## Engine-default CLI
 
 The canonical [engine-default CLI contract](engine-default-cli.md)
 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md), the
 first child of [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152))
-defines the command surface **after the engine-default cutover** — the release
-in which the `forge-template` engine replaces direct Copier as the default
-`new` path:
+defined the command surface for the engine-default cutover. CF-18.01 has
+implemented most of it:
 
-- the engine becomes a required dependency and the default `new` route;
-  `copier` becomes the optional `legacy` extra, reached through a visible
-  `--legacy` flag that scopes `--template`/`--template-url`/`--ref`;
+- the engine is a required dependency and the default `new` route; `copier`
+  is the optional `legacy` extra, reached through the visible `--legacy` flag
+  that scopes `--template`/`--template-url`/`--ref`;
 - `--template-url`/`--ref` are retained rather than replaced (superseding
-  [ADR 0011](adr/0011-engine-source-and-version-resolution.md) on that clause);
-  `--engine-source`/`--engine-ref` are a new orthogonal engine-package
-  override that provisions an isolated environment and whose renders write no
-  generation metadata;
-- `--engine-preview` and the five hidden selection flags: `--engine-preview` is
-  removed, the rest become visible with names unchanged;
-- `list` prints the discovered catalogue (`list --legacy` the registry);
-  `doctor` negotiates against the real engine while staying offline;
-- exit `3` widens to the whole "required generator missing or unusable" class;
-- the deprecation *rule and sequence* are fixed there; the concrete versions,
-  windows, acceptance matrix and support policy are fixed by CF-16.03 in the
-  [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
-  ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)).
+  [ADR 0011](adr/0011-engine-source-and-version-resolution.md) on that
+  clause);
+- `--engine-preview` is removed and the five selection flags above are
+  visible with names unchanged;
+- `list` prints the discovered catalogue; `list --legacy` prints the
+  registry; `doctor` negotiates against the real engine while staying
+  offline, populating `projectspec_protocol.detected`,
+  `component_manifest_protocol`, and `metadata_version`;
+- exit `3` widened to also cover an engine that cannot be imported at all
+  and `--legacy` without the extra installed.
 
-That contract is a decision, not a shipped interface. Until
-[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) implements it,
-every convention above and in the rest of this document remains authoritative.
+Still open: `--engine-source`/`--engine-ref` — a new, orthogonal engine-package
+override that provisions an isolated environment and whose renders write no
+generation metadata (CF-18.02); the engine `new` Git/hook lifecycle
+(CF-18.03); engine-native `update` dispatch (CF-18.04); deeper `--legacy`
+regression and old-preview-project recovery (CF-18.05); and the concrete
+deprecation versions, windows, acceptance matrix and support policy CF-16.03
+fixed in the
+[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
+([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
+remain CF-18.06/CF-18.07's to execute and publish. The full decision record
+lives in `docs/engine-default-cli.md`; update it and this section together
+when a rule it still describes as pending ships.
 
 ## Update dry runs
 
@@ -256,11 +272,11 @@ and other application failures retain exit status `1` and never print the
 success message. Omitting the flag preserves the normal update and its existing
 `Updated`/review-the-diff guidance.
 
-Projects generated through `new --engine-preview` remain ineligible for
-`update` because they do not contain `.copier-answers.yml`; `--dry-run` does not
-change that boundary.
+Projects generated through the default engine `new` path remain ineligible
+for `update` because they do not contain `.copier-answers.yml`; `--dry-run`
+does not change that boundary.
 
-At the engine-default cutover, `update` gains an engine-native route
+`update` will gain an engine-native route
 (CF-16.02, [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
 canonical [engine project lifecycle contract](engine-project-lifecycle.md)):
 `update` routes to it when the project holds a committed
@@ -303,10 +319,11 @@ defines what happens **after the engine renders a project** and **when
   dirty tree / bad merge / missing metadata / no route, `3` for an
   incompatible or unavailable recorded engine, `130` for cancellation.
 
-That contract is a decision, not a shipped interface. Until
+That contract is a decision, not a shipped interface. `new` reaches the
+engine path by default since CF-18.01, but until
 [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
-implement it, the engine path is reachable only through hidden
-`new --engine-preview` and `update` handles only direct-Copier projects.
+implement this contract, an engine-generated project writes no committed
+generation metadata and `update` still handles only direct-Copier projects.
 
 ## Engine-default cutover acceptance
 
@@ -366,9 +383,9 @@ to `--ref` for version selection. See [ADR 0036](adr/0036-template-source-creden
 | Status | Meaning | Examples |
 | --- | --- | --- |
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
-| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)), or an `--engine-preview` selection `create-forge` rejects itself — a selection flag without `--engine-preview`, a contradictory `--capability`/`--no-capabilities` pair, an unknown or wrong-kind component id, or an option for an unselected component ([component selection contract](component-selection.md)). |
-| `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, malformed `--data` without `key=value`, or a malformed `--component-option` without `ID.OPTION=VALUE`. |
-| `3` | An installed or overridden template engine, or its ProjectSpec protocol, is outside the range this CLI supports. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Reachable today only via the hidden `new --engine-preview` flag ([ADR 0014](adr/0014-lazy-engine-reachability.md) — the default direct-Copier path cannot produce it). |
+| `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name (and, on the default engine path, a missing `--archetype`) under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)), or a selection failure `create-forge` rejects itself — one of the five selection flags combined with `--legacy`, a contradictory `--capability`/`--no-capabilities` pair, an unknown or wrong-kind component id, or an option for an unselected component ([component selection contract](component-selection.md)). |
+| `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, an unrecognised flag such as the retired `--engine-preview`, malformed `--data` without `key=value`, or a malformed `--component-option` without `ID.OPTION=VALUE`. |
+| `3` | The required generator is missing or unusable: an installed or overridden engine, or its ProjectSpec/component-manifest protocol or `metadata_version`, is outside the range this CLI supports, the engine cannot be imported at all, or `--legacy` was given without the `legacy` extra installed. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Widened at the cutover by ADR 0040 decision 12 (CF-18.01) to cover the whole provider-availability class — reachable on the now-default engine `new` path, not only a hidden flag. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are

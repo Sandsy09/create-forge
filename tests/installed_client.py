@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CLIENT_VERSION = "0.3.2"
-ENGINE_VERSION = "0.4.1"
+ENGINE_VERSION = "0.5.0"
 DEFAULT_PYTHON = "3.13"
 SUBPROCESS_TIMEOUT = 1800
 FORGE_DISTRIBUTIONS = {
@@ -48,10 +48,14 @@ class InstalledClient:
     """One virtual environment with the candidate wheel installed.
 
     `engine` is the exact `forge-template` version resolved into the
-    environment, or `None` when the wheel was installed without its `engine`
-    extra -- the shape a plain `pip install create-forge` produces. `uv` is
-    always present (installed explicitly when the `engine` extra did not pull
-    it) so a suite can run generated-project checks regardless.
+    environment, or `None` when it was removed after install (`omit=
+    "forge-template"`) to simulate a broken environment -- since ADR 0040
+    (CF-18.01) made the engine a required dependency, a plain
+    `pip install create-forge` always resolves it now, so there is no more
+    "installed without its extra" shape to reach without deliberately
+    breaking the install afterward. `uv` is always present (explicitly
+    installed, since it is also required but a fresh venv does not start
+    with it) so a suite can run generated-project checks regardless.
     """
 
     root: Path
@@ -154,22 +158,34 @@ def build_candidate_wheel(dist_dir: Path, base_env: Mapping[str, str]) -> Path:
 
 
 @contextlib.contextmanager
-def build_client(
+def build_client(  # noqa: PLR0913 - one distinct install-shape knob per parameter; see each one's own docstring line
     wheel: Path,
     base_env: Mapping[str, str],
     *,
     extras: str = "",
     engine: str | None = None,
+    omit: str | None = None,
+    force_version: str | None = None,
     python: str = DEFAULT_PYTHON,
 ) -> Iterator[InstalledClient]:
     """Install the candidate wheel into a fresh virtual environment.
 
-    `extras` is appended to the wheel path (`"[engine]"` or `""`); `engine`
-    pins `forge-template` when the wheel is installed without that extra. `uv`
-    is always added to the install set -- the `engine` extra already carries
-    it, and a wheel installed without that extra still needs it to run a
-    generated project. The environment, and everything generated inside it,
-    lives under a context-managed temporary root removed on any outcome.
+    `extras` is appended to the wheel path (`"[legacy]"` or `""` -- since
+    ADR 0040/CF-18.01, `forge-template` is a required dependency with no
+    extra of its own; `"[legacy]"` is `copier`'s). `engine` pins an exact
+    `forge-template` version alongside the wheel's own declared range, when a
+    specific compatible release matters for a test. `omit`, applied as a
+    second `uv pip uninstall` step after the main install, removes one
+    already-installed distribution to simulate a broken environment -- the
+    only way to reach "the engine is missing" now that it is required.
+    `force_version` similarly runs a second, targeted `uv pip install
+    --reinstall forge-template==<version>` step, since a genuinely
+    out-of-range pin passed to the first install would conflict with the
+    wheel's own declared range and fail the resolver outright. `uv` is always
+    added to the main install set -- a fresh venv does not start with it, and
+    a generated project's own checks need it regardless of `omit`. The
+    environment, and everything generated inside it, lives under a
+    context-managed temporary root removed on any outcome.
     """
     with tempfile.TemporaryDirectory(prefix="create-forge-installed-client-") as tmp:
         root = Path(tmp)
@@ -190,10 +206,47 @@ def build_client(
         )
         assert_success(installed, "candidate wheel installation")
 
+        if force_version:
+            forced = run(
+                [
+                    "uv",
+                    "pip",
+                    "install",
+                    "--python",
+                    str(python_path),
+                    "--reinstall",
+                    f"forge-template=={force_version}",
+                ],
+                root,
+                env=base_env,
+            )
+            assert_success(forced, f"forcing forge-template=={force_version}")
+
+        if omit:
+            removed = run(
+                ["uv", "pip", "uninstall", "--python", str(python_path), omit],
+                root,
+                env=base_env,
+            )
+            assert_success(removed, f"removing {omit} to simulate a broken install")
+
         console = venv_script(venv, "create-forge")
         uv_path = venv_script(venv, "uv")
         assert console.is_file(), console
         assert uv_path.is_file(), uv_path
+
+        resolved_engine: str | None
+        if omit == "forge-template":
+            resolved_engine = None
+        elif force_version:
+            resolved_engine = force_version
+        elif engine:
+            resolved_engine = engine.split("==")[-1]
+        else:
+            # Not pinned or forced: whatever the wheel's own declared range
+            # resolved. Callers that care about the exact version pass
+            # `engine=`/`force_version=` explicitly.
+            resolved_engine = None
 
         yield InstalledClient(
             root=root,
@@ -202,7 +255,7 @@ def build_client(
             console=console,
             uv=uv_path,
             wheel=wheel,
-            engine=engine.split("==")[-1] if engine else None,
+            engine=resolved_engine,
             env=installed_child_env(base_env, venv, root / "config"),
         )
 
