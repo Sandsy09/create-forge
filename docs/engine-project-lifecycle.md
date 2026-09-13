@@ -39,22 +39,22 @@ design gate is the four accepted `forge-template` Stage 15 contracts and
 CF-16.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)),
 all merged.
 
-**This contract is not the cutover.** No `create-forge` release named here
-exists yet. CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
+**This contract is not the cutover, but every rule it decided is now
+shipped.** CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
 made the engine path the default `new` route (no flag needed).
 [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
 ([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
-has since implemented rules 1-5 below — the `new` finalisation lifecycle and
-the committed generation-metadata file — so that default path now writes
+implemented rules 1-5 below — the `new` finalisation lifecycle and
+the committed generation-metadata file — so the default path writes
 `.git`, installs hooks when selected, and commits `.forge/generation.json`.
-[`docs/filesystem-generation.md`](filesystem-generation.md) is authoritative
-for that shipped behaviour; the rules stay below too, as the decision record.
-Rules 6-23 (engine-native `update`) remain undelivered — `create-forge
-update` still handles only direct-Copier projects, now reached through
-`--legacy`, through `runner.update`, until
-[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) implements
-them. [`docs/cli-conventions.md`](cli-conventions.md) remains authoritative
-for that still-pending behaviour.
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)) has since
+implemented rules 6-23 — `create-forge update` now routes by file, runs a
+Git-backed three-way merge with `git merge-file`, prints a genuine per-target
+`--dry-run` list, and supports an opt-in `--degraded` two-way fallback.
+[`docs/filesystem-generation.md`](filesystem-generation.md) and
+[`docs/cli-conventions.md`](cli-conventions.md) are authoritative for that
+shipped behaviour; the rules stay below too, as the decision record.
 
 The two reserved `forge-template` `EngineErrorCode` values
 (`invalid-generation-metadata`, `unsupported-generation-metadata`) are **not
@@ -117,7 +117,8 @@ spawns no process").
 
 Rule 5's write is **shipped by CF-18.03** (in force in
 [`docs/filesystem-generation.md`](filesystem-generation.md)); rule 6's
-rewrite-on-update is CF-18.04's, still pending.
+rewrite-on-update is **shipped by CF-18.04**
+([ADR 0046](adr/0046-engine-native-update-application.md)).
 
 5. **`.forge/generation.json`, committed.** `create-forge` persists
    `forge-template`'s generation-metadata document as JSON at
@@ -152,6 +153,11 @@ rewrite-on-update is CF-18.04's, still pending.
 
 ## `update` routing
 
+**Rule 7 shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)), by
+`create_forge.update.route_for`; rule 8's exact wording remains
+[CF-18.05](https://github.com/Sandsy09/create-forge/issues/162)'s.**
+
 7. **Route by file; `--legacy` forces Copier.** `create-forge update
    <project>`:
 
@@ -179,12 +185,19 @@ rewrite-on-update is CF-18.04's, still pending.
 
 ## Engine-native update
 
+**Shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).** `create_forge.pipeline`
+orchestrates rules 9-15 (`prepare_update`); `create_forge.update` applies the
+result (`apply_renames`, `apply_plan`). `forge_template.plan_update` performs
+the classification itself (CF-ROADMAP-01-EX-01) -- `create-forge` never
+re-implements it.
+
 9. **Three file sets, provider-supplied old and new.** An engine-native
    update diffs, keyed by target:
 
    | Set | Source |
    | --- | --- |
-   | **old** | `render_project(recorded spec)` on the recorded `forge-template` release, provisioned into an isolated environment |
+   | **old** | `render_project(recorded spec)` on the recorded `forge-template` release -- reused from the freshly-computed *new* render with no second render or provisioning at all when the recorded and installed provider versions already match (ADR 0046 decision 3), otherwise provisioned into an isolated environment (ADR 0044) |
    | **new** | `render_project(effective spec)` on the currently installed release |
    | **working tree** | `create-forge` reads it from disk |
 
@@ -209,9 +222,14 @@ rewrite-on-update is CF-18.04's, still pending.
 12. **Per-target three-way merge with inline conflict markers.** For each
     target `create-forge` computes the classification
     `forge-template` fixes — `unchanged`, `added`, `removed`, `changed`,
-    `renamed` — and merges old / new / working-tree by path. Where a template
-    change and a local edit touch the same region, the merged file carries
-    inline `<<<<<<<` / `=======` / `>>>>>>>` markers. The result is left
+    `renamed` — and merges old / new / working-tree by path, via `git
+    merge-file -p` (ADR 0046 decision 4) rather than a bespoke merge
+    algorithm. Where a template change and a local edit touch the same
+    region, the merged file carries inline `<<<<<<<` / `=======` / `>>>>>>>`
+    markers. A binary or otherwise non-mergeable `changed` target is decided
+    by pristine-ness alone instead: replaced outright if pristine, left
+    completely untouched and reported for manual review otherwise (ADR 0046
+    decision 4) — never spliced with text markers. The result is left
     **staged but uncommitted**; the user reviews it with `git diff`, resolves
     any markers, and commits — the same workflow the direct-Copier route
     already documents.
@@ -223,10 +241,10 @@ rewrite-on-update is CF-18.04's, still pending.
     decides.
 
 14. **`skip-if-exists` targets are never touched on update.** A target whose
-    `output` entry records `regeneration: "skip-if-exists"` (today reserved
-    for a future `CHANGELOG.md` and `.env`; the engine renders neither yet) is
-    never written, merged, or deleted during an update. `create-forge` notes
-    it in the summary and moves on — "the engine records the disposition, the
+    `output` entry records `regeneration: "skip-if-exists"` (the `changelog`
+    capability's `CHANGELOG.md`, so far the one shipped example) is never
+    written, merged, or deleted during an update. `create-forge` notes it in
+    the summary and moves on — "the engine records the disposition, the
     client applies the skip".
 
 15. **A repeated no-op update changes nothing visible.** When the recorded and
@@ -236,6 +254,13 @@ rewrite-on-update is CF-18.04's, still pending.
     content (an empty `git diff`), and reports that nothing changed.
 
 ## `update --dry-run`
+
+**Shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).** The effective
+spec for an update is always the recorded spec verbatim (decision 6);
+`update` gains no selection flags, and `--ref` — the Copier route's own
+target-version flag — is rejected outright on the engine route, exit `1`,
+naming `--legacy` as where it applies.
 
 16. **The engine route prints a per-target classification list.** Because the
     engine-native update has *old*, *new*, and the working tree in hand, its
@@ -251,6 +276,12 @@ rewrite-on-update is CF-18.04's, still pending.
     that route's dry run does not gain a list.
 
 ## Rollback and cancellation
+
+**Shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).** Write order is
+merge, then `uv.lock`, then `.forge/generation.json` last, then one `git add
+-A` covering all three (decisions 9-10) — a `uv.lock` refresh warns and keeps
+the project on failure, rather than aborting an otherwise-good update.
 
 18. **The clean-tree precondition is the rollback.** Because an engine-native
     update starts from a clean Git working tree, recovery from any mid-merge
@@ -271,6 +302,12 @@ rewrite-on-update is CF-18.04's, still pending.
 
 ## Unavailable recorded release
 
+**Shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).** Provisioning
+the recorded release reuses the `--engine-source` machinery (ADR 0044); its
+failure becomes `pipeline.UnavailableRecordedReleaseError`, carrying the
+recorded version for the report below.
+
 21. **Fail closed by default.** When the `forge-template` release recorded in
     `.forge/generation.json` cannot be obtained — yanked, offline, an index
     that no longer serves it — `create-forge` fails **before any render or
@@ -284,12 +321,20 @@ rewrite-on-update is CF-18.04's, still pending.
     no *old* render — which loses the ability to distinguish a local edit from
     an old provider default. It is **never automatic**: interactively `update`
     asks, explaining the lost merge base; non-interactively it stays failed
-    unless `--degraded` is passed explicitly. When taken, the refreshed
+    unless `--degraded` is passed explicitly. `update.degraded_plan`
+    (ADR 0046 decision 8) decides "pristine" from the recorded per-target
+    digest in `.forge/generation.json` rather than a reproduced render, since
+    none exists on this path — a pristine target is replaced outright, and
+    everything else, including every genuinely locally-modified file, is left
+    completely alone for manual review. When taken, the refreshed
     `.forge/generation.json` records
     `"reproduction": {"mode": "degraded", "reason": …}` so the next update
     knows the merge base was lost.
 
 ## `_message_after_update`
+
+**Shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).**
 
 23. **One client-owned post-update message, both routes.** `create-forge`
     owns the post-update next-steps text — the `_message_after_update` parity
@@ -322,9 +367,13 @@ depend on the existence of — `forge-template`'s reserved
   by CF-18.03 ([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md)):
   `staging.write_files` refuses the denylist; `copier.yml` itself is not
   applicable (see `docs/filesystem-generation.md`'s Target safety section).
-- The engine-native update *implementation* — the reproducible old/new render
-  plumbing, the merge engine, the `--dry-run` and `--degraded` flags —
-  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161).
+- ~~The engine-native update *implementation* — the reproducible old/new
+  render plumbing, the merge engine, the `--dry-run` and `--degraded`
+  flags~~ — decided by CF-18.04
+  ([ADR 0046](adr/0046-engine-native-update-application.md)): a
+  version-match short-circuit reproduces the old render, `git merge-file -p`
+  performs the merge, and `--degraded` decides pristine-ness from the
+  recorded per-target digest.
 - The exact rejection wording for a pre-cutover `--engine-preview` project and
   any migration helper, and the retention specifics of the direct-Copier
   update route — [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
@@ -341,21 +390,19 @@ depend on the existence of — `forge-template`'s reserved
 
 ## Executable examples
 
-Rules 1-5 are shipped and characterised; rules 6-23 (engine-native `update`)
-remain guarded rather than characterised until CF-18.04:
+Every rule this contract decided — rules 1-5 (`new` finalisation) and rules
+6-23 (engine-native `update`) — is now shipped and characterised:
 
 - [`tests/test_engine_lifecycle_contract.py`](../tests/test_engine_lifecycle_contract.py)
   derives the `new` finalisation lifecycle and the committed generation
   metadata from the live, shipped CLI (CF-18.03) — `pipeline.finalise_files`
   calls `lifecycle.finalise_project`, `lifecycle.py` runs `git init
   --initial-branch=main` and installs hooks, `engine.generation_metadata_target()`
-  names the committed path — and still derives `update`'s pre-CF-18.04
-  parameter set (`project` / `--ref` / `--dry-run`) and `runner.update`'s
-  `.copier-answers.yml` requirement, with one remaining tripwire (dispatch
-  routes only to `runner.update`) that fails deliberately when
-  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
-  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) land. It
-  also asserts
+  names the committed path — and derives the engine-native `update` route
+  (CF-18.04): the full `--legacy`/`--degraded` parameter set,
+  `cli.update_project` dispatching to `pipeline.prepare_update`/
+  `update.apply_plan`, and the `git merge-file` merge mechanism. No
+  CF-EPIC-18 tripwire remains in this file. It also asserts
   [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md) names
   its `CF-ROADMAP-01-AC-03` and `CF-ROADMAP-01-AC-05` obligations literally.
 - [`tests/test_lifecycle.py`](../tests/test_lifecycle.py) and
@@ -363,6 +410,22 @@ remain guarded rather than characterised until CF-18.04:
   characterise rules 1-5 directly — see
   [`docs/filesystem-generation.md`](filesystem-generation.md)'s own
   Executable examples for the full list.
+- [`tests/test_update_routing.py`](../tests/test_update_routing.py)
+  characterises rule 7's routing table and `read_recorded`'s lenient parsing.
+- [`tests/test_update_engine.py`](../tests/test_update_engine.py)
+  characterises rules 9-22 with real `git` (no mocked subprocess): the
+  clean-tree precondition, rename application, every classification's
+  application (including a synthetic `renamed` plan, since the shipped
+  catalogue declares none), the real `git merge-file` merge and its conflict
+  markers, the degraded fallback, and the version-match short-circuit against
+  the real installed engine. Its two `@pytest.mark.e2e` cases run the real
+  console script end to end (`new` then `update`) and provision the
+  `../forge-template` sibling checkout as a stand-in recorded release to
+  exercise the provisioning branch for real.
+- `tests/test_cli.py`'s engine-native `update` section characterises the
+  CLI orchestration: success/no-op/conflict reporting, the dry-run list, the
+  relock warning, and the exit-status mapping for a dirty tree, `Ctrl-C`, and
+  a declined or accepted degraded fallback.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
   link-audit guard keeps this document reachable from `CLAUDE.md`,
   `CONTRIBUTING.md` and [`docs/cli-conventions.md`](cli-conventions.md).

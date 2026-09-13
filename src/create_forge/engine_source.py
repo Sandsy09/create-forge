@@ -132,6 +132,18 @@ def build_requirement(source: str, ref: str | None) -> str:
     return str(Path(candidate).expanduser().resolve())
 
 
+def released_requirement(version: str) -> str:
+    """A `uv pip install` requirement pinning one exact PyPI release.
+
+    Used by `pipeline.prepare_update` (ADR 0046, CF-18.04) to reproduce the
+    `forge-template` release recorded in `.forge/generation.json` when it
+    differs from the installed one -- a third, distinct source kind from
+    `build_requirement`'s user-supplied path/VCS/scp forms above: a recorded
+    release is always an exact PyPI version, never a path or a ref.
+    """
+    return f"{compat.ENGINE_DISTRIBUTION}=={version}"
+
+
 def _isolated_env() -> dict[str, str]:
     """The subprocess environment for `uv` and the worker.
 

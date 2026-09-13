@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from create_forge import engine, lifecycle, staging
+from create_forge import compat, engine, lifecycle, staging, update
 from create_forge.descriptors import DescriptorView
 from create_forge.spec import (
     DESCRIPTOR_KIND,
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from pathlib import Path
 
-    from forge_template import ProjectSpec, RenderedProject
+    from forge_template import ProjectSpec, RenderedProject, UpdatePlan
 
 _KIND_BY_DESCRIPTOR: Mapping[str, SelectionKind] = {
     descriptor_kind: selection_kind
@@ -288,3 +288,113 @@ def finalise_generation_request(
         destination,
         metadata_json=request.rendered.metadata.to_json(),
     )
+
+
+class UnavailableRecordedReleaseError(Exception):
+    """The recorded `forge-template` release could not be reproduced.
+
+    ADR 0041 rules 21-22: the old render for an engine-native update could
+    not be provisioned. Carries the recorded version so the caller can name
+    it in the required
+    "axis, detected value, required action" report and offer `--degraded`
+    (`update.degraded_plan`) as the opt-in fallback -- this engine never
+    performs that comparison itself (CF-ROADMAP-01-EX-01).
+    """
+
+    def __init__(self, recorded_version: str, reason: str) -> None:
+        super().__init__(
+            f"the recorded forge-template {recorded_version} is unavailable: {reason}"
+        )
+        self.recorded_version = recorded_version
+        self.reason = reason
+
+
+@dataclass(frozen=True, slots=True)
+class UpdatePreparation:
+    """One in-memory result of an engine-native update's classification.
+
+    Reproduces the old/new render pair and asks the engine to classify the
+    update (ADR 0041 rules 9-15). Ready for `update.apply_renames`/`apply_plan`
+    to apply against the working tree; nothing here has touched `project` yet.
+    """
+
+    plan: UpdatePlan
+    new: RenderedProject
+    old: Mapping[str, bytes]
+    recorded: update.RecordedDocument
+
+
+def _effective_render(spec_payload: Mapping[str, object]) -> RenderedProject:
+    """Re-parse, re-validate, and render a recorded spec on the installed engine.
+
+    Decision 5: the effective spec for an update is always the recorded spec
+    verbatim; `update` gains no selection flags.
+    """
+    spec = engine.build_project_spec(spec_payload)
+    validated = engine.validate(spec)
+    return engine.render(validated)
+
+
+def _reproduce_old(
+    recorded: update.RecordedDocument, new: RenderedProject
+) -> dict[str, bytes]:
+    """Reproduce the old render (ADR 0041 rule 9), decision 1's short-circuit.
+
+    Renders in process when the recorded and installed provider versions
+    already match. Decision 5 fixes the effective spec to the recorded spec
+    verbatim, so a matching version means `old` and `new` are the *same*
+    render -- there is nothing to reproduce, and no engine-source
+    provisioning is needed at all. Otherwise the recorded release is
+    provisioned out of process through the
+    existing `--engine-source` machinery (ADR 0044) and rendered there; a
+    provisioning or negotiation failure becomes
+    `UnavailableRecordedReleaseError`, the client-detected "unavailable
+    recorded release" signal ADR 0041 rules 21-22 handle.
+    """
+    installed_version = engine.get_info().package_version
+    if recorded.provider_version == installed_version:
+        return {file.target: file.content for file in new.files}
+
+    from create_forge import engine_source  # noqa: PLC0415 - only on the drift path
+
+    requirement = engine_source.released_requirement(recorded.provider_version)
+    try:
+        with engine_source.provision(requirement) as runtime:
+            engine_source.negotiate(runtime)
+            files = engine_source.render(runtime, dict(recorded.spec))
+    except (engine_source.EngineSourceError, compat.EngineCompatibilityError) as exc:
+        version = recorded.provider_version
+        raise UnavailableRecordedReleaseError(version, str(exc)) from exc
+    return dict(files)
+
+
+def prepare_update(project: Path) -> UpdatePreparation:
+    """Reproduce old/new and classify one engine-native update.
+
+    The pure "what would change" half, shared by `--dry-run` and a real run.
+    Raises `update.UpdateError` for a malformed metadata document,
+    `UnavailableRecordedReleaseError` when the recorded release cannot be
+    reproduced, and `engine.EngineCompatibilityError`/`engine.ForgeEngineError`
+    for the installed-engine negotiation and classification calls.
+    """
+    metadata_filename = engine.generation_metadata_target()
+    recorded = update.read_recorded(project, metadata_filename=metadata_filename)
+    new = _effective_render(recorded.spec)
+    old = _reproduce_old(recorded, new)
+    plan = engine.plan_update(recorded.raw, old=old, new=new)
+    return UpdatePreparation(plan=plan, new=new, old=old, recorded=recorded)
+
+
+def prepare_degraded_update(
+    project: Path,
+) -> tuple[update.RecordedDocument, RenderedProject]:
+    """The effective render and recorded document a degraded update needs.
+
+    No old render is attempted at all -- `--degraded` (decision 4) never
+    tries to reproduce the recorded release, whether or not it would in fact
+    succeed; "pristine" is decided from the recorded per-target digests
+    instead (`update.degraded_plan`).
+    """
+    metadata_filename = engine.generation_metadata_target()
+    recorded = update.read_recorded(project, metadata_filename=metadata_filename)
+    return recorded, _effective_render(recorded.spec)

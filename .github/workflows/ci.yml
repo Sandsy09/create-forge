@@ -262,13 +262,17 @@ jobs:
   # the initial commit, conditional `pre-commit install --install-hooks`) is
   # newly OS-sensitive -- path separators, line endings, hook shims -- and the
   # `windows` smoke job above runs only the fast suite (`-m 'not network and
-  # not e2e'`), so it never exercises this. A narrow, separate job rather than
-  # widening `e2e` into a matrix: only the lifecycle-marked tests need a second
-  # OS, not the full 60-minute suite. Exactly the evidence command
-  # docs/engine-cutover-acceptance.md's finalisation row names.
+  # not e2e'`), so it never exercises this. CF-18.04 / ADR 0046 added the
+  # engine-native `update` route's own e2e cases to the same OS-sensitivity
+  # class (a real `git merge-file` merge, path separators, line endings), so
+  # this job runs both rather than widening `e2e` into a matrix: only the
+  # lifecycle- and update-marked tests need a second OS, not the full
+  # 60-minute suite. Exactly the evidence commands
+  # docs/engine-cutover-acceptance.md's finalisation and engine-native-update
+  # rows name.
   # ---------------------------------------------------------------------------
   e2e-windows:
-    name: End-to-end lifecycle (Windows)
+    name: End-to-end lifecycle and update (Windows)
     runs-on: windows-latest
     needs: lint
     steps:
@@ -286,6 +290,9 @@ jobs:
 
       - name: End-to-end lifecycle tests
         run: uv run pytest tests/test_e2e_engine_generation.py -k lifecycle
+
+      - name: Engine-native update tests
+        run: uv run pytest tests/test_update_engine.py
 
   # ---------------------------------------------------------------------------
   # Single required status check for branch protection.

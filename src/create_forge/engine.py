@@ -54,6 +54,17 @@ from create_forge.compat import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    # `GenerationMetadata`/`ReproductionRecord`/`UpdatePlan` are 0.5.0-only
+    # additions (FT-17.01/FT-17.04) -- unlike the names imported above, which
+    # every supported and out-of-range engine alike has always had, these
+    # cannot be imported at module scope (see `plan_update`/`metadata_json`
+    # below, and `generation_metadata_target`'s own docstring for the
+    # identical reasoning that first caught this class of bug, ADR 0045).
+    # Only `GenerationMetadata`/`UpdatePlan` appear in a type annotation here;
+    # `ReproductionRecord` is used only at runtime, inside `metadata_json`'s
+    # own lazy import, after compatibility is confirmed.
+    from forge_template import GenerationMetadata, UpdatePlan
+
 
 def _require_supported_package(info: EngineInfo) -> None:
     """Reject an engine package outside the declared, released range.
@@ -160,6 +171,64 @@ def render(spec: ProjectSpec) -> RenderedProject:
     _require_component_manifest_protocol(info)
     _require_metadata_version(info)
     return _render_project(spec)
+
+
+def plan_update(
+    recorded: str, *, old: Mapping[str, bytes], new: RenderedProject
+) -> UpdatePlan:
+    """Classify an engine-native update after compatibility checks.
+
+    Delegates to `forge_template.plan_update` -- see its own docstring for
+    the negotiation, fail-closed, and classification rules this exposes
+    unchanged (CF-ROADMAP-01-EX-01: no re-implementation in the client).
+    `recorded` is the raw JSON text `update.read_recorded` reads from
+    `.forge/generation.json`; `old`/`new` are the reproduced and freshly
+    rendered file sets `pipeline.prepare_update` already produced.
+
+    `forge_template.plan_update` itself is imported lazily, inside this
+    function body rather than at module scope: it is a `0.5.0`-only addition
+    (FT-17.04), so an out-of-range engine that predates it would otherwise
+    turn this module's own import into a misleading "engine not installed"
+    `ImportError` before the compatibility checks below ever run -- the exact
+    bug `generation_metadata_target()` already documents and ADR 0045 fixed
+    for `DEFAULT_GENERATION_METADATA_TARGET`. The checks below run first, so
+    by the time this import executes, compatibility is already confirmed.
+    """
+    info = get_engine_info()
+    _require_supported_package(info)
+    _require_projectspec_protocol(info)
+    _require_component_manifest_protocol(info)
+    _require_metadata_version(info)
+    from forge_template import plan_update as _plan_update  # noqa: PLC0415
+
+    return _plan_update(recorded, old=old, new=new)
+
+
+def metadata_json(
+    metadata: GenerationMetadata, *, degraded_reason: str | None = None
+) -> str:
+    """The canonical, persistable JSON for one generation-metadata document.
+
+    Callers extract `metadata` from a `RenderedProject.metadata` they have
+    already confirmed is not `None` -- `pipeline.finalise_generation_request`'s
+    fail-closed check for the `new` path applies identically to the update
+    path's own caller, which only ever calls this after a successful
+    `pipeline.prepare_update`/`prepare_degraded_update` -- both already
+    compatibility-gated. `degraded_reason`, when given, marks the document
+    `reproduction.mode = "degraded"` (ADR 0041 rule 22) via `model_copy`:
+    `GenerationMetadata` is frozen, so this is the documented way a client
+    sets a field the engine itself never populates on a fresh render.
+    `ReproductionRecord` is a `0.5.0`-only addition, so it is imported
+    lazily here for the identical reason `plan_update` imports its own
+    forge_template name lazily above.
+    """
+    if degraded_reason is None:
+        return metadata.to_json()
+    from forge_template import ReproductionRecord  # noqa: PLC0415
+
+    reproduction = ReproductionRecord(mode="degraded", reason=degraded_reason)
+    degraded = metadata.model_copy(update={"reproduction": reproduction})
+    return degraded.to_json()
 
 
 def generation_metadata_target() -> str:
