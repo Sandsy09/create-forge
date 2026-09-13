@@ -93,6 +93,7 @@ _SHIPPED_MODULES = (
     "sources",
     "descriptors",
     "engine_source",
+    "lifecycle",
 )
 
 # One of two compatibility-line dependencies ADR 0012 now governs -- Copier

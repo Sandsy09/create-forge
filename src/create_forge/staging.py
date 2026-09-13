@@ -48,6 +48,28 @@ def ensure_available(dst: Path) -> None:
         raise DestinationConflictError(msg)
 
 
+# Copier's `copier.yml` `_exclude` list, minus `copier.yml` itself (which has
+# no engine analogue -- ADR 0045) and `.git` (folded into `_is_denylisted`
+# below, since it is now load-bearing rather than merely hygienic: `git init`
+# runs at `dst` after the rename, so a rendered `.git/hooks/pre-commit` would
+# survive re-initialisation and then execute). `PurePosixPath.match` applies
+# each pattern to the whole target, so `*.py[co]` and `__pycache__` catch a
+# match at any depth, not only at the root.
+_DENYLISTED_PATTERNS = ("*.py[co]", "__pycache__", "__pycache__/*", "~*", ".DS_Store")
+
+
+def _is_denylisted(posix_target: PurePosixPath) -> bool:
+    """Whether `posix_target` falls under the engine's `_exclude` refusal.
+
+    A `.git` path segment anywhere is refused outright; the rest are Copier's
+    hygiene patterns, matched against the whole target so they catch a nested
+    path (`sub/__pycache__/mod.pyc`) the same as a root-level one.
+    """
+    if ".git" in posix_target.parts:
+        return True
+    return any(posix_target.match(pattern) for pattern in _DENYLISTED_PATTERNS)
+
+
 def _safe_relative_path(root: Path, target: str) -> Path:
     """Resolve one project-relative target under `root`, refusing escapes.
 
@@ -63,6 +85,9 @@ def _safe_relative_path(root: Path, target: str) -> Path:
         raise StagingError(msg)
     if ".." in posix_target.parts:
         msg = f"refusing to write outside the staging directory: {target!r}"
+        raise StagingError(msg)
+    if _is_denylisted(posix_target):
+        msg = f"refusing to write an excluded target: {target!r}"
         raise StagingError(msg)
 
     resolved_root = root.resolve()

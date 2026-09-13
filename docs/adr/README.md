@@ -47,6 +47,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0042 — Approve the engine-default cutover acceptance and support policy](0042-engine-cutover-acceptance-and-support-policy.md)
 - [0043 — Consolidate CLAUDE.md and CONTRIBUTING.md behind a docs index](0043-consolidate-contributor-documentation.md)
 - [0044 — Run `--engine-source` overrides out of process](0044-out-of-process-engine-source-overrides.md)
+- [0045 — Run the engine `new` Git/hook lifecycle in a new module, and refuse the excluded targets it makes load-bearing](0045-engine-generation-lifecycle-and-staging-exclusions.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

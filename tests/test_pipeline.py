@@ -18,12 +18,17 @@ from forge_template import (
     ComponentDescriptor,
     ComponentOption,
     ComponentOwner,
+    GenerationMetadata,
     GenerationPlan,
+    MetadataProtocols,
     PlannedFile,
+    ProviderIdentity,
     RenderedFile,
     RenderedProject,
+    SelectedComponent,
 )
 
+import create_forge.lifecycle as lifecycle_module
 import create_forge.staging as staging_module
 from create_forge import engine, pipeline
 from create_forge.pipeline import (
@@ -307,10 +312,25 @@ def test_build_generation_request_reuses_a_supplied_catalogue(
     assert calls == 1  # not re-discovered inside build_generation_request
 
 
-def _synthetic_request() -> GenerationRequest:
+def _synthetic_metadata() -> GenerationMetadata:
+    """A minimal but real `GenerationMetadata`, for tests that stand in for a
+    render without a component catalogue.
+    """
+    return GenerationMetadata(
+        metadata_version=1,
+        provider=ProviderIdentity(distribution="forge-template", version="0.5.0"),
+        protocols=MetadataProtocols(projectspec=1, component_manifest=(1,)),
+        spec={},
+        components=(SelectedComponent(id="library", version="1.0.0"),),
+        output=(),
+    )
+
+
+def _synthetic_request(*, metadata: GenerationMetadata | None) -> GenerationRequest:
     """A `GenerationRequest` built from the real public models, entirely
     without a component catalogue -- `finalise_generation_request` only
-    needs `request.rendered.files`, so this stands in for a real render.
+    needs `request.rendered.files` (and, since CF-18.03, `.metadata`), so
+    this stands in for a real render.
     """
     owner = ComponentOwner(id="library")
     plan = GenerationPlan(
@@ -326,18 +346,29 @@ def _synthetic_request() -> GenerationRequest:
             RenderedFile(target="pyproject.toml", content=b"[project]\n"),
             RenderedFile(target="src/pkg/__init__.py", content=b""),
         ),
+        metadata=metadata,
     )
     # A real `ProjectSpec` plays no part in finalisation -- only
-    # `request.rendered.files` does -- so a plain placeholder stands in,
-    # the same `cast(Any, ...)` pattern used above.
+    # `request.rendered.files`/`.metadata` do -- so a plain placeholder
+    # stands in, the same `cast(Any, ...)` pattern used above.
     return GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+
+
+def _no_lifecycle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Silence the real Git/hook lifecycle for a test that only cares about
+    staging/finalisation -- CF-18.03's `finalise_files` runs it after every
+    successful rename, and this repository's own working tree is not a
+    fixture these tests want touched.
+    """
+    monkeypatch.setattr(lifecycle_module, "finalise_project", lambda dst: ())
 
 
 def test_finalise_generation_request_stages_and_moves_into_place(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    request = _synthetic_request()
+    request = _synthetic_request(metadata=_synthetic_metadata())
     dst = tmp_path / "proj"
+    _no_lifecycle(monkeypatch)
 
     def fake_lock(staging_dir: Path) -> None:
         assert staging_dir != dst
@@ -352,14 +383,80 @@ def test_finalise_generation_request_stages_and_moves_into_place(
     assert (dst / "pyproject.toml").read_bytes() == b"[project]\n"
     assert (dst / "src" / "pkg" / "__init__.py").exists()
     assert (dst / "uv.lock").read_text(encoding="utf-8") == "version = 1\n"
+    metadata_path = dst / ".forge" / "generation.json"
+    assert metadata_path.is_file()
+    assert metadata_path.read_text(encoding="utf-8") == _synthetic_metadata().to_json()
     # Nothing but the destination itself was left behind next to it.
     assert list(tmp_path.iterdir()) == [dst]
+
+
+def test_finalise_generation_request_writes_metadata_before_the_rename(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The metadata document is written into the staging tree alongside the
+    render, not appended afterwards -- so a lock failure that aborts the
+    rename also leaves no partial metadata anywhere.
+    """
+    request = _synthetic_request(metadata=_synthetic_metadata())
+    dst = tmp_path / "proj"
+    seen: dict[str, bool] = {}
+
+    def fake_lock(staging_dir: Path) -> None:
+        seen["metadata_present_before_lock"] = (
+            staging_dir / ".forge" / "generation.json"
+        ).is_file()
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
+    _no_lifecycle(monkeypatch)
+
+    finalise_generation_request(request, dst)
+
+    assert seen["metadata_present_before_lock"] is True
+
+
+def test_finalise_generation_request_fails_closed_with_no_metadata(
+    tmp_path: Path,
+) -> None:
+    """`RenderedProject.metadata is None` is a provider-contract violation on
+    this route (only `--engine-source` legitimately has none, and that route
+    never calls this function) -- fail before any write rather than silently
+    generating an un-updatable project.
+    """
+    request = _synthetic_request(metadata=None)
+    dst = tmp_path / "proj"
+
+    with pytest.raises(StagingError, match="no generation metadata"):
+        finalise_generation_request(request, dst)
+
+    assert not dst.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_finalise_generation_request_runs_the_lifecycle_after_rename(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    request = _synthetic_request(metadata=_synthetic_metadata())
+    dst = tmp_path / "proj"
+    calls: list[Path] = []
+
+    def fake_lifecycle(destination: Path) -> tuple[str, ...]:
+        calls.append(destination)
+        assert destination.is_dir()  # the rename already happened
+        return ("a lifecycle warning",)
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", lambda staging_dir: None)
+    monkeypatch.setattr(lifecycle_module, "finalise_project", fake_lifecycle)
+
+    warnings = finalise_generation_request(request, dst)
+
+    assert calls == [dst]
+    assert warnings == ("a lifecycle warning",)
 
 
 def test_finalise_generation_request_rejects_a_non_empty_destination(
     tmp_path: Path,
 ) -> None:
-    request = _synthetic_request()
+    request = _synthetic_request(metadata=_synthetic_metadata())
     dst = tmp_path / "proj"
     dst.mkdir()
     (dst / "existing.txt").write_text("hi", encoding="utf-8")
@@ -391,6 +488,7 @@ def test_finalise_generation_request_leaves_nothing_on_a_mid_write_failure(
             RenderedFile(target="ok.txt", content=b"fine"),
             RenderedFile(target="../escape.txt", content=b"malicious"),
         ),
+        metadata=_synthetic_metadata(),
     )
     request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
     dst = tmp_path / "proj"
@@ -405,7 +503,7 @@ def test_finalise_generation_request_leaves_nothing_on_a_mid_write_failure(
 def test_finalise_generation_request_cleans_up_a_lock_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    request = _synthetic_request()
+    request = _synthetic_request(metadata=_synthetic_metadata())
     dst = tmp_path / "proj"
 
     def failing_lock(staging_dir: Path) -> None:

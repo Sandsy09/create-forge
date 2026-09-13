@@ -1,21 +1,23 @@
 """Guards for the engine project lifecycle contract (CF-16.02, ADR 0041).
 
-`docs/engine-project-lifecycle.md` is a *decision*, not a shipped interface: it
-describes the engine `new` finalisation lifecycle (git init, initial commit,
-conditional hooks), the committed `.forge/generation.json` metadata file, and
-the engine-native `create-forge update` route, none of which exists yet.
+`docs/engine-project-lifecycle.md` is a *decision*, not a shipped interface:
+CF-18.03 (#160) implemented the `new` half -- the engine `new` finalisation
+lifecycle (git init, initial commit, conditional hooks) and the committed
+`.forge/generation.json` metadata file -- but the engine-native
+`create-forge update` route stays CF-18.04's (#161), not yet built.
 
 Same discipline as `tests/test_engine_default_contract.py` and
 `forge-template`'s `tests/test_cutover_gates.py`:
 
-- **Derived assertions** read the live pre-cutover CLI, so a claim about
-  *today's* state that silently changes fails here.
-- **Tripwires** assert the pre-cutover state deliberately, each naming the
-  CF-EPIC-18 issue whose merge must flip it. When the cutover lands they fail
-  on purpose, forcing whoever implements it to move the affected rule out of
-  `docs/engine-project-lifecycle.md`'s "decided" voice and into
-  `docs/filesystem-generation.md` / `docs/cli-conventions.md`'s "in force"
-  voice in the same change.
+- **Derived assertions** read the live CLI, so a claim about *today's* state
+  that silently changes fails here.
+- **Tripwires** assert a not-yet-built state deliberately, each naming the
+  CF-EPIC-18 issue whose merge must flip it. When it lands, the tripwire is
+  replaced by a derived assertion proving the real behaviour, and the
+  affected rule moves out of `docs/engine-project-lifecycle.md`'s "decided"
+  voice into `docs/filesystem-generation.md` / `docs/cli-conventions.md`'s
+  "in force" voice in the same change -- CF-18.03 did exactly this for its
+  own two rows below; only the CF-18.04 update-dispatch tripwire remains.
 
 No network, no filesystem outside this repository.
 """
@@ -28,7 +30,7 @@ from pathlib import Path
 import pytest
 import typer.main
 
-from create_forge import runner
+from create_forge import engine, runner
 from create_forge.cli import app
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -110,35 +112,47 @@ def test_adr_names_its_review_obligations_literally() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Tripwires -- fail deliberately when the cutover lands                        #
+# Derived assertions -- CF-18.03's rows, now that they are shipped             #
 # --------------------------------------------------------------------------- #
 
 
-def test_tripwire_no_generation_metadata_writer_exists() -> None:
-    """Flips when CF-18.03 (#160) / CF-18.04 (#161) add the
-    `.forge/generation.json` reader/writer. No shipped module names it today.
+def test_the_engine_new_path_persists_generation_metadata() -> None:
+    """CF-18.03 (#160): `pipeline.finalise_files` writes the provider's
+    generation-metadata document into the staged tree, before the rename, at
+    the engine's own documented default path -- re-exported through
+    `engine.generation_metadata_target()` (ADR 0041 rule 5) rather than
+    duplicated as a second `.forge/generation.json` literal, so the two names
+    can never drift apart. Accessed lazily (ADR 0045), not at `engine.py`
+    module scope, so an out-of-range engine that predates this constant still
+    fails through `EngineCompatibilityError` rather than a misleading
+    `ImportError`.
     """
-    for module in ("cli.py", "pipeline.py", "staging.py", "runner.py"):
-        source = (SRC / module).read_text(encoding="utf-8")
-        assert "generation.json" not in source, (
-            f"{module} references generation.json -- the engine metadata file "
-            "landed; update docs/engine-project-lifecycle.md and this tripwire"
-        )
+    assert engine.generation_metadata_target() == METADATA_FILE
+    pipeline_source = (SRC / "pipeline.py").read_text(encoding="utf-8")
+    assert "generation_metadata_target" in pipeline_source
 
 
-def test_tripwire_engine_new_path_runs_no_git_or_hook_lifecycle() -> None:
-    """Flips when CF-18.03 (#160) adds the post-rename `git init` + initial
-    commit + `pre-commit install` lifecycle (ADR 0041 decisions 5-7). Today
-    `pipeline`/`staging` spawn only `uv lock` -- see
-    docs/filesystem-generation.md "contains no `.git`, `.venv`, hooks".
+def test_the_engine_new_path_runs_the_git_and_hook_lifecycle() -> None:
+    """CF-18.03 (#160): `lifecycle.finalise_project` runs `git init` + one
+    initial commit + conditional `pre-commit install --install-hooks` at the
+    final destination, after the atomic rename (ADR 0041 decisions 5-7). It
+    lives in its own engine-free module, called from `pipeline.finalise_files`
+    -- neither `pipeline.py` nor `staging.py` spawns `git` directly.
     """
-    for module in ("pipeline.py", "staging.py"):
-        source = (SRC / module).read_text(encoding="utf-8")
-        assert "pre-commit install" not in source
-        assert not re.search(r"""["'`]git["'`],\s*["'`]init""", source), (
-            f"{module} now runs `git init` -- the engine `new` lifecycle "
-            "landed; update the contract and this tripwire"
-        )
+    pipeline_source = (SRC / "pipeline.py").read_text(encoding="utf-8")
+    assert "lifecycle.finalise_project" in pipeline_source
+
+    lifecycle_source = (SRC / "lifecycle.py").read_text(encoding="utf-8")
+    assert re.search(
+        r"""["'`]init["'`],\s*["'`]--initial-branch=main["'`]""", lifecycle_source
+    ), "lifecycle.py does not run `git init --initial-branch=main`"
+    assert "pre-commit" in lifecycle_source
+    assert "--install-hooks" in lifecycle_source
+
+
+# --------------------------------------------------------------------------- #
+# Tripwires -- fail deliberately when the cutover lands                        #
+# --------------------------------------------------------------------------- #
 
 
 def test_tripwire_update_dispatches_only_to_runner_update() -> None:

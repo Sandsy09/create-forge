@@ -245,7 +245,12 @@ def _assert_initial_project_shape(project: Path, composition: Composition) -> No
     assert (project / f"src/{composition.package_name}/py.typed").is_file()
     assert (project / "notebooks/getting-started.ipynb").is_file()
     assert (project / "tests").is_dir()
-    assert not (project / ".git").exists()
+    assert (project / ".forge" / "generation.json").is_file()
+    # The engine path runs no copier.yml _tasks, but does run its own
+    # post-rename lifecycle (CF-18.03, ADR 0045): `git init` + one commit.
+    # Neither Data Science composition selects `pre-commit`, so hooks are
+    # not installed and no `.venv` is created.
+    assert (project / ".git").is_dir()
     assert not (project / ".venv").exists()
     assert list(project.parent.glob(".create-forge-*")) == []
 

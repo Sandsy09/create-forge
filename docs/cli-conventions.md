@@ -110,9 +110,13 @@ does — `--dry-run` lists the planned targets and writes nothing, on both
 routes alike. `forge-template`'s production catalogue ships `library`, `cli`,
 and `data-science` (plus the `github` platform and eight tooling
 capabilities), so this route generates a real project when given a valid
-archetype. A project it creates today is not yet `create-forge
-update`-able — the committed generation-metadata file and engine-native
-update dispatch are CF-18.03/CF-18.04's job; it is not eligible for the
+archetype. Since CF-18.03, a generated project also gets `git init`, one
+initial commit (containing `uv.lock` and the committed
+`.forge/generation.json` metadata document), and `pre-commit install
+--install-hooks` when the render selected the `pre-commit` capability — see
+the canonical [filesystem generation contract](filesystem-generation.md). A
+project it creates is still not yet `create-forge update`-able, though —
+engine-native update dispatch is CF-18.04's job; it is not eligible for the
 `--legacy` Copier update path either, since it writes no
 `.copier-answers.yml`.
 
@@ -243,10 +247,14 @@ implemented most of it:
   and `--legacy` without the extra installed.
 
 CF-18.02 ([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) then
-implemented `--engine-source`/`--engine-ref` — see the section below. Still
-open: the engine `new` Git/hook lifecycle (CF-18.03); engine-native `update`
-dispatch (CF-18.04); deeper `--legacy` regression and old-preview-project
-recovery (CF-18.05); and the concrete deprecation versions, windows,
+implemented `--engine-source`/`--engine-ref` — see the section below. CF-18.03
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
+then shipped the engine `new` Git/hook lifecycle and the committed
+generation-metadata file — see the
+[filesystem generation contract](filesystem-generation.md). Still open:
+engine-native `update` dispatch (CF-18.04); deeper `--legacy` regression and
+old-preview-project recovery (CF-18.05); and the concrete deprecation versions,
+windows,
 acceptance matrix and support policy CF-16.03 fixed in the
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
 ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
@@ -355,11 +363,17 @@ defines what happens **after the engine renders a project** and **when
   dirty tree / bad merge / missing metadata / no route, `3` for an
   incompatible or unavailable recorded engine, `130` for cancellation.
 
-That contract is a decision, not a shipped interface. `new` reaches the
-engine path by default since CF-18.01, but until
-[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
-implement this contract, an engine-generated project writes no committed
-generation metadata and `update` still handles only direct-Copier projects.
+That contract's `new` half — the first two bullets above — shipped in
+[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md)):
+`new` reaches the engine path by default since CF-18.01, and an
+engine-generated project now writes committed generation metadata and the
+Git/hook lifecycle above — see the canonical
+[filesystem generation contract](filesystem-generation.md). The `update`
+half remains a decision, not a shipped interface: `update` still handles
+only direct-Copier projects until
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) implements
+engine-native update dispatch.
 
 ## Engine-default cutover acceptance
 

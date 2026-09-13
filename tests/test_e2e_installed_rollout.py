@@ -257,9 +257,12 @@ def test_installed_engine_archetype_has_the_expected_shape(
     assert (project / f"src/{package}/py.typed").is_file()
     assert (project / "tests").is_dir()
     assert (project / "uv.lock").is_file()
-    # The engine path runs no copier.yml _tasks -- only the client-finalised
-    # lock before the atomic rename (ADR 0021).
-    assert not (project / ".git").exists()
+    assert (project / ".forge" / "generation.json").is_file()
+    # The engine path runs no copier.yml _tasks, but does run its own
+    # post-rename lifecycle (CF-18.03, ADR 0045): `git init` + one commit.
+    # Neither `_ENGINE_ARCHETYPES` selects `pre-commit`, so hooks are not
+    # installed and no `.venv` is created.
+    assert (project / ".git").is_dir()
     assert not (project / ".venv").exists()
     assert _staging_siblings(project) == []
 
