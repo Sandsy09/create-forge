@@ -4,14 +4,16 @@ Forge gives you a working project structure, dependency management, and
 quality checks so you can start writing your own code.
 
 `create-forge` is the command-line tool. Its companion, `forge-template`,
-provides the generated content and the optional composition engine. You do
+provides the generated content and the default composition engine. You do
 not need to clone either repository to generate a project, and your
 generated application does not depend on Forge at runtime.
 
-This guide covers **create-forge 0.3.2** and **forge-template 0.4.1**. The
-default workflow creates an updatable Library project. CLI Application,
-Data Science, and reusable capabilities are available through the
-[engine preview](projects.md).
+This guide covers **create-forge 0.4.0 and later**, where the engine is the
+default `new` path. Library, CLI Application, Data Science, and reusable
+capabilities are all available directly — see [choosing a project
+type](projects.md). Coming from a `0.3.x` install or project? Start with
+[migration](migration.md). Direct Copier generation is still available
+through `--legacy` — see [installation](installation.md).
 
 ## Before you start
 
@@ -27,9 +29,10 @@ git config user.name
 git config user.email
 ```
 
-The default template creates a local Git repository and commits its
-initial files. If either Git setting is missing, configure the identity
-you want to use for your projects before continuing:
+`new` creates a local Git repository and commits the generated files
+(installing pre-commit hooks too, if selected). If either Git setting is
+missing, configure the identity you want to use for your projects before
+continuing:
 
 ```bash
 git config --global user.name "Your Name"

@@ -1,13 +1,13 @@
 # Build a CLI application
 
-Use the CLI Application preview for a Python tool people run from their
-terminal. It generates a Typer application with a console entry point,
-a `python -m` entry point, and tests for the starter command.
+Use the `cli` archetype for a Python tool people run from their terminal.
+It generates a Typer application with a console entry point, a `python -m`
+entry point, and tests for the starter command.
 
 ## Generate and run
 
 ```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new "Weather Tools" --engine-preview --archetype cli --yes --data license=mit
+uvx create-forge new "Weather Tools" --archetype cli --yes --data license=mit
 cd weather-tools
 uv run --locked poe check
 uv run weather-tools --help
@@ -32,10 +32,10 @@ uv build
 ```
 
 The build produces distribution files under `dist/`. This archetype uses
-fixed packaging and currently has no component options. It includes the
-[shared preview tooling](projects.md#what-preview-projects-share), but does
-not initialise Git or create CI workflows.
+fixed packaging and currently has no component options. `new` initialises
+Git and makes the initial commit here the same as for every other
+archetype; pull later template changes with `create-forge update` — see
+[project updates](updates.md).
 
 You can add [Jupyter or Scientific Python](capabilities.md) at generation
-time, for example when the command wraps a numerical analysis. Generated
-preview projects do not support `create-forge update`.
+time, for example when the command wraps a numerical analysis.

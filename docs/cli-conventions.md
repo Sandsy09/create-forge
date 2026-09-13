@@ -257,13 +257,14 @@ project lifecycle" sections below. CF-18.05
 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)) then
 shipped the pre-cutover `--engine-preview` rejection wording and the
 direct-Copier route's retention against an unusable engine — see "Engine
-project lifecycle" below. Still open: the concrete deprecation versions,
-windows, acceptance matrix and support policy CF-16.03 fixed in the
-[engine-default cutover acceptance contract](engine-cutover-acceptance.md)
-([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
-remain CF-18.06/CF-18.07's to execute and publish. The full decision record
-lives in `docs/engine-default-cli.md`; update it and this section together
-when a rule it still describes as pending ships.
+project lifecycle" below. CF-18.06
+([ADR 0048](adr/0048-installed-cutover-acceptance-evidence.md)) executed the
+installed-console acceptance matrix and brought the user guide's own
+migration, legacy-support, and rollback recipes in force. Still open: the
+publication of `create-forge 0.4.0` itself, which remains
+[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)'s. The full
+decision record lives in `docs/engine-default-cli.md`; update it and this
+section together when a rule it still describes as pending ships.
 
 ## `--engine-source` / `--engine-ref`
 

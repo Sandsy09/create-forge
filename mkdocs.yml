@@ -63,5 +63,6 @@ nav:
       - Data Science: data-science.md
   - Capabilities: capabilities.md
   - Updates and troubleshooting: updates.md
+  - Migrating from 0.3.x: migration.md
   - Reference and direction: reference.md
   - Feedback: feedback.md

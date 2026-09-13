@@ -42,6 +42,7 @@ INSTALLED_DATA_SCIENCE_VALIDATION = (
 )
 ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
+ENGINE_CUTOVER_VALIDATION = REPO_ROOT / "docs" / "engine-cutover-validation.md"
 DOCS_INDEX = REPO_ROOT / "docs" / "README.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
@@ -397,6 +398,21 @@ def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None
         )
 
     assert ROLLOUT_REGRESSION_VALIDATION.is_file()
+
+
+def test_engine_cutover_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-18.06's installed cutover acceptance evidence (ADR 0048) must stay
+    discoverable, mirroring the CF-14.02/CF-14.03 guards above.
+    """
+    link_re = re.compile(r"\([^)]*engine-cutover-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link engine-cutover-validation.md"
+        )
+
+    assert ENGINE_CUTOVER_VALIDATION.is_file()
 
 
 def test_release_0_3_0_validation_doc_is_linked_from_entry_points() -> None:

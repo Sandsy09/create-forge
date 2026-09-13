@@ -1,16 +1,20 @@
 # Installation and versions
 
+create-forge supports four install modes. Each resolves the required
+`forge-template` engine (`>=0.5,<0.6`) automatically — it is a normal
+dependency, not an extra.
+
 ## Run without a persistent install
 
 ```bash
 uvx create-forge new
 uvx create-forge@latest new
-uvx create-forge@0.3.2 new
+uvx create-forge@0.4.0 new
 ```
 
 `uvx` runs a tool in an isolated environment. A plain invocation may reuse
 a cached version or the version installed with `uv tool install`.
-`@latest` checks for the latest release; `@0.3.2` requests that exact CLI
+`@latest` checks for the latest release; `@0.4.0` requests that exact CLI
 version. These commands do not add Forge to your project's dependencies.
 
 ## Install a command for regular use
@@ -29,7 +33,7 @@ installed tools, and `uv tool uninstall create-forge` removes this one.
 ### Pin or change the installed version
 
 ```bash
-uv tool install "create-forge==0.3.2"
+uv tool install "create-forge==0.4.0"
 uv tool upgrade create-forge
 ```
 
@@ -43,54 +47,52 @@ uv tool install create-forge@latest
 See [uv's tool version rules](https://docs.astral.sh/uv/concepts/tools/)
 for cache behaviour, isolation, and upgrading tool dependencies.
 
-## Install the engine preview
-
-The engine extra installs the compatible `forge-template` package and the
-uv version used to finish preview projects' lockfiles:
+## Install into an active environment
 
 ```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new --engine-preview
+pip install create-forge
+create-forge new
 ```
 
-For a persistent command:
+Works the same as the modes above; `forge-template` and `uv` resolve into
+the same environment. Use this when you already manage a virtual
+environment yourself rather than through `uv tool` or `uvx`.
+
+## Add the legacy Copier route
+
+Any of the modes above accept the optional `legacy` extra, which adds
+`copier` back for `--template`/`--template-url`/`--ref` and updating a
+recorded `.copier-answers.yml` project (`new --legacy`, `update`):
 
 ```bash
-uv tool install "create-forge[engine]"
-create-forge new --engine-preview
-uv tool upgrade create-forge
+uv tool install "create-forge[legacy]"
+# or:
+pip install "create-forge[legacy]"
+# or, without a persistent install:
+uvx --from "create-forge[legacy]" create-forge new --legacy
 ```
 
-Include `[engine]` when replacing an installation constraint if you want
-to retain preview support. The `0.3.2` CLI accepts
-`forge-template>=0.4.1,<0.5`; this guide's examples are checked with `0.4.1`.
-To request that exact engine as well:
-
-```bash
-uvx --with "forge-template==0.4.1" --from "create-forge[engine]==0.3.2" create-forge new --engine-preview
-```
-
-`create-forge doctor` reports the installed engine and compatible range.
-Run diagnostics through the same installation or `uvx --from` command as
-generation so you inspect the environment you actually use.
+Without the extra, `--legacy` and a Copier-recorded `update` both exit `3`
+naming this remedy. `create-forge doctor` reports whether `copier` is
+resolved and, if so, at what version.
 
 ## CLI versions and template versions are separate
 
 | Selection | Controls |
 | --- | --- |
-| `create-forge@0.3.2` | The CLI package version used by uvx. |
-| `new --ref v0.4.1` | The template repository's Git tag on the Copier path. |
-| `--with "forge-template==0.4.1"` | The engine package used by a preview invocation. |
+| `create-forge@0.4.0` | The CLI package version used by uvx. |
+| `new --engine-source <url> --engine-ref v1.2.3` | An isolated override of the engine itself, provisioned fresh for one run — not part of a normal install. |
+| `new --legacy --ref v0.4.1` | The template repository's Git tag on the `--legacy` Copier path. |
 
-Pin both CLI and Copier template for a repeatable starting point:
+Pin the CLI for a repeatable starting point:
 
 ```bash
-uvx create-forge@0.3.2 new "Pinned Library" --template library --ref v0.4.1
+uvx create-forge@0.4.0 new "Pinned Library" --archetype library --yes
 ```
 
-Without `--ref`, Copier selects the latest suitable release tag. Pinning
-the CLI alone does not pin the template, and these pins do not freeze
-dependency resolution; keep the generated `uv.lock` under version control.
-
-`--ref`, `--template`, and `--template-url` cannot be used with
-`--engine-preview`. Upgrading the tool or engine does not change files in
-projects you have already generated. See [project updates](updates.md).
+Pinning the CLI does not freeze dependency resolution; keep the generated
+`uv.lock` under version control. `--ref`, `--template`, and
+`--template-url` require `--legacy`. Upgrading the tool or engine does not
+change files in projects you have already generated — see [project
+updates](updates.md), or [migration](migration.md) if you are moving a
+`0.3.x` install or project forward.

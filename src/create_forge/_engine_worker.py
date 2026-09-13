@@ -56,11 +56,21 @@ from forge_template import (
 
 def _info() -> dict[str, object]:
     info = get_engine_info()
+    # `metadata_version` postdates the 0.5.0 cutover (engine.py's own
+    # docstring for the in-process path; cli.py's doctor negotiation applies
+    # the identical `getattr` fallback) -- a provisioned engine older than
+    # that predates the attribute entirely. Substituting 0, never a real
+    # supported value (compat.SUPPORTED_GENERATION_METADATA_VERSIONS starts
+    # at 1), lets `fetch_info` succeed so `negotiate`'s own ordered checks
+    # reach `compat.require_supported_package` and reject the engine as an
+    # incompatible *package version* (exit 3) instead of this worker call
+    # crashing first and surfacing as a generic, wrong-class `EngineSourceError`
+    # (exit 1).
     return {
         "package_version": info.package_version,
         "projectspec_protocols": list(info.projectspec_protocols),
         "component_manifest_protocols": list(info.component_manifest_protocols),
-        "metadata_version": info.metadata_version,
+        "metadata_version": getattr(info, "metadata_version", 0),
     }
 
 
