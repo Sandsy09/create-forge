@@ -92,13 +92,17 @@ def test_legacy_extra_installs_copier(installed_client: InstalledClient) -> None
     """`create-forge[legacy]` resolves `copier` -- read back through
     `doctor --json`'s own diagnostic field rather than probing the venv
     directly, since that field is the client's own documented contract
-    (docs/engine-resolution.md)."""
+    (docs/engine-resolution.md). `doctor`'s overall `ok`/exit status is not
+    asserted here -- an unrelated check (e.g. no global git identity on a
+    bare CI runner) can fail it independent of anything this test covers,
+    exactly as `tests/test_e2e_installed_rollout.py`'s own `doctor --json`
+    cases only inspect the fields they care about.
+    """
     result = run(
         [str(installed_client.console), "doctor", "--json"],
         installed_client.root,
         env=installed_client.env,
     )
-    assert_success(result, "doctor --json")
     payload = json.loads(result.stdout)
     assert payload["integration"]["copier"] is not None
 
