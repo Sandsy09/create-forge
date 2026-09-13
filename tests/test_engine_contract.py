@@ -75,7 +75,11 @@ def test_diagnostic_integration_line_matches_package_release_line() -> None:
 # `forge_template` directly, and `pipeline.py` depends on it transitively
 # (importing engine-owned types only under `TYPE_CHECKING`), mirroring
 # invariant 4's rule that `runner.py` is the only module touching Copier's
-# Python API.
+# Python API. `_engine_worker.py` is also excluded: ADR 0044 (CF-18.02)
+# amends invariant 4 to "engine.py in process, `_engine_worker.py` out of
+# process" -- the second and only other module permitted to import
+# `forge_template`, since it never runs in the parent's own interpreter (see
+# `tests/test_engine_source.py`'s own guard on that file).
 _SHIPPED_MODULES = (
     "cli",
     "prompts",
@@ -86,6 +90,9 @@ _SHIPPED_MODULES = (
     "spec",
     "staging",
     "compat",
+    "sources",
+    "descriptors",
+    "engine_source",
 )
 
 # One of two compatibility-line dependencies ADR 0012 now governs -- Copier

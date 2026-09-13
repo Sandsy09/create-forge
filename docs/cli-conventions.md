@@ -242,18 +242,54 @@ implemented most of it:
 - exit `3` widened to also cover an engine that cannot be imported at all
   and `--legacy` without the extra installed.
 
-Still open: `--engine-source`/`--engine-ref` — a new, orthogonal engine-package
-override that provisions an isolated environment and whose renders write no
-generation metadata (CF-18.02); the engine `new` Git/hook lifecycle
-(CF-18.03); engine-native `update` dispatch (CF-18.04); deeper `--legacy`
-regression and old-preview-project recovery (CF-18.05); and the concrete
-deprecation versions, windows, acceptance matrix and support policy CF-16.03
-fixed in the
+CF-18.02 ([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) then
+implemented `--engine-source`/`--engine-ref` — see the section below. Still
+open: the engine `new` Git/hook lifecycle (CF-18.03); engine-native `update`
+dispatch (CF-18.04); deeper `--legacy` regression and old-preview-project
+recovery (CF-18.05); and the concrete deprecation versions, windows,
+acceptance matrix and support policy CF-16.03 fixed in the
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
 ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
 remain CF-18.06/CF-18.07's to execute and publish. The full decision record
 lives in `docs/engine-default-cli.md`; update it and this section together
 when a rule it still describes as pending ships.
+
+## `--engine-source` / `--engine-ref`
+
+`--engine-source <local-path|vcs-url>` (with optional `--engine-ref <ref>`, an
+error on its own) selects which **engine distribution** provides
+`forge_template` for one `new` invocation — never a Copier template or a
+component resource, and never valid alongside `--legacy` (the equivalent
+escape hatch there is `--template-url`). ADR 0011 reserved the names and
+ADR 0040 decision 4 specified the interface; CF-18.02
+([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) implemented
+it.
+
+The named source is provisioned with `uv` into an isolated, throwaway
+environment containing *only* that engine — never `create-forge` itself — and
+the whole generation (discovery, ProjectSpec parsing/validation, and render)
+runs against it through an out-of-process worker. The installed engine is
+never imported, shadowed, or modified, and there is no in-process `sys.path`
+injection. Source validation is `--template-url`'s
+([ADR 0036](adr/0036-template-source-credentials.md)): embedded credentials,
+queries, and fragments are rejected with exit `1` before any prompt or
+subprocess runs, and rendered source text stays literal. The code-execution
+warning always prints; `--yes` skips only the confirmation, and declining it
+exits `130` with nothing written. The provisioned engine passes the identical
+package/ProjectSpec-protocol/component-manifest-protocol/`metadata_version`
+compatibility check the installed engine does, failing closed at exit `3`
+with no fallback on a mismatch. Component selection, project-answer
+collection, and destination resolution are the same code path the default
+route uses, so interactive and non-interactive behaviour converges
+identically either way.
+
+An `--engine-source` render writes no generation-metadata document — that
+document fixes `provider.distribution` to `forge-template` from the
+*installed* engine and admits no source string — so the project is not
+`create-forge update`-eligible, and the post-generation panel says so
+plainly. `--engine-ref` on a local-path source (there is no VCS reference to
+check out on a plain path) is rejected outright, exit `1`, before any
+provisioning.
 
 ## Update dry runs
 
@@ -469,6 +505,13 @@ The contract is characterized by these tests:
   `test_new_engine_preview_interactive_asks_what_are_you_building_once`,
   `test_new_engine_preview_rejects_copier_only_flags`, and
   `test_new_engine_preview_yes_legacy_data_still_derives_packaging_mode`.
+- [`tests/test_engine_source.py`](../tests/test_engine_source.py) covers
+  `--engine-source`/`--engine-ref` (ADR 0044): source validation ordering,
+  the code-execution warning and confirmation gate, out-of-process worker
+  invocation, ephemeral-environment provisioning and cleanup, compatibility
+  negotiation, and that no generation-metadata document is ever written —
+  plus one real sibling-checkout provisioning run
+  (`test_real_sibling_checkout_provisions_and_generates`, `@pytest.mark.e2e`).
 - [`tests/test_staging.py`](../tests/test_staging.py) covers destination
   conflict detection, target-safety refusals, staging placement and atomic
   finalisation, and cleanup after failure — see the canonical

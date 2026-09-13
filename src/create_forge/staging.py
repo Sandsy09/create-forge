@@ -141,11 +141,15 @@ def _on_rm_error(func: object, path: str, exc_info: object) -> None:
         func(path)
 
 
-def _remove_tree(path: Path) -> None:
+def remove_tree(path: Path) -> None:
     """Best-effort recursive removal that clears read-only files first.
 
     Never raises: a failed cleanup must not mask the original error that
     triggered it, so a residual directory is reported as a warning instead.
+    Public rather than module-private: `engine_source.py`'s ephemeral
+    `--engine-source` environment (ADR 0044) needs the same
+    read-only-clearing, never-raises removal Windows requires for a
+    just-installed package's read-only files.
     """
     if not path.exists():
         return
@@ -192,7 +196,7 @@ def staged(dst: Path) -> Iterator[Path]:
             msg = f"could not move {staging_dir} into place at {dst}: {exc}"
             raise StagingError(msg) from exc
     except BaseException:
-        _remove_tree(staging_dir)
+        remove_tree(staging_dir)
         raise
 
 
@@ -213,5 +217,5 @@ def discard_on_failure(dst: Path) -> Iterator[None]:
         yield
     except BaseException:
         if not pre_existing:
-            _remove_tree(dst)
+            remove_tree(dst)
         raise

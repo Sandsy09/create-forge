@@ -14,8 +14,16 @@ _GUIDANCE = "Use a credential-free source with a Git credential helper or SSH ag
 _CONTROLS = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
-def _url_source(source: str) -> str | None:
-    """Identify URL forms without interpreting local paths as URLs."""
+def url_source(source: str) -> str | None:
+    """Identify URL forms without interpreting local paths as URLs.
+
+    Public rather than module-private: `engine_source.py`'s
+    `--engine-source` requirement construction (ADR 0044) reuses this exact
+    classification so the two features can never disagree about what counts
+    as a URL -- a divergence there would let a source string skip
+    `validate_source`'s credential/query/fragment checks on one route while
+    still being treated as a remote reference on the other.
+    """
     candidate = source.removeprefix("git+")
     for shortcut, host in (("gh:", "github.com"), ("gl:", "gitlab.com")):
         if candidate.startswith(shortcut):
@@ -32,7 +40,7 @@ def validate_source(source: str, *, origin: str = "--template-url") -> None:
     try:
         if not source or source != source.strip() or _CONTROLS.search(source):
             raise SourceError("Invalid template source. " + _GUIDANCE)
-        url = _url_source(source)
+        url = url_source(source)
         if url is None:
             return
         parts = urlsplit(url)
@@ -72,7 +80,7 @@ def display_source(source: str) -> str:
     if _CONTROLS.search(source):
         return "[invalid template source]"
     try:
-        url = _url_source(source)
+        url = url_source(source)
         if url is None:
             validate_source(source)
             return source

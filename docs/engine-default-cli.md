@@ -42,13 +42,18 @@ and
 (FT-15.04 / forge-template ADR 0061) — all merged and closed with
 `FT-EPIC-15`.
 
-**This contract is not the cutover.** No `create-forge` release named here
-exists yet. Until [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)
-implements it, the default `new` path stays direct-Copier with a bundled
-registry, the engine stays the optional `engine` extra reachable only through
-the hidden `new --engine-preview` flag, and
-[`docs/cli-conventions.md`](cli-conventions.md) remains authoritative for
-actual behaviour.
+**This contract predates its own implementation, which has since shipped.**
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) made the
+engine the default, required `new` path (rules 1–24 below); CF-18.02
+([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) then
+implemented `--engine-source`/`--engine-ref` (rules 25–30). Every rule below
+stays in this document's "decided" voice as the permanent record of *why*;
+[`docs/cli-conventions.md`](cli-conventions.md) is where the "in force"
+behaviour is described and kept current — see its "Engine-default CLI" and
+"`--engine-source` / `--engine-ref`" sections. `--legacy`'s Git/hook
+lifecycle, engine-native `update` dispatch, and the concrete deprecation
+windows and acceptance matrix remain open — the "What this contract does not
+decide" section below names their owning issues.
 
 ## The default route and installation
 

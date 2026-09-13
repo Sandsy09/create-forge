@@ -21,6 +21,9 @@ and the canonical [engine resolution contract](../../docs/engine-resolution.md).
 
 from __future__ import annotations
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
 ENGINE_DISTRIBUTION = "forge-template"
 """The PyPI distribution name the engine dependency declares."""
 
@@ -79,3 +82,99 @@ by the `0.5.0` engine cutover -- negotiated exactly like the protocol tuples
 above, via `EngineInfo.metadata_version`. See docs/generation-provenance.md
 in `forge-template` and docs/engine-project-lifecycle.md here.
 """
+
+_SUPPORTED_ENGINE_SPECIFIER = SpecifierSet(SUPPORTED_ENGINE_RANGE)
+
+
+class EngineCompatibilityError(Exception):
+    """An engine is outside the supported package/protocol range.
+
+    Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
+    ADR 0011 for exactly this failure class and widened by ADR 0040 decision
+    12 to cover an out-of-range component-manifest protocol or
+    `metadata_version` too. Reachable from the default `new` path since ADR
+    0040 (CF-18.01) made the engine the default architecture, and from the
+    `--engine-source` override path since ADR 0044 (CF-18.02) -- the same
+    class either way, raised against plain version/protocol values rather
+    than an `EngineInfo` instance, so both `engine.py` (the installed engine,
+    in process) and `engine_source.py` (a provisioned engine, out of process)
+    share one compatibility check instead of two that could drift apart.
+    """
+
+
+def require_supported_package(package_version: str) -> None:
+    """Reject an engine package outside the declared, released range."""
+    if Version(package_version) in _SUPPORTED_ENGINE_SPECIFIER:
+        return
+
+    msg = (
+        f"Detected forge-template {package_version}, but this "
+        f"create-forge release supports {ENGINE_DISTRIBUTION}"
+        f"{SUPPORTED_ENGINE_RANGE}. Run "
+        f"`pip install '{ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}'` "
+        "(or the equivalent `uv add`/`uv sync` invocation) to install a "
+        "compatible version."
+    )
+    raise EngineCompatibilityError(msg)
+
+
+def require_protocol_overlap(
+    *,
+    package_version: str,
+    protocol_name: str,
+    supported: tuple[int, ...],
+    detected: tuple[int, ...],
+) -> None:
+    """Reject an engine with no protocol version in common with this CLI."""
+    supported_set = set(supported)
+    detected_set = set(detected)
+    if supported_set & detected_set:
+        return
+
+    msg = (
+        f"forge-template {package_version} supports {protocol_name} "
+        f"protocol(s) {sorted(detected_set)}, but this create-forge release "
+        f"supports {sorted(supported_set)}."
+    )
+    raise EngineCompatibilityError(msg)
+
+
+def require_projectspec_protocol(
+    package_version: str, detected: tuple[int, ...]
+) -> None:
+    """Require a shared ProjectSpec protocol for every engine operation."""
+    require_protocol_overlap(
+        package_version=package_version,
+        protocol_name="ProjectSpec",
+        supported=SUPPORTED_PROJECTSPEC_PROTOCOLS,
+        detected=detected,
+    )
+
+
+def require_component_manifest_protocol(
+    package_version: str, detected: tuple[int, ...]
+) -> None:
+    """Require a shared component-manifest protocol before discovery."""
+    require_protocol_overlap(
+        package_version=package_version,
+        protocol_name="component manifest",
+        supported=SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
+        detected=detected,
+    )
+
+
+def require_metadata_version(package_version: str, detected: int) -> None:
+    """Require a supported generation-metadata schema version.
+
+    ADR 0040 decision 11/12 widens exit `3` to cover an out-of-range
+    `metadata_version`, the ninth versioned compatibility axis (ADR 0059,
+    published by the `0.5.0` engine cutover) -- checked the same way as the
+    two protocol tuples, via set overlap against a single-element "detected"
+    tuple so `require_protocol_overlap`'s message shape is reused as-is.
+    """
+    require_protocol_overlap(
+        package_version=package_version,
+        protocol_name="generation-metadata",
+        supported=SUPPORTED_GENERATION_METADATA_VERSIONS,
+        detected=(detected,),
+    )
