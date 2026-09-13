@@ -19,21 +19,23 @@ release histories remain separate.
 
 ## Current and target integration
 
-The released v0.3.x CLI's default path owns a bundled prompt registry and calls Copier through
-`src/create_forge/runner.py`. The current `--template-url` option is the
-sanctioned development escape hatch for selecting a sibling template checkout.
-It is also capable of running arbitrary third-party templates, so it always
-uses the existing code-execution warning and trust boundary.
+`create-forge`'s default `new` path builds through the public `forge-template`
+engine (ADR 0040, CF-18.01); `--legacy` reaches the bundled prompt registry
+through `src/create_forge/runner.py`'s direct Copier integration instead.
+`--legacy --template-url` is the development escape hatch for selecting a
+sibling *Copier template* checkout on that route. It is also capable of
+running arbitrary third-party templates, so it always uses the existing
+code-execution warning and trust boundary.
 
-The accepted target in [ADR 0010](adr/0010-public-engine-integration-contract.md)
-replaces direct Copier integration with the versioned public `forge-template`
-engine. Cross-repository development will retain an explicit, warned local or
-VCS override; [ADR 0011](adr/0011-engine-source-and-version-resolution.md) and
-the canonical [engine resolution contract](engine-resolution.md) define that
-interface as `--engine-source`/`--engine-ref`, shipping at the coordinated
-engine cutover rather than today. Do not treat the current Copier option name as the
-future contract or bypass the compatibility rules in the
-[integration contract](integration-contract.md).
+For the default, engine-backed route, `--engine-source`/`--engine-ref`
+([ADR 0011](adr/0011-engine-source-and-version-resolution.md),
+[ADR 0044](adr/0044-out-of-process-engine-source-overrides.md), CF-18.02, the
+canonical [engine resolution contract](engine-resolution.md)) is the
+equivalent sanctioned escape hatch for a sibling **engine** checkout: it
+provisions the named path or VCS URL into an isolated ephemeral environment
+with `uv` and runs the whole generation against it, out of process, through
+`_engine_worker.py`. Do not bypass the compatibility rules in the
+[integration contract](integration-contract.md) on either route.
 
 ## Prepare both working trees
 
@@ -92,9 +94,12 @@ version outside it fails until the range, contract, and tests are deliberately
 moved together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
 
-This isolated installation is the supported preview-engine development seam.
-It is separate from `--template-url`, which exercises the default Copier path
-against template source and does not test the installed engine package.
+This isolated installation is the supported seam for testing the public
+engine *contract* itself (`forge_template`'s Python API shape). It is
+separate from `--engine-source` below, which runs the real, installed
+console script's whole `new` path against a sibling checkout, and from
+`--legacy --template-url`, which exercises the Copier route against template
+source and does not touch the engine at all.
 
 When `copier.yml` and `templates.toml` change together, point the drift suite
 at the working tree rather than its latest release:
@@ -139,6 +144,31 @@ released template instead of the pending branch.
 both ordinary prompts and the confirmation question, but it does not suppress
 the warning. Omit `--yes` when manually exercising the confirmation path, and
 never use a source you do not trust.
+
+When the *engine* itself changed rather than `copier.yml`/`templates.toml`,
+exercise the real default `new` path against the sibling checkout with
+`--engine-source` instead ([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)):
+
+```bash
+uv run create-forge new "Engine Source Smoke" --yes \
+  --archetype library --no-capabilities --no-platforms \
+  --engine-source ../forge-template \
+  --path ../create-forge-engine-source-smoke \
+  --data license=mit --data "author_name=Test User" \
+  --data author_email=test@example.invalid
+cd ../create-forge-engine-source-smoke
+uv run --locked poe check
+```
+
+This provisions the sibling checkout (including uncommitted changes) into an
+isolated environment and runs the whole pipeline through it -- discovery,
+ProjectSpec validation, and render -- proving the pending engine change end
+to end rather than only through its Python API shape. The generated project
+is not `create-forge update`-eligible (no ref pinning is needed the way
+`--ref HEAD` is for `--template-url`: `uv pip install <local-path>` always
+installs the working tree's current state). The code-execution warning and
+`--yes`'s confirmation-only skip apply exactly as they do for
+`--template-url`.
 
 ## Choose the remaining template checks
 

@@ -60,6 +60,19 @@ Both paths share the same non-empty-destination check
 (`staging.ensure_available`) and run it before any other side effect,
 including before an engine compatibility check or import.
 
+**`--engine-source` (ADR 0044) reaches the same staging through
+`pipeline.finalise_files`, not `finalise_generation_request`.** The override
+route runs its ProjectSpec build, validation, and render out of process
+(`engine_source.py`/`_engine_worker.py`), so it never holds a real
+`forge_template.RenderedProject` — only plain `(target, content)` byte pairs.
+`finalise_generation_request` is now a one-line wrapper over
+`pipeline.finalise_files(files, destination)`, the extracted staging/lock/
+atomic-rename body both routes call; the default route just supplies
+`request.rendered.files` mapped to that same pair shape. Staging placement,
+target-safety checks, lock creation, atomic rename, and cleanup-on-failure are
+therefore identical on every route this document describes — there is no
+third finalisation behaviour to learn.
+
 ## Engine lock finalisation
 
 `staging.create_uv_lock` executes the fixed command directly, without a shell,
@@ -160,6 +173,13 @@ by the time either can occur.
   — the adopted `validate_rendered_project` contract against the real pinned
   engine, proving what `finalise_generation_request` relies on already
   happened.
+- [`tests/test_engine_source.py`](../tests/test_engine_source.py) (CF-18.02,
+  [ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) —
+  `test_no_generation_metadata_document_is_written` proves the `--engine-source`
+  route reaches `pipeline.finalise_files` and writes no metadata document;
+  `test_real_sibling_checkout_provisions_and_generates` (`@pytest.mark.e2e`)
+  is the same staged/locked/finalised guarantee through a real provisioned
+  engine.
 
 When staging, finalisation, or cleanup behaviour changes, update this
 contract and its executable examples in the same pull request.

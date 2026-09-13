@@ -40,88 +40,45 @@ from forge_template import discover_components as _discover_components
 from forge_template import parse_project_spec as _parse_project_spec
 from forge_template import render_project as _render_project
 from forge_template import validate_project_spec as _validate_project_spec
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
 
+from create_forge import compat
+
+# Explicit self-reexport, same reason as `ForgeEngineError` above: `cli.py`
+# and `engine_source.py` both type against `engine.EngineCompatibilityError`
+# / `compat.EngineCompatibilityError` -- the same class either way (ADR
+# 0044) -- and mypy strict's no_implicit_reexport otherwise blocks that
+# direct-module attribute access.
 from create_forge.compat import (
-    ENGINE_DISTRIBUTION,
-    SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
-    SUPPORTED_ENGINE_RANGE,
-    SUPPORTED_GENERATION_METADATA_VERSIONS,
-    SUPPORTED_PROJECTSPEC_PROTOCOLS,
+    EngineCompatibilityError as EngineCompatibilityError,  # noqa: PLC0414
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-_SUPPORTED_ENGINE_SPECIFIER = SpecifierSet(SUPPORTED_ENGINE_RANGE)
-
-
-class EngineCompatibilityError(Exception):
-    """An installed engine is outside the supported package/protocol range.
-
-    Carries exit status `3`'s meaning (docs/cli-conventions.md), reserved by
-    ADR 0011 for exactly this failure class and widened by ADR 0040 decision
-    12 to cover an out-of-range component-manifest protocol or
-    `metadata_version` too. Reachable from the default `new` path since ADR
-    0040 (CF-18.01) made the engine the default architecture.
-    """
-
 
 def _require_supported_package(info: EngineInfo) -> None:
-    """Reject an engine package outside the declared, released range."""
-    if Version(info.package_version) in _SUPPORTED_ENGINE_SPECIFIER:
-        return
+    """Reject an engine package outside the declared, released range.
 
-    msg = (
-        f"Detected forge-template {info.package_version}, but this "
-        f"create-forge release supports {ENGINE_DISTRIBUTION}"
-        f"{SUPPORTED_ENGINE_RANGE}. Run "
-        f"`pip install '{ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}'` "
-        "(or the equivalent `uv add`/`uv sync` invocation) to install a "
-        "compatible version."
-    )
-    raise EngineCompatibilityError(msg)
-
-
-def _require_protocol_overlap(
-    info: EngineInfo,
-    *,
-    protocol_name: str,
-    supported: tuple[int, ...],
-    detected: tuple[int, ...],
-) -> None:
-    """Reject an engine with no protocol version in common with this CLI."""
-    supported_set = set(supported)
-    detected_set = set(detected)
-    if supported_set & detected_set:
-        return
-
-    msg = (
-        f"forge-template {info.package_version} supports {protocol_name} "
-        f"protocol(s) {sorted(detected_set)}, but this create-forge release "
-        f"supports {sorted(supported_set)}."
-    )
-    raise EngineCompatibilityError(msg)
+    Delegates to `compat.py`'s plain-value check (ADR 0044) so the installed
+    engine (here) and a provisioned `--engine-source` engine
+    (`engine_source.py`) share one compatibility rule instead of two that
+    could drift apart. This wrapper -- and the three below it -- exist only
+    to unpack the `EngineInfo` this module's callers already hold.
+    """
+    compat.require_supported_package(info.package_version)
 
 
 def _require_projectspec_protocol(info: EngineInfo) -> None:
     """Require a shared ProjectSpec protocol for every engine operation."""
-    _require_protocol_overlap(
-        info,
-        protocol_name="ProjectSpec",
-        supported=SUPPORTED_PROJECTSPEC_PROTOCOLS,
-        detected=info.projectspec_protocols,
+    compat.require_projectspec_protocol(
+        info.package_version, info.projectspec_protocols
     )
 
 
 def _require_component_manifest_protocol(info: EngineInfo) -> None:
     """Require a shared component-manifest protocol before discovery."""
-    _require_protocol_overlap(
-        info,
-        protocol_name="component manifest",
-        supported=SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS,
-        detected=info.component_manifest_protocols,
+    compat.require_component_manifest_protocol(
+        info.package_version, info.component_manifest_protocols
     )
 
 
@@ -131,15 +88,9 @@ def _require_metadata_version(info: EngineInfo) -> None:
     ADR 0040 decision 11/12 widens exit `3` to cover an out-of-range
     `metadata_version`, the ninth versioned compatibility axis (ADR 0059,
     published by the `0.5.0` engine cutover) -- checked the same way as the
-    two protocol tuples, via set overlap against a single-element "detected"
-    tuple so `_require_protocol_overlap`'s message shape is reused as-is.
+    two protocol tuples, via `compat.require_metadata_version`.
     """
-    _require_protocol_overlap(
-        info,
-        protocol_name="generation-metadata",
-        supported=SUPPORTED_GENERATION_METADATA_VERSIONS,
-        detected=(info.metadata_version,),
-    )
+    compat.require_metadata_version(info.package_version, info.metadata_version)
 
 
 def negotiate_protocol() -> None:

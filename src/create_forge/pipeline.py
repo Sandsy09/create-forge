@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from create_forge import engine, staging
+from create_forge.descriptors import DescriptorView
 from create_forge.spec import (
     DESCRIPTOR_KIND,
     SelectionKind,
@@ -32,10 +33,10 @@ from create_forge.spec import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
     from pathlib import Path
 
-    from forge_template import ComponentDescriptor, ProjectSpec, RenderedProject
+    from forge_template import ProjectSpec, RenderedProject
 
 _KIND_BY_DESCRIPTOR: Mapping[str, SelectionKind] = {
     descriptor_kind: selection_kind
@@ -61,25 +62,25 @@ class Catalogue:
 
     The single place descriptor *shape* is interpreted (CF-08.02's rule):
     `cli.py` reads component ids and human text off descriptors but never
-    inspects `ComponentDescriptor.kind` or `.requires` itself -- it asks a
+    inspects `DescriptorView.kind` or `.requires` itself -- it asks a
     `Catalogue` instead. `build_generation_request` accepts a `Catalogue` so a
     caller that has already discovered (`cli.py`'s default `new` flow) does
     not scan the installed catalogue a second time (ADR 0028).
     """
 
-    descriptors: tuple[ComponentDescriptor, ...]
+    descriptors: tuple[DescriptorView, ...]
 
     @property
-    def archetypes(self) -> tuple[ComponentDescriptor, ...]:
+    def archetypes(self) -> tuple[DescriptorView, ...]:
         """The `kind == "archetype"` descriptors, in discovery order."""
         return self.of_kind(SelectionKind.ARCHETYPE)
 
-    def of_kind(self, kind: SelectionKind) -> tuple[ComponentDescriptor, ...]:
+    def of_kind(self, kind: SelectionKind) -> tuple[DescriptorView, ...]:
         """Every descriptor of one selection kind, in discovery order."""
         wanted = DESCRIPTOR_KIND[kind]
         return tuple(d for d in self.descriptors if d.kind == wanted)
 
-    def get(self, component_id: str) -> ComponentDescriptor | None:
+    def get(self, component_id: str) -> DescriptorView | None:
         """The descriptor with this id, or `None` if the catalogue has none."""
         return next((d for d in self.descriptors if d.id == component_id), None)
 
@@ -110,7 +111,7 @@ class Catalogue:
             if self.kind_of(relation.id) == kind
         )
 
-    def selected(self, selection: SelectionRequest) -> tuple[ComponentDescriptor, ...]:
+    def selected(self, selection: SelectionRequest) -> tuple[DescriptorView, ...]:
         """Every selected descriptor, in composition-tier then lexical order.
 
         Tier order is `DESCRIPTOR_KIND`'s declaration order -- archetype,
@@ -121,7 +122,7 @@ class Catalogue:
         catalogue does not contain is skipped -- the engine rejects it
         authoritatively.
         """
-        result: list[ComponentDescriptor] = []
+        result: list[DescriptorView] = []
         for kind in DESCRIPTOR_KIND:
             for component_id in sorted(selection.ids_for(kind)):
                 descriptor = self.get(component_id)
@@ -140,7 +141,7 @@ def discover_catalogue() -> Catalogue:
     return Catalogue(engine.discover())
 
 
-def discover_archetypes() -> tuple[ComponentDescriptor, ...]:
+def discover_archetypes() -> tuple[DescriptorView, ...]:
     """Engine-owned archetype descriptors, for the engine `new` path's selection.
 
     The `kind == "archetype"` view of `discover_catalogue()`, kept as a named
@@ -207,24 +208,36 @@ def build_generation_request(
     return GenerationRequest(spec=validated, rendered=rendered)
 
 
-def finalise_generation_request(request: GenerationRequest, destination: Path) -> None:
-    """Stage, lock, and finalise `request`'s rendered files (ADR 0021).
+def finalise_files(files: Iterable[tuple[str, bytes]], destination: Path) -> None:
+    """Stage, lock, and finalise a rendered file set (ADR 0021, ADR 0044).
 
     Renders them into a directory adjacent to `destination`, then moves that
     directory into place atomically. ``uv.lock`` is created after the reviewed
     render is written and before the rename, so lock resolution cannot leave a
     partial destination.
 
+    Engine-free: `files` is already a plain `(target, content)` pair sequence
+    by the time it reaches here, so this is the one finalisation body shared
+    by both generation routes -- `finalise_generation_request` below (the
+    default, in-process engine) and `engine_source.py`'s `--engine-source`
+    override (out of process, ADR 0044), which cannot hand this function a
+    real `RenderedProject` at all.
+    """
+    with staging.staged(destination) as staging_dir:
+        staging.write_files(staging_dir, files)
+        staging.create_uv_lock(staging_dir)
+
+
+def finalise_generation_request(request: GenerationRequest, destination: Path) -> None:
+    """Stage, lock, and finalise `request`'s rendered files (ADR 0021).
+
     `create-forge` does not call `forge_template.validate_rendered_project`
     itself -- `engine.render()` already did, as the last step inside
     `build_generation_request`. Reaching this function at all means that
     validation already passed; this function's only job is the filesystem
     half create-forge owns: staging, target-safety, lock finalisation, and an
-    atomic rename.
+    atomic rename, all done by `finalise_files`.
     """
-    with staging.staged(destination) as staging_dir:
-        staging.write_files(
-            staging_dir,
-            ((file.target, file.content) for file in request.rendered.files),
-        )
-        staging.create_uv_lock(staging_dir)
+    finalise_files(
+        ((file.target, file.content) for file in request.rendered.files), destination
+    )

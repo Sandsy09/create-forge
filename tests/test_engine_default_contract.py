@@ -1,20 +1,16 @@
 """Guards for the engine-default CLI contract (CF-16.01, ADR 0040).
 
-`docs/engine-default-cli.md` is a *decision*; CF-18.01 has implemented most of
-it (the default `new` route, `--legacy`, the five selection flags un-hidden,
-`doctor`'s real negotiation), but not all -- `--engine-source`/`--engine-ref`
-are CF-18.02's. This module keeps the document honest the same way
-`forge-template`'s `tests/test_cutover_gates.py` keeps its FT-15.04 contract
-honest:
-
-- **Derived assertions** read the live, post-CF-18.01 CLI and
-  `pyproject.toml`, so a claim about *today's* state that silently changes
-  fails here.
-- **Tripwires** assert the still-pending state deliberately, each with a
-  comment naming the CF-EPIC-18 issue whose merge must flip it. When that
-  child lands, these fail on purpose, forcing whoever implements it to move
-  the affected rule out of `docs/engine-default-cli.md`'s "decided" voice and
-  into `docs/cli-conventions.md`'s "in force" voice in the same change.
+`docs/engine-default-cli.md` is a *decision*; CF-18.01 implemented most of it
+(the default `new` route, `--legacy`, the five selection flags un-hidden,
+`doctor`'s real negotiation) and CF-18.02 (ADR 0044) implemented the rest --
+`--engine-source`/`--engine-ref`. Every test below is now a **derived
+assertion**, reading the live, shipped CLI and `pyproject.toml` so a claim
+about today's state that silently changes fails here -- the same idea as
+`forge-template`'s `tests/test_cutover_gates.py` for its own FT-15.04
+contract. `tests/test_engine_source.py` is the executable evidence for
+`--engine-source`'s own behaviour (isolation, compatibility, warnings,
+credential safety); this module only checks that the flags exist, are
+visible, and that the contract documents stay internally consistent.
 
 No network, no filesystem outside this repository.
 """
@@ -55,9 +51,9 @@ _SELECTION_FLAGS = (
     "--component-option",
 )
 
-# ADR 0040 decision 4 (CF-18.02): a new engine-source override pair, not yet
-# implemented.
-_PENDING_SOURCE_FLAGS = ("--engine-source", "--engine-ref")
+# ADR 0040 decision 4, implemented by CF-18.02 (ADR 0044): the engine-source
+# override pair.
+_SOURCE_OVERRIDE_FLAGS = ("--engine-source", "--engine-ref")
 
 
 def _pyproject() -> dict[str, Any]:
@@ -174,13 +170,13 @@ def test_adr_and_contract_name_their_exclusions_literally() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_tripwire_new_has_no_engine_source_override_flags() -> None:
-    """Flips when CF-18.02 (#159) adds --engine-source/--engine-ref (ADR 0040
-    decision 4).
+def test_engine_source_override_flags_are_present_and_visible() -> None:
+    """ADR 0040 decision 4 (CF-18.02, ADR 0044): --engine-source/--engine-ref
+    are a new, visible pair -- not gated behind --engine-preview, which is
+    already gone (`test_engine_preview_flag_is_gone_and_selection_flags_are_
+    visible`).
     """
     params = _new_params()
-    for flag in _PENDING_SOURCE_FLAGS:
-        assert flag not in params, (
-            f"{flag} now exists -- move its rule from docs/engine-default-cli.md "
-            "into docs/cli-conventions.md and update this tripwire"
-        )
+    for flag in _SOURCE_OVERRIDE_FLAGS:
+        assert flag in params, f"{flag} is no longer a `new` option"
+        assert not getattr(params[flag], "hidden", False), f"{flag} is hidden"

@@ -136,17 +136,23 @@ orthogonal to the retained `--template-url`/`--ref`, which CF-18.01 scoped to
 the explicit `--legacy` Copier route rather than replacing them (ADR 0040
 supersedes ADR 0011's "no dual direct-Copier path afterward" clause only).
 
-**These flags do not exist yet.** Until
-[CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) implements
-them, the sanctioned development path is `--legacy`'s `--template-url`,
-exactly as [`docs/cross-repository-workflow.md`](cross-repository-workflow.md)
-describes:
+[CF-18.02](https://github.com/Sandsy09/create-forge/issues/159)
+([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md)) implemented
+this mechanism: `engine_source.py` provisions the environment and runs an
+out-of-process worker (`_engine_worker.py`) inside it, since there is no
+supported way to hold two differently-versioned copies of `forge_template` in
+one process (rule 25 above) -- see the ADR for why. This is now the
+sanctioned cross-repository development path, replacing the pre-cutover
+`--legacy --template-url` workaround
+[`docs/cross-repository-workflow.md`](cross-repository-workflow.md) used to
+describe:
 
 ```bash
-uv run create-forge new --legacy "Cross Repo Smoke" --yes \
-  --template-url ../forge-template --ref HEAD \
-  --path ../create-forge-cross-repo-smoke \
-  --data github_org=test-org --data "author_name=Test User" \
+uv run create-forge new "Engine Source Smoke" --yes \
+  --archetype library --no-capabilities --no-platforms \
+  --engine-source ../forge-template \
+  --path ../create-forge-engine-source-smoke \
+  --data license=mit --data "author_name=Test User" \
   --data author_email=test@example.invalid
 ```
 
@@ -284,6 +290,17 @@ Stage 06 development contract used before a real release existed.
   `test_out_of_range_engine_is_visible_in_doctor` characterize the diagnostics
   table's `engine_package` against the *installed* release candidate with, in
   turn, no engine and a real out-of-range engine resolved.
+- [`tests/test_engine_source.py`](../tests/test_engine_source.py)
+  (CF-18.02, [ADR 0044](adr/0044-out-of-process-engine-source-overrides.md))
+  -- characterizes "Local development resolution" above: requirement
+  construction from a local path or VCS URL (including `gh:`/`gl:` shortcuts
+  and scp-style sources), `--engine-ref` rejected against a local path, the
+  code-execution warning and confirmation gate, out-of-process worker
+  invocation and ephemeral-environment cleanup, the shared compatibility
+  check against a provisioned engine, and that no generation-metadata
+  document is ever written. `test_real_sibling_checkout_provisions_and_generates`
+  (`@pytest.mark.e2e`) runs the exact command shown above against a sibling
+  `../forge-template` checkout.
 
 When a change alters one of the rules above, update this document and its
 characterization tests in the same pull request.

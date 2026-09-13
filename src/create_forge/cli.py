@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from create_forge import compat
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
     INTEGRATION_LINE,
@@ -52,6 +53,7 @@ from create_forge.spec import (
     SELECTABLE_KINDS,
     SelectionKind,
     SelectionRequest,
+    build_spec_payload,
 )
 from create_forge.staging import (
     DestinationConflictError,
@@ -251,18 +253,27 @@ def _collect_answers(
         raise typer.Exit(130) from None
 
 
-def _confirm_third_party(template_url: str | None, *, yes: bool) -> None:
-    """Warn and, unless --yes, ask for confirmation before running foreign code."""
+def _confirm_third_party(
+    template_url: str | None,
+    *,
+    yes: bool,
+    title: str = "[yellow]Third-party template[/yellow]",
+    lead: str = "Scaffolding from ",
+    detail: str = "\nTemplate code will be executed. Only continue if you trust it.",
+) -> None:
+    """Warn and, unless --yes, ask for confirmation before running foreign code.
+
+    `title`/`lead`/`detail` default to the `--template-url` wording;
+    `--engine-source` (ADR 0044) reuses this same warning-then-confirm shape
+    with its own text -- rule 27's "the warning always prints; `--yes` skips
+    only the confirmation" applies identically to both.
+    """
     if not template_url:
         return
     err.print(
         Panel(
-            Text.assemble(
-                "Scaffolding from ",
-                (display_source(template_url), "bold"),
-                "\nTemplate code will be executed. Only continue if you trust it.",
-            ),
-            title="[yellow]Third-party template[/yellow]",
+            Text.assemble(lead, (display_source(template_url), "bold"), detail),
+            title=title,
             border_style="yellow",
         )
     )
@@ -773,7 +784,145 @@ def _run_engine(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own disti
     _report_created(project_answers["project_name"], dst, updatable=False)
 
 
-def _report_created(project_name: object, dst: Path, *, updatable: bool = True) -> None:
+def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine's own justification: one parameter per new()'s distinct input, feeding an isolated provision->discover->select->collect->render->finalise orchestration with its own failure branch per stage
+    preset: dict[str, object],
+    cfg_answers: dict[str, object],
+    path: Path | None,
+    archetype: str | None,
+    flags: ComponentFlags,
+    *,
+    source: str,
+    ref: str | None,
+    dry_run: bool,
+    yes: bool,
+) -> None:
+    """The `--engine-source` override `new` path (ADR 0040 decision 4, ADR 0044).
+
+    Provisions the named source into an isolated ephemeral environment with
+    `uv` and runs the whole generation against it through an out-of-process
+    worker (`engine_source.py`/`_engine_worker.py`) -- the installed engine is
+    never imported, shadowed, or in-process `sys.path`-injected (rule 25).
+    Component selection, project-answer collection, and destination
+    resolution reuse the exact same helpers `_run_engine` calls for the
+    default route, so interactive and non-interactive behaviour converges
+    identically on both (rule 24); only how the catalogue is discovered and
+    how the render is produced differ -- through `engine_source`'s worker
+    protocol instead of the installed `forge_template` package.
+
+    A render produced this way writes no generation-metadata document
+    (rule 29): `_report_created` is told so via `engine_source=True` and
+    prints the not-eligible line.
+    """
+    if path is not None:
+        try:
+            ensure_available(path)
+        except DestinationConflictError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+
+    _confirm_third_party(
+        source,
+        yes=yes,
+        title="[yellow]Engine source override[/yellow]",
+        lead="Building from engine source ",
+        detail="\nforge-template will be installed from this source and its "
+        "code will be executed. Only continue if you trust it.",
+    )
+
+    try:
+        from create_forge import engine_source, pipeline  # noqa: PLC0415
+    except ImportError:
+        err.print(
+            "[red]forge-template is not installed.[/red] create-forge "
+            f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
+            "reinstall create-forge to restore it."
+        )
+        raise typer.Exit(3) from None
+
+    try:
+        requirement = engine_source.build_requirement(source, ref)
+    except engine_source.EngineSourceError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    with engine_source.provision(requirement) as runtime:
+        try:
+            engine_source.negotiate(runtime)
+        except compat.EngineCompatibilityError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(3) from exc
+        except engine_source.EngineSourceError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+
+        try:
+            descriptors = engine_source.discover(runtime)
+        except engine_source.EngineSourceError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+
+        catalogue = pipeline.Catalogue(descriptors)
+        descriptor, selection = _resolve_engine_selection(
+            catalogue, archetype, flags, yes=yes
+        )
+        _validate_component_option_owners(catalogue, selection, flags.options)
+        selected = catalogue.selected(selection)
+
+        project_answers, collected_options = _collect_engine_answers(
+            descriptor, selected, preset, cfg_answers, flags.options, yes=yes
+        )
+        component_options = collected_options or None
+
+        dst = (
+            path or Path.cwd() / slugify(str(project_answers["project_name"]))
+        ).resolve()
+        try:
+            ensure_available(dst)
+        except DestinationConflictError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+
+        payload = build_spec_payload(
+            project_answers,
+            archetype=selection.archetype,
+            capabilities=selection.capabilities,
+            platforms=selection.platforms,
+            component_options=component_options,
+        )
+        try:
+            files = engine_source.render(runtime, payload)
+        except engine_source.EngineSourceError as exc:
+            lines = [str(exc)]
+            hint = _missing_requirement_hint(catalogue, descriptor, selection)
+            if hint:
+                lines.append(hint)
+            err.print(f"[red]{chr(10).join(lines)}[/red]")
+            raise typer.Exit(1) from exc
+
+    if dry_run:
+        for target, _content in files:
+            console.print(f"[dim]would write[/dim] {target}")
+        console.print("[dim]Dry run — nothing written.[/dim]")
+        return
+
+    try:
+        pipeline.finalise_files(files, dst)
+    except StagingError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    _report_created(
+        project_answers["project_name"], dst, updatable=False, engine_source=True
+    )
+
+
+def _report_created(
+    project_name: object,
+    dst: Path,
+    *,
+    updatable: bool = True,
+    engine_source: bool = False,
+) -> None:
     """Print the one client-owned success panel, on either route.
 
     ADR 0040 decision 13: the same shape regardless of whether `new` took the
@@ -782,14 +931,26 @@ def _report_created(project_name: object, dst: Path, *, updatable: bool = True) 
     line. The `--legacy` route additionally prints Copier's own
     `_message_after_copy` (via `runner.scaffold`/Copier itself); the engine
     route has no equivalent template-authored hook.
+
+    `engine_source=True` (ADR 0044) is its own not-eligible wording, distinct
+    from the plain "not yet" line: an `--engine-source` render will never
+    become update-eligible (it writes no generation-metadata document at
+    all, rule 29), which is a different fact from "this route doesn't have
+    engine-native update wired up yet."
     """
     check_command = "uv run poe check" if updatable else "uv run --locked poe check"
-    update_line = (
-        "[dim]Pull later changes with: create-forge update[/dim]"
-        if updatable
-        else "[dim]Not yet update-eligible -- create-forge update does not "
-        "apply to this project.[/dim]"
-    )
+    if updatable:
+        update_line = "[dim]Pull later changes with: create-forge update[/dim]"
+    elif engine_source:
+        update_line = (
+            "[dim]Generated from --engine-source -- create-forge update does "
+            "not apply to this project.[/dim]"
+        )
+    else:
+        update_line = (
+            "[dim]Not yet update-eligible -- create-forge update does not "
+            "apply to this project.[/dim]"
+        )
     console.print(
         Panel(
             f"[bold]{project_name}[/bold] created at [dim]{dst}[/dim]\n\n"
@@ -802,7 +963,7 @@ def _report_created(project_name: object, dst: Path, *, updatable: bool = True) 
 
 
 @app.command("new")
-def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public surface; one parameter per --flag is unavoidable
+def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's options are its public surface; one parameter per --flag is unavoidable, and --engine-source's own validation and dispatch (ADR 0044) add one more early-exit branch each
     name: Annotated[
         str | None,
         typer.Argument(help="Project name. Prompted for when omitted."),
@@ -877,6 +1038,24 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
             help="Set a selected component's option, ID.OPTION=VALUE. Repeatable.",
         ),
     ] = None,
+    engine_source: Annotated[
+        str | None,
+        typer.Option(
+            "--engine-source",
+            help="Build against a forge-template engine from this local path or "
+            "VCS URL instead of the installed one. Provisions an isolated "
+            "environment and runs its code — only use sources you trust. Not "
+            "create-forge update-eligible.",
+        ),
+    ] = None,
+    engine_ref: Annotated[
+        str | None,
+        typer.Option(
+            "--engine-ref",
+            help="A VCS revision for --engine-source. Requires --engine-source "
+            "and a VCS (not local-path) source.",
+        ),
+    ] = None,
 ) -> None:
     """Create a new project."""
     if legacy and template_url is not None:
@@ -888,6 +1067,18 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
     if archetype is not None and legacy:
         err.print("[red]--archetype and --legacy are contradictory.[/red]")
         raise typer.Exit(1)
+    if engine_ref is not None and engine_source is None:
+        err.print("[red]--engine-ref requires --engine-source.[/red]")
+        raise typer.Exit(1)
+    if engine_source is not None and legacy:
+        err.print("[red]--engine-source and --legacy are contradictory.[/red]")
+        raise typer.Exit(1)
+    if engine_source is not None:
+        try:
+            validate_source(engine_source, origin="--engine-source")
+        except SourceError as exc:
+            err.print(str(exc), style="red", markup=False)
+            raise typer.Exit(1) from None
     _any_component_flag = bool(
         capability or no_capabilities or platform or no_platforms or component_option
     )
@@ -952,6 +1143,19 @@ def new(  # noqa: PLR0913, PLR0917 - a CLI entry point's options are its public 
         platforms=_normalise_kind_flag(platform, none_flag=no_platforms),
         options=_parse_component_options(component_option or []),
     )
+    if engine_source is not None:
+        _run_engine_source(
+            preset,
+            cfg_answers,
+            path,
+            archetype,
+            flags,
+            source=engine_source,
+            ref=engine_ref,
+            dry_run=dry_run,
+            yes=yes,
+        )
+        return
     _run_engine(preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes)
 
 

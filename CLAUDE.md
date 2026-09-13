@@ -33,34 +33,50 @@ two codebases. **Do not merge them.** See
 
 ```
 src/create_forge/
-├── models.py       Pydantic v2 models for the registry. No I/O.
-├── templates.toml  Bundled registry data. Package data, ships in the wheel.
-├── registry.py     Loads + validates templates.toml. Cached.
-├── config.py       User config (~/.config/create-forge/config.toml).
-├── prompts.py      questionary flow. Driven entirely by registry data.
-├── staging.py      Destination conflicts, staging, atomic finalisation,
-│                   cleanup. Engine-free; shared by runner.py and pipeline.py.
-├── runner.py       The ONLY module that touches Copier's Python API.
-├── spec.py         Pure ProjectSpec wire-payload builder. No engine import.
-├── compat.py       Engine range + protocol constants. No engine import;
-│                   shared by cli.py's doctor and engine.py.
-├── engine.py       The ONLY module that touches the forge-template engine.
-├── pipeline.py     Shared discover→build→validate→render→finalise pipeline,
-│                   plus `Catalogue` (one discovery, grouped by kind).
-└── cli.py          Typer app: new, list, update, doctor.
+├── models.py         Pydantic v2 models for the registry. No I/O.
+├── templates.toml    Bundled registry data. Package data, ships in the wheel.
+├── registry.py       Loads + validates templates.toml. Cached.
+├── config.py         User config (~/.config/create-forge/config.toml).
+├── prompts.py        questionary flow. Driven entirely by registry data.
+├── staging.py        Destination conflicts, staging, atomic finalisation,
+│                     cleanup. Engine-free; shared by every generation route.
+├── sources.py        Untrusted-source validation/display (--template-url,
+│                     --engine-source). Engine-free.
+├── descriptors.py     DescriptorView/OptionView/RelationView protocols +
+│                     their JSON mirror models. Engine-free.
+├── runner.py         The ONLY module that touches Copier's Python API.
+├── spec.py           Pure ProjectSpec wire-payload builder. No engine import.
+├── compat.py         Engine range/protocol constants + the shared
+│                     compatibility check. No engine import; shared by
+│                     cli.py's doctor, engine.py, and engine_source.py.
+├── engine.py         Touches the installed forge-template engine, in
+│                     process.
+├── engine_source.py  --engine-source/--engine-ref: provisions an isolated
+│                     engine and runs _engine_worker.py inside it. No engine
+│                     import in the parent process.
+├── _engine_worker.py Runs *inside* a provisioned engine only, as a script,
+│                     never imported. Touches forge-template out of process.
+├── pipeline.py       Shared discover→build→validate→render→finalise pipeline,
+│                     plus `Catalogue` (one discovery, grouped by kind).
+└── cli.py            Typer app: new, list, update, doctor.
 ```
 
 Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry`/
-`staging` → `models`. Nothing lower imports anything higher. `engine.py` is
-the only module whose *source* imports `forge_template`
-(ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py));
-`pipeline.py` depends on it but imports `forge_template` only under
+`staging` → `models`. Nothing lower imports anything higher. `engine.py` (in
+process) and `_engine_worker.py` (out of process, run inside a provisioned
+`--engine-source` environment that never has `create-forge` installed) are
+the only two modules whose *source* imports `forge_template`
+(ADR 0013 as amended by ADR 0044,
+[tests/test_engine_contract.py](tests/test_engine_contract.py)); `pipeline.py`
+depends on `engine.py` but imports `forge_template` only under
 `TYPE_CHECKING`. `copier` is behind the optional `legacy` extra, so
 `runner.py` is imported lazily by `cli.py`'s `--legacy` route and by `update`.
-`compat.py` and `staging.py` are engine-free by construction (no
-`forge_template` import, not even under `TYPE_CHECKING`) and are imported
-unconditionally — see the canonical
-[filesystem generation contract](docs/filesystem-generation.md) (ADR 0015).
+`compat.py`, `staging.py`, `sources.py`, `descriptors.py`, and
+`engine_source.py` are engine-free by construction (no `forge_template`
+import, not even under `TYPE_CHECKING`) and are imported unconditionally —
+see the canonical [filesystem generation contract](docs/filesystem-generation.md)
+(ADR 0015) and [engine resolution contract](docs/engine-resolution.md)
+(ADR 0044).
 
 ## Change process
 
@@ -123,20 +139,30 @@ code execution, and prompts for confirmation unless `--yes` was supplied. See
 [ADR 0006](docs/adr/0006-bundled-registry-over-remote.md), and
 [ADR 0036](docs/adr/0036-template-source-credentials.md).
 
-### 4. Copier's and the engine's Python APIs are each touched in exactly one place
+### 4. Copier's and the engine's Python APIs are each touched in exactly one place (two, for the engine)
 
-`runner.py` for Copier (`copier>=9.16,<10`); `engine.py` for `forge_template`.
-Nothing else in this package may import either. On a major bump, only that one
-file should need attention. `compat.py` holds the shared engine range and
-protocol constants so `doctor` can report them without importing the engine.
-Copier's Git transport can raise plumbum `ProcessExecutionError` directly
-rather than a `CopierError` — `runner.py` translates it to sanitized
-repository/ref/network/access guidance, retains the original as the cause, and
-never displays raw argv, stdout, or stderr (a template URL may carry
-credentials). Keep that catch narrow. See
-[ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md),
+`runner.py` for Copier (`copier>=9.16,<10`); `engine.py` for the *installed*
+`forge_template`, in process. ADR 0044 adds the one deliberate second seam:
+`_engine_worker.py` also imports `forge_template`, but only ever runs inside a
+`--engine-source`-provisioned environment as a subprocess script — never
+imported by the parent, and never in the same interpreter as `engine.py`'s
+own import, so the two cannot collide. Nothing else in this package may
+import either Copier or `forge_template`. On a major bump, only `runner.py`
+or `engine.py` (plus, for a wire-protocol change, `_engine_worker.py`) should
+need attention. `compat.py` holds the shared engine range, protocol
+constants, and the compatibility-check functions themselves, so `doctor` can
+report them without importing the engine, and `engine.py`/`engine_source.py`
+apply the identical check to the installed and a provisioned engine
+respectively. Copier's Git transport can raise plumbum
+`ProcessExecutionError` directly rather than a `CopierError` — `runner.py`
+translates it to sanitized repository/ref/network/access guidance, retains
+the original as the cause, and never displays raw argv, stdout, or stderr (a
+template URL may carry credentials); `engine_source.py` applies the same
+never-echo-verbatim rule to `uv`'s own process failures. Keep both catches
+narrow. See [ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md),
 [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md),
-[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md), and the
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md),
+[ADR 0044](docs/adr/0044-out-of-process-engine-source-overrides.md), and the
 [engine update policy](docs/engine-updates.md).
 
 ### 5. templates.toml must ship in the wheel
@@ -191,9 +217,10 @@ repository-local (`./…`) references are the only exceptions.
 (`forge-template>=0.4.1,<0.5`, engine behind the optional `engine` extra,
 `--engine-preview` hidden). `main` has since cut over to the engine as the
 default, required `new` path with `copier` moved to the optional `legacy`
-extra (`forge-template>=0.5,<0.6`) — this ships as **`create-forge 0.4.0`**
-once the remaining Stage 18 work (CF-18.02–CF-18.07) publishes it. See
-[docs/roadmap-v3/](docs/roadmap-v3/) and
+extra (`forge-template>=0.5,<0.6`), and added the isolated `--engine-source`/
+`--engine-ref` override (CF-18.02, ADR 0044) — this ships as
+**`create-forge 0.4.0`** once the remaining Stage 18 work (CF-18.03–CF-18.07)
+publishes it. See [docs/roadmap-v3/](docs/roadmap-v3/) and
 [docs/engine-cutover-acceptance.md](docs/engine-cutover-acceptance.md) for the
 cutover contract, and [docs/README.md](docs/README.md) for everything else.
 
