@@ -126,19 +126,12 @@ target a particular template version.
 
 ## Preview: more project types and capabilities
 
-The `0.3.2` CLI also provides an opt-in engine preview using
-`forge-template>=0.4.1,<0.5`. These options are currently hidden from help.
-
-| Project type | Use it for |
-| --- | --- |
-| Library | A distributable Python package with a choice of packaging modes. |
-| CLI Application | A Typer application with a console command and tests. |
-| Data Science | A Python package with a starter notebook and Jupyter tooling. |
-
-Add **Jupyter** for notebook development or **Scientific Python** for NumPy,
-pandas, Matplotlib, and scikit-learn. Data Science requires Jupyter;
-Scientific Python is optional. These capabilities can also accompany the
-other preview archetypes.
+The `0.3.2` CLI also provides an opt-in engine preview
+(`--engine-preview`, hidden from help) covering three project types — Library,
+CLI Application, and Data Science (a Python package with a starter notebook
+and Jupyter tooling) — plus optional **Jupyter** and **Scientific Python**
+capabilities (Data Science requires Jupyter; Scientific Python is optional and
+can accompany any archetype).
 
 ```bash
 uvx --from "create-forge[engine]==0.3.2" create-forge new "My Analysis" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
@@ -149,23 +142,20 @@ uv run poe notebook
 
 For regular preview use, install with `uv tool install "create-forge[engine]"`.
 The [project guide](https://sandsy09.github.io/create-forge/projects/) explains
-each type's output and links to complete recipes.
-
-**Preview projects do not support `create-forge update`.** Their shared
-tooling differs from the default Copier template; the preview does not
-generate its CI workflows or install Git hooks. `--template`,
-`--template-url`, and `--ref` apply only to the Copier workflow.
+each type's output. **Preview projects do not support `create-forge update`**
+and generate no CI workflows or Git hooks; `--template`, `--template-url`, and
+`--ref` apply only to the Copier workflow.
 
 ## What's next
 
 The Foundation and Data Science roadmaps are complete. The filed
 [Engine-Default Cutover](docs/roadmap-v3/README.md) and
-[Streamlit Archetype](docs/roadmap-v4/README.md) roadmaps describe future work;
-their issues are open, and no release is scheduled. Working engine
-updates and a supported legacy Copier route must precede the default switch.
-Follow [open work](https://github.com/Sandsy09/create-forge/issues)
-and [releases](https://github.com/Sandsy09/create-forge/releases) for updates,
-or suggest a project type, capability, or guide you would find useful.
+[Streamlit Archetype](docs/roadmap-v4/README.md) roadmaps describe future
+work — making the engine preview above the default `new` path, and beyond.
+Their issues are open and no release is scheduled yet. Follow
+[open work](https://github.com/Sandsy09/create-forge/issues) and
+[releases](https://github.com/Sandsy09/create-forge/releases) for updates, or
+suggest a project type, capability, or guide you would find useful.
 
 ## Feedback and contributing
 

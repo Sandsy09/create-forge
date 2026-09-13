@@ -42,8 +42,7 @@ INSTALLED_DATA_SCIENCE_VALIDATION = (
 )
 ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
-CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
-CONTRIBUTING_MD = REPO_ROOT / "CONTRIBUTING.md"
+DOCS_INDEX = REPO_ROOT / "docs" / "README.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
@@ -196,7 +195,7 @@ def test_engine_extra_is_retired_and_legacy_extra_holds_copier() -> None:
 def test_engine_contract_doc_is_linked_from_canonical_entry_points() -> None:
     link_re = re.compile(r"\([^)]*engine-contract-tests\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+    for path in (DOCS_INDEX, INTEGRATION_CONTRACT):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link engine-contract-tests.md"
@@ -207,13 +206,13 @@ def test_engine_contract_doc_is_linked_from_canonical_entry_points() -> None:
 
 def test_engine_resolution_doc_is_linked_from_the_canonical_entry_points() -> None:
     """The living engine-resolution contract must stay discoverable from
-    every doc that already names its sibling contracts (CLI conventions,
-    cross-repository workflow) -- otherwise it is dead documentation nobody
+    every doc that already names its sibling contracts (the docs index,
+    the integration contract) -- otherwise it is dead documentation nobody
     finds from the usual entry points.
     """
     link_re = re.compile(r"\([^)]*engine-resolution\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+    for path in (DOCS_INDEX, INTEGRATION_CONTRACT):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), f"{path.name} does not link engine-resolution.md"
 
@@ -226,7 +225,7 @@ def test_component_discovery_doc_is_linked_from_canonical_entry_points() -> None
     """
     link_re = re.compile(r"\([^)]*component-discovery\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+    for path in (DOCS_INDEX, INTEGRATION_CONTRACT):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), f"{path.name} does not link component-discovery.md"
 
@@ -240,7 +239,7 @@ def test_filesystem_generation_doc_is_linked_from_canonical_entry_points() -> No
     """
     link_re = re.compile(r"\([^)]*filesystem-generation\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, INTEGRATION_CONTRACT):
+    for path in (DOCS_INDEX, INTEGRATION_CONTRACT):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link filesystem-generation.md"
@@ -257,7 +256,7 @@ def test_end_to_end_tests_doc_is_linked_from_canonical_entry_points() -> None:
     """
     link_re = re.compile(r"\([^)]*end-to-end-tests\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+    for path in (DOCS_INDEX,):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), f"{path.name} does not link end-to-end-tests.md"
 
@@ -271,7 +270,7 @@ def test_downstream_client_reference_is_linked_from_canonical_entry_points() -> 
     """
     link_re = re.compile(r"\([^)]*downstream-client-reference\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+    for path in (DOCS_INDEX,):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link downstream-client-reference.md"
@@ -284,12 +283,12 @@ def test_component_selection_doc_is_linked_from_canonical_entry_points() -> None
     """CF-13.02's living component-selection contract (ADR 0027) must remain
     discoverable wherever contributors enter the CLI and engine integration
     documentation, mirroring the equivalent guards above. It is a CLI-surface
-    contract, so its third entry point is cli-conventions.md rather than
+    contract, so its second entry point is cli-conventions.md rather than
     integration-contract.md.
     """
     link_re = re.compile(r"\([^)]*component-selection\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+    for path in (DOCS_INDEX, CLI_CONVENTIONS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), f"{path.name} does not link component-selection.md"
 
@@ -300,11 +299,11 @@ def test_engine_default_cli_doc_is_linked_from_canonical_entry_points() -> None:
     """CF-16.01's living engine-default CLI contract (ADR 0040) must remain
     discoverable wherever contributors enter the CLI and engine integration
     documentation, mirroring component-selection.md's equivalent guard. It is
-    a CLI-surface contract, so its third entry point is cli-conventions.md.
+    a CLI-surface contract, so its second entry point is cli-conventions.md.
     """
     link_re = re.compile(r"\([^)]*engine-default-cli\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+    for path in (DOCS_INDEX, CLI_CONVENTIONS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), f"{path.name} does not link engine-default-cli.md"
 
@@ -315,12 +314,12 @@ def test_engine_project_lifecycle_doc_is_linked_from_canonical_entry_points() ->
     """CF-16.02's living engine project lifecycle contract (ADR 0041) must
     remain discoverable wherever contributors enter the CLI and engine
     integration documentation, mirroring engine-default-cli.md's guard. It is a
-    CLI-and-filesystem-surface contract, so its third entry point is
+    CLI-and-filesystem-surface contract, so its second entry point is
     cli-conventions.md.
     """
     link_re = re.compile(r"\([^)]*engine-project-lifecycle\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+    for path in (DOCS_INDEX, CLI_CONVENTIONS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link engine-project-lifecycle.md"
@@ -333,12 +332,12 @@ def test_engine_cutover_acceptance_doc_is_linked_from_canonical_entry_points() -
     """CF-16.03's living engine-default cutover acceptance contract (ADR 0042)
     must remain discoverable wherever contributors enter the CLI and engine
     integration documentation, mirroring its two sibling contracts' guards. It
-    is a CLI-and-release-surface contract, so its third entry point is
+    is a CLI-and-release-surface contract, so its second entry point is
     cli-conventions.md.
     """
     link_re = re.compile(r"\([^)]*engine-cutover-acceptance\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, CLI_CONVENTIONS):
+    for path in (DOCS_INDEX, CLI_CONVENTIONS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link engine-cutover-acceptance.md"
@@ -354,7 +353,7 @@ def test_data_science_preview_validation_doc_is_linked_from_entry_points() -> No
     """
     link_re = re.compile(r"\([^)]*data-science-preview-validation\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+    for path in (DOCS_INDEX,):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link data-science-preview-validation.md"
@@ -367,7 +366,7 @@ def test_installed_data_science_validation_doc_is_linked_from_entry_points() -> 
     """CF-14.02's installed-candidate evidence must stay discoverable."""
     link_re = re.compile(r"\([^)]*installed-data-science-validation\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, END_TO_END_TESTS):
+    for path in (DOCS_INDEX, END_TO_END_TESTS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link installed-data-science-validation.md"
@@ -382,7 +381,7 @@ def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None
     """
     link_re = re.compile(r"\([^)]*rollout-regression-validation\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD, END_TO_END_TESTS):
+    for path in (DOCS_INDEX, END_TO_END_TESTS):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link rollout-regression-validation.md"
@@ -397,7 +396,7 @@ def test_release_0_3_0_validation_doc_is_linked_from_entry_points() -> None:
     """
     link_re = re.compile(r"\([^)]*release-0-3-0-validation\.md[^)]*\)")
 
-    for path in (CLAUDE_MD, CONTRIBUTING_MD):
+    for path in (DOCS_INDEX,):
         text = path.read_text(encoding="utf-8")
         assert link_re.search(text), (
             f"{path.name} does not link release-0-3-0-validation.md"
