@@ -86,14 +86,29 @@ def route_for(project: Path, *, metadata_filename: str, legacy: bool) -> Route:
     project that never had one. Otherwise `--legacy` always selects the
     Copier route; the engine route is chosen only when `.forge/generation.json`
     exists and `--legacy` was not passed.
+
+    A pre-cutover `--engine-preview` project is one of the "neither file"
+    causes rather than a detected case of its own (ADR 0047 rule 1): that flag
+    wrote no answers file and no metadata document, so it is byte-for-byte
+    indistinguishable on disk from any directory create-forge never touched.
+    The message below names all three causes in one diagnostic; no migration
+    helper is offered (ADR 0047 rule 2) -- no metadata is fabricated and no
+    answers are invented.
     """
     has_metadata = (project / metadata_filename).is_file()
     has_answers = (project / COPIER_ANSWERS_FILE).is_file()
     if not has_metadata and not has_answers:
         msg = (
             f"Neither {metadata_filename} nor {COPIER_ANSWERS_FILE} was found "
-            f"in {project}. This project was not created by create-forge, or "
-            "its provenance file was deleted."
+            f"in {project}. create-forge update needs one of them -- "
+            f"{metadata_filename} selects the engine-native route, "
+            f"{COPIER_ANSWERS_FILE} the --legacy Copier route. This project "
+            "was not created by create-forge, its provenance file was "
+            "deleted, or it was created by the removed development-only "
+            "--engine-preview flag, which wrote neither file and never "
+            "supported updates. Generate a fresh project with `create-forge "
+            "new` and port your changes across -- create-forge will not "
+            "invent answers for an existing tree."
         )
         raise UpdateError(msg)
     if legacy:

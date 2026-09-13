@@ -282,7 +282,7 @@ def _confirm_third_party(
         raise typer.Exit(130)
 
 
-def _ensure_legacy_available() -> None:
+def _ensure_legacy_available(*, purpose: str = "to use --legacy") -> None:
     """Import `create_forge.runner`, failing closed if `copier` is absent.
 
     ADR 0040 decision 2 (CF-18.01) moves `copier` from a required dependency
@@ -295,14 +295,20 @@ def _ensure_legacy_available() -> None:
     `ImportError` traceback. Callers reached only after this succeeds import
     `create_forge.runner`'s names directly -- the module is already cached in
     `sys.modules`, so that second import is free.
+
+    `purpose` distinguishes why the extra is needed (ADR 0047 rule 4): `new
+    --legacy` reads "to use --legacy", while `update`'s file-routed Copier
+    path -- reachable with no `--legacy` flag at all, whenever the project
+    records `.copier-answers.yml` -- supplies its own project-specific
+    wording instead.
     """
     try:
         import create_forge.runner  # noqa: F401, PLC0415
     except ImportError:
         err.print(
             "[red]The legacy Copier route isn't installed.[/red] Run "
-            "`pip install 'create-forge[legacy]'` (or `uv sync --all-extras` "
-            "in a create-forge checkout) to use --legacy."
+            r"`pip install 'create-forge\[legacy]'` (or `uv sync --all-extras` "
+            f"in a create-forge checkout) {purpose}."
         )
         raise typer.Exit(3) from None
 
@@ -1279,7 +1285,9 @@ def update_project(
     both files are present; neither file exits `1` naming both routes.
     `copier` is the optional `legacy` extra (ADR 0040 decision 2), so its
     import stays lazy and guarded, reached only once the Copier route is
-    actually selected.
+    actually selected. The direct-Copier route stays reachable even when the
+    engine itself is unusable (ADR 0047 rule 3) -- a `.copier-answers.yml`
+    project does not depend on the engine at all.
     """
     try:
         from create_forge import engine, update  # noqa: PLC0415
@@ -1292,7 +1300,31 @@ def update_project(
         raise typer.Exit(3) from None
 
     resolved = project.resolve()
-    metadata_filename = engine.generation_metadata_target()
+    try:
+        metadata_filename = engine.generation_metadata_target()
+    except (ImportError, engine.EngineCompatibilityError):
+        # ADR 0047 rule 3: the metadata filename is an engine-owned constant
+        # an out-of-range engine may predate entirely (engine.py's own
+        # docstring). A project that records Copier answers does not need it
+        # -- fall back to the Copier route rather than failing every update
+        # for a project the engine never touches.
+        if (resolved / update.COPIER_ANSWERS_FILE).is_file():
+            if degraded:
+                err.print(
+                    "[red]--degraded applies only to the engine-native "
+                    "update route.[/red]"
+                )
+                raise typer.Exit(1) from None
+            _run_copier_update(resolved, ref=ref, dry_run=dry_run)
+            return
+        err.print(
+            "[red]The installed forge-template engine is unusable.[/red] "
+            f"create-forge requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
+            "reinstall create-forge to restore it, or run `create-forge "
+            "doctor` for details."
+        )
+        raise typer.Exit(3) from None
+
     try:
         route = update.route_for(
             resolved, metadata_filename=metadata_filename, legacy=legacy
@@ -1324,7 +1356,12 @@ def update_project(
 
 def _run_copier_update(project: Path, *, ref: str | None, dry_run: bool) -> None:
     """The direct-Copier `update` route, unchanged from before CF-18.04."""
-    _ensure_legacy_available()
+    from create_forge.update import COPIER_ANSWERS_FILE  # noqa: PLC0415
+
+    _ensure_legacy_available(
+        purpose="to update this project, which records Copier answers in "
+        f"{COPIER_ANSWERS_FILE}"
+    )
     from create_forge.runner import ScaffoldError  # noqa: PLC0415
     from create_forge.runner import update as copier_update  # noqa: PLC0415
 
@@ -1637,7 +1674,7 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache | None, UvSta
             Check(
                 "copier cache",
                 True,
-                "not applicable — install with pip install 'create-forge[legacy]'",
+                r"not applicable — install with pip install 'create-forge\[legacy]'",
                 informational=True,
             )
         )
@@ -1767,7 +1804,7 @@ def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gat
         "copier",
         copier_package
         if copier_package is not None
-        else "not installed — install with pip install 'create-forge[legacy]'",
+        else r"not installed — install with pip install 'create-forge\[legacy]'",
     )
     info("template source", source_detail)
     info("integration line", INTEGRATION_LINE)

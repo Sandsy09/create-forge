@@ -155,8 +155,9 @@ rewrite-on-update is **shipped by CF-18.04**
 
 **Rule 7 shipped by [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
 ([ADR 0046](adr/0046-engine-native-update-application.md)), by
-`create_forge.update.route_for`; rule 8's exact wording remains
-[CF-18.05](https://github.com/Sandsy09/create-forge/issues/162)'s.**
+`create_forge.update.route_for`; rule 8 shipped by
+[CF-18.05](https://github.com/Sandsy09/create-forge/issues/162)
+([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)).**
 
 7. **Route by file; `--legacy` forces Copier.** `create-forge update
    <project>`:
@@ -176,12 +177,15 @@ rewrite-on-update is **shipped by CF-18.04**
 
 8. **A pre-cutover `--engine-preview` project is rejected with guidance.**
    Such a project has neither file — the preview wrote no answers file and no
-   metadata. `update` exits `1` explaining it was created by the removed
-   development-only `--engine-preview` flag, which never supported updates,
-   and pointing to regeneration with `create-forge new`. No metadata is
-   fabricated and no answers are invented.
-   [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) owns the
-   exact wording and any migration helper it decides to add.
+   metadata, so it is byte-for-byte indistinguishable from any directory
+   create-forge never touched (ADR 0047 rule 1). `update`'s single "neither
+   file" diagnostic therefore names all three possible causes — never
+   created by create-forge, the provenance file was deleted, or created by
+   the removed development-only `--engine-preview` flag, which never
+   supported updates — and points at regeneration with `create-forge new`.
+   No metadata is fabricated and no answers are invented, and no migration
+   helper is offered: ADR 0047 rule 2 records why one was considered and
+   rejected.
 
 ## Engine-native update
 
@@ -374,9 +378,13 @@ depend on the existence of — `forge-template`'s reserved
   version-match short-circuit reproduces the old render, `git merge-file -p`
   performs the merge, and `--degraded` decides pristine-ness from the
   recorded per-target digest.
-- The exact rejection wording for a pre-cutover `--engine-preview` project and
-  any migration helper, and the retention specifics of the direct-Copier
-  update route — [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
+- ~~The exact rejection wording for a pre-cutover `--engine-preview` project
+  and any migration helper, and the retention specifics of the direct-Copier
+  update route~~ — decided by CF-18.05
+  ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)):
+  one diagnostic names all three "neither file" causes, no migration helper is
+  offered, and the direct-Copier route stays reachable independent of engine
+  health.
 - The concrete cutover version number (`create-forge 0.4.0`), the supported
   OS / Python / install-mode matrix, the support and deprecation windows, and
   the cross-repository acceptance matrix — decided by CF-16.03
@@ -425,7 +433,19 @@ Every rule this contract decided — rules 1-5 (`new` finalisation) and rules
 - `tests/test_cli.py`'s engine-native `update` section characterises the
   CLI orchestration: success/no-op/conflict reporting, the dry-run list, the
   relock warning, and the exit-status mapping for a dirty tree, `Ctrl-C`, and
-  a declined or accepted degraded fallback.
+  a declined or accepted degraded fallback. Its own `-k legacy`-selectable
+  section (CF-18.05, ADR 0047) characterises rule 8's retention specifics:
+  source validation on `new --legacy --template-url`, `_src_path`
+  re-validation surviving the CLI's file-based routing, and the Copier route
+  staying reachable when the installed engine cannot be imported.
+- [`tests/test_update_routing.py`](../tests/test_update_routing.py)'s own
+  `-k preview`-selectable tests (CF-18.05) characterise rule 8's rejection
+  message and its no-fabrication guarantee.
+- [`tests/test_e2e_installed_cutover.py`](../tests/test_e2e_installed_cutover.py)
+  (CF-18.05) proves `create-forge[legacy]` resolves `copier`, `new --legacy`
+  and `update` against a real local tagged Copier template preserve local
+  edits and reach the newer tag, `--legacy` without the extra exits `3`, and
+  a preview-era project is rejected — all through the installed console.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
   link-audit guard keeps this document reachable from `CLAUDE.md`,
   `CONTRIBUTING.md` and [`docs/cli-conventions.md`](cli-conventions.md).

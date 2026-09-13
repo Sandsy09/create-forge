@@ -23,6 +23,11 @@ import yaml
 from plumbum.commands.processes import ProcessExecutionError
 
 from create_forge.runner import ScaffoldError, ScaffoldRequest, scaffold, update
+from tests.legacy_template import build_tagged_template
+from tests.legacy_template import commit as _commit
+from tests.legacy_template import git as _git
+from tests.legacy_template import init_repo as _init_repo
+from tests.legacy_template import visible_files as _visible_files
 
 
 @pytest.fixture(autouse=True)
@@ -39,70 +44,16 @@ def _isolated_copier_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     monkeypatch.setenv("COPIER_CACHE_DIR", str(tmp_path / "copier-cache"))
 
 
-def _git(*args: str, cwd: Path) -> str:
-    return subprocess.run(  # noqa: S603
-        ["git", *args],  # noqa: S607
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    ).stdout
-
-
-def _init_repo(path: Path) -> None:
-    """A git repo with a fixed identity and CRLF normalisation off.
-
-    CI runners have no global git identity -- the same reason test_cli.py
-    monkeypatches _git_config. core.autocrlf=false matters on Windows: with
-    it on, a freshly committed file can immediately read back as dirty from
-    `git status --porcelain`, tripping Copier's own dirty-tree guard before
-    the test does anything.
-    """
-    path.mkdir(parents=True, exist_ok=True)
-    _git("init", "--quiet", cwd=path)
-    _git("config", "user.name", "Test", cwd=path)
-    _git("config", "user.email", "test@example.com", cwd=path)
-    _git("config", "core.autocrlf", "false", cwd=path)
-
-
-def _commit(path: Path, message: str) -> None:
-    _git("add", "-A", cwd=path)
-    _git("commit", "--quiet", "-m", message, cwd=path)
-
-
 @pytest.fixture(scope="module")
 def template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A throwaway Copier template, tagged v1.0.0 and v1.1.0.
 
-    Deliberately an absolute path with no `.git` suffix and not a `file://`
-    URL: Copier's `get_repo()` only recognises a local directory that is
-    itself a git repo root -- a `file://` URL falls through to
-    "Local template must be a directory."
+    Built by `tests/legacy_template.py`, shared with
+    `tests/test_e2e_installed_cutover.py` (CF-18.05) -- see that module's
+    docstring for the non-obvious constraints (no `.git` suffix, no
+    `file://` URL, `core.autocrlf=false`).
     """
-    root = tmp_path_factory.mktemp("template")
-    _init_repo(root)
-
-    (root / "copier.yml").write_text(
-        "greeting:\n  type: str\n  default: hello\n", encoding="utf-8"
-    )
-    (root / ".copier-answers.yml.jinja").write_text(
-        "{{ _copier_answers|to_nice_yaml }}\n", encoding="utf-8"
-    )
-    (root / "README.md.jinja").write_text(
-        "Hello, {{ greeting }}! v1\n", encoding="utf-8"
-    )
-    (root / "notes.txt.jinja").write_text("original notes\n", encoding="utf-8")
-    _commit(root, "v1")
-    _git("tag", "v1.0.0", cwd=root)
-
-    (root / "README.md.jinja").write_text(
-        "Hello, {{ greeting }}! v2\n", encoding="utf-8"
-    )
-    _commit(root, "v2")
-    _git("tag", "v1.1.0", cwd=root)
-
-    return root
+    return build_tagged_template(tmp_path_factory.mktemp("template"))
 
 
 def _scaffold_at(template_path: Path, dst: Path, ref: str) -> None:
@@ -120,15 +71,6 @@ def _prepare_project(template_path: Path, tmp_path: Path) -> Path:
     _init_repo(dst)
     _commit(dst, "initial scaffold")
     return dst
-
-
-def _visible_files(project: Path) -> dict[str, bytes]:
-    """Snapshot every project file except Git's internal object database."""
-    return {
-        path.relative_to(project).as_posix(): path.read_bytes()
-        for path in project.rglob("*")
-        if path.is_file() and ".git" not in path.relative_to(project).parts
-    }
 
 
 def test_update_applies_template_changes(template: Path, tmp_path: Path) -> None:

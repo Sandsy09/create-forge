@@ -380,9 +380,11 @@ never as a calendar date.
   [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
   [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
   ([ADR 0046](adr/0046-engine-native-update-application.md)), both shipped.
-- Legacy Copier-project preservation and the transition handling for projects
-  scaffolded through the old `--engine-preview` —
-  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
+- ~~Legacy Copier-project preservation and the transition handling for
+  projects scaffolded through the old `--engine-preview`~~ — decided and
+  built by [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162)
+  ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md),
+  canonical [engine project lifecycle contract](engine-project-lifecycle.md)).
 - The concrete cutover version number (`create-forge 0.4.0`), the supported
   OS / Python / install-mode matrix, the support and deprecation windows, the
   cross-repository acceptance matrix and the release gates — decided by CF-16.03
