@@ -64,6 +64,7 @@ from create_forge.staging import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from create_forge import update as update_module
     from create_forge.models import Registry, Template
     from create_forge.pipeline import Catalogue
     from create_forge.runner import ScaffoldRequest
@@ -783,7 +784,7 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
 
     for warning in warnings:
         err.print(f"[yellow]{warning}[/yellow]")
-    _report_created(project_answers["project_name"], dst, updatable=False)
+    _report_created(project_answers["project_name"], dst, updatable=True)
 
 
 def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine's own justification: one parameter per new()'s distinct input, feeding an isolated provision->discover->select->collect->render->finalise orchestration with its own failure branch per stage
@@ -1247,7 +1248,7 @@ def list_templates(
 def update_project(
     project: Annotated[Path, typer.Argument(help="Project directory.")] = Path(),
     ref: Annotated[
-        str | None, typer.Option("--ref", help="Target version. Defaults to latest.")
+        str | None, typer.Option("--ref", help="Target version. Copier route only.")
     ] = None,
     dry_run: Annotated[
         bool,
@@ -1255,21 +1256,82 @@ def update_project(
             "--dry-run", help="Validate the update without changing project files."
         ),
     ] = False,
+    legacy: Annotated[
+        bool,
+        typer.Option("--legacy", help="Force the direct-Copier update route."),
+    ] = False,
+    degraded: Annotated[
+        bool,
+        typer.Option(
+            "--degraded",
+            help=(
+                "Allow a two-way update with no merge base when the recorded "
+                "engine release is unavailable. Engine-native route only."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Pull template changes into an existing project.
 
-    Dispatches only to the Copier update route today -- engine-native update
-    dispatch against the recorded generation-metadata file is CF-18.04's job.
-    `copier` is the optional `legacy` extra now (ADR 0040 decision 2), so this
-    command's own import of it is lazy and guarded, matching `new --legacy`'s.
+    Routes by file (ADR 0041 rule 7): a committed `.forge/generation.json`
+    reaches the engine-native route below; `.copier-answers.yml` only reaches
+    the direct-Copier route, unchanged; `--legacy` forces Copier even when
+    both files are present; neither file exits `1` naming both routes.
+    `copier` is the optional `legacy` extra (ADR 0040 decision 2), so its
+    import stays lazy and guarded, reached only once the Copier route is
+    actually selected.
     """
+    try:
+        from create_forge import engine, update  # noqa: PLC0415
+    except ImportError:
+        err.print(
+            "[red]forge-template is not installed.[/red] create-forge "
+            f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
+            "reinstall create-forge to restore it."
+        )
+        raise typer.Exit(3) from None
+
+    resolved = project.resolve()
+    metadata_filename = engine.generation_metadata_target()
+    try:
+        route = update.route_for(
+            resolved, metadata_filename=metadata_filename, legacy=legacy
+        )
+    except update.UpdateError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    if route is update.Route.COPIER:
+        if degraded:
+            err.print(
+                "[red]--degraded applies only to the engine-native update route.[/red]"
+            )
+            raise typer.Exit(1)
+        _run_copier_update(resolved, ref=ref, dry_run=dry_run)
+        return
+
+    if ref is not None:
+        err.print(
+            "[red]--ref selects a Copier template revision and applies only "
+            "to the --legacy route.[/red] The engine-native route always "
+            "targets the installed forge-template release -- upgrade "
+            "create-forge to move it forward."
+        )
+        raise typer.Exit(1)
+
+    _run_engine_update(resolved, dry_run=dry_run, degraded=degraded)
+
+
+def _run_copier_update(project: Path, *, ref: str | None, dry_run: bool) -> None:
+    """The direct-Copier `update` route, unchanged from before CF-18.04."""
     _ensure_legacy_available()
-    from create_forge.runner import ScaffoldError, update  # noqa: PLC0415
+    from create_forge.runner import ScaffoldError  # noqa: PLC0415
+    from create_forge.runner import update as copier_update  # noqa: PLC0415
 
     try:
         status = "Checking update…" if dry_run else "Updating…"
         with console.status(status):
-            update(project.resolve(), vcs_ref=ref, dry_run=dry_run)
+            copier_update(project, vcs_ref=ref, dry_run=dry_run)
     except ScaffoldError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
@@ -1282,6 +1344,140 @@ def update_project(
         "[green]Updated.[/green] Review the diff before committing — "
         "conflicts are marked inline."
     )
+
+
+def _confirm_degraded(reason: str) -> bool:
+    """Rule 22: never automatic -- explains the lost merge base and asks.
+
+    Non-interactive or closed stdin behaves as a decline, not a raw traceback.
+    """
+    err.print(
+        Panel(
+            f"{reason}\n\n"
+            "A degraded two-way update can proceed instead: it compares only "
+            "the new render against the working tree, so it cannot tell a "
+            "local edit from an old template default.",
+            title="[yellow]Unavailable recorded release[/yellow]",
+            border_style="yellow",
+        )
+    )
+    try:
+        return typer.confirm("Continue with a degraded update?", default=False)
+    except typer.Abort:
+        return False
+
+
+def _print_dry_run_summary(outcome: update_module.UpdateOutcome) -> None:
+    """Rule 16: a genuine per-target classification list.
+
+    `unchanged` targets are summarised as a count rather than listed one by
+    one.
+    """
+    unchanged = 0
+    for result in outcome.results:
+        if result.status == "unchanged":
+            unchanged += 1
+            continue
+        marker = "CONFLICT" if result.status == "conflict" else result.status
+        line = f"[dim]{result.classification:<9}[/dim] {marker:<10} {result.target}"
+        console.print(line)
+    console.print(f"[dim]{unchanged} unchanged target(s).[/dim]")
+
+
+def _report_update_result(outcome: update_module.UpdateOutcome) -> None:
+    """Rule 23: one client-owned message, plus a clean/conflicted count.
+
+    A no-op update (rule 15) reports that nothing changed instead.
+    """
+    if outcome.changed == 0:
+        console.print("[green]Updated.[/green] Nothing changed.")
+        return
+    clean = outcome.changed - outcome.conflicts
+    console.print(
+        "[green]Updated.[/green] Review the diff before committing — "
+        f"conflicts are marked inline. {clean} clean, {outcome.conflicts} conflicted."
+    )
+
+
+def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded/finalise stage, mirroring _run_engine's own linear-orchestration justification
+    project: Path, *, dry_run: bool, degraded: bool
+) -> None:
+    """The engine-native `update` route (ADR 0041 rules 9-23, ADR 0046)."""
+    from create_forge import engine, pipeline, update  # noqa: PLC0415
+
+    try:
+        update.require_clean_tree(project)
+        degraded_reason: str | None = None
+
+        if degraded:
+            recorded, new = pipeline.prepare_degraded_update(project)
+            outcome = update.degraded_plan(
+                project,
+                {file.target: file.content for file in new.files},
+                recorded_digests=recorded.digests,
+                dry_run=dry_run,
+            )
+            degraded_reason = "requested with --degraded"
+        else:
+            try:
+                preparation = pipeline.prepare_update(project)
+            except pipeline.UnavailableRecordedReleaseError as exc:
+                if not _confirm_degraded(str(exc)):
+                    err.print(f"[red]{exc}[/red]")
+                    raise typer.Exit(3) from exc
+                recorded, new = pipeline.prepare_degraded_update(project)
+                outcome = update.degraded_plan(
+                    project,
+                    {file.target: file.content for file in new.files},
+                    recorded_digests=recorded.digests,
+                    dry_run=dry_run,
+                )
+                degraded_reason = str(exc)
+            else:
+                new = preparation.new
+                update.apply_renames(project, preparation.plan.renames)
+                outcome = update.apply_plan(
+                    project,
+                    preparation.plan.targets,
+                    preparation.plan.renames,
+                    old=preparation.old,
+                    new={file.target: file.content for file in preparation.new.files},
+                    dry_run=dry_run,
+                )
+
+        if dry_run:
+            _print_dry_run_summary(outcome)
+            console.print("[green]Dry run complete.[/green] No project files changed.")
+            return
+
+        relock_warning = update.relock(project)
+        if new.metadata is None:
+            msg = "the engine returned no generation metadata for this render"
+            raise StagingError(msg)
+        refreshed = engine.metadata_json(new.metadata, degraded_reason=degraded_reason)
+        (project / engine.generation_metadata_target()).write_text(
+            refreshed, encoding="utf-8"
+        )
+        update.stage_result(project)
+
+        if relock_warning:
+            err.print(f"[yellow]{relock_warning}[/yellow]")
+        _report_update_result(outcome)
+    except KeyboardInterrupt:
+        err.print("\n[dim]Cancelled.[/dim]")
+        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        raise typer.Exit(130) from None
+    except (update.UpdateError, StagingError) as exc:
+        err.print(f"[red]{exc}[/red]")
+        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        raise typer.Exit(1) from exc
+    except engine.EngineCompatibilityError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(3) from exc
+    except engine.ForgeEngineError as exc:
+        err.print(f"[red]{engine.explain(exc)}[/red]")
+        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        raise typer.Exit(1) from exc
 
 
 def _markers(target: Console) -> tuple[str, str]:
@@ -1414,8 +1610,8 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache | None, UvSta
             "git",
             bool(git_found),
             git_found
-            or "not on PATH — required to initialise generated projects "
-            "(and to clone templates under --legacy)",
+            or "not on PATH — required to initialise and update generated "
+            "projects (and to clone templates under --legacy)",
         )
     )
 

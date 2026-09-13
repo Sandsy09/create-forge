@@ -1,10 +1,11 @@
 """Guards for the engine project lifecycle contract (CF-16.02, ADR 0041).
 
-`docs/engine-project-lifecycle.md` is a *decision*, not a shipped interface:
-CF-18.03 (#160) implemented the `new` half -- the engine `new` finalisation
-lifecycle (git init, initial commit, conditional hooks) and the committed
-`.forge/generation.json` metadata file -- but the engine-native
-`create-forge update` route stays CF-18.04's (#161), not yet built.
+`docs/engine-project-lifecycle.md` is a *decision*, not a shipped interface --
+but every rule it decided is now built: CF-18.03 (#160) implemented the `new`
+half (git init, initial commit, conditional hooks, the committed
+`.forge/generation.json` metadata file); CF-18.04 (#161, ADR 0046) implements
+the `update` half (file-based routing, the Git-backed three-way merge, the
+per-target `--dry-run` list, and the client-owned `--degraded` fallback).
 
 Same discipline as `tests/test_engine_default_contract.py` and
 `forge-template`'s `tests/test_cutover_gates.py`:
@@ -16,8 +17,8 @@ Same discipline as `tests/test_engine_default_contract.py` and
   replaced by a derived assertion proving the real behaviour, and the
   affected rule moves out of `docs/engine-project-lifecycle.md`'s "decided"
   voice into `docs/filesystem-generation.md` / `docs/cli-conventions.md`'s
-  "in force" voice in the same change -- CF-18.03 did exactly this for its
-  own two rows below; only the CF-18.04 update-dispatch tripwire remains.
+  "in force" voice in the same change -- CF-18.03 and CF-18.04 have now both
+  done exactly this; no CF-EPIC-18 tripwire remains in this file.
 
 No network, no filesystem outside this repository.
 """
@@ -27,32 +28,28 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
 import typer.main
 
-from create_forge import engine, runner
+from create_forge import engine, update
 from create_forge.cli import app
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ADR_0041 = (
     REPO_ROOT / "docs" / "adr" / "0041-engine-project-lifecycle-and-update-dispatch.md"
 )
+ADR_0046 = REPO_ROOT / "docs" / "adr" / "0046-engine-native-update-application.md"
 ENGINE_PROJECT_LIFECYCLE = REPO_ROOT / "docs" / "engine-project-lifecycle.md"
 SRC = REPO_ROOT / "src" / "create_forge"
 
 METADATA_FILE = ".forge/generation.json"
 
-# ADR 0041 decisions 1 and 10: `--legacy` routes an update to Copier;
-# `--degraded` opts into the two-way update. Neither exists on `update` today.
-_UPDATE_CUTOVER_FLAGS = ("--legacy", "--degraded")
-
 
 def _update_params() -> dict[str, object]:
     """Every click parameter on `create-forge update`, keyed by long option."""
     command = typer.main.get_command(app)
-    update = command.commands["update"]  # type: ignore[attr-defined]
+    update_command = command.commands["update"]  # type: ignore[attr-defined]
     params: dict[str, object] = {}
-    for param in update.params:
+    for param in update_command.params:
         for opt in param.opts:
             params[opt] = param
     return params
@@ -63,31 +60,14 @@ def _update_params() -> dict[str, object]:
 # --------------------------------------------------------------------------- #
 
 
-def test_update_has_only_its_pre_cutover_parameters() -> None:
-    """ADR 0041 adds engine-native update routing to `update`. Today it takes
-    only the project, `--ref` and `--dry-run` -- this reads the live command,
-    so a new flag that lands without updating the contract fails here.
+def test_update_has_the_full_cutover_parameter_set() -> None:
+    """CF-18.04 (#161): `update` now takes `--legacy` and `--degraded`
+    alongside the pre-cutover `project`/`--ref`/`--dry-run` (ADR 0041
+    decisions 1 and 10) -- this reads the live command, so a flag that is
+    removed without updating the contract fails here.
     """
     params = _update_params()
-    assert set(params) >= {"--ref", "--dry-run"}
-    for flag in _UPDATE_CUTOVER_FLAGS:
-        assert flag not in params, (
-            f"{flag} now exists on `update` -- move its rule from "
-            "docs/engine-project-lifecycle.md into docs/cli-conventions.md"
-        )
-
-
-def test_runner_update_still_requires_the_copier_answers_file(tmp_path: Path) -> None:
-    """The one update route today is Copier's, keyed on `.copier-answers.yml`.
-    ADR 0041 decision 1 adds a second route keyed on `.forge/generation.json`;
-    until then a project without the answers file is rejected as here.
-    """
-    project = tmp_path / "proj"
-    project.mkdir()
-    (project / "file.txt").write_text("x", encoding="utf-8")
-
-    with pytest.raises(runner.ScaffoldError, match="copier-answers"):
-        runner.update(project)
+    assert set(params) >= {"--ref", "--dry-run", "--legacy", "--degraded"}
 
 
 def test_new_contract_doc_and_adr_exist_and_name_the_metadata_file() -> None:
@@ -112,7 +92,7 @@ def test_adr_names_its_review_obligations_literally() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Derived assertions -- CF-18.03's rows, now that they are shipped             #
+# Derived assertions -- CF-18.03's rows                                       #
 # --------------------------------------------------------------------------- #
 
 
@@ -151,17 +131,71 @@ def test_the_engine_new_path_runs_the_git_and_hook_lifecycle() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Tripwires -- fail deliberately when the cutover lands                        #
+# Derived assertions -- CF-18.04's rows, now that they are shipped            #
 # --------------------------------------------------------------------------- #
 
 
-def test_tripwire_update_dispatches_only_to_runner_update() -> None:
-    """Flips when CF-18.04 (#161) adds engine-native update dispatch to
-    `cli.update_project` (ADR 0041 decision 1). Today it calls only
-    `runner.update`.
+def test_update_routes_by_file_not_by_flag() -> None:
+    """ADR 0041 rule 7: routing reads the project's own files, never a flag
+    (other than the explicit `--legacy` override) -- `update.route_for` is
+    the one place this decision lives.
     """
-    source = (SRC / "cli.py").read_text(encoding="utf-8")
-    # The engine-native route would import from create_forge.pipeline or a new
-    # update module; the Copier route is the sole `update(` call today.
-    assert "engine_native_update" not in source
-    assert source.count("update(project") <= 1
+    assert update.route_for.__module__ == "create_forge.update"
+    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
+    assert "update.route_for" in cli_source
+
+
+def test_the_update_route_dispatches_to_the_engine_native_module() -> None:
+    """CF-18.04 (#161, ADR 0046): `cli.update_project` now reaches
+    `create_forge.update`'s Git-backed application in addition to
+    `runner.update`'s Copier path -- the tripwire this test replaces asserted
+    the opposite.
+    """
+    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
+    assert "pipeline.prepare_update" in cli_source
+    assert "update.apply_plan" in cli_source
+    assert "runner.update" not in cli_source  # still imported by name, unqualified
+    assert "import update as copier_update" in cli_source
+
+
+def test_the_engine_native_route_merges_with_git_merge_file() -> None:
+    """ADR 0046: the per-target three-way merge (rule 12) is `git merge-file
+    -p`, not a bespoke merge algorithm -- `create-forge` never re-implements
+    what Git already does correctly and everyone already knows. `update.py`
+    staying engine-free at all (no `forge_template` *import*) is
+    `test_engine_contract.py`'s AST-based `_SHIPPED_MODULES` guard's job, not
+    a substring check here -- this module's own docstring names
+    `forge_template.plan_update` in plain English.
+    """
+    update_source = (SRC / "update.py").read_text(encoding="utf-8")
+    assert "merge-file" in update_source
+
+
+def test_the_degraded_route_never_invents_a_merge_base() -> None:
+    """ADR 0041 rule 22 / decision 4: `--degraded` is entirely client-owned
+    code, since `forge_template.plan_update` explicitly declines to perform
+    this comparison itself. `update.degraded_plan` never calls the provider.
+    """
+    update_source = (SRC / "update.py").read_text(encoding="utf-8")
+    assert "def degraded_plan" in update_source
+
+
+def test_adr_0046_exists_and_is_indexed() -> None:
+    assert ADR_0046.is_file()
+    index = (REPO_ROOT / "docs" / "adr" / "README.md").read_text(encoding="utf-8")
+    assert "0046" in index
+
+
+# --------------------------------------------------------------------------- #
+# Executable examples -- link audit                                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_engine_project_lifecycle_doc_reflects_the_shipped_state() -> None:
+    """Every rule this contract decided is now shipped -- the doc's own
+    Status section must say so rather than still describing `update` as
+    Copier-only.
+    """
+    doc = ENGINE_PROJECT_LIFECYCLE.read_text(encoding="utf-8")
+    assert "CF-18.04" in doc
+    assert "ADR 0046" in doc

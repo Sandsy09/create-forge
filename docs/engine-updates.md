@@ -182,10 +182,11 @@ This rule binds the `--legacy` path, whose generated projects track a
 yet: before CF-18.01 it was a hidden, dev-only `--engine-preview` flag that
 had never been the default and wrote no engine answers file, so there were
 no released engine-generated projects to migrate; CF-18.01 made it the
-default `new` path, and CF-18.03
+default `new` path, CF-18.03
 ([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
-has since made it commit `.forge/generation.json`, but `create-forge update`
-still does not route to it (CF-18.04). ADR
+made it commit `.forge/generation.json`, and CF-18.04
+([ADR 0046](adr/0046-engine-native-update-application.md)) has since made
+`create-forge update` route to it. ADR
 0026's move to the 0.4 line was therefore vacuously compliant here; the
 engine-first cutover
 ([CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /
@@ -200,9 +201,9 @@ Git-backed three-way merge when the project holds a committed
 `.forge/generation.json`, to `copier update` when it holds only
 `.copier-answers.yml`, and `update --legacy` forces the latter. Existing
 direct-Copier projects keep exactly the route this section describes; the
-engine-native route is decided by CF-16.02 and built by
-[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161), and has not
-shipped.
+engine-native route was decided by CF-16.02 and shipped by
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+([ADR 0046](adr/0046-engine-native-update-application.md)).
 
 ## Where the supported range is recorded
 

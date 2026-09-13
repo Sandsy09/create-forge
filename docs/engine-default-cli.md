@@ -366,19 +366,20 @@ never as a calendar date.
 
 ## What this contract does not decide
 
-- The engine range adoption (`>=0.5,<0.6`), the lock refresh, and the
-  implementation of every rule above —
+- ~~The engine range adoption (`>=0.5,<0.6`), the lock refresh, and the
+  implementation of every rule above~~ — built by
   [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158),
   [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159),
-  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160).
-- `update` dispatch, the generation-metadata file (`.forge/generation.json`),
+  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160), all shipped.
+- ~~`update` dispatch, the generation-metadata file (`.forge/generation.json`),
   the merge and conflict policy, dry-run, cancellation, rollback, and the
-  `new` Git/hook lifecycle for the engine path — decided by CF-16.02
+  `new` Git/hook lifecycle for the engine path~~ — decided by CF-16.02
   ([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
   canonical [engine project lifecycle contract](engine-project-lifecycle.md)),
   built by
   [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
-  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161).
+  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)
+  ([ADR 0046](adr/0046-engine-native-update-application.md)), both shipped.
 - Legacy Copier-project preservation and the transition handling for projects
   scaffolded through the old `--engine-preview` —
   [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).

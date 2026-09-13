@@ -15,6 +15,8 @@ from __future__ import annotations
 import builtins
 import importlib.metadata
 import json
+import subprocess
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
 from io import BytesIO, TextIOWrapper
 from pathlib import Path
@@ -54,6 +56,8 @@ from create_forge.prompts import PromptAbortedError
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldError, ScaffoldRequest
 from create_forge.staging import StagingError
+from create_forge.update import RecordedDocument, TargetResult
+from create_forge.update import UpdateOutcome as _UpdateOutcome
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -362,10 +366,20 @@ def test_markers_use_glyphs_when_the_encoding_allows() -> None:
     assert _markers(utf8_console) == ("✓", "✗")
 
 
+def _copier_project(tmp_path: Path) -> Path:
+    """A project directory routed to the Copier update route (CF-18.04, ADR
+    0041 rule 7): a `.copier-answers.yml` and no `.forge/generation.json`.
+    """
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".copier-answers.yml").write_text("_src_path: x\n", encoding="utf-8")
+    return project
+
+
 def test_update_dry_run_forwards_ref_and_reports_no_changes(
     update_recorder: list[tuple[Path, str | None, bool]], tmp_path: Path
 ) -> None:
-    project = tmp_path / "project"
+    project = _copier_project(tmp_path)
 
     result = runner.invoke(
         app, ["update", str(project), "--ref", "v1.1.0", "--dry-run"]
@@ -381,7 +395,7 @@ def test_update_dry_run_forwards_ref_and_reports_no_changes(
 def test_update_without_dry_run_preserves_current_behavior(
     update_recorder: list[tuple[Path, str | None, bool]], tmp_path: Path
 ) -> None:
-    project = tmp_path / "project"
+    project = _copier_project(tmp_path)
 
     result = runner.invoke(app, ["update", str(project)])
 
@@ -402,8 +416,9 @@ def test_update_failure_exits_1_without_a_success_message(
         raise ScaffoldError("update failed")
 
     monkeypatch.setattr(runner_module, "update", fail_update)
+    project = _copier_project(tmp_path)
 
-    result = runner.invoke(app, ["update", str(tmp_path / "project"), "--dry-run"])
+    result = runner.invoke(app, ["update", str(project), "--dry-run"])
 
     assert result.exit_code == 1
     assert "update failed" in result.output
@@ -1052,8 +1067,8 @@ def test_new_finalises_a_successful_render(
     monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
     """A successful (faked) render is staged and moved into place exactly
-    like the Copier path, and reports success without claiming the project
-    is `create-forge update`-able (ADR 0015).
+    like the Copier path, and reports success as `create-forge update`-able
+    (ADR 0015, CF-18.04).
     """
     plan = GenerationPlan(
         component_order=("library",),
@@ -1103,8 +1118,8 @@ def test_new_finalises_a_successful_render(
     # Normalise whitespace: Rich wraps long lines to the console width,
     # which varies by environment (see the destination-conflict test above).
     normalised_output = " ".join(result.output.split())
-    assert "create-forge update does not apply" in normalised_output
-    assert "uv run --locked poe check" in normalised_output
+    assert "Pull later changes with: create-forge update" in normalised_output
+    assert "uv run poe check" in normalised_output
 
 
 def test_new_prints_a_lifecycle_warning_and_still_exits_0(
@@ -1739,3 +1754,302 @@ def test_config_show_reports_environment_source(
     assert result.exit_code == 0, result.output
     assert "env-org" in result.output
     assert "environment" in result.output
+
+
+# --------------------------------------------------------------------------- #
+# Engine-native `update` orchestration (CF-18.04, ADR 0041 rules 9-23,        #
+# ADR 0046) -- `create_forge.update`'s own apply/merge/degraded logic is      #
+# tests/test_update_engine.py's job; this only proves cli.py wires it up,     #
+# reports correctly, and maps each failure to the right exit status.         #
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeFile:
+    target: str
+    content: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeRendered:
+    files: tuple[_FakeFile, ...]
+    metadata: GenerationMetadata
+
+
+@dataclass(frozen=True, slots=True)
+class _FakePlan:
+    targets: tuple[object, ...]
+    renames: tuple[object, ...] = ()
+
+
+def _metadata_path(project: Path) -> Path:
+    return project / ".forge" / "generation.json"
+
+
+def _engine_project(tmp_path: Path) -> Path:
+    """A real, clean Git repo with a `.forge/generation.json` -- the engine
+    route's own precondition (`update.require_clean_tree`).
+    """
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".forge").mkdir()
+    _metadata_path(project).write_text(
+        _synthetic_metadata().to_json(), encoding="utf-8"
+    )
+
+    def _git(*args: str) -> None:
+        subprocess.run(  # noqa: S603
+            ["git", *args],  # noqa: S607
+            cwd=project,
+            check=True,
+            capture_output=True,
+        )
+
+    _git("init", "--quiet", "--initial-branch=main")
+    _git("config", "user.name", "Test")
+    _git("config", "user.email", "test@example.com")
+    _git("add", "-A")
+    _git("commit", "--quiet", "-m", "initial")
+    return project
+
+
+def test_engine_update_reports_nothing_changed_on_a_no_op(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    metadata = _synthetic_metadata()
+    fake_new = _FakeRendered(files=(_FakeFile("f.txt", b"x"),), metadata=metadata)
+    fake_preparation = pipeline_module.UpdatePreparation(
+        plan=cast(Any, _FakePlan(targets=())),
+        new=cast(Any, fake_new),
+        old={"f.txt": b"x"},
+        recorded=cast(Any, None),
+    )
+    monkeypatch.setattr(
+        pipeline_module, "prepare_update", lambda project: fake_preparation
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_renames", lambda project, renames: None
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_plan",
+        lambda *a, **k: _UpdateOutcome(results=()),
+    )
+    monkeypatch.setattr("create_forge.update.relock", lambda project: None)
+    monkeypatch.setattr("create_forge.update.stage_result", lambda project: None)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    assert "Nothing changed." in result.output
+    metadata_path = _metadata_path(project)
+    assert metadata_path.read_text(encoding="utf-8") == metadata.to_json()
+
+
+def test_engine_update_reports_clean_and_conflicted_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    fake_preparation = pipeline_module.UpdatePreparation(
+        plan=cast(Any, _FakePlan(targets=())),
+        new=cast(Any, fake_new),
+        old={},
+        recorded=cast(Any, None),
+    )
+    monkeypatch.setattr(
+        pipeline_module, "prepare_update", lambda project: fake_preparation
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_renames", lambda project, renames: None
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_plan",
+        lambda *a, **k: _UpdateOutcome(
+            results=(
+                TargetResult("a.txt", "changed", "clean"),
+                TargetResult("b.txt", "changed", "conflict"),
+            )
+        ),
+    )
+    monkeypatch.setattr("create_forge.update.relock", lambda project: None)
+    monkeypatch.setattr("create_forge.update.stage_result", lambda project: None)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    # Normalise whitespace: Rich wraps long lines to the console width.
+    assert "1 clean, 1 conflicted" in " ".join(result.output.split())
+
+
+def test_engine_update_dry_run_prints_the_classification_list_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    before = _metadata_path(project).read_text(encoding="utf-8")
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    fake_preparation = pipeline_module.UpdatePreparation(
+        plan=cast(Any, _FakePlan(targets=())),
+        new=cast(Any, fake_new),
+        old={},
+        recorded=cast(Any, None),
+    )
+    monkeypatch.setattr(
+        pipeline_module, "prepare_update", lambda project: fake_preparation
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_renames", lambda project, renames: None
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_plan",
+        lambda *a, **k: _UpdateOutcome(
+            results=(TargetResult("a.txt", "added", "clean"),)
+        ),
+    )
+
+    result = runner.invoke(app, ["update", str(project), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "added" in result.output
+    assert "a.txt" in result.output
+    assert "Dry run complete." in result.output
+    assert _metadata_path(project).read_text(encoding="utf-8") == before
+
+
+def test_engine_update_relock_warning_is_printed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    fake_preparation = pipeline_module.UpdatePreparation(
+        plan=cast(Any, _FakePlan(targets=())),
+        new=cast(Any, fake_new),
+        old={},
+        recorded=cast(Any, None),
+    )
+    monkeypatch.setattr(
+        pipeline_module, "prepare_update", lambda project: fake_preparation
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_renames", lambda project, renames: None
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_plan", lambda *a, **k: _UpdateOutcome(results=())
+    )
+    monkeypatch.setattr(
+        "create_forge.update.relock", lambda project: "uv lock failed somehow"
+    )
+    monkeypatch.setattr("create_forge.update.stage_result", lambda project: None)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    assert "uv lock failed somehow" in result.output
+
+
+def test_engine_update_dirty_tree_exits_1_with_the_rollback_hint(
+    tmp_path: Path,
+) -> None:
+    project = _engine_project(tmp_path)
+    (project / "untracked.txt").write_text("x", encoding="utf-8")
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 1, result.output
+    assert "uncommitted changes" in result.output
+    assert "git restore . && git clean -fd" in result.output
+
+
+def test_engine_update_keyboard_interrupt_exits_130_with_the_rollback_hint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+
+    def _interrupt(project: Path) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(pipeline_module, "prepare_update", _interrupt)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 130, result.output
+    assert "Cancelled." in result.output
+    assert "git restore . && git clean -fd" in result.output
+
+
+def test_engine_update_unavailable_release_declined_exits_3(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+
+    def _unavailable(project: Path) -> object:
+        raise pipeline_module.UnavailableRecordedReleaseError("0.4.9", "not found")
+
+    monkeypatch.setattr(pipeline_module, "prepare_update", _unavailable)
+    monkeypatch.setattr(typer, "confirm", lambda *a, **k: False)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 3, result.output
+    assert "0.4.9" in result.output
+
+
+def test_engine_update_unavailable_release_accepted_runs_degraded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    recorded = RecordedDocument(raw="{}", provider_version="0.4.9", spec={}, digests={})
+
+    def _unavailable(project: Path) -> object:
+        raise pipeline_module.UnavailableRecordedReleaseError("0.4.9", "not found")
+
+    monkeypatch.setattr(pipeline_module, "prepare_update", _unavailable)
+    monkeypatch.setattr(
+        pipeline_module,
+        "prepare_degraded_update",
+        lambda project: (recorded, cast(Any, fake_new)),
+    )
+    monkeypatch.setattr(typer, "confirm", lambda *a, **k: True)
+    monkeypatch.setattr(
+        "create_forge.update.degraded_plan",
+        lambda *a, **k: _UpdateOutcome(
+            results=(TargetResult("a.txt", "added", "clean"),)
+        ),
+    )
+    monkeypatch.setattr("create_forge.update.relock", lambda project: None)
+    monkeypatch.setattr("create_forge.update.stage_result", lambda project: None)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    assert "1 clean, 0 conflicted" in " ".join(result.output.split())
+    written = json.loads(_metadata_path(project).read_text(encoding="utf-8"))
+    assert written["reproduction"]["mode"] == "degraded"
+    assert "0.4.9" in written["reproduction"]["reason"]
+    assert "not found" in written["reproduction"]["reason"]
+
+
+def test_engine_update_explicit_degraded_flag_records_the_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    recorded = RecordedDocument(raw="{}", provider_version="0.5.0", spec={}, digests={})
+
+    monkeypatch.setattr(
+        pipeline_module,
+        "prepare_degraded_update",
+        lambda project: (recorded, cast(Any, fake_new)),
+    )
+    monkeypatch.setattr(
+        "create_forge.update.degraded_plan", lambda *a, **k: _UpdateOutcome(results=())
+    )
+    monkeypatch.setattr("create_forge.update.relock", lambda project: None)
+    monkeypatch.setattr("create_forge.update.stage_result", lambda project: None)
+
+    result = runner.invoke(app, ["update", str(project), "--degraded"])
+
+    assert result.exit_code == 0, result.output
+    written = json.loads(_metadata_path(project).read_text(encoding="utf-8"))
+    assert written["reproduction"]["mode"] == "degraded"

@@ -218,10 +218,13 @@ repository-local (`./…`) references are the only exceptions.
 `--engine-preview` hidden). `main` has since cut over to the engine as the
 default, required `new` path with `copier` moved to the optional `legacy`
 extra (`forge-template>=0.5,<0.6`), added the isolated `--engine-source`/
-`--engine-ref` override (CF-18.02, ADR 0044), and added the engine `new`
+`--engine-ref` override (CF-18.02, ADR 0044), added the engine `new`
 Git/hook lifecycle plus the committed `.forge/generation.json` metadata file
-(CF-18.03, ADR 0045) — this ships as **`create-forge 0.4.0`** once the
-remaining Stage 18 work (CF-18.04–CF-18.07) publishes it. See
+(CF-18.03, ADR 0045), and added engine-native `update` dispatch — a
+Git-backed three-way merge via `git merge-file`, a genuine per-target
+`--dry-run`, and an opt-in `--degraded` fallback (CF-18.04, ADR 0046) — this
+ships as **`create-forge 0.4.0`** once the remaining Stage 18 work
+(CF-18.05–CF-18.07) publishes it. See
 [docs/roadmap-v3/](docs/roadmap-v3/) and
 [docs/engine-cutover-acceptance.md](docs/engine-cutover-acceptance.md) for the
 cutover contract, and [docs/README.md](docs/README.md) for everything else.

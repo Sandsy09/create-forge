@@ -48,6 +48,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0043 — Consolidate CLAUDE.md and CONTRIBUTING.md behind a docs index](0043-consolidate-contributor-documentation.md)
 - [0044 — Run `--engine-source` overrides out of process](0044-out-of-process-engine-source-overrides.md)
 - [0045 — Run the engine `new` Git/hook lifecycle in a new module, and refuse the excluded targets it makes load-bearing](0045-engine-generation-lifecycle-and-staging-exclusions.md)
+- [0046 — Apply the engine-native update client-side with `git merge-file`, and reproduce the old render with a version-match short-circuit](0046-engine-native-update-application.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

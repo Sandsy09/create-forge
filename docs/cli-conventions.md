@@ -11,10 +11,10 @@ route flag now gathers answers directly against the public `forge-template`
 engine and ProjectSpec, replacing the released v0.3.x default's registry +
 Copier boundary. `--legacy` reaches that prior boundary unchanged. The
 input, parity, cancellation, and error-presentation conventions below remain
-in force on both routes unless a later decision explicitly revises them;
-`--engine-source`/`--engine-ref`, the engine `new` Git/hook lifecycle, and
-engine-native `update` dispatch remain undelivered (CF-18.02 through
-CF-18.04).
+in force on both routes unless a later decision explicitly revises them.
+`--engine-source`/`--engine-ref` (CF-18.02), the engine `new` Git/hook
+lifecycle (CF-18.03), and engine-native `update` dispatch (CF-18.04) have
+since all shipped.
 
 ## Input resolution and prompt defaults
 
@@ -114,11 +114,10 @@ archetype. Since CF-18.03, a generated project also gets `git init`, one
 initial commit (containing `uv.lock` and the committed
 `.forge/generation.json` metadata document), and `pre-commit install
 --install-hooks` when the render selected the `pre-commit` capability — see
-the canonical [filesystem generation contract](filesystem-generation.md). A
-project it creates is still not yet `create-forge update`-able, though —
-engine-native update dispatch is CF-18.04's job; it is not eligible for the
-`--legacy` Copier update path either, since it writes no
-`.copier-answers.yml`.
+the canonical [filesystem generation contract](filesystem-generation.md).
+Since CF-18.04, a project it creates is `create-forge update`-able through
+the engine-native route below; it is not eligible for the `--legacy` Copier
+update path either, since it writes no `.copier-answers.yml`.
 
 `--engine-preview` — the hidden, development-only precursor to this route —
 was removed outright at the cutover, with no deprecation window: it was
@@ -251,11 +250,12 @@ implemented `--engine-source`/`--engine-ref` — see the section below. CF-18.03
 ([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
 then shipped the engine `new` Git/hook lifecycle and the committed
 generation-metadata file — see the
-[filesystem generation contract](filesystem-generation.md). Still open:
-engine-native `update` dispatch (CF-18.04); deeper `--legacy` regression and
-old-preview-project recovery (CF-18.05); and the concrete deprecation versions,
-windows,
-acceptance matrix and support policy CF-16.03 fixed in the
+[filesystem generation contract](filesystem-generation.md). CF-18.04
+([ADR 0046](adr/0046-engine-native-update-application.md)) then shipped
+engine-native `update` dispatch — see the "Update dry runs" and "Engine
+project lifecycle" sections below. Still open: deeper `--legacy` regression
+and old-preview-project recovery (CF-18.05); and the concrete deprecation
+versions, windows, acceptance matrix and support policy CF-16.03 fixed in the
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
 ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
 remain CF-18.06/CF-18.07's to execute and publish. The full decision record
@@ -301,12 +301,13 @@ provisioning.
 
 ## Update dry runs
 
-`update --dry-run` validates a Copier update without applying it to the target
-project. It performs the same source and `--ref` resolution, safety checks, and
-template rendering as a real update, but calls Copier with `pretend=True`. A
-successful run leaves the project's visible files, `.copier-answers.yml`, Git
-HEAD, index, and working-tree status unchanged and reports `Dry run complete.
-No project files changed.` instead of claiming the project was updated.
+`update --dry-run` writes nothing on either route. On the direct-Copier route
+it validates a Copier update without applying it to the target project: the
+same source and `--ref` resolution, safety checks, and template rendering as
+a real update, but calling Copier with `pretend=True`. A successful run
+leaves the project's visible files, `.copier-answers.yml`, Git HEAD, index,
+and working-tree status unchanged and reports `Dry run complete. No project
+files changed.` instead of claiming the project was updated.
 
 Copier's update merge intentionally suppresses per-file status because it
 cannot report those changes reliably, so this is a validation preview rather
@@ -316,64 +317,56 @@ and other application failures retain exit status `1` and never print the
 success message. Omitting the flag preserves the normal update and its existing
 `Updated`/review-the-diff guidance.
 
-Projects generated through the default engine `new` path remain ineligible
-for `update` because they do not contain `.copier-answers.yml`; `--dry-run`
-does not change that boundary.
-
-`update` will gain an engine-native route
-(CF-16.02, [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
-canonical [engine project lifecycle contract](engine-project-lifecycle.md)):
-`update` routes to it when the project holds a committed
-`.forge/generation.json`, to the Copier path above when it holds only
-`.copier-answers.yml`, and `update --legacy` forces the Copier path. The
-engine-native route runs a Git-backed three-way merge from a clean working
-tree, so `--dry-run` there prints a genuine per-target classification list
-(`added` / `changed` / `removed` / `renamed`, each clean or CONFLICT) rather
-than the change/no-change summary Copier's merge is limited to. That route is
-decided by CF-16.02 and built by
-[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161); it has not
-shipped.
+The engine-native route's `--dry-run` (CF-18.04, below) is a genuine preview
+instead: it has the classified plan in hand already, so it prints a
+per-target list rather than a change/no-change summary.
 
 ## Engine project lifecycle
 
 The canonical [engine project lifecycle contract](engine-project-lifecycle.md)
-(CF-16.02, [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md))
-defines what happens **after the engine renders a project** and **when
-`create-forge update` runs against one**, after the cutover:
+(ADR 0041) defines what happens **after the engine renders a project** and
+**when `create-forge update` runs against one**. Every rule it decided is now
+shipped:
 
 - the engine `new` path, after its staged render and atomic rename, runs
   `git init` + one initial commit at the final destination, and
   `pre-commit install --install-hooks` only when the render produced a
   `.pre-commit-config.yaml`; a failure of any of these keeps the project and
-  warns rather than discarding a sound render;
+  warns rather than discarding a sound render (CF-18.03,
+  [ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md));
 - `create-forge` persists `forge-template`'s generation-metadata document as a
   committed `.forge/generation.json` — the engine analogue of
   `.copier-answers.yml` — and rewrites it, last, after every successful
-  update;
-- an engine-native update requires a clean Git working tree, applies rename
-  records before diffing, writes inline conflict markers, deletes a `removed`
-  target only if pristine, never touches a `skip-if-exists` target, and leaves
-  the result staged for the user to review and commit;
+  update (CF-18.03/CF-18.04);
+- `update <project>` routes by file: a committed `.forge/generation.json`
+  reaches the engine-native route, `.copier-answers.yml` only reaches the
+  Copier route unchanged, both reach the engine-native route unless
+  `update --legacy` forces Copier, and neither exits `1` naming both routes
+  (CF-18.04,
+  [ADR 0046](adr/0046-engine-native-update-application.md));
+- the engine-native route requires a clean Git working tree, applies rename
+  records before diffing, merges each target with `git merge-file -p`
+  (writing inline conflict markers on a genuine conflict), deletes a
+  `removed` target only if pristine, never touches a `skip-if-exists`
+  target, respects a target the user deleted locally rather than
+  resurrecting it, and leaves the result staged for the user to review and
+  commit;
+- the engine-native route's target is always the currently installed
+  `forge-template` release rendering the recorded spec verbatim — `--ref`
+  (the Copier route's own target-version flag) is rejected outright there,
+  exit `1`;
 - recovery from a failed or cancelled update is `git restore . && git clean
   -fd`, which `create-forge` prints but never runs itself;
 - an unavailable recorded engine release fails closed, with an opt-in
-  (`--degraded`, or an interactive prompt) two-way update that records
+  (`--degraded`, or an interactive prompt) two-way update that decides
+  "pristine" from the recorded per-target digest and records
   `reproduction.mode = "degraded"`;
+- a successful update also re-resolves `uv.lock`; a lock failure warns and
+  keeps the update rather than discarding it;
 - update failures reuse the exit-status table above unchanged — `1` for a
   dirty tree / bad merge / missing metadata / no route, `3` for an
-  incompatible or unavailable recorded engine, `130` for cancellation.
-
-That contract's `new` half — the first two bullets above — shipped in
-[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
-([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md)):
-`new` reaches the engine path by default since CF-18.01, and an
-engine-generated project now writes committed generation metadata and the
-Git/hook lifecycle above — see the canonical
-[filesystem generation contract](filesystem-generation.md). The `update`
-half remains a decision, not a shipped interface: `update` still handles
-only direct-Copier projects until
-[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) implements
-engine-native update dispatch.
+  incompatible or unavailable recorded engine (including a declined
+  degraded fallback), `130` for cancellation.
 
 ## Engine-default cutover acceptance
 
@@ -435,7 +428,7 @@ to `--ref` for version selection. See [ADR 0036](adr/0036-template-source-creden
 | `0` | The command completed successfully. | Successful commands, `--help`, and `--version`. |
 | `1` | Parsing succeeded, but the application could not complete the request. | Malformed config, an unknown template, a missing project name (and, on the default engine path, a missing `--archetype`) under `--yes`, failed `doctor` checks, scaffold/update failures, a non-empty destination, a staging/finalisation failure ([ADR 0015](adr/0015-staged-filesystem-generation.md)), or a selection failure `create-forge` rejects itself — one of the five selection flags combined with `--legacy`, a contradictory `--capability`/`--no-capabilities` pair, an unknown or wrong-kind component id, or an option for an unselected component ([component selection contract](component-selection.md)). |
 | `2` | The command invocation is invalid and Typer rejects its usage. | An unknown command or option, an unrecognised flag such as the retired `--engine-preview`, malformed `--data` without `key=value`, or a malformed `--component-option` without `ID.OPTION=VALUE`. |
-| `3` | The required generator is missing or unusable: an installed or overridden engine, or its ProjectSpec/component-manifest protocol or `metadata_version`, is outside the range this CLI supports, the engine cannot be imported at all, or `--legacy` was given without the `legacy` extra installed. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Widened at the cutover by ADR 0040 decision 12 (CF-18.01) to cover the whole provider-availability class — reachable on the now-default engine `new` path, not only a hidden flag. |
+| `3` | The required generator is missing or unusable: an installed or overridden engine, or its ProjectSpec/component-manifest protocol or `metadata_version`, is outside the range this CLI supports, the engine cannot be imported at all, or `--legacy` was given without the `legacy` extra installed. | Assigned by [ADR 0011](adr/0011-engine-source-and-version-resolution.md); implemented at the engine boundary by [ADR 0013](adr/0013-projectspec-construction-boundary.md)'s `engine.EngineCompatibilityError`. Widened at the cutover by ADR 0040 decision 12 (CF-18.01) to cover the whole provider-availability class — reachable on the now-default engine `new` path, not only a hidden flag. On the engine-native `update` route (CF-18.04), also the recorded `forge-template` release being unavailable and the opt-in degraded fallback being declined. |
 | `130` | The user cancelled an interactive operation. | Ctrl-C/Ctrl-D at a question, or declining the third-party source confirmation. |
 
 Cancellation must not invoke scaffolding. Expected application failures are
@@ -559,6 +552,15 @@ The contract is characterized by these tests:
   update against a local two-tag template, including the dry-run no-change
   guarantee followed by a successful real update, plus a missing-source failure
   that leaves the project and Git state unchanged.
+- [`tests/test_update_routing.py`](../tests/test_update_routing.py) and
+  [`tests/test_update_engine.py`](../tests/test_update_engine.py) cover the
+  engine-native `update` route CF-18.04 added (ADR 0046) — routing,
+  `require_clean_tree`, rename application, every classification's
+  application against a real `git merge-file` merge, the degraded fallback,
+  and the version-match short-circuit against the real installed engine. See
+  the canonical [engine project lifecycle contract](engine-project-lifecycle.md)'s
+  own Executable examples for the full list, including the CLI-orchestration
+  cases in `tests/test_cli.py`.
 - The `--engine-preview` component-selection surface is its own canonical
   [component selection contract](component-selection.md), characterized by
   `tests/test_engine_cross_repository.py`'s
