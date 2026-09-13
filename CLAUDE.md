@@ -4,18 +4,15 @@ Guidance for Claude Code working in this repository.
 
 ## What this is
 
-`create-forge` is a CLI that scaffolds Python projects from Copier templates,
-analogous to `pnpm create-payload-app`. It is a **thin wrapper**: Copier does the
-rendering and merging, this tool owns the prompt experience and a bundled
-registry of known templates.
+`create-forge` is a CLI that scaffolds Python projects, analogous to
+`pnpm create-payload-app`. It is a **thin wrapper**: a `forge-template` engine
+(or, via `--legacy`, Copier) does the rendering, this tool owns the prompt
+experience and orchestration.
 
-Distributed via `uvx create-forge`, and since #9
-([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md))
-published to PyPI as `create-forge` (`pip install create-forge`). Since
-[ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md)
-(CF-18.01), the `forge-template` engine is the default `new` architecture and
-a required dependency; `pip install 'create-forge[legacy]'` adds `copier`
-back for the explicit `--legacy` Copier route. Public, MIT, intended for
+Distributed via `uvx create-forge` and published to PyPI as `create-forge`
+(`pip install create-forge`). The `forge-template` engine is the default `new`
+architecture and a required dependency; `pip install 'create-forge[legacy]'`
+adds `copier` back for the explicit `--legacy` route. Public, MIT, intended for
 open-source use.
 
 ## Repository relationship
@@ -27,9 +24,9 @@ Two repositories, deliberately separate:
 | `https://github.com/Sandsy09/create-forge` | This repo. The CLI. |
 | `https://github.com/Sandsy09/forge-template` | The templates it scaffolds from. |
 
-They are split because Copier resolves template versions from PEP440 git tags in
-the template repo. A shared repo would make `v1.3.0` ambiguous between the two
-codebases. **Do not merge them.** See
+They are split because Copier resolves template versions from PEP440 git tags
+in the template repo. A shared repo would make `v1.3.0` ambiguous between the
+two codebases. **Do not merge them.** See
 [ADR 0003](docs/adr/0003-two-repo-split.md).
 
 ## Architecture
@@ -42,17 +39,14 @@ src/create_forge/
 ├── config.py       User config (~/.config/create-forge/config.toml).
 ├── prompts.py      questionary flow. Driven entirely by registry data.
 ├── staging.py      Destination conflicts, staging, atomic finalisation,
-│                   cleanup. Engine-free; shared by runner.py and pipeline.py
-│                   (ADR 0015).
+│                   cleanup. Engine-free; shared by runner.py and pipeline.py.
 ├── runner.py       The ONLY module that touches Copier's Python API.
 ├── spec.py         Pure ProjectSpec wire-payload builder. No engine import.
 ├── compat.py       Engine range + protocol constants. No engine import;
-│                   shared by cli.py's doctor and engine.py (ADR 0018).
+│                   shared by cli.py's doctor and engine.py.
 ├── engine.py       The ONLY module that touches the forge-template engine.
 ├── pipeline.py     Shared discover→build→validate→render→finalise pipeline,
-│                   plus `Catalogue` (one discovery, grouped by kind; ADR
-│                   0028). Reachable from `new`'s default engine path (ADR
-│                   0040, CF-18.01 -- no flag required since the cutover).
+│                   plus `Catalogue` (one discovery, grouped by kind).
 └── cli.py          Typer app: new, list, update, doctor.
 ```
 
@@ -61,305 +55,38 @@ Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry`/
 the only module whose *source* imports `forge_template`
 (ADR 0013, [tests/test_engine_contract.py](tests/test_engine_contract.py));
 `pipeline.py` depends on it but imports `forge_template` only under
-`TYPE_CHECKING`. Since `forge-template` is a required dependency (ADR 0040
-decision 1, CF-18.01), `cli.py` imports `engine`/`pipeline` lazily but
-unconditionally within the default `new` path -- guarding only against a
-genuinely broken install, not an optional extra. `copier` is the one now
-behind an extra (`legacy`), so `runner.py` is the module `cli.py`'s
-`--legacy` route and `update` import lazily instead -- the inverse of ADR
-0014's original guard, same shape. `staging.py` is engine-free and imported
-unconditionally by both `runner.py` and `cli.py` — see the canonical
+`TYPE_CHECKING`. `copier` is behind the optional `legacy` extra, so
+`runner.py` is imported lazily by `cli.py`'s `--legacy` route and by `update`.
+`compat.py` and `staging.py` are engine-free by construction (no
+`forge_template` import, not even under `TYPE_CHECKING`) and are imported
+unconditionally — see the canonical
 [filesystem generation contract](docs/filesystem-generation.md) (ADR 0015).
 
-## Accepted target — engine available, CLI not integrated
+## Change process
 
-[ADR 0010](docs/adr/0010-public-engine-integration-contract.md) accepts a
-future one-way integration in which `create-forge` constructs ProjectSpec and
-orchestrates the filesystem while a versioned `forge-template` package owns
-ProjectSpec validation, component discovery, composition, rendering and
-Copier. The living [integration contract](docs/integration-contract.md)
-records the compatibility and trust rules for that transition.
-Strict [ProjectSpec protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/project-spec.md)
-and [component manifest protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
-are implemented by the
-[stable template-engine API](https://github.com/Sandsy09/forge-template/blob/main/docs/template-engine-api.md)
-under [forge-template ADR 0029](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0029-stable-template-engine-api.md).
-The engine's
-[generated-project validation contract](https://github.com/Sandsy09/forge-template/blob/main/docs/generated-project-validation.md)
-is accepted under
-[forge-template ADR 0030](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0030-generated-project-validation.md).
-The accepted
-[Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-and [forge-template ADR 0031](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0031-library-archetype-contract.md)
-define the first production component, implemented on `forge-template/main`
-and released at `0.3.0`. The accepted
-[CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-and [forge-template ADR 0034](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0034-select-cli-application-reference-archetype.md)
-select the optionless engine-owned `cli` archetype and derive its command from
-`ProjectSpec.project.repository_name`; FT-08.04 implemented it, and it ships
-alongside `library` in the same `0.3.0` release.
-This repository's development pair moved to `forge-template==0.3.0`
-(CF-08.02, [ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
-whose production catalogue is no longer empty; then to a real released
-range, `forge-template>=0.3.1,<0.4` ([#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md));
-then, crossing one compatibility line, to
-`forge-template>=0.4,<0.5` (CF-13.01,
-[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)) — the
-0.4 line whose lower bound `0.4.0` first ships the Data Science archetype and
-reusable capabilities; then within that line to the reviewed
-`forge-template>=0.4.1,<0.5` release (CF-14.01,
-[ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
-It is declared as the optional `engine` extra
-(`create-forge[engine]`) rather than a `[project.dependencies]` entry or a
-development-only pin. The boundary can construct ProjectSpec, discover,
-validate, render, and finalise a project to disk through the public facade;
-as of CF-07.01 this is reachable from a real command via the hidden
-`new --engine-preview` flag (ADR 0014), though still not from the default
-`new` path — neither ADR 0018 nor ADR 0026 performs the CLI cutover.
-CF-08.02 also adds a hidden `--archetype` option and a discovery-driven
-interactive prompt, so `--engine-preview` selects for real between the
-discovered archetypes rather than passing a fixed id through. The
-`forge-template>=0.4.1,<0.5` / protocol-1 pair is recorded by the canonical
-[cross-repository engine contract tests](docs/engine-contract-tests.md).
-`forge-template 0.4.1` is the current compatible release; it republishes the
-reviewed `0.4.0` catalogue without a public-facade, protocol, component, or
-rendered-byte change. `create-forge 0.2.1`
-adds `uv>=0.12,<0.13` to the optional `engine` extra and creates `uv.lock` in
-adjacent staging before the atomic rename (ADR 0021); render plans and the
-public engine facade remain side-effect free.
-CF-07.04 ([ADR 0015](docs/adr/0015-staged-filesystem-generation.md)) moved
-the pin once, within the prior unreleased `0.2.0` contract, to adopt
-generated-project validation; CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md))
-moved it again, to the first tagged release; ADR 0018 replaced the pin
-entirely with the first released range, and ADR 0026 moved that range to the
-0.4 line — `render_project` still calls the public
-`validate_rendered_project` before returning. The canonical
-[component discovery contract](docs/component-discovery.md) records the
-protocol-first, no-fallback adapter semantics, and the canonical
-[filesystem generation contract](docs/filesystem-generation.md) records how
-`staging.py` stages and finalises a validated render, and how the Copier
-path cleans up after a failure instead.
-[ADR 0011](docs/adr/0011-engine-source-and-version-resolution.md) and the
-living [engine resolution contract](docs/engine-resolution.md) define how
-that engine is sourced, overridden for local development, diagnosed, and
-rejected when incompatible. The installable runtime range is implemented
-(ADR 0018) and now points at the 0.4 line (ADR 0026); the CLI cutover that
-makes it the default path is not. That cutover is now filed —
-[CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) (client
-contracts) and
-[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153)
-(implementation). CF-16.01
-([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
-canonical [engine-default CLI contract](docs/engine-default-cli.md)) fixes the
-default/`--legacy`/`--engine-source` selection and source-resolution UX:
-the engine becomes a required dependency and the default `new` path, `copier`
-becomes the optional `legacy` extra behind a visible `--legacy` flag,
-`--template-url`/`--ref` are retained (superseding ADR 0011's atomic-
-replacement clause only), `--engine-preview` is removed and its five selection
-flags become visible, and exit `3` widens to the whole "generator missing or
-unusable" class. CF-16.02
-([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md),
-canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md))
-fixes the update-and-lifecycle half: the engine `new` path's post-rename
-`git init` + initial commit + conditional hooks, the committed
-`.forge/generation.json` metadata file, and `create-forge update` routing to a
-Git-backed engine-native three-way merge (`.copier-answers.yml` projects and
-`--legacy` stay on `copier update`). CF-16.03
-([ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md),
-canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md))
-fixes the acceptance half: the cutover is a single **`create-forge 0.4.0`**
-release; Linux and Windows are supported (macOS unclaimed), the Python window
-is the latest four CPython releases, and the install modes are `uvx` /
-`uv tool install` / `pip` / the `legacy` extra; a cross-repository acceptance
-matrix (every row owned by a filed CF-18.x / FT-18.01 issue) and release gates
-(provider publishes first; both integrated validations and working
-engine-native **and** legacy updates before `create-forge` publishes); an
-immutable-forward-plus-yank release rollback; and a `create-forge 0.3.x`
-support window and a deprecation window of ≥ 90 days and ≥ 1 further tagged
-release. All three are decisions, not shipped interfaces — no implementing
-release exists. CF-16.03 closes CF-EPIC-16.
-[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) adds the first
-code: `spec.py`/`engine.py` build and negotiate a ProjectSpec against
-`forge-template`, now the optional `engine` extra rather than a
-tag-pinned development dependency — see the canonical
-[ProjectSpec construction contract](docs/project-spec-construction.md).
-The canonical
-[organisation-policy protocol v1](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy.md)
-is a downstream-client input resolved before effective ProjectSpec
-construction. CF-09.01 / [#53](https://github.com/Sandsy09/create-forge/issues/53)
-([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) delivered
-that hook: `spec.SelectionRequest`/`SelectionProvenance` preserve whether each
-selection kind was explicitly supplied, and
-`pipeline.build_generation_request` accepts them as `selection`/`provenance`
-keywords. The current CLI still consumes no policy itself and ships no
-resolver — that is the decision, not an unfinished step; see the canonical
-[downstream policy-consumption contract](docs/organisation-policy-consumption.md).
-Forge-template Stage 09 is complete under the canonical
-[safe extension contract](https://github.com/Sandsy09/forge-template/blob/main/docs/extension-points.md),
-[organisation-policy fixture](https://github.com/Sandsy09/forge-template/blob/main/docs/organisation-policy-fixtures.md),
-[compatibility policy](https://github.com/Sandsy09/forge-template/blob/main/docs/compatibility-policy.md),
-and [no-copy proof](https://github.com/Sandsy09/forge-template/blob/main/docs/no-copy-inheritance.md).
-The last proof keeps Foundation/component source package-bound and private
-catalogue overrides test-only. Do not duplicate engine content or infer a
-plugin mechanism.
-Forge-template [ADRs 0039–0042](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/README.md)
-record those four decisions.
-CF-09.02 / [#54](https://github.com/Sandsy09/create-forge/issues/54)
-([ADR 0023](docs/adr/0023-downstream-client-reference.md)) added
-[`examples/downstream_cli.py`](examples/downstream_cli.py): a second,
-independent Blueprint-style CLI over the public `forge_template` facade,
-carrying its own compatibility bounds and its own minimal organisation-policy
-resolver. It imports no `create_forge` module — proven by an AST guard in
-`tests/test_downstream_reference.py`, not merely stated — since it exists to
-demonstrate that a downstream client needs nothing from this repository. See
-the canonical [downstream client reference](docs/downstream-client-reference.md).
-CF-09.03 / [#55](https://github.com/Sandsy09/create-forge/issues/55) completes
-Stage 09 under
-[ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md):
-`create-forge` is one reference client rather than a framework dependency,
-the supported engine has no reverse dependency, policy remains
-selection-only, and generated projects depend on neither Forge package.
-[ADR 0014](docs/adr/0014-lazy-engine-reachability.md) adds `pipeline.py` and
-the hidden `new --engine-preview` flag that reaches this boundary from a real
-command for the first time, via a lazily-imported module `cli.py` otherwise
-never touches — the default `new` path remains unchanged. [ADR 0015](docs/adr/0015-staged-filesystem-generation.md)
-completes that flag with real staging and finalisation via `staging.py`.
-CF-07.06 ([ADR 0016](docs/adr/0016-end-to-end-reference-client-tests.md))
-closes Stage 07 with real, CI-enforced coverage of the Copier path — the real
-console script, its `_tasks`, and the generated project's own checks — see
-the canonical [end-to-end tests contract](docs/end-to-end-tests.md).
-CF-08.03 ([ADR 0019](docs/adr/0019-cli-archetype-parity-review.md)) reviewed
-both archetypes for parity: the shared ProjectSpec/pipeline construction path
-and engine-owned discovery hold generically, and the one archetype-specific
-branch this repository had —
-`pipeline._resolved_component_options`' legacy `library` option
-derivation — is now gated by the selected archetype's own discovered
-descriptor rather than a hardcoded id. That review also found, and left
-unfixed, that `--engine-preview` still prompted from the Copier registry's
-Library-shaped questions regardless of archetype — tracked by
-[#91](https://github.com/Sandsy09/create-forge/issues/91), since fixing it
-changed documented `--engine-preview` prompt-flow behaviour.
-[#91](https://github.com/Sandsy09/create-forge/issues/91)
-([ADR 0025](docs/adr/0025-engine-native-prompt-flow.md)) then closed that
-gap: `--engine-preview` prompts directly from the selected archetype's own
-discovered `ComponentDescriptor.options` (`prompts.ask_project_answers`/
-`ask_component_options`), reads no `templates.toml` registry data at all,
-selects the archetype before collecting any answer, and asks "What are you
-building?" exactly once instead of twice. `--template`/`--template-url`/
-`--ref` are now rejected outright in combination with `--engine-preview`
-rather than silently ignored, and the legacy `build_backend`/`versioning` →
-`packaging_mode` mapping (ADR 0019) survives as a `--data`-only fallback for
-whichever option was not answered directly.
-CF-08.04 ([ADR 0020](docs/adr/0020-engine-path-end-to-end-tests.md)) closed
-CF-EPIC-08's last open child issue: the engine path now has the same real,
-CI-enforced end-to-end coverage the Copier path already had — both reference
-archetypes generated through `--engine-preview` against the real installed
-engine, each project's own checks run, and a real released-install
-compatibility boundary (an out-of-range engine, and no engine extra at all)
-proven to write nothing. Forge-template's FT-08.05 review then corrected the
-Foundation boundary in `0.3.2`; create-forge supplies the matching dynamic
-lock finalisation under [ADR 0021](docs/adr/0021-client-finalises-engine-lockfiles.md).
-The two-repository Stage 08 implementation is complete.
+Run this loop for every issue or change:
 
-## Data Science roadmap
-
-The completed Foundation roadmap remains under `docs/roadmap-v1`; the completed
-[Data Science roadmap](docs/roadmap-v2/README.md) covers Stages 10–14.
-forge-template owns the package-backed Data Science archetype, reusable
-capabilities, and engine review. create-forge owns generic capability selection
-behind `--engine-preview` and the client E2E rollout. Do not recreate provider
-component metadata or treat roadmap completion as an engine-default decision.
-CF-14.01 ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
-adopted the reviewed `forge-template 0.4.1` release and prepared create-forge
-`0.3.0`. CF-14.02
-([ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
-proves both accepted Data Science compositions through that candidate wheel's
-installed console script, and CF-14.03
-([ADR 0033](docs/adr/0033-complete-rollout-regression-validation.md)) reuses
-that wheel for the Library / CLI Application engine paths, the default Copier
-path with no engine installed, a real out-of-range engine, and the full
-selection / option / destination / lock / cleanup failure matrix — see the
-canonical
-[rollout regression and failure validation](docs/rollout-regression-validation.md).
-CF-14.04 ([ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md))
-then published create-forge `0.3.0` to PyPI, verified the released
-`create-forge` / `forge-template 0.4.1` pair against its own artefacts, and
-closed CF-EPIC-14 and both Stage 13 and Stage 14 milestones — see the canonical
-[release 0.3.0 validation](docs/release-0-3-0-validation.md). The Data Science
-roadmap is complete in both repositories; `--engine-preview` stays hidden and
-the default `new` path stays direct-Copier.
-FT-10.01's canonical
-[Data Science contract](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-archetype.md)
-now fixes an optionless package, test, starter-notebook, ignored working-tree,
-and ownership shape. It is published in the provider's `0.4.0` engine line;
-create-forge must still not hard-code its ID, paths, or component rules.
-FT-10.02's canonical
-[initial capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
-define optionless `jupyter` and `scientific-python` components. Data Science
-requires Jupyter, while Scientific Python remains independently
-optional. FT-11.01 published the required Foundation extension points,
-FT-11.02 implements Jupyter under
-[ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md),
-and FT-11.03 implements Scientific Python under [ADR
-0051](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0051-production-scientific-python-capability.md).
-FT-11.04 completed their composition validation. Stage 12 then implemented and
-validated Data Science and published the five-component catalogue as
-[`forge-template 0.4.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.4.0)
-on [PyPI](https://pypi.org/project/forge-template/0.4.0/), with
-[release evidence](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-validation.md#published-040-release-verification).
-CF-13.01 ([ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md))
-adopted `forge-template>=0.4,<0.5`, so `engine.discover()` now returns all
-five descriptors. CF-13.02
-([ADR 0027](docs/adr/0027-generic-component-selection-conventions.md)) fixed
-the generic component-selection CLI conventions — `--capability`/`--platform`/
-`--component-option`, precedence, absent-vs-empty, prompt order — in the
-canonical [component selection contract](docs/component-selection.md). CF-13.03
-([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md)) implemented
-capability and platform selection: `pipeline.Catalogue` (one discovery,
-grouped by kind), the four `--capability`/`--no-capabilities`/`--platform`/
-`--no-platforms` flags, interactive multi-selects with required entries
-pre-locked, and the absent-versus-explicit-empty encoding through
-`SelectionRequest`. CF-13.04
-([ADR 0029](docs/adr/0029-per-component-option-collection.md)) implemented
-per-component option collection: the owner-qualified `--component-option`
-flag, `prompts.resolve_component_options` over `Catalogue.selected()` for
-*every* selected component, `prompts.coerce_option_value` CLI-string typing,
-and the legacy Library fallback merged per option name. CF-13.05
-([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md)) then
-validated the whole Data Science composition through that pipeline against the
-released engine — `tests/test_data_science_pipeline.py`, the discovery-driven
-generalisation of the `["library", "cli"]` parity/pipeline parametrisations,
-the widened AST guard, and the canonical
-[Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
-acceptance record — closing CF-EPIC-13. This CLI must not hard-code capability
-IDs or relationships — selection stays discovery-driven, semantic validation
-stays engine-owned. CF-14.02 then adds the candidate-wheel E2E boundary in
-`tests/test_e2e_installed_data_science.py`: both accepted compositions,
-byte-identical rendered output and locks, Foundation/component ownership,
-locked checks and notebooks, built distributions, isolated installs, and the
-Python 3.11/3.13/3.14 handoff matrix. The canonical
-[installed Data Science validation](docs/installed-data-science-validation.md)
-record maps that evidence under
-[ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md).
-
-The engine boundary is released behind `--engine-preview`, but it is not the
-default path. Until the coordinated cutover lands, the default Copier
-architecture and the invariants below remain authoritative. Do not partially
-migrate ownership or weaken the bundled-source trust boundary in advance of a
-decision that implements and tests the complete cutover contract. CF-16.01
-([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
-canonical [engine-default CLI contract](docs/engine-default-cli.md)) and
-CF-16.02 ([ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md),
-canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md)),
-and CF-16.03 ([ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md),
-canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md))
-are decisions only: together they fix the post-cutover selection,
-source-resolution, `new` lifecycle, `update` UX, the `create-forge 0.4.0`
-cutover release, the supported OS / Python / install-mode matrix, the
-cross-repository acceptance matrix and release gates, and the rollback /
-support / deprecation windows — but ship no runtime code, move no dependency,
-and bump no version. CF-16.03 closed CF-EPIC-16.
+1. **Plan first.** Read the issue and whichever canonical contracts in
+   [docs/README.md](docs/README.md) it touches. Surface every open
+   implementation question before writing the plan — no assumption left
+   unstated.
+2. **Decide whether it is a decision.** A new or changed architecture
+   boundary, dependency range, or CLI surface needs an ADR in `docs/adr/`
+   (Nygard format: `## Status`/`## Context`/`## Decision`/`## Consequences`).
+   Records are immutable — supersede, never edit. `uv run poe check:adr`
+   enforces filenames, contiguous numbering, the index entry, and the four
+   headings.
+3. **Move the contracts with the change.** If a canonical `docs/*.md`
+   contract describes the behaviour you're changing, update it in the same
+   PR. Several have link-audit or byte-exact guard tests — see
+   [docs/README.md](docs/README.md).
+4. **Implement**, matching the surrounding code's idiom and comment density.
+5. **Verify.** `uv run poe check` always. Add `pytest -m network` when
+   `templates.toml` changes, `uv run poe test:e2e` at the engine boundary, and
+   `uv run poe check:wheel` before any release.
+6. **Ship.** Branch, Conventional Commit, open a PR, wait for
+   `All checks passed`, squash-merge, delete the branch, fast-forward local
+   `main`.
 
 ## Invariants — do not break these
 
@@ -386,60 +113,31 @@ never require a CLI change.
 ### 3. unsafe=True is load-bearing and dangerous
 
 `runner.scaffold()` passes `unsafe=True` (the API form of `--trust`) because
-templates declare `_tasks`. This executes code from whatever is cloned.
-
-The default is acceptable because template URLs are bundled — they ship with
-the reviewed release and cannot be altered at runtime. Do not add remote
-registry fetching or config-based URL overrides without revisiting this. The
-`--template-url` flag is the sanctioned explicit escape hatch: it validates the
-source, displays the code-execution warning, and prompts for confirmation
-unless `--yes` was supplied. See
+templates declare `_tasks`. This executes code from whatever is cloned. The
+default is acceptable because template URLs are bundled — they ship with the
+reviewed release and cannot be altered at runtime. Do not add remote registry
+fetching or config-based URL overrides without revisiting this. `--template-url`
+is the sanctioned explicit escape hatch: it validates the source, warns about
+code execution, and prompts for confirmation unless `--yes` was supplied. See
 [ADR 0005](docs/adr/0005-execute-template-tasks.md),
 [ADR 0006](docs/adr/0006-bundled-registry-over-remote.md), and
 [ADR 0036](docs/adr/0036-template-source-credentials.md).
 
-### 4. Copier's Python API is touched in exactly one place
+### 4. Copier's and the engine's Python APIs are each touched in exactly one place
 
-`runner.py`. It is public but evolves faster than the CLI, hence the
-`copier>=9.16,<10` pin. On a major bump, only that file should need
-attention. The lower bound clears every published Copier advisory (the
-destination-escape set through 9.14.1;
-[ADR 0038](docs/adr/0038-dependency-floor-review.md)) and sits at the first
-release with the git-mirror cache and `COPIER_CACHE_DIR`
-([ADR 0039](docs/adr/0039-copier-cache-diagnostics.md)) — `runner.py` models
-that cache-location rule (checked against Copier's own resolver in
-`tests/test_copier_cache.py`) so `doctor` can report it and a cache failure
-can be explained; `platformdirs` is a direct dependency for that, pinned to
-Copier's own declared bound. The CI `floor` job tests all of it at the
-advertised floor. See
-[ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md). `copier`
-is today's *compatibility-line dependency* per
-[ADR 0012](docs/adr/0012-engine-dependency-update-policy.md): Dependabot is
-configured to never propose crossing that major on its own — see the
-[engine update policy](docs/engine-updates.md). `engine.py` follows the same
-one-module rule for `forge_template`, per
-[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md) — nothing
-else in this package may import it. `cli.py` reaches it only through a
-lazy, guarded import inside `--engine-preview`'s branch
-([ADR 0014](docs/adr/0014-lazy-engine-reachability.md)) — `forge-template`
-is the optional `engine` extra ([ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)),
-not installed by a plain `pip install create-forge`, so no module reachable
-at `cli.py`'s own import time may depend on it, directly or through
-`pipeline.py`. `compat.py` and `staging.py` are the exception that proves
-the rule: both are imported unconditionally by `cli.py` (and `staging.py` by
-`runner.py` too) precisely because they are engine-free by construction — no
-`forge_template` import, not even under `TYPE_CHECKING`
-([ADR 0015](docs/adr/0015-staged-filesystem-generation.md); ADR 0018).
-`compat.py` holds the engine range and protocol constants both `cli.py`'s
-`doctor` and `engine.py` need, so `doctor` can report them without ever
-importing the engine itself.
-
+`runner.py` for Copier (`copier>=9.16,<10`); `engine.py` for `forge_template`.
+Nothing else in this package may import either. On a major bump, only that one
+file should need attention. `compat.py` holds the shared engine range and
+protocol constants so `doctor` can report them without importing the engine.
 Copier's Git transport can raise plumbum `ProcessExecutionError` directly
-rather than a `CopierError`. `runner.py` owns that boundary too: translate it
-to sanitized repository/ref/network/access guidance for both scaffold and
-update, retain the original exception as the cause, and never display its raw
-argv, stdout, or stderr because a template URL may contain credentials. Keep
-this catch narrow; unrelated exceptions must not be hidden as user errors.
+rather than a `CopierError` — `runner.py` translates it to sanitized
+repository/ref/network/access guidance, retains the original as the cause, and
+never displays raw argv, stdout, or stderr (a template URL may carry
+credentials). Keep that catch narrow. See
+[ADR 0004](docs/adr/0004-copier-python-api-over-subprocess.md),
+[ADR 0012](docs/adr/0012-engine-dependency-update-policy.md),
+[ADR 0013](docs/adr/0013-projectspec-construction-boundary.md), and the
+[engine update policy](docs/engine-updates.md).
 
 ### 5. templates.toml must ship in the wheel
 
@@ -459,161 +157,17 @@ SHA with an adjacent `# vX.Y.Z` comment — not a branch or tag, which can be
 repointed after review. Workflow-level `permissions:` is read-only
 (`contents: read`); `write` and `id-token` scopes exist only on the individual
 `release`/`publish`/`deploy` jobs that need them. `docker://` and
-repository-local (`./…`) references are the only exceptions to the SHA rule.
-`scripts/check_workflows.py`
-(`uv run poe check:workflows`, and `tests/test_workflows.py` in the fast suite)
-enforces both. A Dependabot Action bump merges only once its proposed tag is
-resolved to the SHA that tag points to. See
+repository-local (`./…`) references are the only exceptions.
+`scripts/check_workflows.py` (`uv run poe check:workflows`, and
+`tests/test_workflows.py` in the fast suite) enforces both. See
 [ADR 0037](docs/adr/0037-immutable-workflow-actions.md) and the canonical
 [workflow security contract](docs/workflow-security.md).
 
 ## Conventions
 
-- The canonical [CLI UX and prompting conventions](docs/cli-conventions.md)
-  cover input precedence, prompt skipping, parity, validation ownership, and
-  exit statuses. Treat them as a compatibility contract.
-- The canonical [engine-default CLI contract](docs/engine-default-cli.md)
-  (CF-16.01, [ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md))
-  fixes the command surface *after* the engine-default cutover: the engine as
-  the default `new` path and a required dependency, `copier` as the optional
-  `legacy` extra behind a visible `--legacy` flag, retained
-  `--template-url`/`--ref` (superseding ADR 0011's atomic-replacement clause),
-  the new `--engine-source`/`--engine-ref` engine-package override, the removal
-  of `--engine-preview` and un-hiding of its five selection flags, `list` /
-  `doctor` against the discovered catalogue, the widened exit `3`, the
-  post-generation message, and the deprecation rule and sequence (numbers are
-  CF-16.03's). It is a decision, not a shipped interface — implemented by
-  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
-- The canonical [engine project lifecycle contract](docs/engine-project-lifecycle.md)
-  (CF-16.02, [ADR 0041](docs/adr/0041-engine-project-lifecycle-and-update-dispatch.md))
-  fixes what happens after the engine renders a project and when
-  `create-forge update` runs against one, after the cutover: the engine `new`
-  path's post-rename `git init` + initial commit + conditional
-  `pre-commit install` (a lifecycle failure keeps the project and warns); the
-  committed `.forge/generation.json` metadata file (the engine analogue of
-  `.copier-answers.yml`); `update` routing (`.forge/generation.json` →
-  engine-native, `.copier-answers.yml` → Copier, `--legacy` forces Copier);
-  the engine-native Git-backed three-way merge from a clean tree with inline
-  conflict markers, `--dry-run` per-target list, `git restore`/`git clean`
-  rollback (printed, never run), and the opt-in `--degraded` two-way update.
-  Also a decision only — built by
-  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
-  [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
-  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162).
-- The canonical [engine-default cutover acceptance contract](docs/engine-cutover-acceptance.md)
-  (CF-16.03, [ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md))
-  fixes how the cutover is accepted and supported: it is a single
-  **`create-forge 0.4.0`** release; the supported operating systems (Linux and
-  Windows proven, macOS unclaimed), Python versions (the latest four final
-  CPython releases, today 3.11–3.14) and install modes (`uvx`,
-  `uv tool install`, `pip`, and the `legacy` extra); the cross-repository
-  acceptance matrix (every row owned by a filed CF-18.x / FT-18.01 issue — no
-  new issue) and release gates (provider publishes the reviewed immutable
-  `forge-template 0.5.0` first; both integrated validations and working
-  engine-native **and** legacy updates before `create-forge` publishes); the
-  immutable-forward-plus-yank release rollback; the `create-forge 0.3.x`
-  support window (≥ 90 days and ≥ 1 further tagged release past the cutover);
-  and the deprecation window (≥ 90 days and ≥ 1 release, expressed relative to
-  publication, no calendar dates). A decision only, built by
-  [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); it closed
-  [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152).
-- The canonical [cross-repository contributor workflow](docs/cross-repository-workflow.md)
-  defines how to validate sibling `create-forge` and `forge-template` changes
-  before tagging or release.
-- The canonical [engine resolution contract](docs/engine-resolution.md)
-  defines how the template engine is sourced, overridden locally, diagnosed,
-  and rejected when incompatible. Treat it as a compatibility contract.
-- The canonical [engine update policy](docs/engine-updates.md) defines how a
-  compatibility-line dependency update is adopted, how a breaking line is
-  crossed, and what automated dependency tooling may never do on its own.
-- The canonical [workflow security contract](docs/workflow-security.md)
-  (ADR 0037) defines the external-action SHA-pinning rule and its `docker://`
-  / repository-local exceptions, the read-only workflow-level `permissions:`
-  rule and per-job write scopes, and how a Dependabot Action bump is reviewed.
-  `scripts/check_workflows.py` enforces it.
-- The canonical [ProjectSpec construction contract](docs/project-spec-construction.md)
-  defines the CLI-answer-to-ProjectSpec field mapping, derivation rules,
-  protocol negotiation, and validation behaviour `spec.py`/`engine.py`
-  implement.
-- The canonical [component discovery contract](docs/component-discovery.md)
-  defines protocol negotiation before catalogue access, descriptor ownership,
-  and the no-fallback trust boundary implemented by `engine.py`.
-- The canonical [component selection contract](docs/component-selection.md)
-  (CF-13.02, [ADR 0027](docs/adr/0027-generic-component-selection-conventions.md))
-  defines the `--capability`/`--platform`/`--component-option` flag surface,
-  the absent-versus-explicit-empty rule, owner-qualified option syntax and
-  precedence, deterministic prompt order, and which selection failures are
-  client-owned versus engine-owned. CF-13.03
-  ([ADR 0028](docs/adr/0028-discovery-driven-component-selection.md))
-  implemented the capability/platform half (`pipeline.Catalogue`, the four
-  flags, the multi-selects); CF-13.04
-  ([ADR 0029](docs/adr/0029-per-component-option-collection.md)) implemented
-  `--component-option`, per-component option collection over
-  `Catalogue.selected()`, and CLI-string typing; CF-13.05
-  ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-  proved the whole path for the Data Science composition — canonical
-  [Data Science preview-pipeline validation](docs/data-science-preview-validation.md).
-  No shipped module may name a production component id (the widened AST guard
-  enforces it); test fixtures feeding the real engine still may.
-- The canonical [cross-repository engine contract tests](docs/engine-contract-tests.md)
-  define the supported package/protocol range, public-facade coverage,
-  production-catalogue rendering boundary, and sibling-checkout command.
-- The canonical [filesystem generation contract](docs/filesystem-generation.md)
-  defines destination-conflict, staging, target-safety, finalisation, and
-  cleanup rules implemented by `staging.py` and used by both `runner.py` and
-  `pipeline.py`.
-- The canonical [end-to-end tests contract](docs/end-to-end-tests.md) defines
-  the fast/`network`/`e2e` test-tier split and what the real console script
-  is proven to do, against a released template on the Copier path and the
-  real installed engine on the engine path (CF-08.04, ADR 0020; every
-  discovered archetype including Data Science since CF-13.05, ADR 0030).
-- The canonical
-  [Data Science preview-pipeline validation](docs/data-science-preview-validation.md)
-  (CF-13.05, [ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-  maps CF-EPIC-13's acceptance checklist to the named tests proving it.
-- The canonical
-  [installed Data Science validation](docs/installed-data-science-validation.md)
-  (CF-14.02, [ADR 0032](docs/adr/0032-validate-installed-data-science-generation.md))
-  maps the candidate-wheel console, deterministic lock, generated-project,
-  package, isolation, and Python handoff evidence.
-- The canonical
-  [Library archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/library-archetype.md)
-  defines engine-owned Library semantics; this CLI owns only selection,
-  ProjectSpec construction, and orchestration at the future cutover.
-- The canonical
-  [CLI Application archetype contract](https://github.com/Sandsy09/forge-template/blob/main/docs/cli-application-archetype.md)
-  defines the optionless `cli` component, exposed via `--engine-preview
-  --archetype cli` since CF-08.02 ([ADR 0017](docs/adr/0017-cli-application-archetype-exposure.md)),
-  and derives its console name from `ProjectSpec.project.repository_name`; do
-  not duplicate those semantics in the registry or CLI models.
-- The canonical
-  [initial Data Science capability contracts](https://github.com/Sandsy09/forge-template/blob/main/docs/data-science-capabilities.md)
-  define the Jupyter hard co-selection and independently optional Scientific
-  Python component. Both capabilities and the `data-science` archetype are
-  published in `forge-template 0.4.0` and unchanged in the reviewed `0.4.1`
-  release, which this repository's supported `>=0.4.1,<0.5` range resolves
-  since CF-14.01
-  ([ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)).
-  Jupyter is recorded under
-  [ADR 0050](https://github.com/Sandsy09/forge-template/blob/main/docs/adr/0050-production-jupyter-capability.md).
-  CF-13.05 ([ADR 0030](docs/adr/0030-data-science-preview-pipeline-validation.md))
-  closed Stage 13 by consuming those descriptors and relationships
-  generically — deriving each archetype's requirements from
-  `Catalogue.required_ids`, with no hard-coded capability ID or rule.
-- The canonical [downstream policy-consumption contract](docs/organisation-policy-consumption.md)
-  defines the `SelectionRequest`/`SelectionProvenance` seam CF-09.01
-  ([ADR 0022](docs/adr/0022-downstream-organisation-policy-hook.md)) added to
-  `pipeline.build_generation_request`, what may cross the engine boundary,
-  and why `create-forge` deliberately ships no policy parser or resolver.
-- The canonical [downstream client reference](docs/downstream-client-reference.md)
-  defines `examples/downstream_cli.py` (CF-09.02,
-  [ADR 0023](docs/adr/0023-downstream-client-reference.md)): a second,
-  independent client demonstrating the public `forge_template` facade with no
-  `create-forge` dependency, its own compatibility bounds, and its own
-  minimal organisation-policy resolver.
-- [ADR 0024](docs/adr/0024-reference-client-not-framework-dependency.md)
-  closes the Stage 09 dependency boundary: shared engine logic stays in the
-  supported `forge-template` facade, while clients remain independent.
+- Canonical contracts governing CLI behaviour, the engine boundary, and
+  release/security process are indexed in [docs/README.md](docs/README.md) —
+  treat them as compatibility contracts, not background reading.
 - Python 3.11+ (`tomllib`, `StrEnum`)
 - mypy strict; ruff with `ANN` and `D` enabled
 - Conventional Commits (enforced by pre-commit once set up)
@@ -622,107 +176,36 @@ resolved to the SHA that tag points to. See
 - Errors shown to users go through `runner._explain()` or are phrased for a
   reader who has never used Copier
 
-## Current state
-
-Working: the default engine `new` path, `--legacy` Copier path, configuration,
-registry drift guard, staged filesystem generation, diagnostics, documentation
-site, packaging and CI gates are all implemented. `create-forge` is published
-to PyPI ([#9](https://github.com/Sandsy09/create-forge/issues/9),
-[ADR 0018](docs/adr/0018-pypi-distribution-and-the-first-engine-range.md)).
-The declared engine range moved from the first assigned
-`forge-template>=0.3.1,<0.4` to `>=0.4,<0.5` (CF-13.01,
-[ADR 0026](docs/adr/0026-adopt-the-0-4-engine-compatibility-line.md)), the
-0.4 Data Science line, then to the reviewed `>=0.4.1,<0.5` lower bound
-(CF-14.01, [ADR 0031](docs/adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)),
-and, on `main` since CF-18.01
-([ADR 0040](docs/adr/0040-engine-default-selection-and-source-resolution.md),
-[ADR 0042](docs/adr/0042-engine-cutover-acceptance-and-support-policy.md)),
-to the reviewed `>=0.5,<0.6` engine-default cutover release, adopted as a
-required dependency rather than the optional `engine` extra -- `copier`
-moved to the optional `legacy` extra in the same change. `create-forge 0.3.2`
-remains the latest **tagged and published** release; the engine-default
-cutover on `main` ships as `create-forge 0.4.0` only once
-[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) publishes it,
-gated on the remaining Stage 18 children (CF-18.02 through CF-18.06). The
-`0.3.0` release introduced the pre-cutover engine-preview line — CF-14.04,
-[ADR 0034](docs/adr/0034-publish-0-3-0-and-close-roadmap-v2.md),
-verified against its own artefacts in
-[release 0.3.0 validation](docs/release-0-3-0-validation.md).
-
-## Completed bootstrap plan
-
-See [docs/plan-v0.1.0.md](docs/plan-v0.1.0.md) for the phased roadmap covering
-items 0-6 below (drift guard against `forge-template`'s `copier.yml`, test
-suite, `config.py` wiring, repo hygiene, CI, ADRs, release) — written after a
-`forge-template` session found a live bug here (`task_runner` still prompted
-for after `forge-template` removed the question) and confirmed this CLI has
-never been run end to end.
-
-**0. Tag the template repo.** ✅ Done — `create-forge new` cannot work until
-`forge-template` has a PEP440 tag; that is pushed.
-
-**1. Test suite.** ✅ Done —
-- `tests/test_registry.py` — bundled registry validates; ids unique; default
-  exists and is not deprecated
-- `tests/test_models.py` — validator behaviour (select without choices,
-  deprecated without successor, duplicate keys)
-- `tests/test_cli.py` — Typer's `CliRunner` against `list`, `doctor`,
-  `new --dry-run`, `new --yes`, bad `--data` format
-- `tests/test_drift.py` — invariant 1, marked `network`
-
-Assert the *resolved Copier invocation* by monkeypatching `runner.scaffold`,
-rather than actually scaffolding. Keep the real scaffold in one network test.
-
-**2. Wire `config.py` into `cli.py`.** ✅ Done — `new` loads config and merges
-`as_answers()` into `preset` **beneath** any `--data` values, so precedence runs
-config < `--data` < prompt. `ValueError` from `load_config` is a user error.
-Config state is surfaced in `doctor`.
-
-**3. Repo hygiene.** ✅ Done — pre-commit config, `CONTRIBUTING.md`,
-`SECURITY.md`, `LICENSE`, `CHANGELOG.md`, `.gitattributes`
-(`* text=auto eol=lf` — the author develops on Windows), issue and PR
-templates, CODEOWNERS.
-
-**4. CI.** ✅ Done — lint (`pre-commit` + `mypy`), a test matrix over
-3.11–3.14, a Windows smoke job, `scripts/check_wheel.py` (`poe check:wheel`),
-a `floor` job that runs the fast suite under `uv --resolution lowest-direct`
-so the advertised dependency floors are tested not asserted (ADR 0038, ADR
-0039), and the `copier.yml` drift guard on push/PR and a Monday cron. `Dependabot`
-covers `github-actions` and `uv`, not `.pre-commit-config.yaml`'s pinned revs.
-Branch protection on `main` requires the `all-green` aggregate check. Every
-external Action is SHA-pinned and workflow permissions are per-job, enforced by
-`scripts/check_workflows.py` (`poe check:workflows`, and `tests/test_workflows.py`
-in the fast suite) — ADR 0037.
-
-**5. `docs/`.** ✅ Done — `docs/adr/` records accepted decisions and
-`scripts/adr.py` keeps that set internally consistent. The shared MkDocs site
-is published from `docs/user-guide/` under ADR 0035; pull requests build it and
-`main` deploys it.
-
-**6. First release.** ✅ Done — [`release.yml`](.github/workflows/release.yml)
-reads `pyproject.toml`'s `version` as the single source (ADR 0009, since
-`forge-template`'s bump-choice model would let the tag and the package's own
-`--version` drift apart). `v0.1.0` established the release path; current
-releases publish GitHub artefacts and PyPI packages through Trusted Publishing.
-
-## Deferred, with reasons
+## Out of scope, with reasons
 
 - **Remote registry override** — breaks the security property behind
   `unsafe=True`. Would need a signing or allowlist mechanism first.
-- **GitHub repo creation and push** — deliberately out of scope. Would pull `gh`
-  into the dependency tree and require the `workflow` OAuth scope, which is a
-  confusing failure for users.
+- **GitHub repo creation and push** — deliberately out of scope. Would pull
+  `gh` into the dependency tree and require the `workflow` OAuth scope, which
+  is a confusing failure for users.
 - **Interactive template browsing / search** — not useful with one template.
+
+## Current state
+
+`create-forge 0.3.2` is the latest **tagged and published** release
+(`forge-template>=0.4.1,<0.5`, engine behind the optional `engine` extra,
+`--engine-preview` hidden). `main` has since cut over to the engine as the
+default, required `new` path with `copier` moved to the optional `legacy`
+extra (`forge-template>=0.5,<0.6`) — this ships as **`create-forge 0.4.0`**
+once the remaining Stage 18 work (CF-18.02–CF-18.07) publishes it. See
+[docs/roadmap-v3/](docs/roadmap-v3/) and
+[docs/engine-cutover-acceptance.md](docs/engine-cutover-acceptance.md) for the
+cutover contract, and [docs/README.md](docs/README.md) for everything else.
 
 ## Gotchas already hit
 
-- `gh` pushes fail on `.github/workflows/**` without the `workflow` OAuth scope
-  (`gh auth refresh -h github.com -s workflow`). Relevant if repo creation is
-  ever added.
+- `gh` pushes fail on `.github/workflows/**` without the `workflow` OAuth
+  scope (`gh auth refresh -h github.com -s workflow`). Relevant if repo
+  creation is ever added.
 - This repo's Actions policy is **Allow select actions** (Settings → Actions →
-  General). A `uses:` a pattern in `patterns_allowed` doesn't match fails the
-  whole run at startup with no log — `startup_failure`, 0s. The entries use
-  `owner/repo@*` so SHA pins match; a new third-party action needs an
-  allowlist entry (`gh api --method PUT
+  General). A `uses:` pattern not in `patterns_allowed` fails the whole run at
+  startup with no log — `startup_failure`, 0s. Entries use `owner/repo@*` so
+  SHA pins match; a new third-party action needs an allowlist entry (`gh api
+  --method PUT
   repos/Sandsy09/create-forge/actions/permissions/selected-actions`) added
   with it. See [ADR 0037](docs/adr/0037-immutable-workflow-actions.md).

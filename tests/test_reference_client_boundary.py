@@ -76,8 +76,7 @@ def test_reference_client_decision_is_linked_from_canonical_entry_points() -> No
 
     for relative_path in (
         "docs/user-guide/reference.md",
-        "CLAUDE.md",
-        "CONTRIBUTING.md",
+        "docs/README.md",
         "docs/integration-contract.md",
         "docs/downstream-client-reference.md",
     ):
