@@ -696,6 +696,140 @@ def test_new_reports_a_scaffold_error(
     assert "boom" in result.output
 
 
+# --- CF-18.05: `-k legacy` acceptance-matrix evidence ------------------------
+#
+# docs/engine-cutover-acceptance.md's accepted matrix names `pytest
+# tests/test_cli.py -k legacy` as CF-18.05's own evidence row for retained
+# `--template`/`--template-url`/`--ref` and `_src_path` source validation.
+# Several existing tests above already exercise this behaviour but under
+# names the selector does not match; these are the gaps that survive that
+# audit -- source validation on `new --legacy --template-url` (not covered
+# above at all) and the engine-unusable Copier fallback ADR 0047 rule 3 adds.
+
+
+def test_new_legacy_template_url_is_source_validated(
+    recorder: list[ScaffoldRequest],
+) -> None:
+    """A credential-bearing `--template-url` is rejected before any clone
+    (ADR 0036) -- `new --legacy`'s own call to `validate_source`, distinct
+    from `update`'s `_src_path` re-validation `tests/test_sources.py` covers.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "--legacy",
+            "Foo",
+            "--yes",
+            "--template-url",
+            "https://user:secret@example.com/template.git",
+        ],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "secret" not in result.output
+    assert recorder == []
+
+
+def test_update_legacy_revalidates_the_recorded_src_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The Copier update route stays reachable, but a hostile recorded
+    `_src_path` is still rejected before Copier's own `run_update` is ever
+    called (ADR 0036) -- distinct from `tests/test_sources.py`'s direct
+    `runner.update()` unit coverage, this proves the same guard survives the
+    CLI's file-based routing (ADR 0041 rule 7). The real `runner.update` runs
+    here (no `update_recorder` fixture, which would fake it away entirely and
+    so never exercise the validation at all), with only Copier's own
+    `run_update` faked to prove it is never reached.
+    """
+
+    def _unexpected(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("run_update must not be reached")
+
+    monkeypatch.setattr(runner_module, "run_update", _unexpected)
+    project = _copier_project(tmp_path)
+    (project / ".copier-answers.yml").write_text(
+        "_src_path: https://user:secret@example.com/template.git\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 1, result.output
+    assert "secret" not in result.output
+
+
+def test_update_legacy_route_survives_an_unusable_engine(
+    update_recorder: list[tuple[Path, str | None, bool]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A `.copier-answers.yml` project stays updatable even when the
+    installed engine cannot be imported (ADR 0047 rule 3) -- the
+    metadata-filename lookup that gates routing must not depend on it."""
+
+    def _unusable() -> str:
+        raise ImportError("forge_template has no DEFAULT_GENERATION_METADATA_TARGET")
+
+    monkeypatch.setattr(engine_module, "generation_metadata_target", _unusable)
+    project = _copier_project(tmp_path)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 0, result.output
+    assert len(update_recorder) == 1
+    assert update_recorder[0][0] == project.resolve()
+
+
+def test_update_legacy_engine_unusable_and_no_copier_answers_exits_3(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With no `.copier-answers.yml` to fall back to, an unusable engine is
+    a provider-availability failure (exit `3`), not a routing failure."""
+
+    def _unusable() -> str:
+        raise ImportError("forge_template has no DEFAULT_GENERATION_METADATA_TARGET")
+
+    monkeypatch.setattr(engine_module, "generation_metadata_target", _unusable)
+    project = tmp_path / "project"
+    project.mkdir()
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 3, result.output
+
+
+def test_update_legacy_without_the_extra_exits_3_naming_the_remedy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The file-routed Copier `update` path names the remedy even though the
+    user passed no `--legacy` flag at all (ADR 0047 rule 4)."""
+    real_import = builtins.__import__
+
+    def blocking_import(
+        name: str,
+        globals: Mapping[str, object] | None = None,  # noqa: A002 - matches __import__
+        locals: Mapping[str, object] | None = None,  # noqa: A002 - matches __import__
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "create_forge.runner":
+            msg = "copier not installed (simulated)"
+            raise ImportError(msg)
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocking_import)
+    project = _copier_project(tmp_path)
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 3, result.output
+    assert "pip install" in result.output
+    assert "create-forge[legacy]" in result.output
+    assert ".copier-answers.yml" in result.output
+
+
 # --- CF-07.06: conflict and cleanup, at the CLI layer ------------------------
 #
 # The real `scaffold()` runs here (no `recorder` fixture) with only

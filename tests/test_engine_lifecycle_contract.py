@@ -5,7 +5,10 @@ but every rule it decided is now built: CF-18.03 (#160) implemented the `new`
 half (git init, initial commit, conditional hooks, the committed
 `.forge/generation.json` metadata file); CF-18.04 (#161, ADR 0046) implements
 the `update` half (file-based routing, the Git-backed three-way merge, the
-per-target `--dry-run` list, and the client-owned `--degraded` fallback).
+per-target `--dry-run` list, and the client-owned `--degraded` fallback);
+CF-18.05 (#162, ADR 0047) implements rule 8's exact wording (the pre-cutover
+`--engine-preview` rejection) and the retention specifics ADR 0041 rule 7
+otherwise left to it.
 
 Same discipline as `tests/test_engine_default_contract.py` and
 `forge-template`'s `tests/test_cutover_gates.py`:
@@ -17,8 +20,8 @@ Same discipline as `tests/test_engine_default_contract.py` and
   replaced by a derived assertion proving the real behaviour, and the
   affected rule moves out of `docs/engine-project-lifecycle.md`'s "decided"
   voice into `docs/filesystem-generation.md` / `docs/cli-conventions.md`'s
-  "in force" voice in the same change -- CF-18.03 and CF-18.04 have now both
-  done exactly this; no CF-EPIC-18 tripwire remains in this file.
+  "in force" voice in the same change -- CF-18.03, CF-18.04 and CF-18.05 have
+  now all done exactly this; no CF-EPIC-18 tripwire remains in this file.
 
 No network, no filesystem outside this repository.
 """
@@ -38,6 +41,12 @@ ADR_0041 = (
     REPO_ROOT / "docs" / "adr" / "0041-engine-project-lifecycle-and-update-dispatch.md"
 )
 ADR_0046 = REPO_ROOT / "docs" / "adr" / "0046-engine-native-update-application.md"
+ADR_0047 = (
+    REPO_ROOT
+    / "docs"
+    / "adr"
+    / "0047-legacy-copier-retention-and-preview-transition.md"
+)
 ENGINE_PROJECT_LIFECYCLE = REPO_ROOT / "docs" / "engine-project-lifecycle.md"
 SRC = REPO_ROOT / "src" / "create_forge"
 
@@ -187,6 +196,36 @@ def test_adr_0046_exists_and_is_indexed() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Derived assertions -- CF-18.05's rows, now that they are shipped            #
+# --------------------------------------------------------------------------- #
+
+
+def test_the_neither_file_message_names_the_removed_preview_flag() -> None:
+    """ADR 0047 rule 1: rule 8's rejection is one diagnostic covering all
+    three "neither file" causes, including the removed `--engine-preview`
+    flag, rather than a detected case of its own."""
+    update_source = (SRC / "update.py").read_text(encoding="utf-8")
+    assert "--engine-preview" in update_source
+
+
+def test_the_copier_route_stays_reachable_without_a_usable_engine() -> None:
+    """ADR 0047 rule 3: `update_project` must not resolve the engine-owned
+    metadata filename unconditionally before routing -- a project that only
+    records `.copier-answers.yml` does not depend on the engine at all."""
+    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
+    assert "EngineCompatibilityError" in cli_source
+    assert "COPIER_ANSWERS_FILE" in cli_source
+
+
+def test_adr_0047_exists_is_indexed_and_names_its_review_obligation() -> None:
+    assert ADR_0047.is_file()
+    index = (REPO_ROOT / "docs" / "adr" / "README.md").read_text(encoding="utf-8")
+    assert "0047" in index
+    adr = ADR_0047.read_text(encoding="utf-8")
+    assert "CF-ROADMAP-01-AC-05" in adr
+
+
+# --------------------------------------------------------------------------- #
 # Executable examples -- link audit                                          #
 # --------------------------------------------------------------------------- #
 
@@ -199,3 +238,5 @@ def test_engine_project_lifecycle_doc_reflects_the_shipped_state() -> None:
     doc = ENGINE_PROJECT_LIFECYCLE.read_text(encoding="utf-8")
     assert "CF-18.04" in doc
     assert "ADR 0046" in doc
+    assert "CF-18.05" in doc
+    assert "ADR 0047" in doc

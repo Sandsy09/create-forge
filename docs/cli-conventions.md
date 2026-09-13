@@ -253,9 +253,12 @@ generation-metadata file — see the
 [filesystem generation contract](filesystem-generation.md). CF-18.04
 ([ADR 0046](adr/0046-engine-native-update-application.md)) then shipped
 engine-native `update` dispatch — see the "Update dry runs" and "Engine
-project lifecycle" sections below. Still open: deeper `--legacy` regression
-and old-preview-project recovery (CF-18.05); and the concrete deprecation
-versions, windows, acceptance matrix and support policy CF-16.03 fixed in the
+project lifecycle" sections below. CF-18.05
+([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)) then
+shipped the pre-cutover `--engine-preview` rejection wording and the
+direct-Copier route's retention against an unusable engine — see "Engine
+project lifecycle" below. Still open: the concrete deprecation versions,
+windows, acceptance matrix and support policy CF-16.03 fixed in the
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
 ([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)), which
 remain CF-18.06/CF-18.07's to execute and publish. The full decision record
@@ -343,7 +346,15 @@ shipped:
   Copier route unchanged, both reach the engine-native route unless
   `update --legacy` forces Copier, and neither exits `1` naming both routes
   (CF-18.04,
-  [ADR 0046](adr/0046-engine-native-update-application.md));
+  [ADR 0046](adr/0046-engine-native-update-application.md)) — that
+  diagnostic also names the removed `--engine-preview` flag as a possible
+  cause, since a pre-cutover preview project is byte-for-byte
+  indistinguishable from one that was never create-forge's, and offers no
+  migration helper (CF-18.05,
+  [ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md));
+  the Copier route stays reachable even when the installed engine is
+  unusable, since it does not depend on the engine at all (CF-18.05,
+  ADR 0047);
 - the engine-native route requires a clean Git working tree, applies rename
   records before diffing, merges each target with `git merge-file -p`
   (writing inline conflict markers on a genuine conflict), deletes a
@@ -561,6 +572,18 @@ The contract is characterized by these tests:
   the canonical [engine project lifecycle contract](engine-project-lifecycle.md)'s
   own Executable examples for the full list, including the CLI-orchestration
   cases in `tests/test_cli.py`.
+- CF-18.05 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md))
+  added `tests/test_update_routing.py -k preview` (the pre-cutover
+  `--engine-preview` rejection message and its no-fabrication guarantee),
+  `tests/test_cli.py -k legacy` (retained `--template-url` source validation,
+  `_src_path` re-validation, and the Copier route surviving an unusable
+  engine), and
+  [`tests/test_e2e_installed_cutover.py`](../tests/test_e2e_installed_cutover.py)
+  (`create-forge[legacy]` resolving `copier`, a real local tagged Copier
+  generation and update through the installed console, `--legacy` without the
+  extra, and the preview-era rejection) — see the canonical
+  [engine project lifecycle contract](engine-project-lifecycle.md)'s own
+  Executable examples.
 - The `--engine-preview` component-selection surface is its own canonical
   [component selection contract](component-selection.md), characterized by
   `tests/test_engine_cross_repository.py`'s

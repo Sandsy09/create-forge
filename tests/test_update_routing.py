@@ -104,6 +104,50 @@ def test_neither_file_raises_even_under_legacy(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# A pre-cutover `--engine-preview` project -- ADR 0047 rule 1                 #
+# --------------------------------------------------------------------------- #
+#
+# The `0.3.x` `--engine-preview` flag wrote neither file, so such a project is
+# byte-for-byte indistinguishable from any directory create-forge never
+# touched (verified against `git show v0.3.2:src/create_forge/{pipeline,
+# engine}.py`). There is nothing to detect -- only the "neither file" message
+# changes, to name it as one of the possible causes.
+
+
+def test_neither_file_message_names_the_removed_engine_preview_flag(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(UpdateError) as excinfo:
+        route_for(tmp_path, metadata_filename=METADATA_FILE, legacy=False)
+    message = str(excinfo.value)
+    assert "--engine-preview" in message
+    assert "create-forge new" in message
+
+
+def test_preview_era_project_is_rejected_without_fabricating_provenance(
+    tmp_path: Path,
+) -> None:
+    """No metadata is fabricated and no answers are invented (ADR 0041
+    decision 2, ADR 0047 rule 2)."""
+    with pytest.raises(UpdateError):
+        route_for(tmp_path, metadata_filename=METADATA_FILE, legacy=False)
+    assert not (tmp_path / ".forge").exists()
+    assert not (tmp_path / COPIER_ANSWERS_FILE).exists()
+
+
+def test_preview_era_rejection_message_is_the_same_under_legacy(
+    tmp_path: Path,
+) -> None:
+    """An explicit `--legacy` does not change the diagnostic or fabricate an
+    answers file for a project that never had one."""
+    with pytest.raises(UpdateError) as excinfo:
+        route_for(tmp_path, metadata_filename=METADATA_FILE, legacy=True)
+    assert "--engine-preview" in str(excinfo.value)
+    assert not (tmp_path / ".forge").exists()
+    assert not (tmp_path / COPIER_ANSWERS_FILE).exists()
+
+
+# --------------------------------------------------------------------------- #
 # read_recorded -- lenient structural parsing                                 #
 # --------------------------------------------------------------------------- #
 
@@ -181,6 +225,24 @@ def test_cli_exits_1_naming_both_routes_when_neither_file_exists(
     assert result.exit_code == 1, result.output
     assert METADATA_FILE in result.output
     assert COPIER_ANSWERS_FILE in result.output
+
+
+def test_cli_preview_era_project_rejection_points_at_regeneration(
+    tmp_path: Path,
+) -> None:
+    """A directory with neither provenance file -- the shape a pre-cutover
+    `--engine-preview` project has (ADR 0047 rule 1) -- is rejected with
+    actionable guidance and nothing written (CF-ROADMAP-01-AC-05)."""
+    project = tmp_path / "project"
+    project.mkdir()
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 1, result.output
+    assert "--engine-preview" in result.output
+    assert "create-forge new" in result.output
+    assert not (project / ".forge").exists()
+    assert not (project / COPIER_ANSWERS_FILE).exists()
 
 
 def test_cli_rejects_ref_on_the_engine_route(

@@ -240,9 +240,39 @@ def test_tripwire_user_guide_still_says_the_cutover_is_unscheduled() -> None:
     assert "no scheduled release" in text
 
 
-def test_tripwire_no_installed_cutover_suite_exists_yet() -> None:
-    """Flips when CF-18.06 (#163) adds the installed-console cutover suite the
-    acceptance matrix names (`tests/test_e2e_installed_cutover.py`, the analogue
-    of tests/test_e2e_installed_rollout.py).
+def test_installed_cutover_suite_covers_the_cf_18_05_scenarios() -> None:
+    """CF-18.05 (#162, ADR 0047 rule 5) created
+    `tests/test_e2e_installed_cutover.py` -- the acceptance matrix's own row
+    204 names this file as CF-18.05's evidence, ahead of the tripwire this
+    test replaces, which had assumed CF-18.06 (#163) would create it first.
     """
-    assert not (REPO_ROOT / "tests" / "test_e2e_installed_cutover.py").exists()
+    suite = REPO_ROOT / "tests" / "test_e2e_installed_cutover.py"
+    assert suite.is_file()
+    text = suite.read_text(encoding="utf-8")
+    for needle in (
+        "def test_legacy_extra_installs_copier",
+        "def test_legacy_generation_and_update_against_a_local_tagged_template",
+        "def test_legacy_route_without_the_extra_exits_3",
+        "def test_preview_era_project_transition_is_rejected",
+    ):
+        assert needle in text, f"{suite.name} is missing {needle}"
+
+
+def test_tripwire_installed_cutover_suite_does_not_yet_cover_the_full_matrix() -> None:
+    """Flips when CF-18.06 (#163) extends
+    `tests/test_e2e_installed_cutover.py` past CF-18.05's own legacy-route and
+    preview-transition scenarios to the rest of the installed cutover
+    acceptance matrix: install-mode coverage (row 172), the
+    incompatible/invalid/failure matrix (row 219), and the out-of-range/
+    no-engine boundary (row 220). Narrow or delete this tripwire in that
+    change.
+    """
+    text = (REPO_ROOT / "tests" / "test_e2e_installed_cutover.py").read_text(
+        encoding="utf-8"
+    )
+    for not_yet_covered in (
+        "def test_install_modes",
+        "def test_boundary",
+        "def test_incompatible",
+    ):
+        assert not_yet_covered not in text, not_yet_covered
