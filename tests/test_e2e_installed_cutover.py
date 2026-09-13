@@ -342,12 +342,15 @@ def test_install_modes_uvx_ephemeral_resolves_and_generates(
     root.mkdir()
     env = _isolated_tool_env(e2e_child_env, root / "config")
 
+    # `doctor`'s overall exit status/`ok` reflects unrelated environment
+    # checks too (e.g. no global git identity on a bare CI runner) --
+    # test_legacy_extra_installs_copier's own docstring explains this; only
+    # the field this test cares about is asserted.
     doctor = run(
         ["uvx", "--from", str(candidate_wheel), "create-forge", "doctor", "--json"],
         root,
         env=env,
     )
-    assert_success(doctor, "uvx create-forge doctor --json")
     payload = json.loads(doctor.stdout)
     assert payload["integration"]["engine_package"] is not None
 
@@ -391,8 +394,9 @@ def test_install_modes_uv_tool_install_resolves_and_generates(
     assert console.is_file(), console
     run_env = _isolated_tool_env(e2e_child_env, root / "config")
 
+    # See test_install_modes_uvx_ephemeral_resolves_and_generates's comment:
+    # `doctor`'s overall status is not asserted, only the field of interest.
     doctor = run([str(console), "doctor", "--json"], root, env=run_env)
-    assert_success(doctor, "uv tool install create-forge doctor --json")
     payload = json.loads(doctor.stdout)
     assert payload["integration"]["engine_package"] is not None
 
@@ -410,10 +414,11 @@ def test_install_modes_pip_install_resolves_and_generates(
     generates with no `legacy` extra at all.
     """
     with build_client(candidate_wheel, e2e_child_env) as client:
+        # See test_install_modes_uvx_ephemeral_resolves_and_generates's
+        # comment: `doctor`'s overall status is not asserted here either.
         doctor = run(
             [str(client.console), "doctor", "--json"], client.root, env=client.env
         )
-        assert_success(doctor, "pip install create-forge doctor --json")
         payload = json.loads(doctor.stdout)
         assert payload["integration"]["engine_package"] is not None
 
@@ -582,6 +587,13 @@ def test_failure_engine_native_degraded_update_refuses_to_overwrite_a_diverged_e
     readme = dest / "README.md"
     diverged = readme.read_text(encoding="utf-8") + "local edit\n"
     readme.write_text(diverged, encoding="utf-8")
+    # A local commit here (distinct from the engine lifecycle's own initial
+    # commit, which supplies its own identity via installed_client.env's
+    # GIT_AUTHOR_NAME/EMAIL) needs its own repo-local identity -- a bare CI
+    # runner has no global git config, the same reason
+    # tests/legacy_template.py's init_repo sets one.
+    git("config", "user.name", "Test", cwd=dest)
+    git("config", "user.email", "test@example.com", cwd=dest)
     git("add", "-A", cwd=dest)
     git("commit", "--quiet", "-m", "local edit", cwd=dest)
 
