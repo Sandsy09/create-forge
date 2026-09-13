@@ -30,6 +30,7 @@ import questionary
 from forge_template import EngineInfo
 from typer.testing import CliRunner
 
+import create_forge.lifecycle as lifecycle_module
 import create_forge.pipeline as pipeline_module
 import create_forge.staging as staging_module
 from create_forge import engine as engine_module
@@ -190,10 +191,19 @@ def test_a_full_composition_stages_locks_and_finalises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The non-interactive path all the way to disk: every planned target is
-    present under `dst`, the client-finalised lock alongside it, no staging
-    directory survives, and no `_tasks` artefact (`.git`/`.venv`) is created.
+    present under `dst`, alongside the client-finalised lock and the
+    committed generation-metadata document, with no staging directory left
+    behind.
+
+    The post-rename Git/hook lifecycle (CF-18.03, ADR 0041) is faked to a
+    no-op here -- this test is about the multi-capability composition
+    reaching staging and finalisation intact, not about `git`/`pre-commit`
+    themselves, which `tests/test_lifecycle.py` and the e2e suite cover with
+    real subprocesses. Faking it also keeps this test independent of the
+    runner's git identity.
     """
     monkeypatch.setattr(staging_module, "create_uv_lock", _fake_lock)
+    monkeypatch.setattr(lifecycle_module, "finalise_project", lambda dst: ())
     dest = tmp_path / "risk-models"
 
     result = runner.invoke(
@@ -216,11 +226,16 @@ def test_a_full_composition_stages_locks_and_finalises(
     on_disk = {
         p.relative_to(dest).as_posix()
         for p in dest.rglob("*")
-        if p.is_file() and p.name != "uv.lock"
+        if p.is_file()
+        and p.name not in {"uv.lock"}
+        and p.relative_to(dest).as_posix() != ".forge/generation.json"
     }
     assert on_disk == expected
     assert (dest / "uv.lock").is_file()
+    assert (dest / ".forge" / "generation.json").is_file()
     assert _staging_siblings(dest) == []
+    # The lifecycle is faked above, so these stay absent regardless --
+    # `tests/test_lifecycle.py` and the e2e suite prove the real steps.
     assert not (dest / ".git").exists()
     assert not (dest / ".venv").exists()
 

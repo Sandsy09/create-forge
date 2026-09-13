@@ -84,20 +84,72 @@ A missing executable, process-launch error, or non-zero resolver status becomes
 an actionable `StagingError`. Raw subprocess output is not exposed because
 resolver diagnostics and package-index URLs can contain credentials. The
 staging context removes the incomplete tree and leaves the destination
-untouched. Successful engine output contains `uv.lock`, but still contains no
-`.git`, `.venv`, hooks, or pre-commit installation.
+untouched. Engine output written into staging contains `uv.lock` and the
+generation-metadata document (below); `.git`, `.venv`, and hooks are never
+written in staging — the lifecycle below runs only after the rename.
 
-At the engine-default cutover, a **`new` finalisation step runs after the
-atomic rename** — `git init` + one initial commit at the final destination,
-`pre-commit install` when a `.pre-commit-config.yaml` was rendered, and the
-committed `.forge/generation.json` metadata file — the engine analogue of the
-Copier path's `_tasks`. It runs after the rename, not in staging, for the same
-absolute-path reason the Copier path is cleaned-up rather than staged. That
-step is CF-16.02's decision, recorded in the canonical
-[engine project lifecycle contract](engine-project-lifecycle.md)
-([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md)) and
-built by [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160); the
-staging, atomic-rename and cleanup rules on this page are unchanged by it.
+## The generation-metadata document
+
+`pipeline.finalise_files` accepts an optional `metadata_json: str | None`.
+When the caller supplies one — `finalise_generation_request` always does, from
+`RenderedProject.metadata.to_json()` — it is written into the staging tree at
+`engine.generation_metadata_target()` (re-exported from
+`forge_template.DEFAULT_GENERATION_METADATA_TARGET`, `.forge/generation.json`)
+through the same `write_files` target-safety pass as every rendered file, and
+before `create_uv_lock` runs. The re-export is a lazy function, not a
+module-scope import (ADR 0045): an out-of-range engine that predates this
+constant (published only at the `0.5.0` cutover) would otherwise turn a
+version mismatch into a misleading "engine not installed" `ImportError`,
+raised before `negotiate_protocol`'s own compatibility check ever runs; by
+the time `finalise_files` calls it, a render has already succeeded through
+every compatibility-gated function, so compatibility is already confirmed.
+This keeps the atomic-rename guarantee whole:
+there is no window where `dst` exists without its own provenance document, and
+a metadata-write failure is an ordinary staging failure — cleans up, exits `1`
+— not a special case. `finalise_generation_request` fails closed with a
+`StagingError` *before any write* if `RenderedProject.metadata` is `None`: the
+installed engine always returns one, so a `None` here is a provider-contract
+violation, and a silently un-updatable project is worse than an explicit exit
+`1`. `--engine-source` (ADR 0044 rule 29) calls `finalise_files` with no
+`metadata_json` — it still writes no metadata document, since it never holds a
+real `RenderedProject` to take one from.
+
+## The `new` Git and hook lifecycle
+
+A **`new` finalisation step runs after the atomic rename**, at the final
+destination — `git init` + `git add -A` + one initial commit, then
+`pre-commit install --install-hooks` only if the render produced a
+`.pre-commit-config.yaml` — the engine analogue of the Copier path's
+`_tasks`. It runs after the rename, not in staging, for the same
+absolute-path reason the Copier path is cleaned-up rather than staged: `git
+init` and `uv run --install-hooks` (which implicitly creates/syncs `.venv`
+from the staged `uv.lock`) both bake `dst`'s absolute path into `.git/hooks/`
+and `.venv/`.
+
+`create_forge.lifecycle` owns this step — a new, engine-free module (ADR
+0045), called from `pipeline.finalise_files` once the rename has succeeded.
+It never raises: a `git init` failure skips every later step (nothing else
+can succeed without a repository); a failed `git add` skips only the commit
+(hook installation needs `.git/` but not a commit); every other failure is
+independent. Each failure becomes one warning naming the exact manual command
+that finishes the step; `cli.py` prints every warning it gets back and `new`
+still exits `0` — the render is sound, and the convenience step is not worth
+discarding it for (ADR 0041 rule 4). No warning ever includes raw subprocess
+stdout or stderr, the same rule `create_uv_lock` and `engine_source.py`
+already apply. `--engine-source` gets the identical lifecycle (minus the
+metadata document, above) — `git init` is unrelated to update-eligibility, and
+the success panel already says the project is not updatable.
+
+One asymmetry worth knowing: a project with the `pre-commit` capability
+selected ends generation with a populated `.venv` (created by `uv run
+--install-hooks`); one without the capability does not.
+
+This is CF-16.02's decision
+([ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md),
+canonical [engine project lifecycle contract](engine-project-lifecycle.md)),
+built by [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md));
+the staging, atomic-rename and cleanup rules on this page are unchanged by it.
 
 ## Target safety
 
@@ -110,12 +162,22 @@ this is not assumed without checking: the safety boundary belongs to
 `create-forge`, the same way destination-conflict and path-traversal checks
 always have.
 
+The same pass also refuses `forge-template`'s `copier.yml` `_exclude`
+denylist (ADR 0045, [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)):
+a `.git` path segment anywhere, `*.py[co]`, `__pycache__`, a `~`-prefixed
+name, or `.DS_Store`. The `.git` refusal is load-bearing, not merely
+hygienic — the lifecycle above runs `git init` at `dst` after the rename, so
+a rendered `.git/hooks/pre-commit` would survive re-initialisation and later
+execute as a real hook. `copier.yml` itself is not in this list: it is a
+template-source file Copier had to avoid copying into its own output, and the
+engine has no equivalent input to accidentally re-emit.
+
 ## Finalisation and cleanup
 
 | Path | On success | On failure |
 | --- | --- | --- |
 | Copier (`runner.scaffold`) | `dst` contains the completed project, written directly by Copier. | `dst` is removed if this call created it; left untouched if it pre-existed. |
-| Engine (`pipeline.finalise_generation_request`) | Rendered files and `uv.lock` are complete before the staging directory is renamed to `dst`; no intermediate state is ever visible there. | Write, lock, or rename failure removes the staging directory; `dst` is left exactly as it was found — created or not. |
+| Engine (`pipeline.finalise_generation_request`) | Rendered files, the generation-metadata document, and `uv.lock` are complete before the staging directory is renamed to `dst`; the Git/hook lifecycle then runs at `dst`. No intermediate state is ever visible there. | Write, lock, or rename failure removes the staging directory; `dst` is left exactly as it was found — created or not. A lifecycle failure *after* a successful rename keeps `dst` and warns instead — see above. |
 
 Cleanup never raises over the exception that triggered it: a residual
 directory that cannot be removed (e.g. a locked file) is reported as a
@@ -139,22 +201,36 @@ by the time either can occur.
 ## Executable examples
 
 - [`tests/test_staging.py`](../tests/test_staging.py) — destination conflict
-  detection; target-safety refusals (absolute, drive-qualified, `..`
-  targets); staging directory placement (adjacent to `dst`, not the system
-  temp directory); uv command/error translation; atomic finalisation;
-  staging-tree cleanup on failure,
-  including read-only files; `discard_on_failure` removing only a
+  detection; target-safety refusals (absolute, drive-qualified, `..` targets,
+  and the `_exclude` denylist: `.git` at any depth, `*.py[co]`,
+  `__pycache__`, `~`-prefixed names, `.DS_Store`); staging directory
+  placement (adjacent to `dst`, not the system temp directory); uv
+  command/error translation; atomic finalisation; staging-tree cleanup on
+  failure, including read-only files; `discard_on_failure` removing only a
   destination it created.
+- [`tests/test_lifecycle.py`](../tests/test_lifecycle.py) (CF-18.03, ADR
+  0045) — `finalise_project`'s step order and gating (hooks only when
+  `.pre-commit-config.yaml` exists; a `git init` failure skips every later
+  step; a failed `git add` skips only the commit); every failure mode
+  reported as a warning naming the manual command, never raising and never
+  echoing raw subprocess output.
 - [`tests/test_pipeline.py`](../tests/test_pipeline.py) —
   `finalise_generation_request` against a real `RenderedProject`, command
-  ordering before rename, and write/lock failures leaving nothing behind.
+  ordering before rename, write/lock failures leaving nothing behind, the
+  metadata document landing in staging before the rename, `metadata is None`
+  failing closed with nothing written, and the lifecycle running only after
+  a successful rename with its warnings propagated to the caller.
 - [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new` path
   (`test_new_rejects_a_non_empty_destination_before_the_engine`) against a
   non-empty destination exits before the engine is touched;
   `test_new_dry_run_lists_targets_and_writes_nothing` neither writes nor
   resolves; `test_new_reports_lock_failure_and_writes_nothing` exits `1` and
-  writes nothing; the characterized-failure cases assert no destination and
-  no leftover staging directory.
+  writes nothing; `test_new_finalises_a_successful_render` asserts the
+  committed metadata document lands on disk;
+  `test_new_prints_a_lifecycle_warning_and_still_exits_0` proves a lifecycle
+  warning is printed without turning into a non-zero exit; the
+  characterized-failure cases assert no destination and no leftover staging
+  directory.
 - [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
   (CF-13.05) — the same guarantees for the multi-component Data Science
   composition: a full staged/locked/finalised project on disk, dry-run
@@ -162,13 +238,31 @@ by the time either can occur.
   five failure modes (missing requirement, invalid option, incompatible
   engine, destination conflict, lock failure) each leaving no partial
   project and no staging sibling.
+- [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py)
+  (CF-18.03) — a real console-script `new` with `--capability pre-commit`
+  proves the full lifecycle against a real `git`/`uv`: exactly one commit
+  with the exact message, `uv.lock` and `.forge/generation.json` tracked in
+  it, the committed metadata document's digests matching the files on disk,
+  and `.git/hooks/pre-commit` installed; a real Git-identity-stripped
+  subprocess proves a lifecycle failure keeps the project, prints the manual
+  command, and still exits `0`; a pre-existing destination is left byte-for-
+  byte untouched. `docs/engine-cutover-acceptance.md`'s finalisation row
+  names the exact `-k` selectors these satisfy, including a dedicated
+  `windows-latest` CI run.
 - [`tests/test_e2e_installed_rollout.py`](../tests/test_e2e_installed_rollout.py)
   (CF-14.03, [ADR 0033](adr/0033-complete-rollout-regression-validation.md)) —
   the same guarantees through the *installed* `0.3.0` console script:
   `test_installed_non_empty_destination_is_preserved` on both paths,
   `test_installed_lock_failure_leaves_no_partial_project` (a real emptied-`PATH`
-  `create_uv_lock` failure, not a fake), and every `test_installed_failure_case_*`
-  asserting no destination and no `.create-forge-*` staging sibling.
+  `create_uv_lock` failure, not a fake), every `test_installed_failure_case_*`
+  asserting no destination and no `.create-forge-*` staging sibling, and (since
+  CF-18.03) `test_installed_engine_archetype_has_the_expected_shape` asserting
+  the committed `.forge/generation.json` and a real `.git` directory.
+  `tests/installed_client.py`'s shared `assert_output_matches_owned_plan`
+  excludes `.git/` internals from its byte-for-byte comparison (their content
+  is git's own bookkeeping, not part of the owned render) and expects
+  `.forge/generation.json` alongside `uv.lock`; `tests/test_e2e_installed_data_science.py`
+  (CF-14.02) reuses both.
 - [`tests/test_engine_cross_repository.py`](../tests/test_engine_cross_repository.py)
   — the adopted `validate_rendered_project` contract against the real pinned
   engine, proving what `finalise_generation_request` relies on already

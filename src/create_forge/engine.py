@@ -23,6 +23,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+# Explicit self-reexport: mypy strict's no_implicit_reexport otherwise blocks
+# `cli.py`'s `except engine.ForgeEngineError` (a direct import of this
+# module, not merely an attribute chain) from typing against a name this
+# module only imported rather than defined.
 from forge_template import (
     ComponentDescriptor,
     EngineInfo,
@@ -30,11 +34,6 @@ from forge_template import (
     RenderedProject,
     get_engine_info,
 )
-
-# Explicit self-reexport: mypy strict's no_implicit_reexport otherwise blocks
-# `cli.py`'s `except engine.ForgeEngineError` (a direct import of this
-# module, not merely an attribute chain) from typing against a name this
-# module only imported rather than defined.
 from forge_template import ForgeEngineError as ForgeEngineError  # noqa: PLC0414
 from forge_template import discover_components as _discover_components
 from forge_template import parse_project_spec as _parse_project_spec
@@ -161,6 +160,27 @@ def render(spec: ProjectSpec) -> RenderedProject:
     _require_component_manifest_protocol(info)
     _require_metadata_version(info)
     return _render_project(spec)
+
+
+def generation_metadata_target() -> str:
+    """The provider's documented default persisted-metadata path (ADR 0041
+    rule 5) -- re-exported rather than duplicated as a second
+    `.forge/generation.json` literal, so the two names can never drift apart.
+
+    Imported lazily, not at module scope: an installed engine outside
+    `compat.SUPPORTED_ENGINE_RANGE` may predate this constant entirely (it
+    was published only at the `0.5.0` cutover, FT-17.01/ADR 0062) -- a
+    module-level import would turn that mismatch into a misleading "engine
+    not installed" `ImportError` raised before `negotiate_protocol`'s own
+    compatibility check ever runs, instead of the intended
+    `EngineCompatibilityError`. `pipeline.finalise_files` only calls this
+    after a render has already succeeded through every compatibility-gated
+    function above, so by the time this import runs, compatibility is
+    already confirmed.
+    """  # noqa: D205
+    from forge_template import DEFAULT_GENERATION_METADATA_TARGET  # noqa: PLC0415
+
+    return DEFAULT_GENERATION_METADATA_TARGET
 
 
 def get_info() -> EngineInfo:

@@ -313,6 +313,35 @@ def test_discard_on_failure_removes_read_only_files_it_created(
     assert not dst.exists()
 
 
+@pytest.mark.parametrize(
+    "target",
+    [
+        ".git/hooks/pre-commit",
+        "sub/.git/config",
+        "module.pyc",
+        "module.pyo",
+        "src/__pycache__/module.cpython-313.pyc",
+        "~draft.txt",
+        ".DS_Store",
+        "sub/.DS_Store",
+    ],
+)
+def test_write_files_refuses_excluded_targets(tmp_path: Path, target: str) -> None:
+    """The engine's `_exclude` parity row (ADR 0045): a `.git` path segment is
+    load-bearing (`git init` runs at `dst` after the rename, so a rendered
+    `.git/hooks/pre-commit` would survive re-initialisation and execute); the
+    rest are Copier's hygiene patterns. Refused, not silently skipped -- the
+    whole call aborts with nothing written, same as an escape attempt.
+    """
+    root = tmp_path / "root"
+    root.mkdir()
+
+    with pytest.raises(StagingError, match="refusing to write an excluded target"):
+        write_files(root, [(target, b"data")])
+
+    assert list(root.iterdir()) == []
+
+
 @pytest.mark.skipif(os.name != "nt", reason="drive-qualified paths are Windows-only")
 @pytest.mark.parametrize("target", ["D:evil.txt", "C:\\Windows\\escape.txt"])
 def test_write_files_refuses_a_drive_qualified_target_on_windows(

@@ -661,7 +661,7 @@ def _collect_engine_answers(  # noqa: PLR0913 - project answers plus per-compone
     return project_answers, component_options
 
 
-def _run_engine(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own distinct input, and a linear discover->select->collect->build->finalise orchestration; see new()'s own justification
+def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s own distinct input, a linear discover->select->collect->build->finalise orchestration (see new()'s own justification), and one added branch printing CF-18.03's lifecycle warnings
     preset: dict[str, object],
     cfg_answers: dict[str, object],
     path: Path | None,
@@ -776,11 +776,13 @@ def _run_engine(  # noqa: PLR0913, PLR0915 - one parameter per new()'s own disti
         return
 
     try:
-        pipeline.finalise_generation_request(request, dst)
+        warnings = pipeline.finalise_generation_request(request, dst)
     except StagingError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
+    for warning in warnings:
+        err.print(f"[yellow]{warning}[/yellow]")
     _report_created(project_answers["project_name"], dst, updatable=False)
 
 
@@ -906,11 +908,13 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
         return
 
     try:
-        pipeline.finalise_files(files, dst)
+        warnings = pipeline.finalise_files(files, dst)
     except StagingError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
+    for warning in warnings:
+        err.print(f"[yellow]{warning}[/yellow]")
     _report_created(
         project_answers["project_name"], dst, updatable=False, engine_source=True
     )
@@ -1409,7 +1413,9 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache | None, UvSta
         Check(
             "git",
             bool(git_found),
-            git_found or "not on PATH — required to clone templates",
+            git_found
+            or "not on PATH — required to initialise generated projects "
+            "(and to clone templates under --legacy)",
         )
     )
 

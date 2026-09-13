@@ -6,16 +6,20 @@ this module is its engine-path counterpart, kept separate rather than folded
 in because the two paths differ in almost everything but the console script
 they invoke:
 
-- no `copier.yml` `_tasks` run here -- a rendered project has no `.git`,
-  `.venv`, or `pre-commit` hooks installed. Client finalisation creates
-  `uv.lock`; `uv run --locked poe check` restores and checks from that lock.
-- the happy path below needs **no network at all**: `forge-template` is a
-  required, installed package (ADR 0040 decision 1), not a cloned template,
-  so generating through it is as deterministic as any other in-process call.
-  Only the two negative tests at the bottom, which build a real virtual
-  environment against a different engine version to prove a compatibility
-  boundary, touch GitHub -- and they skip, rather than fail, when it is
-  unreachable.
+- the post-rename lifecycle (CF-18.03, ADR 0045) gives a rendered project its
+  own `git init` + one initial commit, committing the client-finalised
+  `uv.lock` and `.forge/generation.json` alongside the render; `pre-commit
+  install --install-hooks` runs only when the render selected the
+  `pre-commit` capability. `e2e_child_env` supplies the Git identity this
+  needs (`tests/conftest.py`), the same identity the Copier path's own
+  `_tasks` already required.
+- most of the happy path below needs **no network at all**: `forge-template`
+  is a required, installed package (ADR 0040 decision 1), not a cloned
+  template, so generating through it is as deterministic as any other
+  in-process call. The two negative compatibility tests at the bottom, and
+  the lifecycle fixture's `pre-commit install --install-hooks` step (which
+  downloads hook environments), are the exceptions -- the negative tests
+  skip, rather than fail, when GitHub is unreachable.
 - `--archetype` selects which one to build; every archetype this catalogue
   discovers is covered here -- `library` and `cli` (CF-08.03's
   archetype-parity review, ADR 0019) and, since CF-13.05 (ADR 0030), Data
@@ -31,6 +35,8 @@ rather than failing it, when the engine is not importable at all --
 
 from __future__ import annotations
 
+import hashlib
+import json
 import subprocess
 import tomllib
 from pathlib import Path
@@ -193,11 +199,15 @@ def test_new_produces_the_expected_project_shape(
     assert (project / f"src/{package}/__init__.py").is_file()
     assert (project / f"src/{package}/py.typed").is_file()
     assert (project / "tests").is_dir()
-    # The engine path runs no copier.yml _tasks: create-forge adds only the
-    # client-finalised lockfile before the atomic rename (ADR 0021).
-    assert not (project / ".git").exists()
-    assert not (project / ".venv").exists()
     assert (project / "uv.lock").is_file()
+    assert (project / ".forge" / "generation.json").is_file()
+    # The engine path runs no copier.yml _tasks, but does run its own
+    # post-rename lifecycle (CF-18.03, ADR 0045): `git init` + one commit.
+    # None of these three archetypes select `pre-commit`, so hooks are not
+    # installed and no `.venv` is created -- see the dedicated lifecycle
+    # fixture below for that combination.
+    assert (project / ".git").is_dir()
+    assert not (project / ".venv").exists()
 
 
 @pytest.mark.parametrize("archetype", _ARCHETYPES)
@@ -301,6 +311,238 @@ def test_generated_project_passes_its_own_check(
         f"{archetype}'s generated project `poe check` failed:\n"
         f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}"
     )
+
+
+# --------------------------------------------------------------------------- #
+# CF-18.03 / ADR 0045: the post-rename Git and pre-commit hook lifecycle       #
+# --------------------------------------------------------------------------- #
+
+# `_ARCHETYPES`'s three fixtures above select no capability, so none of them
+# renders `.pre-commit-config.yaml` -- generated separately, once per session,
+# so the hook-installation step (which needs network) is proven somewhere.
+_LIFECYCLE_PROJECT_NAME = "E2E Engine Lifecycle"
+_LIFECYCLE_PACKAGE_NAME = "e2e_engine_lifecycle"
+_LIFECYCLE_REPOSITORY_NAME = "e2e-engine-lifecycle"
+
+
+def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603
+        ["git", "-C", str(project), *args],  # noqa: S607
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+
+@pytest.fixture(scope="session")
+def generated_lifecycle_project(
+    tmp_path_factory: pytest.TempPathFactory,
+    create_forge_command: str,
+    e2e_child_env: dict[str, str],
+) -> Path:
+    """A `library` project generated with the `pre-commit` capability
+    selected -- the one combination that exercises every step of the
+    post-rename lifecycle: `git init`, one initial commit containing
+    `uv.lock` and `.forge/generation.json`, and
+    `pre-commit install --install-hooks`.
+    """
+    dest = tmp_path_factory.mktemp("e2e-engine-lifecycle") / _LIFECYCLE_REPOSITORY_NAME
+    answers = _ANSWERS["library"]
+    args = [
+        create_forge_command,
+        "new",
+        _LIFECYCLE_PROJECT_NAME,
+        "--archetype",
+        "library",
+        "--capability",
+        "pre-commit",
+        "--yes",
+        "--path",
+        str(dest),
+    ]
+    for key, value in answers.items():
+        if key == "project_name":
+            continue
+        args += ["--data", f"{key}={value}"]
+
+    result = subprocess.run(  # noqa: S603
+        args,
+        cwd=dest.parent,
+        env=e2e_child_env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.fail(
+            "create-forge new --capability pre-commit failed "
+            f"(exit {result.returncode}):\n"
+            f"--- stdout ---\n{result.stdout}\n--- stderr ---\n{result.stderr}"
+        )
+    return dest
+
+
+def test_new_lifecycle_finalise_creates_exactly_one_commit(
+    generated_lifecycle_project: Path,
+) -> None:
+    """`git init` + `git add -A` + one initial commit, byte-identical to the
+    direct-Copier `_tasks`' own message.
+    """
+    project = generated_lifecycle_project
+    assert (project / ".git").is_dir()
+
+    log = _git(project, "log", "--format=%s")
+    assert log.returncode == 0, log.stdout + log.stderr
+    assert log.stdout.strip().splitlines() == ["feat: initial scaffold from template"]
+
+
+def test_new_lifecycle_finalise_commits_the_lock_and_metadata(
+    generated_lifecycle_project: Path,
+) -> None:
+    project = generated_lifecycle_project
+    tracked = _git(project, "ls-tree", "-r", "--name-only", "HEAD")
+    assert tracked.returncode == 0, tracked.stdout + tracked.stderr
+    names = set(tracked.stdout.split())
+    assert "uv.lock" in names
+    assert ".forge/generation.json" in names
+
+
+def test_new_lifecycle_finalise_writes_valid_generation_metadata(
+    generated_lifecycle_project: Path,
+) -> None:
+    """The committed document parses, and every recorded digest matches the
+    file it describes on disk -- proving `create-forge` persisted the real
+    document the engine returned, not a hand-built stand-in.
+    """
+    project = generated_lifecycle_project
+    document = json.loads(
+        (project / ".forge" / "generation.json").read_text(encoding="utf-8")
+    )
+    assert document["metadata_version"] == 1
+    assert document["provider"]["distribution"] == "forge-template"
+
+    for record in document["output"]:
+        target = project / record["target"]
+        assert target.is_file(), f"{record['target']} is recorded but missing"
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        assert record["digest"] == f"sha256:{digest}"
+
+
+def test_new_lifecycle_installs_pre_commit_hooks(
+    generated_lifecycle_project: Path,
+) -> None:
+    """`pre-commit install --install-hooks` ran because
+    `.pre-commit-config.yaml` was rendered -- proven by the installed hook
+    shim rather than by running `pre-commit` itself, which would additionally
+    require the downloaded hook environments to succeed, not merely exist.
+    """
+    project = generated_lifecycle_project
+    hook = project / ".git" / "hooks" / "pre-commit"
+    assert hook.is_file()
+
+
+def test_new_lifecycle_failure_keeps_the_project_and_warns(
+    tmp_path: Path, create_forge_command: str, e2e_child_env: dict[str, str]
+) -> None:
+    """A `git commit` failure after a good render keeps the project, prints
+    the one manual command that finishes the step, and still exits `0` (ADR
+    0041 rule 4) -- proven against a real subprocess with no Git identity
+    reachable anywhere (env, global config, or system config), not a faked
+    lifecycle.
+    """
+    dest = tmp_path / "proj"
+    answers = _ANSWERS["library"]
+    args = [
+        create_forge_command,
+        "new",
+        answers["project_name"],
+        "--archetype",
+        "library",
+        "--yes",
+        "--path",
+        str(dest),
+    ]
+    for key, value in answers.items():
+        if key == "project_name":
+            continue
+        args += ["--data", f"{key}={value}"]
+
+    env = dict(e2e_child_env)
+    for key in (
+        "GIT_AUTHOR_NAME",
+        "GIT_AUTHOR_EMAIL",
+        "GIT_COMMITTER_NAME",
+        "GIT_COMMITTER_EMAIL",
+    ):
+        env.pop(key, None)
+    # Neither an env identity nor a discoverable global/system gitconfig:
+    # point both at paths that do not exist rather than relying on this
+    # machine happening to have no `user.name` configured.
+    env["GIT_CONFIG_GLOBAL"] = str(tmp_path / "no-such-gitconfig")
+    env["GIT_CONFIG_SYSTEM"] = str(tmp_path / "no-such-gitconfig-system")
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+
+    result = subprocess.run(  # noqa: S603
+        args,
+        cwd=dest.parent,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    normalised = " ".join((result.stdout + result.stderr).split())
+    assert "finish it yourself" in normalised
+    assert (dest / "pyproject.toml").is_file()
+    assert (dest / ".git").is_dir()
+
+
+def test_new_cleanup_leaves_a_pre_existing_destination_untouched(
+    tmp_path: Path, create_forge_command: str, e2e_child_env: dict[str, str]
+) -> None:
+    """The non-empty-destination check still runs, and still runs first, with
+    the heavier post-rename lifecycle wired in: a pre-existing file is never
+    touched, and neither the render nor the lifecycle ever starts.
+    """
+    dest = tmp_path / "proj"
+    dest.mkdir()
+    (dest / "existing.txt").write_text("keep me", encoding="utf-8")
+
+    answers = _ANSWERS["library"]
+    args = [
+        create_forge_command,
+        "new",
+        answers["project_name"],
+        "--archetype",
+        "library",
+        "--capability",
+        "pre-commit",
+        "--yes",
+        "--path",
+        str(dest),
+    ]
+    for key, value in answers.items():
+        if key == "project_name":
+            continue
+        args += ["--data", f"{key}={value}"]
+
+    result = subprocess.run(  # noqa: S603
+        args,
+        cwd=dest.parent,
+        env=e2e_child_env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        check=False,
+    )
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert list(dest.iterdir()) == [dest / "existing.txt"]
+    assert (dest / "existing.txt").read_text(encoding="utf-8") == "keep me"
 
 
 @pytest.fixture(scope="session")

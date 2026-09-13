@@ -300,11 +300,19 @@ print(json.dumps({"planned": planned, "rendered": rendered}))
 
 
 def file_bytes(root: Path) -> dict[str, bytes]:
-    """Every file under `root`, keyed by its POSIX-relative path."""
+    """Every file under `root`, keyed by its POSIX-relative path.
+
+    Skips `.git/` internals: since CF-18.03, the engine `new` path's own
+    post-rename lifecycle creates a real repository there, and its
+    bookkeeping (objects, refs, hooks, logs) is no more part of the owned
+    render than an empty `.git/` directory would have been before --
+    `docs/filesystem-generation.md` is authoritative for what the lifecycle
+    adds.
+    """
     return {
         path.relative_to(root).as_posix(): path.read_bytes()
         for path in sorted(root.rglob("*"))
-        if path.is_file()
+        if path.is_file() and ".git" not in path.relative_to(root).parts
     }
 
 
@@ -322,7 +330,9 @@ def assert_output_matches_owned_plan(
     and rendered target lists agree and are unique; every planned file is
     owned by Foundation or a selected component; every selected component
     contributes at least one file; and the generated tree is exactly the
-    rendered targets plus the client-owned `uv.lock`, byte for byte.
+    rendered targets plus the client-owned `uv.lock` and (since CF-18.03)
+    `.forge/generation.json`, byte for byte -- `.git/` internals are excluded
+    by `file_bytes`, not compared here.
     """
     payload = json.dumps(
         {
@@ -354,7 +364,7 @@ def assert_output_matches_owned_plan(
         assert any(item["owner"] == component_id for item in planned)
 
     actual = file_bytes(project)
-    assert set(actual) == {*rendered_targets, "uv.lock"}
+    assert set(actual) == {*rendered_targets, "uv.lock", ".forge/generation.json"}
     for item in rendered:
         assert hashlib.sha256(actual[item["target"]]).hexdigest() == item["sha256"], (
             item["target"]

@@ -41,15 +41,20 @@ all merged.
 
 **This contract is not the cutover.** No `create-forge` release named here
 exists yet. CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md))
-made the engine path the default `new` route (no flag needed), but until
-[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) onward
-implement this contract, that default path still writes no `.git`, installs
-no hooks, and writes no generation metadata — and `create-forge update`
-handles only direct-Copier projects, now reached through `--legacy`, through
-`runner.update`.
-[`docs/filesystem-generation.md`](filesystem-generation.md) and
-[`docs/cli-conventions.md`](cli-conventions.md) remain authoritative for
-actual behaviour.
+made the engine path the default `new` route (no flag needed).
+[CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
+has since implemented rules 1-5 below — the `new` finalisation lifecycle and
+the committed generation-metadata file — so that default path now writes
+`.git`, installs hooks when selected, and commits `.forge/generation.json`.
+[`docs/filesystem-generation.md`](filesystem-generation.md) is authoritative
+for that shipped behaviour; the rules stay below too, as the decision record.
+Rules 6-23 (engine-native `update`) remain undelivered — `create-forge
+update` still handles only direct-Copier projects, now reached through
+`--legacy`, through `runner.update`, until
+[CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) implements
+them. [`docs/cli-conventions.md`](cli-conventions.md) remains authoritative
+for that still-pending behaviour.
 
 The two reserved `forge-template` `EngineErrorCode` values
 (`invalid-generation-metadata`, `unsupported-generation-metadata`) are **not
@@ -58,6 +63,12 @@ assumes they exist yet; the client-side "metadata file missing or unreadable"
 path (§ Exit statuses) is `create-forge`'s own and stays distinct from them.
 
 ## The engine `new` finalisation lifecycle
+
+**Shipped by [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md));
+[`docs/filesystem-generation.md`](filesystem-generation.md) is authoritative
+for this behaviour, in force.** Rules 1-4 below record the decision as
+implemented, by `create_forge.lifecycle`.
 
 The engine `new` path renders and validates fully in memory, then stages
 adjacent to the destination, resolves `uv.lock`, and finalises by atomic
@@ -103,6 +114,10 @@ spawns no process").
    [`docs/filesystem-generation.md`](filesystem-generation.md).
 
 ## The generation-metadata file
+
+Rule 5's write is **shipped by CF-18.03** (in force in
+[`docs/filesystem-generation.md`](filesystem-generation.md)); rule 6's
+rewrite-on-update is CF-18.04's, still pending.
 
 5. **`.forge/generation.json`, committed.** `create-forge` persists
    `forge-template`'s generation-metadata document as JSON at
@@ -303,8 +318,10 @@ depend on the existence of — `forge-template`'s reserved
 
 ## What this contract does not decide
 
-- The `_exclude` staging filter (`copier.yml`, `*.pyc`, `.git`) —
-  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160).
+- ~~The `_exclude` staging filter (`copier.yml`, `*.pyc`, `.git`)~~ — decided
+  by CF-18.03 ([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md)):
+  `staging.write_files` refuses the denylist; `copier.yml` itself is not
+  applicable (see `docs/filesystem-generation.md`'s Target safety section).
 - The engine-native update *implementation* — the reproducible old/new render
   plumbing, the merge engine, the `--dry-run` and `--degraded` flags —
   [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161).
@@ -324,20 +341,28 @@ depend on the existence of — `forge-template`'s reserved
 
 ## Executable examples
 
-Until the cutover ships, the contract is guarded rather than characterised:
+Rules 1-5 are shipped and characterised; rules 6-23 (engine-native `update`)
+remain guarded rather than characterised until CF-18.04:
 
 - [`tests/test_engine_lifecycle_contract.py`](../tests/test_engine_lifecycle_contract.py)
-  derives what it can from the live pre-cutover CLI — `update`'s parameter set
-  is still `project` / `--ref` / `--dry-run`, `runner.update` still requires
-  `.copier-answers.yml`, the engine `new` path still writes no `.git` and no
-  `.forge/generation.json` — and carries tripwires that fail deliberately when
-  [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160) /
+  derives the `new` finalisation lifecycle and the committed generation
+  metadata from the live, shipped CLI (CF-18.03) — `pipeline.finalise_files`
+  calls `lifecycle.finalise_project`, `lifecycle.py` runs `git init
+  --initial-branch=main` and installs hooks, `engine.generation_metadata_target()`
+  names the committed path — and still derives `update`'s pre-CF-18.04
+  parameter set (`project` / `--ref` / `--dry-run`) and `runner.update`'s
+  `.copier-answers.yml` requirement, with one remaining tripwire (dispatch
+  routes only to `runner.update`) that fails deliberately when
   [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
-  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) land, so the
-  implementation cannot ship without bringing this document back into step. It
+  [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) land. It
   also asserts
   [ADR 0041](adr/0041-engine-project-lifecycle-and-update-dispatch.md) names
   its `CF-ROADMAP-01-AC-03` and `CF-ROADMAP-01-AC-05` obligations literally.
+- [`tests/test_lifecycle.py`](../tests/test_lifecycle.py) and
+  [`tests/test_e2e_engine_generation.py`](../tests/test_e2e_engine_generation.py)
+  characterise rules 1-5 directly — see
+  [`docs/filesystem-generation.md`](filesystem-generation.md)'s own
+  Executable examples for the full list.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
   link-audit guard keeps this document reachable from `CLAUDE.md`,
   `CONTRIBUTING.md` and [`docs/cli-conventions.md`](cli-conventions.md).

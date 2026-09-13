@@ -27,16 +27,21 @@ from copier.errors import CopierError
 from forge_template import (
     ComponentOwner,
     EngineInfo,
+    GenerationMetadata,
     GenerationPlan,
+    MetadataProtocols,
     PlannedFile,
+    ProviderIdentity,
     RenderedFile,
     RenderedProject,
+    SelectedComponent,
 )
 from pydantic import HttpUrl
 from rich.console import Console
 from typer.testing import CliRunner
 
 import create_forge.cli as cli_module
+import create_forge.lifecycle as lifecycle_module
 import create_forge.runner as runner_module
 import create_forge.staging as staging_module
 from create_forge import engine as engine_module
@@ -804,6 +809,21 @@ _ENGINE_ANSWERS = [
 ]
 
 
+def _synthetic_metadata() -> GenerationMetadata:
+    """A minimal but real `GenerationMetadata`, for a faked `RenderedProject`
+    that must reach `finalise_generation_request` -- CF-18.03's fail-closed
+    check rejects `metadata=None` before staging.
+    """
+    return GenerationMetadata(
+        metadata_version=1,
+        provider=ProviderIdentity(distribution="forge-template", version="0.5.0"),
+        protocols=MetadataProtocols(projectspec=1, component_manifest=(1,)),
+        spec={},
+        components=(SelectedComponent(id="library", version="1.0.0"),),
+        output=(),
+    )
+
+
 def test_new_with_legacy_is_unchanged(
     recorder: list[ScaffoldRequest], tmp_path: Path
 ) -> None:
@@ -1044,6 +1064,7 @@ def test_new_finalises_a_successful_render(
     rendered = RenderedProject(
         plan=plan,
         files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+        metadata=_synthetic_metadata(),
     )
     fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
     monkeypatch.setattr(
@@ -1054,6 +1075,10 @@ def test_new_finalises_a_successful_render(
         (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
 
     monkeypatch.setattr(staging_module, "create_uv_lock", fake_lock)
+    # This test is about CLI orchestration and staging, not the real Git/hook
+    # lifecycle -- that is `tests/test_lifecycle.py`'s and the e2e suite's job
+    # (CF-18.03). Faked here so this fast test needs no git identity.
+    monkeypatch.setattr(lifecycle_module, "finalise_project", lambda dst: ())
 
     dest = tmp_path / "proj"
 
@@ -1073,12 +1098,71 @@ def test_new_finalises_a_successful_render(
     assert recorder == []
     assert (dest / "pyproject.toml").read_bytes() == b"[project]\n"
     assert (dest / "uv.lock").is_file()
+    assert (dest / ".forge" / "generation.json").is_file()
     assert "created at" in result.output
     # Normalise whitespace: Rich wraps long lines to the console width,
     # which varies by environment (see the destination-conflict test above).
     normalised_output = " ".join(result.output.split())
     assert "create-forge update does not apply" in normalised_output
     assert "uv run --locked poe check" in normalised_output
+
+
+def test_new_prints_a_lifecycle_warning_and_still_exits_0(
+    monkeypatch: pytest.MonkeyPatch, recorder: list[ScaffoldRequest], tmp_path: Path
+) -> None:
+    """A `git`/`pre-commit` lifecycle failure after a good render keeps the
+    project and warns, rather than discarding a sound render (ADR 0041 rule
+    4). `lifecycle.finalise_project` owns the real failure handling
+    (`tests/test_lifecycle.py`); this only proves `cli.py` prints what it
+    returns and does not turn a warning into a non-zero exit.
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="pyproject.toml", owner=ComponentOwner(id="library")),
+        ),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+        metadata=_synthetic_metadata(),
+    )
+    fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    monkeypatch.setattr(
+        pipeline_module, "build_generation_request", lambda *a, **k: fake_request
+    )
+    monkeypatch.setattr(
+        staging_module,
+        "create_uv_lock",
+        lambda staging_dir: (staging_dir / "uv.lock").write_text(
+            "version = 1\n", encoding="utf-8"
+        ),
+    )
+    monkeypatch.setattr(
+        lifecycle_module,
+        "finalise_project",
+        lambda dst: ("git commit failed; finish it yourself: git -C ... commit ...",),
+    )
+
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_ANSWERS,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert recorder == []
+    assert "git commit failed" in result.output
+    assert "created at" in result.output
+    assert (dest / "pyproject.toml").is_file()
 
 
 def test_new_reports_lock_failure_and_writes_nothing(
@@ -1095,6 +1179,7 @@ def test_new_reports_lock_failure_and_writes_nothing(
     rendered = RenderedProject(
         plan=plan,
         files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+        metadata=_synthetic_metadata(),
     )
     fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
     monkeypatch.setattr(

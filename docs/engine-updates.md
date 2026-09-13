@@ -182,8 +182,10 @@ This rule binds the `--legacy` path, whose generated projects track a
 yet: before CF-18.01 it was a hidden, dev-only `--engine-preview` flag that
 had never been the default and wrote no engine answers file, so there were
 no released engine-generated projects to migrate; CF-18.01 made it the
-default `new` path, but it still writes no `.forge/generation.json` and
-`create-forge update` still does not route to it (CF-18.03/CF-18.04). ADR
+default `new` path, and CF-18.03
+([ADR 0045](adr/0045-engine-generation-lifecycle-and-staging-exclusions.md))
+has since made it commit `.forge/generation.json`, but `create-forge update`
+still does not route to it (CF-18.04). ADR
 0026's move to the 0.4 line was therefore vacuously compliant here; the
 engine-first cutover
 ([CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) /

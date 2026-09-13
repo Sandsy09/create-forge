@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from create_forge import engine, staging
+from create_forge import engine, lifecycle, staging
 from create_forge.descriptors import DescriptorView
 from create_forge.spec import (
     DESCRIPTOR_KIND,
@@ -208,13 +208,33 @@ def build_generation_request(
     return GenerationRequest(spec=validated, rendered=rendered)
 
 
-def finalise_files(files: Iterable[tuple[str, bytes]], destination: Path) -> None:
-    """Stage, lock, and finalise a rendered file set (ADR 0021, ADR 0044).
+def finalise_files(
+    files: Iterable[tuple[str, bytes]],
+    destination: Path,
+    *,
+    metadata_json: str | None = None,
+) -> tuple[str, ...]:
+    """Stage, lock, finalise, and run the post-rename lifecycle for `files`.
 
-    Renders them into a directory adjacent to `destination`, then moves that
-    directory into place atomically. ``uv.lock`` is created after the reviewed
-    render is written and before the rename, so lock resolution cannot leave a
-    partial destination.
+    ADR 0021, ADR 0041, ADR 0044. Renders `files` into a directory adjacent
+    to `destination`, then moves that directory into place atomically.
+    `uv.lock` is created after the
+    reviewed render is written and before the rename, so lock resolution
+    cannot leave a partial destination. `metadata_json`, when given, is
+    written into the staging tree at `engine.generation_metadata_target()`
+    alongside the render -- through the same `staging.write_files`
+    target-safety pass every other file gets -- so the atomic rename yields a
+    project that already contains its provenance document; there is no
+    window where `destination` exists without it. Omitted (the
+    `--engine-source` override, ADR 0044 rule 29), no metadata document is
+    written.
+
+    Once the rename succeeds, `lifecycle.finalise_project` runs `git init`,
+    an initial commit, and conditional `pre-commit` hook installation at
+    `destination` -- never in staging, for the same absolute-path reason the
+    direct-Copier `_tasks` cannot be staged either
+    (`docs/filesystem-generation.md`). Its warnings, if any, are returned for
+    the caller to print; `new` still exits `0` (ADR 0041 rule 4).
 
     Engine-free: `files` is already a plain `(target, content)` pair sequence
     by the time it reaches here, so this is the one finalisation body shared
@@ -224,20 +244,47 @@ def finalise_files(files: Iterable[tuple[str, bytes]], destination: Path) -> Non
     real `RenderedProject` at all.
     """
     with staging.staged(destination) as staging_dir:
-        staging.write_files(staging_dir, files)
+        all_files = (
+            files
+            if metadata_json is None
+            else (
+                *files,
+                (
+                    engine.generation_metadata_target(),
+                    metadata_json.encode(),
+                ),
+            )
+        )
+        staging.write_files(staging_dir, all_files)
         staging.create_uv_lock(staging_dir)
+    return lifecycle.finalise_project(destination)
 
 
-def finalise_generation_request(request: GenerationRequest, destination: Path) -> None:
-    """Stage, lock, and finalise `request`'s rendered files (ADR 0021).
+def finalise_generation_request(
+    request: GenerationRequest, destination: Path
+) -> tuple[str, ...]:
+    """Stage, lock, finalise, and run the post-rename lifecycle for `request`.
 
-    `create-forge` does not call `forge_template.validate_rendered_project`
+    ADR 0021, ADR 0041. `create-forge` does not call
+    `forge_template.validate_rendered_project`
     itself -- `engine.render()` already did, as the last step inside
     `build_generation_request`. Reaching this function at all means that
-    validation already passed; this function's only job is the filesystem
-    half create-forge owns: staging, target-safety, lock finalisation, and an
-    atomic rename, all done by `finalise_files`.
+    validation already passed; this function's only job is the filesystem and
+    lifecycle half create-forge owns, all done by `finalise_files`.
+
+    The engine is contractually required to return generation metadata for
+    every render (`RenderedProject.metadata` is only ever `None` on a route
+    that never asked for one -- `--engine-source`, which does not call this
+    function). A `None` metadata document here is a provider-contract
+    violation, not a normal failure mode: it fails closed with a
+    `StagingError` before anything is written, since an un-updatable project
+    with no diagnostic is worse than an exit `1`.
     """
-    finalise_files(
-        ((file.target, file.content) for file in request.rendered.files), destination
+    if request.rendered.metadata is None:
+        msg = "the engine returned no generation metadata for this render"
+        raise staging.StagingError(msg)
+    return finalise_files(
+        ((file.target, file.content) for file in request.rendered.files),
+        destination,
+        metadata_json=request.rendered.metadata.to_json(),
     )

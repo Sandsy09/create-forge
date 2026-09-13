@@ -256,10 +256,11 @@ def _patch_happy_path(monkeypatch: pytest.MonkeyPatch, dst: Path) -> list[str]:
         lambda _r, _payload: (("pyproject.toml", b"[project]\n"),),
     )
 
-    def fake_finalise(files: object, destination: Path) -> None:
+    def fake_finalise(files: object, destination: Path) -> tuple[str, ...]:
         for target, _content in files:  # type: ignore[attr-defined]
             written.append(target)
         destination.mkdir(parents=True, exist_ok=True)
+        return ()
 
     monkeypatch.setattr(pipeline, "finalise_files", fake_finalise)
     return written
