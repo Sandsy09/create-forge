@@ -1,33 +1,66 @@
 # Build a Python library
 
-Use Library for reusable code that you want to import from other projects
-or distribute as a wheel. Both workflows produce a `src/` package and
-tests; choose the workflow based on its tooling and update support.
+Use the `library` archetype for reusable code that you want to import from
+other projects or distribute as a wheel.
 
-## Default Library
+## Library
 
 This example creates `credit-risk-utils/` with an import package named
 `credit_risk_utils`, Hatchling packaging, and a static version:
 
 ```bash
-uvx create-forge@0.3.2 new "Credit Risk Utils" --template library --ref v0.4.1 --yes --data github_org=example-org --data build_backend=hatchling --data versioning=static
+uvx create-forge new "Credit Risk Utils" --archetype library --yes --component-option library.packaging_mode=hatchling-static --data license=mit
+cd credit-risk-utils
+uv run --locked poe check
+uv build
+```
+
+Configure your [Git identity](index.md#before-you-start) first. `new`
+resolves the engine, creates `src/credit_risk_utils/`, package tests, a
+`uv.lock`, initialises Git, makes the initial commit, and (if selected)
+installs pre-commit hooks. `uv build` writes a wheel and source archive
+under `dist/`; it does not publish either one.
+
+Add your implementation to `src/credit_risk_utils/` and tests under
+`tests/`. Pull later template changes with `create-forge update` — see
+[project updates](updates.md).
+
+### Packaging choices
+
+| Library option | Values |
+| --- | --- |
+| `library.packaging_mode` | `uv-build-static` (default), `hatchling-static`, `hatchling-vcs` |
+| `library.initial_version` | A PEP 440 version; defaults to `0.1.0` |
+
+Set options with repeated `--component-option ID.OPTION=VALUE` flags.
+`initial_version` is ignored in `hatchling-vcs` mode, where Git tags
+determine the build version — for that mode, commit the generated files and
+create your intended version tag before building a release. Omit `--yes`
+to choose interactively; see [capabilities](capabilities.md) to add
+Jupyter or a scientific Python stack.
+
+## Legacy Copier library (`--legacy`)
+
+The direct Copier route remains available and fully supported, unaffected
+by the archetype above — install the `legacy` extra first (see
+[installation](installation.md)):
+
+```bash
+uvx create-forge new "Credit Risk Utils" --legacy --template library --ref v0.4.1 --yes --data github_org=example-org --data build_backend=hatchling --data versioning=static
 cd credit-risk-utils
 uv run poe check
 uv build
 ```
 
-Configure your [Git identity](index.md#before-you-start) first and replace
-the example organisation before using the generated repository settings.
-The template initialises Git, installs dependencies, and installs hooks.
-`uv build` writes a wheel and source archive under `dist/`; it does not
-publish either one.
-
-Add your implementation to `src/credit_risk_utils/` and tests under `tests/`.
-You can pull later template changes with [Copier updates](updates.md).
+Replace the example organisation before using the generated repository
+settings. `new --legacy` initialises Git, installs dependencies, and
+installs hooks. Pull later Copier template changes with `create-forge
+update` (routed automatically since this project records
+`.copier-answers.yml`) — see [project updates](updates.md).
 
 ### Packaging and tooling choices
 
-| Choice | Default-workflow answers |
+| Choice | Answers |
 | --- | --- |
 | uv build backend, static version | `--data build_backend=uv_build --data versioning=static` |
 | Hatchling, static version | `--data build_backend=hatchling --data versioning=static` |
@@ -41,29 +74,3 @@ Other useful presets are `--data type_checking=both`,
 `--data dependency_updates=dependabot`. Omit `--yes` to choose interactively.
 When docs are enabled, `uv run poe docs` serves the generated project's own
 documentation and `uv run poe docs:build` validates it.
-
-## Preview Library
-
-Use this route to combine a distributable package with the engine's
-[capabilities](capabilities.md). It does not support template updates.
-
-```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new "Preview Lib" --engine-preview --archetype library --yes --component-option library.packaging_mode=hatchling-static --data license=mit
-cd preview-lib
-uv run --locked poe check
-uv build
-```
-
-This creates `src/preview_lib/`, package tests, shared quality tooling, and
-`uv.lock`. It leaves Git initialisation to you. The first useful change is
-adding a function and its test, then rerunning `poe check`.
-
-| Library option | Values |
-| --- | --- |
-| `library.packaging_mode` | `uv-build-static` (default), `hatchling-static`, `hatchling-vcs` |
-| `library.initial_version` | A PEP 440 version; defaults to `0.1.0` |
-
-Set options with repeated `--component-option ID.OPTION=VALUE` flags.
-`initial_version` is ignored in `hatchling-vcs` mode, where Git tags determine
-the build version. For that mode, initialise Git, commit the generated files,
-and create your intended version tag before building a release.

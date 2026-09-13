@@ -1,13 +1,13 @@
 # Start a Data Science project
 
-Use Data Science when notebooks explore reusable Python code. The preview
-creates a package, tests, and an output-free starter notebook. Jupyter is
-required; the scientific runtime stack is optional.
+Use the `data-science` archetype when notebooks explore reusable Python
+code. It creates a package, tests, and an output-free starter notebook.
+Jupyter is required; the scientific runtime stack is optional.
 
 ## Start with notebooks and a package
 
 ```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new "Notebook Study" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
+uvx create-forge new "Notebook Study" --archetype data-science --capability jupyter --yes --data license=mit
 cd notebook-study
 uv run --locked poe check
 uv run poe notebook
@@ -24,7 +24,7 @@ For numerical work, data frames, charts, or machine learning, generate a
 second project with Scientific Python selected:
 
 ```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new "Model Study" --engine-preview --archetype data-science --capability jupyter --capability scientific-python --yes --data license=mit
+uvx create-forge new "Model Study" --archetype data-science --capability jupyter --capability scientific-python --yes --data license=mit
 cd model-study
 uv run --locked poe check
 uv run poe notebook
@@ -66,4 +66,4 @@ they have your user's filesystem and network access.
 
 `poe check` already includes the notebook check, so use the dedicated task
 when you only need to validate notebooks. Both Data Science compositions
-are preview projects and cannot use `create-forge update`.
+support `create-forge update` — see [project updates](updates.md).

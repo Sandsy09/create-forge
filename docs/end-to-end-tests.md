@@ -6,9 +6,9 @@ records the decision this document keeps current.
 
 ## Status
 
-Four `e2e`-marked modules cover both generation paths, the installed
-Data Science release-candidate boundary, and the installed rollout regression
-matrix. `tests/test_e2e_generation.py`
+Five `e2e`-marked modules cover both generation paths, the installed
+Data Science release-candidate boundary, the installed rollout regression
+matrix, and the installed cutover acceptance matrix. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
@@ -34,9 +34,15 @@ engine, then validates both accepted Data Science compositions. CF-14.03
 CF-14.02 left out: the Library and CLI Application engine paths, the default
 Copier path in a wheel with no engine installed, a real out-of-range engine,
 and the full selection / option / destination / lock / cleanup failure matrix.
-See [the engine path](#the-engine-path),
-[the installed Data Science path](#the-installed-data-science-path), and
-[the installed rollout path](#the-installed-rollout-path) below.
+CF-18.05 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md))
+adds `tests/test_e2e_installed_cutover.py` for the retained legacy Copier
+route and the rejected preview-project transition; CF-18.06
+([ADR 0048](adr/0048-installed-cutover-acceptance-evidence.md)) extends it to
+the rest of the installed cutover acceptance matrix. See
+[the engine path](#the-engine-path),
+[the installed Data Science path](#the-installed-data-science-path),
+[the installed rollout path](#the-installed-rollout-path), and
+[the installed cutover path](#the-installed-cutover-path) below.
 
 ## The three-tier test split
 
@@ -206,6 +212,27 @@ The canonical
 record maps every #113 acceptance criterion, and the epic criteria it
 discharges, to a named test.
 
+## The installed cutover path
+
+`tests/test_e2e_installed_cutover.py` (CF-18.05, extended by CF-18.06,
+[ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md) /
+[ADR 0048](adr/0048-installed-cutover-acceptance-evidence.md)) proves the
+installed cutover acceptance matrix's own rows: the retained legacy Copier
+route and rejected pre-cutover `--engine-preview` transition (CF-18.05), then
+the four contractual install modes, the cutover-specific slice of the
+incompatible/invalid/failure/boundary matrix (the rest is
+`tests/test_e2e_installed_rollout.py`'s, mapped rather than repeated), and
+the documented recipes exercised through the installed console (CF-18.06).
+It reuses `tests/installed_client.py`'s `build_client` plus two small local
+helpers for `uvx --from <wheel>` and `uv tool install <wheel>` — shapes
+`build_client` does not express, kept local since only this suite needs
+them.
+
+The canonical
+[engine-default cutover installed validation](engine-cutover-validation.md)
+record maps every CF-18.06 acceptance criterion, including rows the rollout
+suite's own pre-existing coverage discharges, to a named test.
+
 ## Running it
 
 ```bash
@@ -264,11 +291,17 @@ it skips rather than fails when GitHub is unreachable.
   `test_new_leaves_a_pre_existing_destination_untouched_on_failure` prove the
   same conflict/cleanup behaviour at the CLI layer, with only `runner.run_copy`
   faked, for a cost this fast suite can afford on every run;
-  `test_new_engine_preview_exits_3_on_incompatible_engine` and
-  `test_new_engine_preview_fails_cleanly_without_the_engine_dependency` prove
-  the engine path's equivalent boundaries the same cheap way.
+  `test_new_exits_3_on_incompatible_engine` and
+  `test_new_fails_closed_when_the_engine_cannot_be_imported` prove the engine
+  path's equivalent boundaries the same cheap way.
+- [`tests/test_e2e_installed_cutover.py`](../tests/test_e2e_installed_cutover.py) —
+  CF-18.05's retained legacy Copier route and rejected preview-project
+  transition, extended by CF-18.06's install-mode, cutover-specific
+  failure/boundary, and documented-recipe evidence.
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)'s `e2e` job —
-  where both suites run in CI, and how the job stays separate from `network`.
+  where the installed suites run in CI, and how the job stays separate from
+  `network`; its `e2e-windows` job also runs the installed cutover suite's
+  install-mode and legacy cases on `windows-latest` (CF-18.06).
 
 When end-to-end behaviour or its CI placement changes, update this contract
 and its executable examples in the same pull request.

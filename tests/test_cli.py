@@ -705,9 +705,15 @@ def test_new_reports_a_scaffold_error(
 # names the selector does not match; these are the gaps that survive that
 # audit -- source validation on `new --legacy --template-url` (not covered
 # above at all) and the engine-unusable Copier fallback ADR 0047 rule 3 adds.
+#
+# CF-18.06's own `-k "credential or secret"` acceptance-matrix row
+# (docs/engine-cutover-acceptance.md row 221) selects `tests/test_cli.py
+# tests/test_runner.py`, but named nothing in this file until these two were
+# renamed to say what they actually test -- a credential-bearing source being
+# rejected without ever echoing it.
 
 
-def test_new_legacy_template_url_is_source_validated(
+def test_new_legacy_credential_bearing_template_url_is_rejected(
     recorder: list[ScaffoldRequest],
 ) -> None:
     """A credential-bearing `--template-url` is rejected before any clone
@@ -731,7 +737,7 @@ def test_new_legacy_template_url_is_source_validated(
     assert recorder == []
 
 
-def test_update_legacy_revalidates_the_recorded_src_path(
+def test_update_legacy_revalidates_the_recorded_credential_bearing_src_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """The Copier update route stays reachable, but a hostile recorded

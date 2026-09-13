@@ -37,14 +37,18 @@ and the four accepted `forge-template` Stage 15 contracts, all merged and
 closed with `FT-EPIC-15`.
 
 **This contract is not the cutover.** No `create-forge` release named here
-exists yet. Until [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)
-through [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)
-implement, validate and publish it, the default `new` path stays direct-Copier
-with a bundled registry, the engine stays the optional `engine` extra reachable
-only through the hidden `new --engine-preview` flag, and
+has published yet. [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)
+through [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) have
+implemented and validated it on `main` — the engine is the default `new`
+path, `copier` is the optional `legacy` extra, and the removed
+`--engine-preview` flag no longer exists — but it is not yet tagged or
+published. Until [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)
+publishes `create-forge 0.4.0`, the latest **published** release remains
+`0.3.x`, where the default `new` path is direct-Copier and the engine is
+reachable only through the hidden `new --engine-preview` flag.
 [`docs/cli-conventions.md`](cli-conventions.md) and
-[`docs/integration-contract.md`](integration-contract.md) remain authoritative
-for actual behaviour.
+[`docs/integration-contract.md`](integration-contract.md) are authoritative
+for `main`'s actual behaviour.
 
 Its review obligations are **CF-ROADMAP-01-AC-06** (implementation, migration
 E2E, legacy regression and release tasks are filed separately with an explicit
@@ -157,10 +161,13 @@ least one row; every row names a filed issue.
 checks both directions.
 
 Evidence-command paths are targets the implementing issue meets; a suite that
-does not exist yet is named descriptively (`tests/test_e2e_installed_cutover.py`
-is the installed-console suite
-[CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) adds, the
-analogue of `tests/test_e2e_installed_rollout.py`).
+does not exist yet is named descriptively.
+`tests/test_e2e_installed_cutover.py` is the installed-console suite, the
+analogue of `tests/test_e2e_installed_rollout.py` — created by
+[CF-18.05](https://github.com/Sandsy09/create-forge/issues/162) for its own
+legacy-route and preview-transition rows (ADR 0047 rule 5), then extended by
+[CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) (ADR 0048) to
+the rest of the matrix below.
 
 ### Default engine generation
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 import ast
 import contextlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -579,6 +580,76 @@ def test_worker_info_reports_the_installed_engine_facts() -> None:
     assert isinstance(result, dict)
     assert isinstance(result["package_version"], str)
     assert result["projectspec_protocols"] == [1]
+
+
+_FAKE_TOO_OLD_ENGINE = """
+class _EngineInfo:
+    package_version = "0.1.0"
+    projectspec_protocols = (1,)
+    component_manifest_protocols = (1,)
+    # Deliberately no metadata_version -- the shape a real engine predating
+    # the 0.5.0 cutover has (engine.py's own docstring).
+
+
+class ForgeEngineError(Exception):
+    pass
+
+
+def get_engine_info():
+    return _EngineInfo()
+
+
+def discover_components():
+    raise NotImplementedError
+
+
+def parse_project_spec(payload):
+    raise NotImplementedError
+
+
+def render_project(spec):
+    raise NotImplementedError
+
+
+def validate_project_spec(spec):
+    raise NotImplementedError
+"""
+
+
+def test_worker_info_degrades_a_too_old_engine_missing_metadata_version(
+    tmp_path: Path,
+) -> None:
+    """CF-18.06 regression: a provisioned engine old enough to predate
+    `EngineInfo.metadata_version` must not crash the worker's `info`
+    operation -- `negotiate`'s own ordered checks need `fetch_info` to
+    succeed so the *package version* mismatch is what gets reported (exit
+    `3`), not a generic internal-error from this call (exit `1`, the wrong
+    failure class). Reproduced with a minimal stand-in `forge_template`
+    module on `PYTHONPATH` rather than a real pre-cutover release, so this
+    runs in the fast suite; `tests/test_e2e_installed_cutover.py`'s
+    `test_boundary_incompatible_engine_via_engine_source_writes_nothing`
+    proves the same fix against a real `forge-template==0.3.0`.
+    """
+    fake_root = tmp_path / "fake-engine"
+    fake_root.mkdir()
+    (fake_root / "forge_template.py").write_text(_FAKE_TOO_OLD_ENGINE, encoding="utf-8")
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(fake_root)
+
+    result = subprocess.run(  # noqa: S603 - fixed interpreter/argv, test-only
+        [sys.executable, str(WORKER_PATH), "info"],
+        input="{}",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+        env=env,
+    )
+    assert result.returncode == 0, result.stderr
+    response = json.loads(result.stdout)
+    assert response["ok"] is True
+    assert response["result"]["metadata_version"] == 0
 
 
 def test_worker_discover_returns_the_wire_shaped_catalogue() -> None:

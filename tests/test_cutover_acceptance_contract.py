@@ -20,7 +20,9 @@ Same discipline as `tests/test_engine_default_contract.py`,
   on purpose, forcing whoever implements it to move the affected rule out of
   `docs/engine-cutover-acceptance.md`'s "decided" voice and into
   `docs/cli-conventions.md` / `docs/integration-contract.md`'s "in force" voice
-  in the same change.
+  in the same change. CF-18.06 (#163, ADR 0048) has already flipped both of
+  its own; only `test_tripwire_version_is_not_yet_the_cutover_release`
+  (CF-18.07's) remains.
 
 No network, no filesystem outside this repository.
 """
@@ -231,13 +233,15 @@ def test_tripwire_version_is_not_yet_the_cutover_release() -> None:
     assert not str(_project()["version"]).startswith("0.4."), _project()["version"]
 
 
-def test_tripwire_user_guide_still_says_the_cutover_is_unscheduled() -> None:
-    """Flips when CF-18.06 (#163) updates the user guide for the shipped
-    cutover. Today docs/user-guide/reference.md's "What's next" still says the
-    engine default is a planned direction with no scheduled release.
+def test_user_guide_says_the_cutover_has_shipped() -> None:
+    """CF-18.06 (#163, ADR 0048 decision 5) updated the user guide for the
+    shipped cutover -- this replaces the tripwire that asserted the opposite
+    (`docs/user-guide/reference.md`'s "What's next" used to say the engine
+    default was a planned direction with no scheduled release).
     """
     text = " ".join(USER_GUIDE_REFERENCE.read_text(encoding="utf-8").split())
-    assert "no scheduled release" in text
+    assert "no scheduled release" not in text
+    assert "Engine-Default Cutover has shipped" in text
 
 
 def test_installed_cutover_suite_covers_the_cf_18_05_scenarios() -> None:
@@ -258,21 +262,26 @@ def test_installed_cutover_suite_covers_the_cf_18_05_scenarios() -> None:
         assert needle in text, f"{suite.name} is missing {needle}"
 
 
-def test_tripwire_installed_cutover_suite_does_not_yet_cover_the_full_matrix() -> None:
-    """Flips when CF-18.06 (#163) extends
+def test_installed_cutover_suite_covers_the_cf_18_06_scenarios() -> None:
+    """CF-18.06 (#163, ADR 0048) extended
     `tests/test_e2e_installed_cutover.py` past CF-18.05's own legacy-route and
     preview-transition scenarios to the rest of the installed cutover
-    acceptance matrix: install-mode coverage (row 172), the
-    incompatible/invalid/failure matrix (row 219), and the out-of-range/
-    no-engine boundary (row 220). Narrow or delete this tripwire in that
-    change.
+    acceptance matrix -- this replaces the tripwire that asserted the
+    opposite: install-mode coverage (row 172), the cutover-specific slice of
+    the incompatible/invalid/failure matrix and the out-of-range/no-engine
+    boundary (rows 219-220, the rest mapped onto
+    `tests/test_e2e_installed_rollout.py` by `docs/engine-cutover-validation.md`
+    per ADR 0048 decision 2), and the documented recipes (rows 228-229).
     """
-    text = (REPO_ROOT / "tests" / "test_e2e_installed_cutover.py").read_text(
-        encoding="utf-8"
-    )
-    for not_yet_covered in (
-        "def test_install_modes",
-        "def test_boundary",
-        "def test_incompatible",
+    suite = REPO_ROOT / "tests" / "test_e2e_installed_cutover.py"
+    text = suite.read_text(encoding="utf-8")
+    for needle in (
+        "def test_install_modes_uvx_ephemeral_resolves_and_generates",
+        "def test_install_modes_uv_tool_install_resolves_and_generates",
+        "def test_install_modes_pip_install_resolves_and_generates",
+        "def test_install_modes_legacy_extra_resolves_and_generates",
+        "def test_incompatible_engine_native_update_fails_closed_at_exit_3",
+        "def test_boundary_incompatible_engine_via_engine_source_writes_nothing",
+        "def test_recipe_diagnose_with_doctor",
     ):
-        assert not_yet_covered not in text, not_yet_covered
+        assert needle in text, f"{suite.name} is missing {needle}"

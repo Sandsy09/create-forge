@@ -264,17 +264,20 @@ jobs:
   # `windows` smoke job above runs only the fast suite (`-m 'not network and
   # not e2e'`), so it never exercises this. CF-18.04 / ADR 0046 added the
   # engine-native `update` route's own e2e cases to the same OS-sensitivity
-  # class (a real `git merge-file` merge, path separators, line endings), so
-  # this job runs both rather than widening `e2e` into a matrix: only the
-  # lifecycle- and update-marked tests need a second OS, not the full
-  # 60-minute suite. Exactly the evidence commands
-  # docs/engine-cutover-acceptance.md's finalisation and engine-native-update
-  # rows name.
+  # class (a real `git merge-file` merge, path separators, line endings), and
+  # CF-18.06 / ADR 0048 adds the installed cutover suite's own install-mode
+  # and legacy cases -- `uv tool install`'s produced console script and the
+  # legacy Copier route's own file handling are exactly the same
+  # OS-sensitivity class. This job runs all three rather than widening `e2e`
+  # into a matrix: only these cases need a second OS, not the full 60-minute
+  # suite. Exactly the evidence commands docs/engine-cutover-acceptance.md's
+  # finalisation, engine-native-update, and installed-cutover rows name.
   # ---------------------------------------------------------------------------
   e2e-windows:
     name: End-to-end lifecycle and update (Windows)
     runs-on: windows-latest
     needs: lint
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -293,6 +296,9 @@ jobs:
 
       - name: Engine-native update tests
         run: uv run pytest tests/test_update_engine.py
+
+      - name: Installed cutover install-mode and legacy tests
+        run: uv run pytest tests/test_e2e_installed_cutover.py -k "install_modes or legacy"
 
   # ---------------------------------------------------------------------------
   # Single required status check for branch protection.
