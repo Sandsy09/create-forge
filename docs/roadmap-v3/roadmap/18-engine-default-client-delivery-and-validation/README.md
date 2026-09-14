@@ -6,6 +6,12 @@ Filed and open.
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
 [FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143).
 
+`CF-EPIC-18`'s six implementation children (CF-18.01–CF-18.06) have merged;
+CF-18.07 (ADR 0049) is publishing `create-forge 0.4.0`, gated on
+[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156). See
+`docs/release-0-4-0-validation.md` for the publication evidence once it
+lands.
+
 ## Entry criteria
 
 Follow each child's direct blockers below. Contract approval unblocks design;

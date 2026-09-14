@@ -56,21 +56,19 @@ the default `new` architecture rather than a hidden development flag;
 construction, component-discovery, validation, and rendering adapters are
 tested against that real, installed range, and are reachable by default,
 with a discovery-driven `--archetype` selection, for the production
-archetypes — `--legacy` reaches the prior Copier-backed path. **The
-integrated cross-repository cutover validation and the client release
-itself remain open** (CF-18.02 through CF-18.07).
-The **released** default `new` command (`create-forge 0.3.2` on PyPI) remains
-a thin Copier wrapper with a bundled registry, and its current security and
-update invariants remain authoritative for that release until the cutover
-ships. That cutover is filed as
+archetypes — `--legacy` reaches the prior Copier-backed path. CF-18.02
+through CF-18.07 completed the integrated cross-repository cutover
+validation and the client release: `create-forge 0.4.0` is the
+**released** default `new` command on PyPI, the engine is the required
+default architecture, and `--legacy` is the explicit route to the
+Copier-backed path. That cutover was filed as
 [CF-EPIC-16](https://github.com/Sandsy09/create-forge/issues/152) and
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153); its
 selection and source-resolution UX is fixed by
 [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) and the
-canonical [engine-default CLI contract](engine-default-cli.md). CF-18.01 has
-implemented the default-path flip on `main` (see the paragraph above and the
-table below) — no tagged release naming it has shipped yet; that is
-CF-18.07's job.
+canonical [engine-default CLI contract](engine-default-cli.md). CF-18.07
+(ADR 0049) tagged and published it (see the paragraph above and the table
+below).
 
 | create-forge line | forge-template engine range | ProjectSpec protocol | Status |
 | --- | --- | --- | --- |
@@ -81,11 +79,11 @@ CF-18.07's job.
 
 CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
 `engine` extra into `[project.dependencies]`, making the engine the default
-`new` architecture; `copier` moved into the optional `legacy` extra. This is
-the engine-default cutover's client-side adoption step, not the full cutover
--- `--engine-source`/`--engine-ref` (CF-18.02), the engine `new` Git/hook
-lifecycle (CF-18.03), engine-native `update` (CF-18.04), and the `0.4.0`
-release itself (CF-18.07) remain open. See
+`new` architecture; `copier` moved into the optional `legacy` extra. CF-18.02
+through CF-18.06 completed the rest of the cutover --
+`--engine-source`/`--engine-ref`, the engine `new` Git/hook lifecycle, and
+engine-native `update` -- and CF-18.07 (ADR 0049) published it as
+`create-forge 0.4.0`. See
 [docs/engine-cutover-acceptance.md](https://github.com/Sandsy09/forge-template/blob/main/docs/engine-cutover-acceptance.md)
 in `forge-template` for the reviewed provider release this line pairs with.
 
@@ -146,9 +144,10 @@ line's optional `engine` extra or the `0.4.x` line's required dependency.
 assigns component manifest protocol `1`; forge-template ADR 0031 later added
 protocol `2` for the production manifests the `0.3.x` range consumes, and
 FT-17.01 added protocol `3` for the `0.4.x` range's rename/regeneration
-records. Component discovery is available by default on `main` since CF-18.01
-(`--legacy` reaches the unchanged direct-Copier registry instead); the
-released `0.3.x` line still gates it behind `--engine-preview`.
+records. Component discovery is available by default since `create-forge
+0.4.0` (CF-18.01, CF-18.07) — `--legacy` reaches the unchanged direct-Copier
+registry instead; the `0.3.x` support-window line still gates discovery
+behind `--engine-preview`.
 
 [ADR 0011](adr/0011-engine-source-and-version-resolution.md), ADR 0018,
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), and the
@@ -299,8 +298,8 @@ The engine-owned
 [manifest contract](https://github.com/Sandsy09/forge-template/blob/main/docs/component-manifests.md)
 is the sole component metadata source. `create-forge` must not retain its
 bundled registry as a fallback or recreate compatibility, dependency, or
-conflict rules after cutover. The client-side mechanics and current pre-cutover
-status are recorded in the [component discovery contract](component-discovery.md).
+conflict rules after cutover. The client-side mechanics and current status
+are recorded in the [component discovery contract](component-discovery.md).
 
 Cross-repository development may use an explicit local or VCS engine override.
 The user must select it deliberately, receive a code-execution warning, and
@@ -348,9 +347,9 @@ For the engine-default cutover specifically, the canonical
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md)
 (CF-16.03, [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md))
 is the client-side record of the acceptance matrix, the release gates
-(provider publishes the reviewed immutable `forge-template 0.5.0` first; both
-integrated validations and working engine-native and legacy updates before
-`create-forge 0.4.0` publishes), and the rollback, `0.3.x` support and
+(provider published the reviewed immutable `forge-template 0.5.0` first; both
+integrated validations and working engine-native and legacy updates passed
+before `create-forge 0.4.0` published), and the rollback, `0.3.x` support and
 deprecation windows. This section stays authoritative for the client-side
 mechanics it instantiates.
 

@@ -244,16 +244,20 @@ pattern-matching message text.
 
 ## The engine dependency
 
-`forge-template` is the optional `engine` extra as of #9
-([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)):
-`[project.optional-dependencies].engine = ["forge-template>=0.4.1,<0.5"]`
-([ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved the
-range from `>=0.3.1,<0.4`; [ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
-adopted the reviewed lower bound), resolved from PyPI like any other dependency --
-no `[tool.uv.sources]` override, no dev-only dependency group.
-`[project.dependencies]` remains unaffected, so `create-forge` itself
-(`pip install create-forge`, or `uvx create-forge`) never resolves it; only
-`pip install 'create-forge[engine]'` or `uv sync --all-extras` does.
+`forge-template` was the optional `engine` extra from its introduction in #9
+([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md):
+`[project.optional-dependencies].engine = ["forge-template>=0.3.1,<0.4"]`)
+through [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)
+(`>=0.4,<0.5`) and [ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)
+(the reviewed `>=0.4.1,<0.5` lower bound). CF-18.01
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)) then
+moved it into `[project.dependencies]` as a **required** dependency —
+`forge-template>=0.5,<0.6` — making `copier` the optional `legacy` extra
+instead. `create-forge` itself (`pip install create-forge`, or
+`uvx create-forge`) now always resolves the engine; no `[tool.uv.sources]`
+override, no dev-only dependency group. Either resolution is from PyPI like
+any other dependency.
 [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s ADR
 0011/0012 guards continue to hold: the range has a tested lower bound and a
 strict upper bound, and Dependabot is gated from crossing it unattended.

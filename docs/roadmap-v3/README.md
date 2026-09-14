@@ -7,6 +7,14 @@ Filed and open. This pack records 5 repository-owned epics and
 milestones, native parents and direct dependencies. No release or runtime
 implementation is claimed by these planning documents.
 
+The `create-forge`-side implementation this pack planned is complete on
+`main`: CF-18.01 through CF-18.06 shipped the engine-default cutover, and
+CF-18.07 ([#164](https://github.com/Sandsy09/create-forge/issues/164), ADR
+0049) is publishing it as `create-forge 0.4.0`, gated on
+[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156)'s
+provider-side integrated validation. See `docs/release-0-4-0-validation.md`
+for the publication evidence once it lands.
+
 Working engine-native updates and continued support for existing Copier
 projects gate the engine-default release. Detailed architecture remains
 subject to the explicit decision children.

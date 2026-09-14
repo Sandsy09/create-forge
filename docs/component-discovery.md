@@ -54,7 +54,7 @@ itself, not that selection layer.
 
 1. call the public `forge_template.get_engine_info()` facade once;
 2. require the installed package version to fall within
-   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.4.1,<0.5`);
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.5,<0.6`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and

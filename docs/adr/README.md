@@ -51,6 +51,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0046 — Apply the engine-native update client-side with `git merge-file`, and reproduce the old render with a version-match short-circuit](0046-engine-native-update-application.md)
 - [0047 — Reject a pre-cutover `--engine-preview` project with one diagnostic, add no migration helper, and keep the Copier route reachable without a usable engine](0047-legacy-copier-retention-and-preview-transition.md)
 - [0048 — Complete the installed cutover acceptance evidence and the user guide's post-cutover voice](0048-installed-cutover-acceptance-evidence.md)
+- [0049 — Publish create-forge 0.4.0 and close the Engine-Default Cutover roadmap](0049-publish-0-4-0-and-close-roadmap-v3.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

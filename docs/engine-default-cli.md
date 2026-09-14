@@ -20,7 +20,7 @@ support policy are CF-16.03's, in the
 [engine-default cutover acceptance contract](engine-cutover-acceptance.md).
 
 It is a sibling of [`docs/cli-conventions.md`](cli-conventions.md) (which keeps
-the exit-status table and the pre-cutover behaviour it already documents), the
+the exit-status table and the shipped behaviour it documents), the
 [component selection contract](component-selection.md) (the selection surface
 this contract makes visible), and the
 [engine resolution contract](engine-resolution.md) (how the engine package is
@@ -398,23 +398,19 @@ never as a calendar date.
 
 ## Executable examples
 
-Until the cutover ships, the contract is guarded rather than characterised:
+The cutover has shipped, so the contract is now guarded against drift:
 
 - [`tests/test_engine_default_contract.py`](../tests/test_engine_default_contract.py)
-  derives what it can from the live pre-cutover CLI — `--engine-preview` and
-  the five selection flags still hidden, the exit-`3` row still documented
-  once, `forge-template` still an optional extra — and carries tripwires that
-  fail deliberately when
-  [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) /
-  [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159) land, so the
-  implementation cannot ship without bringing this document back into step.
-  It also asserts
+  derives what it can from the live CLI — `--engine-preview` is gone, the
+  five selection flags and `--engine-source`/`--engine-ref` are visible,
+  `forge-template` is a required dependency and `copier` the optional
+  `legacy` extra — and also asserts
   [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) names
   its `CF-ROADMAP-01-EX-*` obligations literally.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
   link-audit guard keeps this document reachable from `CLAUDE.md`,
   `CONTRIBUTING.md` and [`docs/cli-conventions.md`](cli-conventions.md).
 
-When the cutover implements a rule above, move it from this contract's
-"decided" voice into `docs/cli-conventions.md`'s "in force" voice and add its
-characterization test in the same pull request.
+Any future rule change moves it from this contract's "decided" voice into
+`docs/cli-conventions.md`'s "in force" voice, with its characterization test,
+in the same pull request.

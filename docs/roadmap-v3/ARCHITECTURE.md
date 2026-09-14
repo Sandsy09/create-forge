@@ -14,8 +14,12 @@ Client selection → ProjectSpec → public provider validation/render
              client staging, lock and filesystem application
 ```
 
-The current release keeps Copier as default and the engine preview optional.
-This preparation changes no runtime API, schema, dependency or version.
+At filing, the current release kept Copier as default and the engine preview
+optional; this preparation itself changed no runtime API, schema, dependency
+or version. The cutover this pack planned has since shipped as
+`create-forge 0.4.0` ([CF-18.07](https://github.com/Sandsy09/create-forge/issues/164),
+ADR 0049) — see `docs/release-0-4-0-validation.md` for the publication
+evidence.
 
 ## Accepted planning gates
 

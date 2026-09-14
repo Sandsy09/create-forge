@@ -1,28 +1,25 @@
 """Guards for the engine-default cutover acceptance contract (CF-16.03, ADR 0042).
 
-`docs/engine-cutover-acceptance.md` is a *decision*, not a shipped interface: it
-fixes the cutover release (`create-forge 0.4.0`), the supported OS / Python /
-install-mode matrix, the cross-repository acceptance matrix and release gates,
-and the rollback / support / deprecation windows — none of which any release
-has performed.
+`docs/engine-cutover-acceptance.md` fixed the cutover release
+(`create-forge 0.4.0`), the supported OS / Python / install-mode matrix, the
+cross-repository acceptance matrix and release gates, and the rollback /
+support / deprecation windows. CF-18.01 through CF-18.06 implemented and
+validated all of it on `main`; CF-18.07 (#164, ADR 0049) published it.
 
 Same discipline as `tests/test_engine_default_contract.py`,
 `tests/test_engine_lifecycle_contract.py` and `forge-template`'s
 `tests/test_cutover_gates.py`:
 
-- **Derived assertions** read the live pre-cutover repository (`pyproject.toml`,
-  the CLI) and the roadmap filing manifests, so a claim about *today's* state
-  that silently changes fails here.
+- **Derived assertions** read the live repository (`pyproject.toml`, the CLI)
+  and the roadmap filing manifests, so a claim about *today's* state that
+  silently changes fails here.
 - **Structural checks** keep the acceptance matrix honest: every row names an
   issue that is actually filed, and every Stage 18 client child owns a row.
-- **Tripwires** assert the pre-cutover state deliberately, each naming the
-  CF-EPIC-18 issue whose merge must flip it. When the cutover lands they fail
-  on purpose, forcing whoever implements it to move the affected rule out of
-  `docs/engine-cutover-acceptance.md`'s "decided" voice and into
-  `docs/cli-conventions.md` / `docs/integration-contract.md`'s "in force" voice
-  in the same change. CF-18.06 (#163, ADR 0048) has already flipped both of
-  its own; only `test_tripwire_version_is_not_yet_the_cutover_release`
-  (CF-18.07's) remains.
+
+No tripwires remain. `docs/engine-cutover-acceptance.md`'s last pre-publication
+claims and `test_tripwire_version_is_not_yet_the_cutover_release` -- the final
+one -- were replaced by CF-18.07 with the derived assertions below, the same
+"flip the tripwire into a derived check" move CF-18.06 made for its own two.
 
 No network, no filesystem outside this repository.
 """
@@ -34,6 +31,8 @@ import re
 import tomllib
 from pathlib import Path
 from typing import Any
+
+from create_forge import compat
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = REPO_ROOT / "pyproject.toml"
@@ -127,13 +126,13 @@ def _matrix_owner_tokens() -> set[str]:
 # --------------------------------------------------------------------------- #
 
 
-def test_create_forge_is_still_on_the_pre_cutover_line() -> None:
-    """ADR 0042 decision 1 fixes the cutover as `create-forge 0.4.0`. Today the
-    package is still on the 0.3 line -- this reads the live version, so the
-    release bump cannot land without updating the contract.
+def test_create_forge_is_on_the_cutover_release_line() -> None:
+    """ADR 0042 decision 1 fixed the cutover as `create-forge 0.4.0`; CF-18.07
+    (ADR 0049) published it. This reads the live version, so a future release
+    off the `0.4.x` line cannot silently drift this contract's own claim.
     """
     version = str(_project()["version"])
-    assert version.startswith("0.3."), version
+    assert version.startswith("0.4."), version
 
 
 def test_supported_python_window_is_unchanged() -> None:
@@ -221,16 +220,21 @@ def test_every_stage_18_child_owns_at_least_one_matrix_row() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Tripwires -- fail deliberately when the cutover lands                        #
+# Derived assertions -- the published cutover release                         #
 # --------------------------------------------------------------------------- #
 
 
-def test_tripwire_version_is_not_yet_the_cutover_release() -> None:
-    """Flips when CF-18.07 (#164) bumps `pyproject.toml` to the 0.4 line for
-    the cutover release. Update docs/engine-cutover-acceptance.md's Status and
-    this tripwire in that change.
+def test_diagnostic_line_tracks_the_cutover_release() -> None:
+    """CF-18.07 (#164, ADR 0049) replaced the last tripwire,
+    `test_tripwire_version_is_not_yet_the_cutover_release`, with this derived
+    pair: `compat.INTEGRATION_LINE` moved to the published release's line, and
+    the acceptance contract's own Status section no longer claims the cutover
+    hasn't shipped.
     """
-    assert not str(_project()["version"]).startswith("0.4."), _project()["version"]
+    assert compat.INTEGRATION_LINE == "v0.4.x-engine"
+    text = " ".join(_contract().split())
+    assert "has published yet" not in text
+    assert "create-forge 0.4.0" in text
 
 
 def test_user_guide_says_the_cutover_has_shipped() -> None:

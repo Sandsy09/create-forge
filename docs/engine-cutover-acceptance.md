@@ -36,16 +36,15 @@ Its design gate is the two accepted predecessor contracts (CF-16.01, CF-16.02)
 and the four accepted `forge-template` Stage 15 contracts, all merged and
 closed with `FT-EPIC-15`.
 
-**This contract is not the cutover.** No `create-forge` release named here
-has published yet. [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)
-through [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) have
-implemented and validated it on `main` — the engine is the default `new`
-path, `copier` is the optional `legacy` extra, and the removed
-`--engine-preview` flag no longer exists — but it is not yet tagged or
-published. Until [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)
-publishes `create-forge 0.4.0`, the latest **published** release remains
-`0.3.x`, where the default `new` path is direct-Copier and the engine is
-reachable only through the hidden `new --engine-preview` flag.
+**This contract described a decision; the cutover it described has shipped.**
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) through
+[CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) implemented and
+validated it on `main` — the engine is the default `new` path, `copier` is the
+optional `legacy` extra, and the removed `--engine-preview` flag no longer
+exists — and [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)
+(ADR 0049) tagged and published it as **`create-forge 0.4.0`**. The latest
+published release now resolves `forge-template>=0.5,<0.6` as a required
+dependency; `--legacy` is the explicit, supported route to direct Copier.
 [`docs/cli-conventions.md`](cli-conventions.md) and
 [`docs/integration-contract.md`](integration-contract.md) are authoritative
 for `main`'s actual behaviour.
@@ -292,11 +291,12 @@ which already reject an existing or non-increasing tag.
 
 **The `0.3.x` support window.** `create-forge 0.3.x` — the last direct-Copier
 default line — stays installable and supported for **at least 90 days and at
-least one further tagged `create-forge` release** past the cutover.
+least one further tagged `create-forge` release** past the cutover, a window
+that started when `0.4.0` published (CF-18.07).
 `create-forge 0.3.2` resolves `forge-template>=0.4.1,<0.5`, so a user who hits
 a `0.4.0` defect can pin `create-forge==0.3.2` and keep generating while a fix
 ships. The acceptance matrix carries the row proving that pin-back path still
-resolves, installs and generates after `0.4.0` publishes. This is a new
+resolves, installs and generates since `0.4.0` published. This is a new
 client-side commitment modelled on `forge-template`'s `0.4.x` window, not an
 inheritance.
 
@@ -321,10 +321,10 @@ commits to for every provider axis, so the two repositories state one number.
 `create-forge` cites that policy rather than restating it; changing the number
 needs an ADR superseding `forge-template` ADR 0041.
 
-**`--engine-preview` is removed in `0.4.0` with no window.** It is hidden,
-absent from `--help` and documented development-only, so it has no
-compatibility promise to honour (ADR 0040 decision 34). The release that makes
-it meaningless removes it — an unknown option, exit `2`.
+**`--engine-preview` was removed in `0.4.0` with no window.** It was hidden,
+absent from `--help` and documented development-only, so it carried no
+compatibility promise to honour (ADR 0040 decision 34). The release that made
+it meaningless removed it — an unknown option, exit `2`.
 
 **The direct-Copier route is not deprecated and starts no clock.** `--legacy`,
 `--template`, `--template-url`, `--ref`, the bundled registry and
@@ -359,7 +359,7 @@ gives. The policy is fixed; no date is invented.
 - Whether a future release promotes the engine to `1.0.0`, and retiring
   `template/` in favour of the catalogue.
 - The Streamlit archetype and its client adoption —
-  [roadmap-v4](roadmap-v4/README.md), which enters after this contract is
+  [roadmap-v4](roadmap-v4/README.md), which enters after this contract was
   accepted.
 - Any `forge-template` change. Provider manifests, composition, generated
   content and in-memory validation stay in `forge-template`
@@ -370,30 +370,25 @@ gives. The policy is fixed; no date is invented.
 
 ## Executable examples
 
-Until the cutover ships, the contract is guarded rather than characterised:
+The cutover has shipped, so the contract is now guarded against drift rather
+than characterised as pending:
 
 - [`tests/test_cutover_acceptance_contract.py`](../tests/test_cutover_acceptance_contract.py)
-  derives what it can from the live pre-cutover repository — `create-forge` is
-  still on the `0.3` line, `requires-python` is still `>=3.11`, the classifiers
-  are still 3.11–3.14, there is no `legacy` extra — and checks the matrix
-  itself: every row names an issue in
+  derives what it can from the live repository — `create-forge` is on the
+  `0.4` line, `requires-python` is `>=3.11`, the classifiers are 3.11–3.14,
+  `copier` is the optional `legacy` extra — and checks the matrix itself:
+  every row names an issue in
   [`docs/roadmap-v3/github-issues/filing-manifest.json`](roadmap-v3/github-issues/filing-manifest.json)
   (the mechanism `forge-template`'s `tests/test_cutover_gates.py` uses), and
-  every Stage 18 client child owns at least one row. It carries tripwires that
-  fail deliberately when
-  [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158) /
-  [CF-18.06](https://github.com/Sandsy09/create-forge/issues/163) /
-  [CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) land, so the
-  implementation cannot ship without bringing this document back into step. It
-  also asserts
+  every Stage 18 client child owns at least one row. It also asserts
   [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md) names
   its `CF-ROADMAP-01-AC-06` and `CF-ROADMAP-01-EX-04` obligations literally.
 - [`tests/test_engine_contract.py`](../tests/test_engine_contract.py)'s
   link-audit guard keeps this document reachable from `CLAUDE.md`,
   `CONTRIBUTING.md` and [`docs/cli-conventions.md`](cli-conventions.md).
 
-When the cutover implements a rule above, move it from this contract's
-"decided" voice into the "in force" voice of
+Any future rule change to this contract moves it from the "decided" voice
+here into the "in force" voice of
 [`docs/cli-conventions.md`](cli-conventions.md) or
-[`docs/integration-contract.md`](integration-contract.md), and add its
+[`docs/integration-contract.md`](integration-contract.md), with its
 characterization test, in the same pull request.
