@@ -54,6 +54,7 @@ Acceptance-checklist-to-named-test maps, each closing an epic or a release.
 | [rollout-regression-validation.md](rollout-regression-validation.md) | Library/CLI Application engine paths, the engine-less default, and the full selection/option/destination/lock/cleanup failure matrix (ADR 0033). |
 | [release-0-3-0-validation.md](release-0-3-0-validation.md) | The published `create-forge 0.3.0` / `forge-template 0.4.1` pair verified against its own artefacts (ADR 0034). |
 | [engine-cutover-validation.md](engine-cutover-validation.md) | The installed-console cutover acceptance matrix's remaining rows, and the rewritten user guide (ADR 0048). |
+| [release-0-4-0-validation.md](release-0-4-0-validation.md) | The published `create-forge 0.4.0` / `forge-template 0.5.0` pair verified against its own artefacts, and the Engine-Default Cutover roadmap close-out (ADR 0049). |
 
 ## Process and security
 

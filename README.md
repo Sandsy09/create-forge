@@ -12,11 +12,12 @@ uvx create-forge new
 
 Requires [uv](https://docs.astral.sh/uv/getting-started/installation/), Git,
 and Python 3.11+ (uv can install Python for you). Configure your Git author
-name and email before generating a default Library project: generation
-creates local commits.
+name and email before generating a project: generation creates local commits.
 
 **[Read the Forge user guide](https://sandsy09.github.io/create-forge/)**
-for walkthroughs, template choices, and troubleshooting.
+for walkthroughs, project types, and troubleshooting. Coming from a `0.3.x`
+install or project? Start with the
+[migration guide](https://sandsy09.github.io/create-forge/migration/).
 
 ## How the repositories fit together
 
@@ -41,8 +42,11 @@ uv, Ruff, pytest with coverage, mypy and/or pyright, pre-commit hooks, and
 GitHub Actions CI. Choose your build backend, versioning, license, and
 dependency-update tooling. MkDocs documentation is optional.
 
-The template is rendered by [Copier](https://copier.readthedocs.io/), which
-also supports bringing later template improvements into existing projects.
+`new` discovers project types and capabilities directly from the
+`forge-template` engine, constructs a ProjectSpec, and renders through its
+public facade — no template repository to clone. Generation also runs
+`git init`, an initial commit, and installs any pre-commit hooks the project
+carries.
 
 ## Install and manage the tool
 
@@ -61,8 +65,8 @@ your terminal.
 
 ```bash
 uvx create-forge@latest new
-uvx create-forge@0.3.2 new
-uv tool install "create-forge==0.3.2"
+uvx create-forge@0.4.0 new
+uv tool install "create-forge==0.4.0"
 ```
 
 Plain `uvx create-forge` can reuse a cached or persistently installed
@@ -76,8 +80,8 @@ See [installation and versions](https://sandsy09.github.io/create-forge/installa
 | Command | Purpose |
 | --- | --- |
 | `uvx create-forge new` | Create a project interactively. |
-| `uvx create-forge list` | List the bundled Copier templates. |
-| `uvx create-forge update` | Update a Copier-generated project from its directory. |
+| `uvx create-forge list` | List the discovered project types and capabilities. |
+| `uvx create-forge update` | Update a generated project from its directory. |
 | `uvx create-forge doctor` | Diagnose Python, Git, uv, and package compatibility. |
 | `uvx create-forge config init` | Create an optional configuration file. |
 | `uvx create-forge config show` | Show resolved configuration and its sources. |
@@ -88,30 +92,40 @@ For scripts and CI, provide a project name and skip questions with `--yes`:
 uvx create-forge new "My Library" --yes --data github_org=your-org --data build_backend=hatchling --data versioning=vcs
 ```
 
-Use `--path` to choose the destination and repeat `--data key=value` to
-preset answers. Run `uvx create-forge new --help` for the default workflow's
-options. Saved author details, GitHub organisation, and preferred template
-are covered in the [CLI guide](https://sandsy09.github.io/create-forge/cli/).
+Use `--path` to choose the destination, `--archetype`/`--capability` to
+preselect a project type, and repeat `--data key=value` to preset answers.
+Run `uvx create-forge new --help` for the default workflow's options. Saved
+author details, GitHub organisation, and preferred archetype are covered in
+the [CLI guide](https://sandsy09.github.io/create-forge/cli/).
 
-### Choose a template version or source
+### More project types and capabilities
 
 ```bash
-uvx create-forge new "My Library" --template library --ref v0.4.1
-uvx create-forge new "Custom Project" --template-url https://github.com/you/your-template
+uvx create-forge new "My Analysis" --archetype data-science --capability jupyter --yes --data license=mit
+cd my-analysis
+uv run --locked poe check
+uv run poe notebook
 ```
 
-`--ref` selects a Git revision in the **template repository**. It does not
-select the CLI version. Without it, Copier uses the latest suitable release
-tag. The bundled registry currently offers Library; upgrade the CLI to
-receive registry changes.
+Available types include Library, CLI Application, and Data Science (a Python
+package with a starter notebook and Jupyter tooling), plus optional
+**Jupyter** and **Scientific Python** capabilities (Data Science requires
+Jupyter; Scientific Python is optional and can accompany any archetype). The
+[project guide](https://sandsy09.github.io/create-forge/projects/) explains
+each type's output.
 
-Templates can execute code through generation and update tasks. Use custom
-sources only when you trust their content; `--yes` also skips the custom
-template confirmation.
+### Isolated engine overrides
+
+```bash
+uvx create-forge new "Custom" --engine-source https://github.com/you/your-engine-fork --engine-ref v0.5.1
+```
+
+`--engine-source`/`--engine-ref` provision an isolated environment for
+cross-repository development against a fork or unreleased engine revision,
+separate from your ordinary install. Use custom sources only when you trust
+their content; `--yes` also skips the confirmation prompt.
 
 ### Update a generated project
-
-From a clean, committed Copier-generated project:
 
 ```bash
 uvx create-forge update --dry-run
@@ -119,40 +133,32 @@ uvx create-forge update
 uv run poe check
 ```
 
-Keep `.copier-answers.yml` committed. Review the resulting diff and resolve
-conflicts before committing. A dry run validates the update without applying
-it; it does not produce a file-by-file diff. Use `update --ref v0.4.1` to
-target a particular template version.
+`update` runs the engine-native Git-backed three-way merge against the
+project's committed `.forge/generation.json`. Review the resulting diff and
+resolve any conflict markers before committing. `--dry-run` prints the
+per-target classification without writing anything; a failed or interrupted
+update always leaves a recoverable working tree, printed on request:
+`git restore . && git clean -fd`.
 
-## Preview: more project types and capabilities
-
-The `0.3.2` CLI also provides an opt-in engine preview
-(`--engine-preview`, hidden from help) covering three project types — Library,
-CLI Application, and Data Science (a Python package with a starter notebook
-and Jupyter tooling) — plus optional **Jupyter** and **Scientific Python**
-capabilities (Data Science requires Jupyter; Scientific Python is optional and
-can accompany any archetype).
+## The `--legacy` Copier route
 
 ```bash
-uvx --from "create-forge[engine]==0.3.2" create-forge new "My Analysis" --engine-preview --archetype data-science --capability jupyter --yes --data license=mit
-cd my-analysis
-uv run --locked poe check
-uv run poe notebook
+uv tool install "create-forge[legacy]"
+uvx --from "create-forge[legacy]" create-forge new "My Library" --legacy --template library --ref v0.4.1
 ```
 
-For regular preview use, install with `uv tool install "create-forge[engine]"`.
-The [project guide](https://sandsy09.github.io/create-forge/projects/) explains
-each type's output. **Preview projects do not support `create-forge update`**
-and generate no CI workflows or Git hooks; `--template`, `--template-url`, and
-`--ref` apply only to the Copier workflow.
+`--legacy` renders directly from the bundled Copier registry instead of the
+engine — the original `create-forge` architecture, still fully supported.
+`--template`, `--template-url`, and `--ref` select the template and version
+under this route; `create-forge update` against a `.copier-answers.yml`
+project runs `copier update`. The `legacy` extra installs `copier`; without
+it, `--legacy` exits `3` naming the remedy.
 
 ## What's next
 
-The Foundation and Data Science roadmaps are complete. The filed
-[Engine-Default Cutover](docs/roadmap-v3/README.md) and
-[Streamlit Archetype](docs/roadmap-v4/README.md) roadmaps describe future
-work — making the engine preview above the default `new` path, and beyond.
-Their issues are open and no release is scheduled yet. Follow
+The Foundation, Data Science, and Engine-Default Cutover roadmaps are
+complete. The filed [Streamlit Archetype](docs/roadmap-v4/README.md) roadmap
+describes the next project type. Follow
 [open work](https://github.com/Sandsy09/create-forge/issues) and
 [releases](https://github.com/Sandsy09/create-forge/releases) for updates, or
 suggest a project type, capability, or guide you would find useful.

@@ -8,8 +8,10 @@ milestones, native parents and direct dependencies. No release or runtime
 implementation is claimed by these planning documents.
 
 Streamlit begins after the provider and client cutover contracts are accepted.
-If cutover has not shipped, client adoption uses the supported engine-preview
-path without expanding the Copier registry or changing plain installs.
+The client cutover has since shipped as `create-forge 0.4.0`
+([CF-18.07](https://github.com/Sandsy09/create-forge/issues/164), ADR 0049),
+so Streamlit client adoption builds on the engine-default `new` path, not the
+removed `--engine-preview` flag.
 
 ## Read this pack
 

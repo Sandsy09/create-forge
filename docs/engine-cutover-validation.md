@@ -105,9 +105,11 @@ tests:
 
 This is an E2E test, one worker-module bugfix, a CI step, and a
 documentation change: no shipped CLI flag, protocol, component identifier,
-or default path changed. `create-forge` remains on the `0.3.x` line until
-[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) tags and
-publishes `0.4.0`.
+or default path changed. `create-forge` stayed on the `0.3.x` line until
+[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164) (ADR 0049)
+tagged and published `0.4.0`; see
+[docs/release-0-4-0-validation.md](release-0-4-0-validation.md) for that
+publication's own evidence.
 
 When this boundary or its evidence changes, update this record, the
 [end-to-end tests contract](end-to-end-tests.md), and the executable suite

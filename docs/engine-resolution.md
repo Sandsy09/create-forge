@@ -178,7 +178,7 @@ major version.
 | --- | --- | --- |
 | `create_forge` | CLI version | always |
 | `python`, `platform` | interpreter version and OS | always |
-| `integration.line` | `"v0.3.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
+| `integration.line` | `"v0.4.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
 | `integration.copier` | installed Copier version, `null` if the `legacy` extra isn't installed | `importlib.metadata`, never an import of Copier itself |
 | `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine fails closed at exit `1`, since it is a required dependency (ADR 0040 decision 1) |
 | `integration.engine_range` | `"forge-template>=0.5,<0.6"` | always -- this is what this CLI release declares, independent of what's installed |

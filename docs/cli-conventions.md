@@ -8,8 +8,9 @@ CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md)
 implemented the accepted target in
 [ADR 0010](adr/0010-public-engine-integration-contract.md): `new` with no
 route flag now gathers answers directly against the public `forge-template`
-engine and ProjectSpec, replacing the released v0.3.x default's registry +
-Copier boundary. `--legacy` reaches that prior boundary unchanged. The
+engine and ProjectSpec, replacing the v0.3.x default's registry +
+Copier boundary the last pre-cutover release shipped. `--legacy` reaches
+that prior boundary unchanged. The
 input, parity, cancellation, and error-presentation conventions below remain
 in force on both routes unless a later decision explicitly revises them.
 `--engine-source`/`--engine-ref` (CF-18.02), the engine `new` Git/hook
@@ -255,16 +256,16 @@ generation-metadata file — see the
 engine-native `update` dispatch — see the "Update dry runs" and "Engine
 project lifecycle" sections below. CF-18.05
 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)) then
-shipped the pre-cutover `--engine-preview` rejection wording and the
+shipped the removed `--engine-preview` flag's rejection wording and the
 direct-Copier route's retention against an unusable engine — see "Engine
 project lifecycle" below. CF-18.06
 ([ADR 0048](adr/0048-installed-cutover-acceptance-evidence.md)) executed the
 installed-console acceptance matrix and brought the user guide's own
-migration, legacy-support, and rollback recipes in force. Still open: the
-publication of `create-forge 0.4.0` itself, which remains
-[CF-18.07](https://github.com/Sandsy09/create-forge/issues/164)'s. The full
-decision record lives in `docs/engine-default-cli.md`; update it and this
-section together when a rule it still describes as pending ships.
+migration, legacy-support, and rollback recipes in force. CF-18.07
+([ADR 0049](adr/0049-publish-0-4-0-and-close-roadmap-v3.md)) published all of
+it as `create-forge 0.4.0`, closing the Engine-Default Cutover roadmap. The
+full decision record lives in `docs/engine-default-cli.md`; update it and
+this section together when a future rule change ships.
 
 ## `--engine-source` / `--engine-ref`
 

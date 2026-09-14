@@ -197,7 +197,7 @@ def test_doctor_fails_when_the_engine_is_not_installed(
     assert "forge-template>=0.5,<0.6" in result.output
     assert "engine" in result.output
     assert "integration line" in result.output
-    assert "v0.3.x-engine" in result.output
+    assert "v0.4.x-engine" in result.output
 
 
 def test_doctor_reports_the_installed_engine_package_when_present(
@@ -215,10 +215,10 @@ def test_doctor_reports_the_installed_engine_package_when_present(
 
     assert table_result.exit_code == 0, table_result.output
     assert "integration line" in table_result.output
-    assert "v0.3.x-engine" in table_result.output
+    assert "v0.4.x-engine" in table_result.output
     payload = json.loads(result.output)
     assert payload["integration"]["engine_package"] == "0.5.0"
-    assert payload["integration"]["line"] == "v0.3.x-engine"
+    assert payload["integration"]["line"] == "v0.4.x-engine"
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -238,7 +238,7 @@ def test_doctor_json_emits_the_documented_shape(
     assert payload["create_forge"] == cli_module._version()
     assert payload["ok"] is True
     integration = payload["integration"]
-    assert integration["line"] == "v0.3.x-engine"
+    assert integration["line"] == "v0.4.x-engine"
     assert integration["engine_package"] is not None
     assert integration["engine_range"] == "forge-template>=0.5,<0.6"
     assert integration["projectspec_protocol"]["supported"] == "1"

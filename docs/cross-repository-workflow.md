@@ -190,14 +190,14 @@ correct after Copier silently discards an unknown answer.
 ## Merge and release compatible changes
 
 Merging `forge-template` does not publish either downstream surface: the
-default path resolves its latest PEP 440 Git tag, while the preview path
-resolves a bounded package from PyPI. Use this sequence for compatible paired
-changes:
+default engine path resolves a bounded package from PyPI, while the explicit
+`--legacy` path resolves its latest PEP 440 Git tag. Use this sequence for
+compatible paired changes:
 
 1. Open both pull requests and validate their working trees together with the
    local drift and scaffold commands above.
 2. Prove the pending provider remains compatible with the latest supported
-   create-forge release, currently `0.3.2`, on every affected surface.
+   create-forge release, currently `0.4.0`, on every affected surface.
 3. Merge the `forge-template` pull request first. Publish a compatible template
    tag for Copier changes, or publish the provider package before changing the
    client's engine bound. A change affecting both surfaces needs both provider

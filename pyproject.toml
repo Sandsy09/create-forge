@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "create-forge"
-version = "0.3.2"
+version = "0.4.0"
 description = "Scaffold modern Python projects from maintained templates."
 readme = "README.md"
 requires-python = ">=3.11"
