@@ -2,22 +2,24 @@
 
 ## Status
 
-Filed and open. This pack records 5 repository-owned epics and
+Filed and delivered. This pack recorded 5 repository-owned epics and
 21 children for Stages 15–18, with verified issue numbers, labels,
-milestones, native parents and direct dependencies. No release or runtime
-implementation is claimed by these planning documents.
+milestones, native parents and direct dependencies. The filed manifest, the
+issue bodies, and `scripts/check_roadmaps.py`'s expected output stay
+unchanged (`filed-open`) by design — completion is recorded in prose here
+and in the evidence record below, not in the pack's own filing status; see
+ADR 0049 decision 5.
 
-The `create-forge`-side implementation this pack planned is complete on
-`main`: CF-18.01 through CF-18.06 shipped the engine-default cutover, and
-CF-18.07 ([#164](https://github.com/Sandsy09/create-forge/issues/164), ADR
-0049) is publishing it as `create-forge 0.4.0`, gated on
-[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156)'s
-provider-side integrated validation. See `docs/release-0-4-0-validation.md`
-for the publication evidence once it lands.
+The engine-default cutover this pack planned has shipped:
+[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) closed the
+provider-side integrated validation, and CF-18.07
+([#164](https://github.com/Sandsy09/create-forge/issues/164), ADR 0049)
+published it as **`create-forge 0.4.0`**. See
+`docs/release-0-4-0-validation.md` for the full publication evidence and
+roadmap reconciliation.
 
 Working engine-native updates and continued support for existing Copier
-projects gate the engine-default release. Detailed architecture remains
-subject to the explicit decision children.
+projects gated the engine-default release; both shipped.
 
 ## Read this pack
 

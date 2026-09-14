@@ -2,15 +2,16 @@
 
 ## Status and epics
 
-Filed and open.
-[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153),
-[FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143).
-
-`CF-EPIC-18`'s six implementation children (CF-18.01–CF-18.06) have merged;
-CF-18.07 (ADR 0049) is publishing `create-forge 0.4.0`, gated on
-[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156). See
-`docs/release-0-4-0-validation.md` for the publication evidence once it
-lands.
+Filed and delivered on the `create-forge` side.
+[CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153) is closed:
+all seven children merged, and CF-18.07 (ADR 0049) published
+`create-forge 0.4.0` after
+[FT-18.01](https://github.com/Sandsy09/forge-template/issues/156) closed the
+provider-side integrated validation. See `docs/release-0-4-0-validation.md`
+for the full publication evidence.
+[FT-EPIC-18](https://github.com/Sandsy09/forge-template/issues/143) is
+`forge-template`'s own epic; see that repository's roadmap record for its
+status.
 
 ## Entry criteria
 
