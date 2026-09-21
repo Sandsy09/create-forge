@@ -369,9 +369,12 @@ def test_the_suite_runs_against_the_candidate_and_the_pinned_provider(
 
     assert_success(version, "--version")
     assert version.stdout.strip() == CLIENT_VERSION
-    assert_success(doctor, "doctor --json")
-    integration = json.loads(doctor.stdout)["integration"]
-    assert integration["engine_package"] == ENGINE_VERSION
+    # `doctor`'s exit status also reflects unrelated environment checks -- a bare
+    # CI runner has no git identity, so it exits 1 there -- so only its JSON
+    # report of the client and the provider matters here.
+    report = json.loads(doctor.stdout)
+    assert report["create_forge"] == CLIENT_VERSION
+    assert report["integration"]["engine_package"] == ENGINE_VERSION
 
 
 # --------------------------------------------------------------------------- #

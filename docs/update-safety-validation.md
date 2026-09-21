@@ -132,8 +132,8 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | create-forge version | `0.4.0` |
 | create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:c5199599203d93f77d42982ea927ae6719592387af90f48f3cd7b1aa1f73ddfa` |
 | create-forge wheel content digest | `sha256:d2838f3fcf67fcdaa2650cae28779e560a1ac830bda1f84c3c95f591dd160c10` |
-| create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:7e89deb74c8c0c30f9b8464cd107c0c8b5df6af22b2c0e4a5364dcef1605603a` |
-| create-forge sdist content digest | `sha256:72f2b09f50d44fa05ddfbb9b59a86d612e1a4d561547aa078a887f668e4fd26d` |
+| create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:d0e0e88981a59984a5aed683ae3a968eeadf526395ccb6cfee256c1bb79ac89f` |
+| create-forge sdist content digest | `sha256:ca289060599581f49d043f5ebd684f44eb8b20dd6e771ce6f2f6b120989edd56` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
 | forge-template sdist | `forge_template-0.6.0.tar.gz` `sha256:07e036a582d038f704c5678a75d93c75cec186e8fb138b75ae08d933dd0b9db8` |
 | forge-template wheel | `forge_template-0.6.0-py3-none-any.whl` `sha256:cf21152242a81b6a19d5298521a77f504063091759b5cca721b3f527c64ac742` |
