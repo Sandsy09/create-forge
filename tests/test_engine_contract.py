@@ -40,6 +40,9 @@ DATA_SCIENCE_PREVIEW_VALIDATION = (
 INSTALLED_DATA_SCIENCE_VALIDATION = (
     REPO_ROOT / "docs" / "installed-data-science-validation.md"
 )
+INSTALLED_STREAMLIT_VALIDATION = (
+    REPO_ROOT / "docs" / "installed-streamlit-validation.md"
+)
 ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
 ENGINE_CUTOVER_VALIDATION = REPO_ROOT / "docs" / "engine-cutover-validation.md"
@@ -384,6 +387,21 @@ def test_installed_data_science_validation_doc_is_linked_from_entry_points() -> 
         )
 
     assert INSTALLED_DATA_SCIENCE_VALIDATION.is_file()
+
+
+def test_installed_streamlit_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-21.02's installed Streamlit evidence (ADR 0051) must stay
+    discoverable, mirroring the CF-14.02 guard above.
+    """
+    link_re = re.compile(r"\([^)]*installed-streamlit-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link installed-streamlit-validation.md"
+        )
+
+    assert INSTALLED_STREAMLIT_VALIDATION.is_file()
 
 
 def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None:
