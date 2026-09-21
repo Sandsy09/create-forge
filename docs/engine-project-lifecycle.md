@@ -348,6 +348,45 @@ recorded version for the report below.
     one-line count of clean versus conflicted targets. A no-op update
     (§ 15) reports that nothing changed instead.
 
+## Update target containment
+
+**Shipped by [CF-22.01](https://github.com/Sandsy09/create-forge/issues/193)
+([ADR 0052](adr/0052-contain-every-client-filesystem-target.md)).** Every
+string an engine-native update turns into a path — plan targets, rename
+endpoints, the metadata filename, and the `output[].target` strings recorded in
+`.forge/generation.json` — goes through the one shared boundary. The accepted
+spelling, the refused names, symlink and junction containment, and the threat
+model are defined once, for `new` and `update` alike, in
+[filesystem-generation.md § Target safety](filesystem-generation.md#target-safety).
+
+24. **The whole update is validated before its first mutation.** Before
+    `create-forge` renames, writes, or deletes anything, it validates every
+    plan target — including `skip-if-exists` and `unchanged` entries, which
+    are never written but are still provider-supplied — both endpoints of
+    every rename, and the metadata filename; the degraded path validates every
+    new-render target and every recorded target. One unacceptable target
+    anywhere refuses the whole update, so an invalid *late* target cannot leave
+    a partial mutation behind. On the normal path the recorded document is not
+    validated on its own: every recorded target the plan acts on appears as a
+    plan target.
+
+25. **Each filesystem operation revalidates its own target.** A read, write,
+    delete, rename, or metadata refresh resolves its target again immediately
+    before it happens. This narrows the window for a concurrent change to the
+    working tree; it does not close it, and no race-safety guarantee is made.
+
+26. **`--dry-run` reads nothing outside the project.** Validation runs before
+    the first read, so a tampered recorded target is refused rather than opened
+    — the dry run's "writes nothing" (§ 16) has a read-side counterpart.
+
+27. **A refused target is exit `1`, sanitised.** The diagnostic names the
+    target and the rule it broke, never a filesystem path or raw subprocess
+    output, and reuses the existing exit-`1` row. Existing local-edit
+    preservation, conflict handling, and the lock and provenance lifecycle are
+    unchanged. The printed recovery hint is unchanged too; making it accurate
+    for the project's actual Git state is
+    [CF-22.02](https://github.com/Sandsy09/create-forge/issues/194)'s subject.
+
 ## Exit statuses
 
 The [`docs/cli-conventions.md`](cli-conventions.md) exit-status table stays
@@ -356,7 +395,7 @@ existing rows:
 
 | Condition | Status |
 | --- | --- |
-| dirty Git working tree; non-Git project; a merge or render failure; `.forge/generation.json` missing when routing chose the engine, or unreadable JSON; neither route file present | `1` |
+| dirty Git working tree; non-Git project; a merge or render failure; `.forge/generation.json` missing when routing chose the engine, or unreadable JSON; neither route file present; a target refused by the containment boundary (§ 24) | `1` |
 | the recorded `forge-template` release is incompatible with this CLI, or is unavailable and the degraded path was declined | `3` — the "required generator missing or unusable" class [ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md) already widened `3` to; not a new code |
 | the user cancels a prompt or interrupts the merge | `130` |
 

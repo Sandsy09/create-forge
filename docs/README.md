@@ -40,7 +40,7 @@ still usually cites the ADR that authorised it.
 
 | Contract | Governs |
 | --- | --- |
-| [filesystem-generation.md](filesystem-generation.md) | Destination-conflict, staging, finalisation, and cleanup rules in `staging.py` (ADR 0015). |
+| [filesystem-generation.md](filesystem-generation.md) | Destination-conflict, staging, finalisation, and cleanup rules in `staging.py` (ADR 0015), and the shared target-safety boundary in `paths.py` that both generation and engine-native `update` resolve every engine-supplied path through (ADR 0052). |
 | [end-to-end-tests.md](end-to-end-tests.md) | The fast/`network`/`e2e` test-tier split and what the real console script is proven to do (ADR 0016). |
 
 ## Validation records

@@ -358,3 +358,53 @@ def test_write_files_refuses_a_drive_qualified_target_on_windows(
 
     with pytest.raises(StagingError, match="refusing to write"):
         write_files(root, [(target, b"data")])
+
+
+@pytest.mark.parametrize(
+    ("target", "reason"),
+    [
+        ("aux.py", "reserved device name"),
+        ("src/COM1", "reserved device name"),
+        ("a./b", "ending in a dot or space"),
+        ("a\\b", "a backslash"),
+        ("C:x", "a `:`"),
+        ("stream.txt:hidden", "a `:`"),
+        ("a//b", "an empty path component"),
+        ("a\x00b", "a control character"),
+    ],
+)
+def test_write_files_refuses_a_platform_ambiguous_target_on_every_host(
+    tmp_path: Path, target: str, reason: str
+) -> None:
+    """CF-22.01 (ADR 0052): `new` and `update` share `paths.py`'s spelling
+    rules, so a target refused on one route is refused on the other, and on
+    every host rather than only where it would misbehave.
+    """
+    root = tmp_path / "root"
+    root.mkdir()
+
+    with pytest.raises(
+        StagingError, match="refusing to write an unsafe target"
+    ) as info:
+        write_files(root, [(target, b"data")])
+
+    assert reason in str(info.value)
+    assert list(root.iterdir()) == []
+
+
+def test_write_files_refuses_a_symlinked_parent_that_escapes_the_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    try:
+        (root / "pkg").symlink_to(outside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks are unavailable on this host")
+
+    with pytest.raises(StagingError, match="refusing to write outside"):
+        write_files(root, [("pkg/mod.py", b"data")])
+
+    assert list(outside.iterdir()) == []

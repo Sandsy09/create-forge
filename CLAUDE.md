@@ -40,6 +40,10 @@ src/create_forge/
 ├── prompts.py        questionary flow. Driven entirely by registry data.
 ├── staging.py        Destination conflicts, staging, atomic finalisation,
 │                     cleanup. Engine-free; shared by every generation route.
+├── paths.py          The one boundary between an engine-supplied target
+│                     string and the disk: accepted spelling, refused
+│                     names, symlink/junction containment. Engine-free;
+│                     used by staging.py and update.py.
 ├── sources.py        Untrusted-source validation/display (--template-url,
 │                     --engine-source). Engine-free.
 ├── descriptors.py     DescriptorView/OptionView/RelationView protocols +
@@ -71,7 +75,7 @@ the only two modules whose *source* imports `forge_template`
 depends on `engine.py` but imports `forge_template` only under
 `TYPE_CHECKING`. `copier` is behind the optional `legacy` extra, so
 `runner.py` is imported lazily by `cli.py`'s `--legacy` route and by `update`.
-`compat.py`, `staging.py`, `sources.py`, `descriptors.py`, and
+`compat.py`, `staging.py`, `paths.py`, `sources.py`, `descriptors.py`, and
 `engine_source.py` are engine-free by construction (no `forge_template`
 import, not even under `TYPE_CHECKING`) and are imported unconditionally —
 see the canonical [filesystem generation contract](docs/filesystem-generation.md)
