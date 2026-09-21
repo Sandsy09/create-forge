@@ -7,6 +7,15 @@ edit_uri: edit/main/docs/user-guide/
 docs_dir: docs/user-guide
 site_dir: site
 
+# Written and tested ahead of the release that ships it (CF-21.02, ADR 0051):
+# this guide describes released behaviour, and published create-forge 0.4.0
+# cannot select Streamlit yet. CF-21.03 removes this entry and adds the nav
+# entry and cross-links when it releases. `tests/test_user_guide_recipes.py`
+# checks the page's recipes and relative links while it is excluded, since the
+# strict build does not see it.
+exclude_docs: |
+  streamlit.md
+
 theme:
   name: material
   custom_dir: docs/overrides

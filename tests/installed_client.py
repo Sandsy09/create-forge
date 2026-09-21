@@ -73,15 +73,22 @@ def run(
     cwd: Path,
     *,
     env: Mapping[str, str] | None = None,
+    timeout: float = SUBPROCESS_TIMEOUT,
 ) -> subprocess.CompletedProcess[str]:
-    """Run one child command, capturing output, never raising on exit status."""
+    """Run one child command, capturing output, never raising on exit status.
+
+    `timeout` defaults to `SUBPROCESS_TIMEOUT`; a suite whose provider contract
+    fixes a tighter bound (the Streamlit smoke, CF-21.02) passes its own. An
+    expired bound raises `subprocess.TimeoutExpired` rather than returning, so
+    the test fails -- a timeout is never retried or absorbed into an exit code.
+    """
     return subprocess.run(  # noqa: S603 - reviewed argv, no shell
         list(command),
         cwd=cwd,
         env=dict(env) if env is not None else None,
         capture_output=True,
         text=True,
-        timeout=SUBPROCESS_TIMEOUT,
+        timeout=timeout,
         check=False,
     )
 

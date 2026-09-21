@@ -6,9 +6,10 @@ records the decision this document keeps current.
 
 ## Status
 
-Five `e2e`-marked modules cover both generation paths, the installed
+Six `e2e`-marked modules cover both generation paths, the installed
 Data Science release-candidate boundary, the installed rollout regression
-matrix, and the installed cutover acceptance matrix. `tests/test_e2e_generation.py`
+matrix, the installed cutover acceptance matrix, and the installed Streamlit
+boundary. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
@@ -38,11 +39,15 @@ CF-18.05 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md)
 adds `tests/test_e2e_installed_cutover.py` for the retained legacy Copier
 route and the rejected preview-project transition; CF-18.06
 ([ADR 0048](adr/0048-installed-cutover-acceptance-evidence.md)) extends it to
-the rest of the installed cutover acceptance matrix. See
+the rest of the installed cutover acceptance matrix. CF-21.02
+([ADR 0051](adr/0051-validate-installed-streamlit-generation.md)) adds
+`tests/test_e2e_installed_streamlit.py`, which reuses the same wheel to validate
+the four accepted Streamlit compositions and their failure cases. See
 [the engine path](#the-engine-path),
 [the installed Data Science path](#the-installed-data-science-path),
-[the installed rollout path](#the-installed-rollout-path), and
-[the installed cutover path](#the-installed-cutover-path) below.
+[the installed rollout path](#the-installed-rollout-path),
+[the installed cutover path](#the-installed-cutover-path), and
+[the installed Streamlit path](#the-installed-streamlit-path) below.
 
 ## The three-tier test split
 
@@ -234,6 +239,28 @@ The canonical
 [engine-default cutover installed validation](engine-cutover-validation.md)
 record maps every CF-18.06 acceptance criterion, including rows the rollout
 suite's own pre-existing coverage discharges, to a named test.
+
+## The installed Streamlit path
+
+`tests/test_e2e_installed_streamlit.py` (CF-21.02,
+[ADR 0051](adr/0051-validate-installed-streamlit-generation.md)) reuses
+`tests/installed_client.py` and the session `installed_client` fixture --
+the candidate wheel with exactly the published `forge-template 0.6.0` -- and
+proves only what the client owns: the four accepted Streamlit compositions each
+generate twice with byte-identical output including the client-finalised lock,
+match the installed pipeline's own ownership plan, restore from the committed
+lock, and pass the generated project's `poe check` and its `tests/test_app.py`
+smoke under the provider's 600-second bound (the full composition again at
+Python 3.11 and 3.14); a real previous-line `forge-template 0.5.0` is rejected
+at exit `3`; the provider's rejection matrix, a non-empty destination, and a
+real lock failure each leave nothing behind; and the recipes in
+`docs/user-guide/streamlit.md` run verbatim through the installed console.
+Wheel and sdist contents, the `run` task, secret handling, and the listen guard
+are provider-owned and deliberately not re-audited here.
+
+The canonical
+[installed Streamlit validation](installed-streamlit-validation.md) record maps
+every CF-21.02 acceptance criterion to a named test.
 
 ## Running it
 

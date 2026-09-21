@@ -232,9 +232,13 @@ jobs:
   # (CF-14.03, ADR 0033) reuses that wheel for the Library / CLI Application
   # default engine paths, the `--legacy` Copier path in a wheel with no
   # engine installed, a real out-of-range engine, and the full selection /
-  # option / destination / lock / cleanup failure matrix. Those
-  # scientific-Python/Jupyter dependency trees, live notebooks, and the three
-  # extra installed environments hold the 60-minute budget.
+  # option / destination / lock / cleanup failure matrix.
+  # `test_e2e_installed_streamlit.py` (CF-21.02, ADR 0051) reuses the same
+  # wheel for the four accepted Streamlit compositions (each restored from its
+  # committed lock and run under the provider's 600-second check/smoke bound),
+  # a real previous-line engine, and the Streamlit failure cases. Those
+  # scientific-Python/Jupyter dependency trees, live notebooks, and the extra
+  # installed environments hold the 60-minute budget.
   # ---------------------------------------------------------------------------
   e2e:
     name: End-to-end generation
