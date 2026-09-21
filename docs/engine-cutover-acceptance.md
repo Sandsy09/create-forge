@@ -199,7 +199,7 @@ the rest of the matrix below.
 | --- | --- | --- | --- |
 | `create-forge update` routes to the engine-native Git-backed three-way merge on `.forge/generation.json`, to `copier update` on `.copier-answers.yml` only, and `update --legacy` forces Copier; neither file is exit `1` naming both routes | `uv run pytest tests/test_update_routing.py` | CF-18.04 | CF-18.04 |
 | A clean-tree update applies rename records first, merges old / new / working tree per target with inline conflict markers left staged, deletes a `removed` target only if pristine, and never touches a `skip-if-exists` target; file add / delete / rename, no-op and repeated updates all classify correctly | `uv run pytest tests/test_update_engine.py` | CF-18.04 | CF-18.04 |
-| `update --dry-run` writes nothing and prints the per-target classification list; malformed metadata, `Ctrl-C` and a failed merge leave a recoverable project and print (never run) `git restore . && git clean -fd`; `.forge/generation.json` is rewritten last (**CF-ROADMAP-01-AC-03**) | `uv run pytest tests/test_update_engine.py -k "dry_run or recover"` | CF-18.04 | CF-18.04 |
+| `update --dry-run` writes nothing and prints the per-target classification list; malformed metadata, `Ctrl-C` and a failed merge leave a recoverable project and print (never run) recovery guidance read from the repository's actual Git state — `git restore --source=HEAD --staged --worktree .`, untracked files previewed before any `git clean -fd`, and "nothing to recover" when nothing changed (amended by CF-22.02, ADR 0053; the original `git restore . && git clean -fd` did not undo a staged update); `.forge/generation.json` is rewritten last (**CF-ROADMAP-01-AC-03**) | `uv run pytest tests/test_update_engine.py -k "dry_run or recover"`; `uv run pytest tests/test_update_recovery.py` | CF-18.04 | CF-18.04 |
 | An unavailable recorded release fails closed with the four report facts; the opt-in `--degraded` two-way update records `reproduction.mode = "degraded"` | `uv run pytest tests/test_update_engine.py -k degraded` | CF-18.04 | CF-18.04 |
 | The engine-native update on `windows-latest` | `uv run pytest tests/test_update_engine.py` on `windows-latest` | CF-18.04 | CF-18.04 |
 
@@ -302,8 +302,9 @@ inheritance.
 
 **User-project rollback** — restoring a working tree and its stored
 `.forge/generation.json` after a bad update — is the clean-tree precondition
-and the printed `git restore . && git clean -fd` recovery ADR 0041 already
-fixed, implemented by
+and the printed recovery ADR 0041 fixed (corrected to read the actual Git state
+by [ADR 0053](adr/0053-recover-updates-from-the-actual-git-state.md)),
+implemented by
 [CF-18.04](https://github.com/Sandsy09/create-forge/issues/161) /
 [CF-18.05](https://github.com/Sandsy09/create-forge/issues/162). It is not a
 release-process concern.

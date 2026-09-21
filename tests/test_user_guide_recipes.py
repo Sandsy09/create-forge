@@ -18,7 +18,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from create_forge.update import ROLLBACK_HINT
+from tests.recovery_recipes import (
+    CLEAN_COMMAND,
+    CLEAN_PREVIEW_COMMAND,
+    LEGACY_0_4_0_HINT,
+    RESTORE_COMMAND,
+)
 from tests.streamlit_recipes import CHECK_COMMAND, RECIPES
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -54,13 +59,53 @@ def test_migration_doc_documents_the_pin_back_recipe() -> None:
     assert 'uv tool install "create-forge==0.3.2"' in text
 
 
-def test_migration_doc_documents_the_rollback_recipe_verbatim() -> None:
-    """`test_recipe_rollback_restores_a_bad_update` runs
-    `update.ROLLBACK_HINT` itself -- imported here rather than duplicated, so
-    the two can never silently drift apart.
+def _fenced_lines(path: Path) -> list[str]:
+    """Every non-empty line inside a fenced code block, whitespace-normalised."""
+    blocks = re.findall(r"```[a-z]*\n(.*?)```", path.read_text(encoding="utf-8"), re.S)
+    return [" ".join(line.split()) for block in blocks for line in block.splitlines()]
+
+
+def test_guides_document_the_recovery_recipe_verbatim() -> None:
+    """CF-22.02 (ADR 0053): `test_recipe_rollback_restores_a_bad_update`
+    (`tests/test_e2e_installed_cutover.py`) runs the commands in
+    `tests/recovery_recipes.py`, and `test_update_recovery.py` asserts those
+    equal what `create-forge` itself prints -- so both guides must still tell
+    the reader exactly them, each as its own command in a fenced block.
     """
-    assert ROLLBACK_HINT in _normalised(MIGRATION)
-    assert ROLLBACK_HINT in _normalised(UPDATES)
+    for guide in (UPDATES, MIGRATION):
+        lines = _fenced_lines(guide)
+        for command in (
+            RESTORE_COMMAND,
+            CLEAN_PREVIEW_COMMAND,
+            CLEAN_COMMAND,
+        ):
+            assert command in lines, f"{guide.name} no longer documents {command!r}"
+
+
+def test_the_retired_recovery_command_is_never_a_documented_recipe() -> None:
+    """`git restore . && git clean -fd` is what published 0.4.0 prints. It may
+    only be *named*, in prose, as a command not to rely on -- never appear in a
+    fenced block a reader would copy.
+    """
+    for guide in (UPDATES, MIGRATION):
+        assert not any(LEGACY_0_4_0_HINT in line for line in _fenced_lines(guide))
+        text = _normalised(guide)
+        assert LEGACY_0_4_0_HINT in text, f"{guide.name} lost its 0.4.0 note"
+        assert "0.4.0" in text
+
+
+def test_the_guides_state_what_the_recovery_discards() -> None:
+    """The scope statements the issue requires: the whole repository, an
+    unmoved `HEAD`, a `git clean -nd` review, and the repository root.
+    """
+    text = _normalised(UPDATES)
+    for phrase in (
+        "whole repository",
+        "`HEAD` is still the commit you started from",
+        "git revert",
+        "repository root",
+    ):
+        assert phrase in text, f"updates.md no longer says {phrase!r}"
 
 
 def test_migration_doc_documents_the_preview_project_rejection() -> None:

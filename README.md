@@ -136,9 +136,10 @@ uv run poe check
 `update` runs the engine-native Git-backed three-way merge against the
 project's committed `.forge/generation.json`. Review the resulting diff and
 resolve any conflict markers before committing. `--dry-run` prints the
-per-target classification without writing anything; a failed or interrupted
-update always leaves a recoverable working tree, printed on request:
-`git restore . && git clean -fd`.
+per-target classification without writing anything. A failed or interrupted
+update leaves a working tree you can restore to your last commit — the
+[updates guide](https://sandsy09.github.io/create-forge/updates/) has the
+recovery procedure, including for an update that is already staged.
 
 ## The `--legacy` Copier route
 

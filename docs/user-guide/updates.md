@@ -31,13 +31,10 @@ three-way merge, staging the result with `git add`. Conflicting edits are
 left as inline conflict markers for you to resolve — review the diff
 before committing.
 
-If an update is interrupted (for example with Ctrl-C) or a merge step
-fails partway through, nothing is committed and the project can be fully
-recovered:
-
-```bash
-git restore . && git clean -fd
-```
+If an update is interrupted (for example with Ctrl-C) or a step fails
+partway through, nothing is committed, but the project can be left with
+changes to discard — some of them already staged. See
+[Recovering from a failed or unwanted update](#recovering-from-a-failed-or-unwanted-update).
 
 If the recorded `forge-template` release used to generate the project is
 no longer available to reproduce, `create-forge` asks before falling back
@@ -48,6 +45,51 @@ carefully.
 
 To update a project elsewhere, pass its directory:
 `uvx create-forge update path/to/project`.
+
+## Recovering from a failed or unwanted update
+
+An engine-native update starts from a clean, committed tree, so abandoning it
+means going back to that commit. The update may already have **staged** its
+result — a finished update always has, and a rename is staged the moment it is
+applied — so restore the index as well as the working tree. Run this from the
+repository root, the top-level directory that contains `.git`:
+
+```bash
+git restore --source=HEAD --staged --worktree .
+```
+
+That returns every tracked file to your last commit and takes back files the
+update added. Git ignores some files on purpose, and this leaves those alone.
+Files the update created that were never staged are *untracked*, so list them
+before deleting anything:
+
+```bash
+git clean -nd
+git clean -fd
+```
+
+The first command only lists what the second would remove. Run the second once
+the list holds nothing you want to keep.
+
+Before you run either, know what they do:
+
+- **They act on the whole repository**, not only the update. Edits to tracked
+  files that you made after the update finished are discarded too, and the
+  untracked files in the list are deleted. Commit or stash anything you want
+  to keep first.
+- **They assume `HEAD` is still the commit you started from.** If you have
+  already committed the update, undo it with `git revert` instead (or `git
+  reset` if you have not pushed it).
+- **If `create-forge` said your working tree has uncommitted changes, the
+  update never started.** There is nothing to recover. Commit or stash your
+  changes, then run the update again.
+
+> **`create-forge 0.4.0` prints an older command.** After a failed update it
+> prints `git restore . && git clean -fd`. That command restores files from the
+> index, so it does not undo an update that is already staged or a rename that
+> has already been applied. Use the steps above instead. If your working tree
+> had uncommitted changes when `0.4.0` refused to update, it also printed that
+> command there — do not run it, because it would discard your own work.
 
 ## Update a `--legacy` Copier-generated project
 

@@ -51,6 +51,7 @@ from tests.legacy_template import (
     init_repo,
     visible_files,
 )
+from tests.recovery_recipes import CLEAN_ARGV, CLEAN_PREVIEW_ARGV, RESTORE_ARGV
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -619,15 +620,20 @@ def test_failure_engine_native_degraded_update_refuses_to_overwrite_a_diverged_e
 def test_recipe_rollback_restores_a_bad_update(
     installed_client: InstalledClient,
 ) -> None:
-    """The documented rollback recipe (`docs/user-guide/migration.md`) --
-    `git restore . && git clean -fd` -- genuinely restores a project left
-    mid-update, run against a real installed-console-generated repository.
-    Mirrors `tests/test_update_engine.py`'s own
-    `test_recovering_from_a_failed_merge_restores_the_clean_tree` simulation
-    of a partially-applied update (`apply_plan` only ever writes the working
-    tree; `stage_result`'s `git add -A` runs last), but proves it here
-    against the real generated project this suite already trusts, not a
-    hand-built fixture.
+    """The documented recovery recipe (`docs/user-guide/updates.md` and
+    `migration.md`, CF-22.02, ADR 0053) genuinely restores a project left
+    mid-update in each state an update can leave, run against a real
+    installed-console-generated repository -- not a hand-built fixture.
+
+    The states: an unstaged edit plus an untracked file; a fully **staged**
+    update (what a completed update always leaves); and a rename applied with
+    `git mv`, which stages at once. The previous recipe, `git restore . && git
+    clean -fd`, restores from the index and recovered neither staged state.
+    One project serves all three because each recovery must return it to the
+    generated baseline, and an ignored file the user owns must survive every one.
+
+    `tests/test_update_recovery.py` drives the update's own functions through
+    the same states; this is the installed-console half.
     """
     dest = installed_client.root / "recipe" / "rollback-project"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -640,19 +646,45 @@ def test_recipe_rollback_restores_a_bad_update(
 
     readme = dest / "README.md"
     original = readme.read_text(encoding="utf-8")
-
-    # Simulate a partially-applied update: an edited tracked file and one
-    # new untracked file, all unstaged -- exactly what a failure between
-    # writing and finishing an update would leave behind.
-    readme.write_text(original + "merged content\n", encoding="utf-8")
-    (dest / "mid-update.txt").write_text("new content\n", encoding="utf-8")
-
-    git("restore", ".", cwd=dest)
-    git("clean", "-fd", cwd=dest)
-
-    assert readme.read_text(encoding="utf-8") == original
-    assert not (dest / "mid-update.txt").exists()
+    user_file = dest / "__pycache__" / "user-data.pyc"
+    user_file.parent.mkdir(exist_ok=True)
+    user_file.write_bytes(b"owned by the user\n")
+    git("check-ignore", "-q", "__pycache__/user-data.pyc", cwd=dest)  # precondition
     assert git("status", "--porcelain", cwd=dest).strip() == ""
+
+    def unstaged() -> None:
+        readme.write_text(original + "merged content\n", encoding="utf-8")
+        (dest / "mid-update.txt").write_text("new content\n", encoding="utf-8")
+
+    def staged() -> None:
+        readme.write_text(original + "merged content\n", encoding="utf-8")
+        (dest / "added-by-update.txt").write_text("new content\n", encoding="utf-8")
+        git("add", "-A", cwd=dest)  # `stage_result`
+
+    def renamed() -> None:
+        git("mv", "README.md", "README-moved.md", cwd=dest)  # `apply_renames`
+        (dest / "mid-update.txt").write_text("new content\n", encoding="utf-8")
+
+    for name, leave_state in (
+        ("unstaged", unstaged),
+        ("staged", staged),
+        ("renamed", renamed),
+    ):
+        leave_state()
+        assert git("status", "--porcelain", cwd=dest).strip() != "", name
+
+        # The documented recipe, from the repository root.
+        git(*RESTORE_ARGV[1:], cwd=dest)
+        untracked = git(*CLEAN_PREVIEW_ARGV[1:], cwd=dest)
+        assert "__pycache__" not in untracked, name  # ignored: never a candidate
+        git(*CLEAN_ARGV[1:], cwd=dest)
+
+        assert readme.read_text(encoding="utf-8") == original, name
+        assert not (dest / "README-moved.md").exists(), name
+        assert not (dest / "mid-update.txt").exists(), name
+        assert not (dest / "added-by-update.txt").exists(), name
+        assert user_file.read_bytes() == b"owned by the user\n", name
+        assert git("status", "--porcelain", cwd=dest).strip() == "", name
 
 
 def test_boundary_incompatible_engine_via_engine_source_writes_nothing(

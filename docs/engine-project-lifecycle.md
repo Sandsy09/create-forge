@@ -287,12 +287,33 @@ merge, then `uv.lock`, then `.forge/generation.json` last, then one `git add
 -A` covering all three (decisions 9-10) — a `uv.lock` refresh warns and keeps
 the project on failure, rather than aborting an otherwise-good update.
 
-18. **The clean-tree precondition is the rollback.** Because an engine-native
-    update starts from a clean Git working tree, recovery from any mid-merge
-    failure, render failure, or `Ctrl-C` is `git restore . && git clean -fd`.
-    `create-forge` prints that exact command on failure. It does **not** run
-    it itself — a tool invoking `git clean -fd` can delete untracked files the
-    user cared about; the choice stays the user's.
+18. **The clean-tree precondition is the rollback, and the guidance reads the
+    real Git state.** *Amended by
+    [CF-22.02](https://github.com/Sandsy09/create-forge/issues/194)
+    ([ADR 0053](adr/0053-recover-updates-from-the-actual-git-state.md)); the
+    original `git restore . && git clean -fd` is retired.* Because an
+    engine-native update starts from a clean Git working tree, abandoning it is
+    a Git operation back to `HEAD`. But the update **does** leave staged state
+    behind — `git mv` stages a rename immediately, and a completed update ends
+    in `git add -A` — and `git restore .` restores the working tree from the
+    *index*, so it recovers neither. After a failure or cancellation
+    `create-forge` therefore inspects the repository (read-only) and prints
+    guidance for what it finds:
+
+    | Found | Printed |
+    | --- | --- |
+    | nothing differs from `HEAD` | `No project files were changed; nothing to recover.` — no command |
+    | changes exist and `HEAD` exists | `git -C <root> restore --source=HEAD --staged --worktree .` — correct for an unstaged, staged, partly-staged or post-`git mv` state; and, **only if untracked files exist**, `git -C <root> clean -nd` (preview) then `git -C <root> clean -fd` |
+    | no commit to restore from | manual guidance and **no command** |
+    | Git cannot be consulted | the same restore and review commands, unanchored, with a note to run them from the repository root |
+
+    The text states that this returns the *whole repository* to its last commit
+    and discards any uncommitted work made since. Untracked files are always
+    previewed before deletion, and ignored files are never candidates (no
+    `-x`). `create-forge` does **not** run any of it — the choice stays the
+    user's. **Nothing is printed until the clean-tree precondition (§ 10) has
+    passed:** before it, whatever is dirty is the user's own work, and no
+    command that discards a working tree is theirs to run.
 
 19. **`.forge/generation.json` is written last.** The refreshed metadata file
     is written only after the merge has fully succeeded. A failed or cancelled
@@ -301,8 +322,8 @@ the project on failure, rather than aborting an otherwise-good update.
     (CF-ROADMAP-01-AC-05).
 
 20. **Exit codes.** A cancelled update exits `130`; a merge, render, or
-    provisioning failure exits `1`. Both print the recovery hint. See
-    § Exit statuses.
+    provisioning failure exits `1`. Both print the recovery guidance of § 18
+    once the update has started. See § Exit statuses.
 
 ## Unavailable recorded release
 

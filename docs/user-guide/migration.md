@@ -102,15 +102,30 @@ generating exactly as it did before the cutover.
 ## Recovering from a bad `update`
 
 Both update routes require a clean, committed working tree before writing
-anything, and a failed or interrupted engine-native update never leaves
-half-applied changes staged. If an update leaves your tree in a state you
-want to discard entirely:
+anything. If an engine-native update leaves your tree in a state you want to
+discard entirely, restore the index and the working tree together, from the
+repository root:
 
 ```bash
-git restore . && git clean -fd
+git restore --source=HEAD --staged --worktree .
 ```
 
-This restores every tracked file to its last commit and removes any new
-untracked files the update added — the same recovery `create-forge` itself
-prints if an engine-native update is interrupted (for example with
-Ctrl-C). Run it from the project root before retrying.
+An update can leave changes **staged** — a finished one always does — so plain
+`git restore .` is not enough: it restores from the index and would change
+nothing. Files the update created that were never staged are untracked; list
+them before removing anything:
+
+```bash
+git clean -nd
+git clean -fd
+```
+
+Both commands act on the whole repository and assume `HEAD` is still the commit
+you started from. The
+[updates guide](updates.md#recovering-from-a-failed-or-unwanted-update) has the
+full procedure and what each step discards.
+
+`create-forge 0.4.0` prints `git restore . && git clean -fd` after a failed
+update. Do not rely on it: it does not undo a staged update, and it is also
+printed when `create-forge` refuses to start because your tree has uncommitted
+changes, where running it would discard your own work.

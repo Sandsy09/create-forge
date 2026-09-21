@@ -35,7 +35,7 @@ import pytest
 from create_forge import engine, engine_source, pipeline
 from create_forge.spec import SelectionRequest, build_spec_payload
 from create_forge.update import (
-    ROLLBACK_HINT,
+    RESTORE_COMMAND,
     UpdateError,
     apply_plan,
     apply_renames,
@@ -557,48 +557,50 @@ def test_prepare_update_short_circuits_on_a_matching_version(tmp_path: Path) -> 
 
 
 # --------------------------------------------------------------------------- #
-# Rollback hint                                                               #
+# Recovery: why the restore must cover the index (CF-22.02, ADR 0053)         #
 # --------------------------------------------------------------------------- #
+#
+# The recovery guidance itself -- every state an update can leave behind, the
+# printed commands actually executed, the CLI wiring -- is
+# tests/test_update_recovery.py's job. This only pins the premise ADR 0041's
+# rule 18 got wrong, next to the functions that break it.
 
 
-def test_rollback_hint_is_git_restore_and_clean() -> None:
-    assert ROLLBACK_HINT == "git restore . && git clean -fd"
-
-
-def test_recovering_from_a_failed_merge_restores_the_clean_tree(
+def test_recovery_restores_the_index_because_an_update_stages_its_result(
     tmp_path: Path,
 ) -> None:
-    """Rule 18: the printed, never-run `git restore . && git clean -fd`
-    genuinely recovers a project left mid-update, back to the last good
-    commit -- proving `ROLLBACK_HINT` is a correct recovery command, not
-    just a string constant.
+    """Rule 18 assumed "a failure mid-update never leaves anything staged".
 
-    `apply_plan` only ever writes the working tree; `stage_result` (a `git
-    add -A`) runs last, only once every other step has already succeeded
-    (decision 9), so a failure mid-update never leaves anything staged --
-    only unstaged working-tree edits and new untracked files, exactly what
-    `git restore .` (unstaged) and `git clean -fd` (untracked) fully clean
-    up between them.
+    `stage_result` runs `git add -A`, so a completed update *is* staged, and
+    `git restore .` -- which restores the worktree from the index -- undoes
+    none of it. `RESTORE_COMMAND` names `HEAD` as the source and restores both.
     """
     _init_repo(tmp_path)
     (tmp_path / "a.txt").write_text("original a\n", encoding="utf-8")
-    (tmp_path / "b.txt").write_text("original b\n", encoding="utf-8")
+    _commit(tmp_path)
+    (tmp_path / "a.txt").write_text("merged a\n", encoding="utf-8")
+    stage_result(tmp_path)
+
+    assert _git("diff", "--cached", "--name-only", cwd=tmp_path).split() == ["a.txt"]
+
+    _git("restore", ".", cwd=tmp_path)  # what published 0.4.0 printed
+    assert (tmp_path / "a.txt").read_text(encoding="utf-8") == "merged a\n"
+
+    _git(*RESTORE_COMMAND[1:], cwd=tmp_path)
+    assert (tmp_path / "a.txt").read_text(encoding="utf-8") == "original a\n"
+    assert _git("status", "--porcelain", cwd=tmp_path).strip() == ""
+
+
+def test_apply_renames_stages_the_move_so_an_interrupted_rename_is_not_unstaged(
+    tmp_path: Path,
+) -> None:
+    _init_repo(tmp_path)
+    (tmp_path / "old.txt").write_text("content\n", encoding="utf-8")
     _commit(tmp_path)
 
-    # Simulate a partially-applied update: two targets merged/written, and
-    # one brand-new file -- exactly what a failure between writing and
-    # finishing an update would leave behind, all unstaged.
-    (tmp_path / "a.txt").write_text("merged a\n", encoding="utf-8")
-    (tmp_path / "b.txt").write_text("merged b\n", encoding="utf-8")
-    (tmp_path / "new.txt").write_text("new content\n", encoding="utf-8")
+    apply_renames(tmp_path, [_Rename("c", "old.txt", "new.txt")])
 
-    _git("restore", ".", cwd=tmp_path)
-    _git("clean", "-fd", cwd=tmp_path)
-
-    assert (tmp_path / "a.txt").read_text(encoding="utf-8") == "original a\n"
-    assert (tmp_path / "b.txt").read_text(encoding="utf-8") == "original b\n"
-    assert not (tmp_path / "new.txt").exists()
-    assert _git("status", "--porcelain", cwd=tmp_path).strip() == ""
+    assert _git("status", "--porcelain", cwd=tmp_path).split()[0] == "R"
 
 
 def test_read_recorded_is_reused_by_pipeline() -> None:
