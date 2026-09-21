@@ -17,6 +17,7 @@ from tests.installed_client import (
     InstalledClient,
     build_candidate_wheel,
     build_client,
+    supplied_candidate_wheel,
 )
 
 if TYPE_CHECKING:
@@ -91,7 +92,15 @@ def candidate_wheel(e2e_child_env: dict[str, str]) -> Iterator[Path]:
     rather than resolving the editable console script: CF-14.02's installed
     Data Science validation and CF-14.03's installed rollout regression matrix
     (ADR 0032, ADR 0033).
+
+    `CREATE_FORGE_CANDIDATE_WHEEL=<path>` supplies an already-built wheel
+    instead -- the one PyPI serves after a release -- so the same suites can
+    test the published artefact (CF-21.03, ADR 0056). Unset, nothing changes.
     """
+    supplied = supplied_candidate_wheel(os.environ)
+    if supplied is not None:
+        yield supplied
+        return
     with tempfile.TemporaryDirectory(prefix="create-forge-candidate-wheel-") as tmp:
         yield build_candidate_wheel(Path(tmp), e2e_child_env)
 

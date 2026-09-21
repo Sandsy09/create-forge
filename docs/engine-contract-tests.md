@@ -10,8 +10,9 @@ the range to the `forge-template` 0.4 compatibility line, what CF-14.01
 (ADR 0040/0042) did by adopting the `0.5.0` engine-default cutover release
 and making the engine a required dependency, and what CF-21.01 (ADR 0050) did
 by adopting the `0.6.0` Streamlit provider release. This is what a
-`create-forge` install on `main` resolves; the published `create-forge 0.4.0`
-still declares the `0.5` line until CF-21.03 releases.
+`create-forge` install on `main` resolves, and what `create-forge 0.5.0`
+(CF-21.03, ADR 0056) publishes; `create-forge 0.4.0` keeps declaring the `0.5`
+line.
 
 ## Supported range
 
