@@ -29,8 +29,8 @@ adopted the reviewed `0.4.1` patch by raising the lower bound to
 release, moving it to `>=0.5,<0.6`; and CF-21.01
 ([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) adopted the
 reviewed `0.6.0` Streamlit provider release, moving it to `>=0.6,<0.7`
-(unreleased until CF-21.03; published `create-forge 0.4.0` declares
-`>=0.5,<0.6`). `copier`
+(released as `create-forge 0.5.0` by CF-21.03, [ADR 0056](adr/0056-publish-create-forge-0-5-0.md);
+`create-forge 0.4.0` keeps declaring `>=0.5,<0.6`). `copier`
 is now the compatibility-line dependency for the `--legacy` path instead,
 behind its own optional extra. **Two**
 compatibility-line dependencies exist simultaneously, each governing its
@@ -40,7 +40,8 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.4.x default `new` (required) | `forge-template` | `>=0.6,<0.7` | Current architecture (ADR 0042, CF-18.01); moved to the `0.6` line, unreleased (ADR 0050, CF-21.01) — published `0.4.0` declares `>=0.5,<0.6` |
+| v0.5.x default `new` (required) | `forge-template` | `>=0.6,<0.7` | Current architecture; the `0.6` Streamlit provider line (ADR 0050, CF-21.01), released as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
+| v0.4.x default `new` (required) | `forge-template` | `>=0.5,<0.6` | Superseded by v0.5.x (ADR 0056); the engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
 | v0.3.x default `new` | `copier` | `>=9.16,<10` | Now the `--legacy` route's dependency, behind the optional `legacy` extra (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Superseded by v0.4.x (ADR 0042) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |

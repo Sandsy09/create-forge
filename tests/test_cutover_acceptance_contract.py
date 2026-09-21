@@ -32,6 +32,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from packaging.version import Version
+
 from create_forge import compat
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -126,13 +128,15 @@ def _matrix_owner_tokens() -> set[str]:
 # --------------------------------------------------------------------------- #
 
 
-def test_create_forge_is_on_the_cutover_release_line() -> None:
+def test_create_forge_is_at_or_past_the_cutover_release() -> None:
     """ADR 0042 decision 1 fixed the cutover as `create-forge 0.4.0`; CF-18.07
-    (ADR 0049) published it. This reads the live version, so a future release
-    off the `0.4.x` line cannot silently drift this contract's own claim.
+    (ADR 0049) published it. This reads the live version, so a version *behind*
+    the cutover cannot silently contradict this contract's own claim. ADR 0056
+    (CF-21.03) moved the package on to `0.5.0`: the cutover release is a floor,
+    not the current line, which `compat.INTEGRATION_LINE` tracks separately.
     """
-    version = str(_project()["version"])
-    assert version.startswith("0.4."), version
+    version = Version(str(_project()["version"]))
+    assert version >= Version("0.4.0"), version
 
 
 def test_supported_python_window_is_unchanged() -> None:
@@ -229,9 +233,11 @@ def test_diagnostic_line_tracks_the_cutover_release() -> None:
     `test_tripwire_version_is_not_yet_the_cutover_release`, with this derived
     pair: `compat.INTEGRATION_LINE` moved to the published release's line, and
     the acceptance contract's own Status section no longer claims the cutover
-    hasn't shipped.
+    hasn't shipped. ADR 0056 (CF-21.03) moved the line on to `v0.5.x-engine`
+    for the Streamlit provider release; the contract's text stays a statement
+    about the 0.4.0 cutover, which is why only the line literal moved.
     """
-    assert compat.INTEGRATION_LINE == "v0.4.x-engine"
+    assert compat.INTEGRATION_LINE == "v0.5.x-engine"
     text = " ".join(_contract().split())
     assert "has published yet" not in text
     assert "create-forge 0.4.0" in text

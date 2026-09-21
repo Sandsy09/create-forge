@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-CLIENT_VERSION = "0.4.0"
+CLIENT_VERSION = "0.5.0"
 ENGINE_VERSION = "0.6.0"
 DEFAULT_PYTHON = "3.13"
 SUBPROCESS_TIMEOUT = 1800
@@ -142,6 +142,35 @@ def installed_child_env(
     env[path_key] = f"{scripts}{os.pathsep}{env.get(path_key, '')}"
     env["XDG_CONFIG_HOME"] = str(config_root)
     return env
+
+
+SUPPLIED_WHEEL_ENV = "CREATE_FORGE_CANDIDATE_WHEEL"
+
+
+def supplied_candidate_wheel(environ: Mapping[str, str]) -> Path | None:
+    """The wheel `CREATE_FORGE_CANDIDATE_WHEEL` names, or `None` to build one.
+
+    An opt-in that lets the installed suites run against an already-built
+    artefact -- the wheel downloaded from PyPI after a release -- instead of the
+    working tree (CF-21.03, ADR 0056). It is checked rather than trusted: a
+    missing file, a non-wheel, or a wheel for another `CLIENT_VERSION` fails
+    loudly, because a suite that silently tested the wrong wheel would be worse
+    than one that did not run.
+    """
+    value = environ.get(SUPPLIED_WHEEL_ENV)
+    if not value:
+        return None
+    wheel = Path(value)
+    if not wheel.is_file() or wheel.suffix != ".whl":
+        msg = f"{SUPPLIED_WHEEL_ENV}={value!r} is not an existing .whl file"
+        raise ValueError(msg)
+    if not wheel.name.startswith(f"create_forge-{CLIENT_VERSION}-"):
+        msg = (
+            f"{SUPPLIED_WHEEL_ENV} names {wheel.name}, but the suites expect "
+            f"create_forge-{CLIENT_VERSION}-*.whl"
+        )
+        raise ValueError(msg)
+    return wheel
 
 
 def build_candidate_wheel(dist_dir: Path, base_env: Mapping[str, str]) -> Path:

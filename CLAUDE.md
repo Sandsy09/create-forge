@@ -240,9 +240,14 @@ for the published-artefact evidence, and [docs/README.md](docs/README.md) for
 everything else. The next roadmap is Streamlit
 ([docs/roadmap-v4/](docs/roadmap-v4/)): `main` has adopted the reviewed
 `forge-template 0.6.0` Streamlit provider line (`>=0.6,<0.7`, CF-21.01,
-[ADR 0050](docs/adr/0050-adopt-the-0-6-streamlit-provider-line.md)) but it is
-**unreleased** — the published `0.4.0` still declares `>=0.5,<0.6`, so the user
-guide keeps that range until CF-21.03 releases.
+[ADR 0050](docs/adr/0050-adopt-the-0-6-streamlit-provider-line.md)), and
+CF-21.03 ([ADR 0056](docs/adr/0056-publish-create-forge-0-5-0.md)) releases it
+as `create-forge 0.5.0` (line `v0.5.x-engine`). The release is dispatched by
+hand only after a dry run and an explicit maintainer go, and `main` is frozen
+until it is done. The user guide keeps the published `0.4.0`'s `>=0.5,<0.6`
+range and the Streamlit page stays excluded from the site until the published
+artefacts are verified (Phase B); check PyPI, not this paragraph, for what is
+actually published.
 
 ## Gotchas already hit
 

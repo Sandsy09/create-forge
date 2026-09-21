@@ -49,8 +49,10 @@ retained `--template-url` under `--legacy` — remains
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
 [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165)
 ([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) then crossed to
-the `forge-template>=0.6,<0.7` Streamlit provider line, unreleased until
-CF-21.03.
+the `forge-template>=0.6,<0.7` Streamlit provider line, which
+[CF-21.03](https://github.com/Sandsy09/create-forge/issues/167)
+([ADR 0056](adr/0056-publish-create-forge-0-5-0.md)) released as
+`create-forge 0.5.0`.
 
 `forge-template 0.6.0` is the lower bound of the current line and its current
 compatible release — the first to discover the `streamlit` archetype, changing
@@ -92,7 +94,8 @@ or `uv sync --all-extras` — for `new --legacy` and `update`'s Copier route.
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Superseded by v0.4.x (ADR 0042) |
-| v0.4.x (required) | `forge-template>=0.6,<0.7` | `1` (supported) | Current architecture (ADR 0042, CF-18.01); range advanced to the `0.6` line, unreleased (ADR 0050, CF-21.01). Published `create-forge 0.4.0` declares `forge-template>=0.5,<0.6` |
+| v0.4.x (required) | `forge-template>=0.5,<0.6` | `1` (supported) | Superseded by v0.5.x (ADR 0056). The engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
+| v0.5.x (required) | `forge-template>=0.6,<0.7` | `1` (supported) | Current architecture; the `0.6` Streamlit provider line (ADR 0050, CF-21.01), released as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —
@@ -186,7 +189,7 @@ major version.
 | --- | --- | --- |
 | `create_forge` | CLI version | always |
 | `python`, `platform` | interpreter version and OS | always |
-| `integration.line` | `"v0.4.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
+| `integration.line` | `"v0.5.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
 | `integration.copier` | installed Copier version, `null` if the `legacy` extra isn't installed | `importlib.metadata`, never an import of Copier itself |
 | `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine fails closed at exit `1`, since it is a required dependency (ADR 0040 decision 1) |
 | `integration.engine_range` | `"forge-template>=0.6,<0.7"` | always -- this is what this CLI release declares, independent of what's installed |

@@ -204,7 +204,7 @@ def test_engine_extra_is_retired_and_legacy_extra_holds_copier() -> None:
     )
 
     contract_text = INTEGRATION_CONTRACT.read_text(encoding="utf-8")
-    expected = f"| v0.4.x | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
+    expected = f"| v0.5.x | `{ENGINE_REQUIREMENT}` | 1 (supported) |"
     assert expected in contract_text, (
         "docs/integration-contract.md's compatibility table must record the "
         "same range this test just verified in pyproject.toml (ADR 0042)."

@@ -25,6 +25,10 @@ builds of the same candidate can be expected to share.
 
 Run `uv run poe evidence:candidate` (builds the wheel and sdist into a fresh
 temporary directory), or `--no-build` for just the digest and provider hashes.
+`--archive PATH` (repeatable) instead prints the two digests of files that were
+built elsewhere -- the wheel and sdist PyPI serves after a release -- so a
+published artefact can be compared with the candidate it came from (CF-21.03,
+ADR 0056).
 """
 
 from __future__ import annotations
@@ -242,6 +246,16 @@ def render_table(  # noqa: PLR0913 - one keyword per row group of the table
     return "\n".join(lines)
 
 
+def render_archive_table(archives: list[Path]) -> str:
+    """The archive sha256 and content digest of each given file, as a table."""
+    lines = ["| File | Archive sha256 | Content digest |", "| --- | --- | --- |"]
+    lines += [
+        f"| `{path.name}` | `{_sha256_file(path)}` | `{content_digest(path)}` |"
+        for path in archives
+    ]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Print the candidate binding table."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -250,7 +264,26 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="skip building the wheel and sdist (digest and provider hashes only)",
     )
+    parser.add_argument(
+        "--archive",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="PATH",
+        help=(
+            "print the archive sha256 and content digest of an already-built "
+            "wheel or sdist (repeatable), e.g. the files PyPI serves, and exit; "
+            "compare the content digest with a candidate's"
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.archive:
+        missing = [path for path in args.archive if not path.is_file()]
+        if missing:
+            parser.error(f"not a file: {', '.join(str(path) for path in missing)}")
+        print(render_archive_table(args.archive))
+        return 0
 
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text("utf-8"))
     version = pyproject["project"]["version"]

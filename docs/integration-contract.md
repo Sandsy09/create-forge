@@ -75,7 +75,8 @@ below).
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Superseded by v0.4.x (ADR 0042) |
-| v0.4.x | `forge-template>=0.6,<0.7` | 1 (supported) | Current architecture (ADR 0042, CF-18.01); range advanced to the `0.6` line, unreleased (ADR 0050, CF-21.01). Published `create-forge 0.4.0` declares `forge-template>=0.5,<0.6` |
+| v0.4.x | `forge-template>=0.5,<0.6` | 1 (supported) | Superseded by v0.5.x (ADR 0056). The engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
+| v0.5.x | `forge-template>=0.6,<0.7` | 1 (supported) | Current architecture; the `0.6` Streamlit provider line (ADR 0050, CF-21.01), released as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
 
 CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
 `engine` extra into `[project.dependencies]`, making the engine the default
@@ -99,8 +100,10 @@ and the public engine facade unchanged, so no adapter changed. `streamlit`
 declares no `requires`, `conflicts` or options and is reached only through the
 generic archetype/component contract; no production module names it. The
 `0.5.x` line remains a stable fourteen-component catalogue for a client pinned
-there. This adoption does not release `create-forge` (CF-21.03) or validate
-installed Streamlit generation (CF-21.02).
+there. That adoption did not itself release `create-forge`: CF-21.02 validated
+installed Streamlit generation, and CF-21.03
+([ADR 0056](adr/0056-publish-create-forge-0-5-0.md)) released the line as
+`create-forge 0.5.0`.
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI

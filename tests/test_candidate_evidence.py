@@ -27,6 +27,7 @@ from candidate_evidence import (
     content_digest,
     lock_artifacts,
     main,
+    render_archive_table,
     render_table,
     safety_digest,
 )
@@ -330,6 +331,37 @@ def _sdist(path: Path, members: dict[str, bytes], mtime: int) -> Path:
             info.mtime = mtime
             archive.addfile(info, io.BytesIO(content))
     return path
+
+
+def test_archive_table_lists_both_digests_per_file(tmp_path: Path) -> None:
+    wheel = _wheel(tmp_path / "a.whl", _MEMBERS, zipfile.ZIP_DEFLATED)
+    sdist = _sdist(tmp_path / "a.tar.gz", _MEMBERS, mtime=1)
+
+    table = render_archive_table([wheel, sdist])
+
+    for path in (wheel, sdist):
+        row = next(line for line in table.splitlines() if f"`{path.name}`" in line)
+        assert f"`{content_digest(path)}`" in row
+        assert len(_SHA256.findall(row)) == 2  # archive sha256 and content digest
+
+
+def test_main_archive_prints_the_table_without_building(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    wheel = _wheel(tmp_path / "a.whl", _MEMBERS, zipfile.ZIP_DEFLATED)
+
+    assert main(["--archive", str(wheel)]) == 0
+
+    out = capsys.readouterr().out
+    assert content_digest(wheel) in out
+    assert "forge-template version" not in out  # not the candidate table
+
+
+def test_main_archive_rejects_a_missing_file(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as raised:
+        main(["--archive", str(tmp_path / "nope.whl")])
+
+    assert raised.value.code == 2
 
 
 def test_content_digest_reads_an_sdist_and_ignores_its_metadata(tmp_path: Path) -> None:
