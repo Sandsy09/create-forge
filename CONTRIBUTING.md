@@ -190,6 +190,16 @@ uv run poe labels:sync --prune     # apply, deleting extras
 `pyproject.toml`'s `version` is the single source of truth for a release's
 tag — see [ADR 0009](docs/adr/0009-pyproject-as-the-single-version-source.md).
 
+0. **Confirm the installed safety evidence still applies.** Update safety is
+   proven through the installed wheel, and `main` goes red if the code that
+   evidence covers changes without it being refreshed. Before the bump PR, run
+   `uv run poe evidence:candidate` on the commit you will release and follow the
+   release-prerequisite checklist in
+   [docs/update-safety-validation.md](docs/update-safety-validation.md): it also
+   records the exact artefact hashes for both installed suites (update safety
+   and Streamlit) that the release needs. If the guard test fails, re-run
+   `uv run pytest tests/test_e2e_installed_update_safety.py` and refresh the
+   record first.
 1. Open a PR bumping `pyproject.toml`'s `version` and regenerating the
    changelog: `uv run git-cliff --tag vX.Y.Z --output CHANGELOG.md`.
 2. Merge it. Wait for `All checks passed` on `main`.

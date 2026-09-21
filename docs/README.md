@@ -56,6 +56,7 @@ Acceptance-checklist-to-named-test maps, each closing an epic or a release.
 | [engine-cutover-validation.md](engine-cutover-validation.md) | The installed-console cutover acceptance matrix's remaining rows, and the rewritten user guide (ADR 0048). |
 | [release-0-4-0-validation.md](release-0-4-0-validation.md) | The published `create-forge 0.4.0` / `forge-template 0.5.0` pair verified against its own artefacts, and the Engine-Default Cutover roadmap close-out (ADR 0049). |
 | [installed-streamlit-validation.md](installed-streamlit-validation.md) | The four accepted Streamlit compositions, the previous-line provider, and the Streamlit failure cases through the installed candidate wheel (ADR 0051). |
+| [update-safety-validation.md](update-safety-validation.md) | Update containment and recovery proven through the installed candidate wheel, the candidate's hashes and safety-relevant source digest, and CF-21.03's release prerequisite (ADR 0054). |
 
 ## Process and security
 

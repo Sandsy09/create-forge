@@ -239,6 +239,12 @@ jobs:
   # a real previous-line engine, and the Streamlit failure cases. Those
   # scientific-Python/Jupyter dependency trees, live notebooks, and the extra
   # installed environments hold the 60-minute budget.
+  # `test_e2e_installed_update_safety.py` (CF-22.03, ADR 0054) reuses the wheel
+  # once more for update safety through the installed console: real changed,
+  # removed and added targets, dry-run, containment refusals, and the recovery
+  # commands the console prints, against an outside sentinel file. It runs on
+  # Linux here and on Windows in `e2e-windows` below; one CI run of the same
+  # candidate therefore covers both this and the Streamlit suite.
   # ---------------------------------------------------------------------------
   e2e:
     name: End-to-end generation
@@ -272,10 +278,19 @@ jobs:
   # CF-18.06 / ADR 0048 adds the installed cutover suite's own install-mode
   # and legacy cases -- `uv tool install`'s produced console script and the
   # legacy Copier route's own file handling are exactly the same
-  # OS-sensitivity class. This job runs all three rather than widening `e2e`
-  # into a matrix: only these cases need a second OS, not the full 60-minute
-  # suite. Exactly the evidence commands docs/engine-cutover-acceptance.md's
-  # finalisation, engine-native-update, and installed-cutover rows name.
+  # OS-sensitivity class. CF-22.03 / ADR 0054 adds the installed update-safety
+  # suite: path containment (a symlink, a junction, a drive-qualified or
+  # reserved name) and the recovery commands it prints are OS-sensitive by
+  # construction, and CF-22.03's AC-02 requires Linux *and* Windows. This job
+  # runs them all rather than widening `e2e` into a matrix: only these cases
+  # need a second OS, not the full 60-minute suite. Exactly the evidence
+  # commands docs/engine-cutover-acceptance.md's finalisation,
+  # engine-native-update, and installed-cutover rows name, plus
+  # docs/update-safety-validation.md's installed suite.
+  #
+  # The list below is hand-picked, so a new installed module is silently absent
+  # from Windows unless it is named here -- tests/test_update_safety_evidence.py
+  # guards this one.
   # ---------------------------------------------------------------------------
   e2e-windows:
     name: End-to-end lifecycle and update (Windows)
@@ -303,6 +318,9 @@ jobs:
 
       - name: Installed cutover install-mode and legacy tests
         run: uv run pytest tests/test_e2e_installed_cutover.py -k "install_modes or legacy"
+
+      - name: Installed update-safety tests
+        run: uv run pytest tests/test_e2e_installed_update_safety.py
 
   # ---------------------------------------------------------------------------
   # Single required status check for branch protection.
