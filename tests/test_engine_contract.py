@@ -43,6 +43,8 @@ INSTALLED_DATA_SCIENCE_VALIDATION = (
 INSTALLED_STREAMLIT_VALIDATION = (
     REPO_ROOT / "docs" / "installed-streamlit-validation.md"
 )
+UPDATE_SAFETY_VALIDATION = REPO_ROOT / "docs" / "update-safety-validation.md"
+CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
 ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
 ENGINE_CUTOVER_VALIDATION = REPO_ROOT / "docs" / "engine-cutover-validation.md"
@@ -403,6 +405,22 @@ def test_installed_streamlit_validation_doc_is_linked_from_entry_points() -> Non
         )
 
     assert INSTALLED_STREAMLIT_VALIDATION.is_file()
+
+
+def test_update_safety_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-22.03's installed update-safety evidence (ADR 0054) is a release
+    prerequisite for CF-21.03, so it must stay discoverable from the docs index,
+    the end-to-end contract, and the Releasing steps a maintainer follows.
+    """
+    link_re = re.compile(r"\([^)]*update-safety-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, END_TO_END_TESTS, CONTRIBUTING):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link update-safety-validation.md"
+        )
+
+    assert UPDATE_SAFETY_VALIDATION.is_file()
 
 
 def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None:

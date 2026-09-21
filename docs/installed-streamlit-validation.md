@@ -133,6 +133,20 @@ bumping the version, and publishing. Interactive selection at the installed leve
 is proven through discovery and in-process, not through a pseudo-terminal (ADR
 0051 decision 6).
 
+## One candidate, two installed suites
+
+CF-21.03's release criteria require the exact candidate hashes for **both** this
+suite and the installed update-safety suite
+([update-safety-validation.md](update-safety-validation.md), CF-22.03, ADR 0054).
+They run against the same candidate wheel and the same published `forge-template`
+in one protected CI run, and `uv run poe evidence:candidate` prints the artefact
+hashes both records bind to; the release-prerequisite checklist in that record
+covers both. This suite's own protected CI run, for the merge that added it, was
+[35582899643](https://github.com/Sandsy09/create-forge/actions/runs/35582899643)
+(`End-to-end generation` 7m0s, `End-to-end lifecycle and update (Windows)` 2m26s)
+— the CI evidence for CF-ROADMAP-02-AC-06 that the "Not completed locally" note
+above points to.
+
 When this installed boundary or its evidence changes, update this record, the
 [end-to-end tests contract](end-to-end-tests.md), and the executable suite in the
 same pull request.

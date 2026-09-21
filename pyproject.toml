@@ -224,6 +224,13 @@ docs = "mkdocs serve"
 # entry point -- see scripts/check_workflows.py.
 "check:workflows" = "python scripts/check_workflows.py"
 
+# Prints the table that binds the installed update-safety evidence to one
+# candidate: commit, wheel/sdist hashes, forge-template artefact hashes, tool
+# versions, and the safety-relevant source digest a fast-suite test checks
+# (ADR 0054, CF-22.03). Re-run on the release commit to refresh it; `--no-build`
+# skips the build. See scripts/candidate_evidence.py.
+"evidence:candidate" = "python scripts/candidate_evidence.py"
+
 # Reconciles a repo's GitHub labels against .github/labels.toml. Idempotent:
 # `gh label create --force` creates or updates. Pass extra args after `--`,
 # e.g. `uv run poe labels:sync --dry-run` or `--repo OWNER/NAME --prune`
