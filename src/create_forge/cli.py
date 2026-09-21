@@ -1448,9 +1448,16 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
 
         if degraded:
             recorded, new = pipeline.prepare_degraded_update(project)
+            new_files = {file.target: file.content for file in new.files}
+            update.preflight_update(
+                project,
+                metadata_filename=engine.generation_metadata_target(),
+                targets=new_files,
+                recorded_targets=recorded.digests,
+            )
             outcome = update.degraded_plan(
                 project,
-                {file.target: file.content for file in new.files},
+                new_files,
                 recorded_digests=recorded.digests,
                 dry_run=dry_run,
             )
@@ -1463,15 +1470,31 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
                     err.print(f"[red]{exc}[/red]")
                     raise typer.Exit(3) from exc
                 recorded, new = pipeline.prepare_degraded_update(project)
+                new_files = {file.target: file.content for file in new.files}
+                update.preflight_update(
+                    project,
+                    metadata_filename=engine.generation_metadata_target(),
+                    targets=new_files,
+                    recorded_targets=recorded.digests,
+                )
                 outcome = update.degraded_plan(
                     project,
-                    {file.target: file.content for file in new.files},
+                    new_files,
                     recorded_digests=recorded.digests,
                     dry_run=dry_run,
                 )
                 degraded_reason = str(exc)
             else:
                 new = preparation.new
+                # ADR 0052: refuse the whole update before its first mutation.
+                # Plan targets already cover every recorded target the plan
+                # acts on, so the recorded document itself is not re-read here.
+                update.preflight_update(
+                    project,
+                    metadata_filename=engine.generation_metadata_target(),
+                    targets=[item.target for item in preparation.plan.targets],
+                    renames=preparation.plan.renames,
+                )
                 update.apply_renames(project, preparation.plan.renames)
                 outcome = update.apply_plan(
                     project,
@@ -1492,8 +1515,10 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
             msg = "the engine returned no generation metadata for this render"
             raise StagingError(msg)
         refreshed = engine.metadata_json(new.metadata, degraded_reason=degraded_reason)
-        (project / engine.generation_metadata_target()).write_text(
-            refreshed, encoding="utf-8"
+        update.write_recorded(
+            project,
+            metadata_filename=engine.generation_metadata_target(),
+            content=refreshed,
         )
         update.stage_result(project)
 

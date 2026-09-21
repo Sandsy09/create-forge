@@ -19,8 +19,10 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+from create_forge import paths
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -48,54 +50,25 @@ def ensure_available(dst: Path) -> None:
         raise DestinationConflictError(msg)
 
 
-# Copier's `copier.yml` `_exclude` list, minus `copier.yml` itself (which has
-# no engine analogue -- ADR 0045) and `.git` (folded into `_is_denylisted`
-# below, since it is now load-bearing rather than merely hygienic: `git init`
-# runs at `dst` after the rename, so a rendered `.git/hooks/pre-commit` would
-# survive re-initialisation and then execute). `PurePosixPath.match` applies
-# each pattern to the whole target, so `*.py[co]` and `__pycache__` catch a
-# match at any depth, not only at the root.
-_DENYLISTED_PATTERNS = ("*.py[co]", "__pycache__", "__pycache__/*", "~*", ".DS_Store")
-
-
-def _is_denylisted(posix_target: PurePosixPath) -> bool:
-    """Whether `posix_target` falls under the engine's `_exclude` refusal.
-
-    A `.git` path segment anywhere is refused outright; the rest are Copier's
-    hygiene patterns, matched against the whole target so they catch a nested
-    path (`sub/__pycache__/mod.pyc`) the same as a root-level one.
-    """
-    if ".git" in posix_target.parts:
-        return True
-    return any(posix_target.match(pattern) for pattern in _DENYLISTED_PATTERNS)
-
-
 def _safe_relative_path(root: Path, target: str) -> Path:
     """Resolve one project-relative target under `root`, refusing escapes.
 
     Targets are engine-owned strings using forward slashes (`RenderedFile`
-    documents them as project-relative). `PurePosixPath` parses them
-    platform-independently before `Path` joins them, so a target containing
-    backslashes is treated as a literal filename component, never as a
-    Windows separator.
+    documents them as project-relative). The spelling, `_exclude` refusal, and
+    containment rules are `paths.py`'s -- shared with the `update` path so the
+    two can never disagree (ADR 0052); this only phrases a rejection for the
+    staging surface.
     """
-    posix_target = PurePosixPath(target)
-    if posix_target.is_absolute() or posix_target.drive:
-        msg = f"refusing to write outside the staging directory: {target!r}"
-        raise StagingError(msg)
-    if ".." in posix_target.parts:
-        msg = f"refusing to write outside the staging directory: {target!r}"
-        raise StagingError(msg)
-    if _is_denylisted(posix_target):
-        msg = f"refusing to write an excluded target: {target!r}"
-        raise StagingError(msg)
-
-    resolved_root = root.resolve()
-    destination = (root / Path(*posix_target.parts)).resolve()
-    if destination != resolved_root and resolved_root not in destination.parents:
-        msg = f"refusing to write outside the staging directory: {target!r}"
-        raise StagingError(msg)
-    return destination
+    try:
+        return paths.ProjectBoundary.for_project(root).resolve(target)
+    except paths.PathContainmentError as exc:
+        if exc.violation is paths.Violation.EXCLUDED:
+            msg = f"refusing to write an excluded target: {target!r}"
+        elif exc.violation is paths.Violation.SPELLING:
+            msg = f"refusing to write an unsafe target: {target!r} ({exc.reason})"
+        else:
+            msg = f"refusing to write outside the staging directory: {target!r}"
+        raise StagingError(msg) from exc
 
 
 def write_files(root: Path, files: Iterable[tuple[str, bytes]]) -> None:

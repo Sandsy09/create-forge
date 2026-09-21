@@ -13,6 +13,7 @@ the same behaviour at the CLI layer without paying for a real clone.
 from __future__ import annotations
 
 import builtins
+import hashlib
 import importlib.metadata
 import json
 import subprocess
@@ -2193,3 +2194,83 @@ def test_engine_update_explicit_degraded_flag_records_the_reason(
     assert result.exit_code == 0, result.output
     written = json.loads(_metadata_path(project).read_text(encoding="utf-8"))
     assert written["reproduction"]["mode"] == "degraded"
+
+
+# --------------------------------------------------------------------------- #
+# Update target containment (CF-22.01, ADR 0052) -- update.py's boundary is    #
+# tests/test_update_containment.py's job; this proves cli.py preflights the    #
+# whole update before its first mutation on both the normal and degraded paths. #
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeTarget:
+    target: str
+    classification: str
+    regeneration: str = "replace"
+
+
+def test_engine_update_refuses_an_unsafe_plan_target_before_any_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _engine_project(tmp_path)
+    before = _metadata_path(project).read_text(encoding="utf-8")
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    plan = _FakePlan(targets=(_FakeTarget("../outside/x.txt", "changed"),))
+    monkeypatch.setattr(
+        pipeline_module,
+        "prepare_update",
+        lambda project: pipeline_module.UpdatePreparation(
+            plan=cast(Any, plan),
+            new=cast(Any, fake_new),
+            old={},
+            recorded=cast(Any, None),
+        ),
+    )
+    mutated: list[str] = []
+    monkeypatch.setattr(
+        "create_forge.update.apply_renames",
+        lambda project, renames: mutated.append("apply_renames"),
+    )
+    monkeypatch.setattr(
+        "create_forge.update.apply_plan",
+        lambda *a, **k: mutated.append("apply_plan"),
+    )
+
+    result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 1, result.output
+    assert "unsafe update target" in " ".join(result.output.split())
+    assert mutated == []
+    assert _metadata_path(project).read_text(encoding="utf-8") == before
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_engine_update_degraded_refuses_a_tampered_recorded_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dry_run: bool
+) -> None:
+    """The recorded digest matches the outside file -- the case that, before
+    ADR 0052, was read (even in `--dry-run`) and then deleted.
+    """
+    project = _engine_project(tmp_path)
+    outside = tmp_path / "sentinel.txt"
+    outside.write_bytes(b"outside\n")
+    digest = "sha256:" + hashlib.sha256(b"outside\n").hexdigest()
+    fake_new = _FakeRendered(files=(), metadata=_synthetic_metadata())
+    recorded = RecordedDocument(
+        raw="{}",
+        provider_version="0.6.0",
+        spec={},
+        digests={"../sentinel.txt": digest},
+    )
+    monkeypatch.setattr(
+        pipeline_module,
+        "prepare_degraded_update",
+        lambda project: (recorded, cast(Any, fake_new)),
+    )
+    args = ["update", str(project), "--degraded"]
+    result = runner.invoke(app, [*args, "--dry-run"] if dry_run else args)
+
+    assert result.exit_code == 1, result.output
+    assert "unsafe update target" in " ".join(result.output.split())
+    assert outside.read_bytes() == b"outside\n"

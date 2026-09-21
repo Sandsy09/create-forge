@@ -153,24 +153,73 @@ the staging, atomic-rename and cleanup rules on this page are unchanged by it.
 
 ## Target safety
 
-`staging.write_files` resolves every `(target, content)` pair the engine
-hands back before writing anything. A target is rejected — and nothing from
-that call is written — if it is absolute, drive-qualified, or contains a
-`..` segment anywhere, or if its resolved path would land outside the
-staging root. `RenderedFile.target` is documented as project-relative, but
-this is not assumed without checking: the safety boundary belongs to
-`create-forge`, the same way destination-conflict and path-traversal checks
-always have.
+One client-owned boundary, `create_forge.paths`
+([ADR 0052](adr/0052-contain-every-client-filesystem-target.md),
+[CF-22.01](https://github.com/Sandsy09/create-forge/issues/193)), turns every
+engine-supplied target *string* into a filesystem path. `RenderedFile.target`
+and `UpdateTarget.target` are documented as project-relative, but that is not
+assumed without checking: the safety boundary belongs to `create-forge`, the
+same way destination-conflict and path-traversal checks always have. Two routes
+use it — `staging.write_files` when generating, and `update.py` when applying
+an engine-native update (see
+[engine-project-lifecycle.md](engine-project-lifecycle.md)) — so they cannot
+disagree about what a target may be.
 
-The same pass also refuses `forge-template`'s `copier.yml` `_exclude`
-denylist (ADR 0045, [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)):
-a `.git` path segment anywhere, `*.py[co]`, `__pycache__`, a `~`-prefixed
-name, or `.DS_Store`. The `.git` refusal is load-bearing, not merely
-hygienic — the lifecycle above runs `git init` at `dst` after the rename, so
-a rendered `.git/hooks/pre-commit` would survive re-initialisation and later
-execute as a real hook. `copier.yml` itself is not in this list: it is a
+### Accepted spelling
+
+A target is a relative, forward-slash POSIX path with no dot components:
+`src/pkg/module.py`. Everything below is rejected on **every** host, not only
+where it would misbehave, so a target that works on Linux works on Windows:
+
+| Rejected | Examples |
+| --- | --- |
+| empty or root-only | `""`, `"."`, `"/"`, `"//"` |
+| absolute | `/etc/passwd`, `//server/share/x` |
+| drive-qualified, drive-relative, or a `:` anywhere (which also covers NTFS alternate data streams) | `C:/x`, `C:x`, `a.txt:stream` |
+| any backslash (a UNC path, `C:\...`, or a Windows separator) | `a\b`, `\\server\share\x` |
+| `.`, `..` or empty components | `../x`, `a/../b`, `a//b`, `a/` |
+| control characters, including NUL | a NUL or newline byte inside a name |
+| Windows-reserved device names, with or without an extension | `aux.py`, `CON`, `COM1`, `nul.tar.gz` |
+| a component ending in a dot or space | `a./b`, `a /b` |
+
+### Refused names
+
+Also refused, on both routes and with nothing written: a `.git` path segment
+anywhere, `*.py[co]`, `__pycache__`, a `~`-prefixed name, and `.DS_Store`
+(ADR 0045, [CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)).
+The `.git` refusal is load-bearing, not merely hygienic: on `new` the lifecycle
+above runs `git init` at `dst` after the rename, so a rendered
+`.git/hooks/pre-commit` would survive re-initialisation and later execute as a
+real hook; on `update` the repository already exists, so a written hook would
+run on the user's next commit. `copier.yml` itself is not in this list: it is a
 template-source file Copier had to avoid copying into its own output, and the
 engine has no equivalent input to accidentally re-emit.
+
+### Containment
+
+The validated parts are joined to the project's resolved root and fully
+resolved, and the result must be a strict descendant of that root. One rule
+therefore covers an escaping **final symlink**, an escaping **symlinked
+parent**, and a **Windows junction** or reparse-point escape, and a leaf that
+does not exist yet is contained by its resolved existing prefix. A link that
+resolves back *inside* the project is left working — a user's own internal
+symlink is a legitimate local edit. `ProjectBoundary.resolve` returns the
+lexical location under the resolved root, so an internal symlink leaf is
+operated on as itself (removing it removes the link, not its target).
+
+`staging.write_files` validates every `(target, content)` pair before writing
+anything: one refused target aborts the whole call with nothing written by it.
+
+### Threat model
+
+This defends against a malformed, hostile or tampered *target string* — an
+engine result, a rename record, or a `.forge/generation.json` a user or a
+repository has edited. Validation and use are separate system calls, so a
+process that can mutate the project tree concurrently could swap a component
+between them. Callers revalidate immediately before each filesystem operation,
+which narrows that window and does not close it: **no race-safety guarantee is
+made**, and the boundary is not a defence against a party who already has write
+access to the tree.
 
 ## Finalisation and cleanup
 

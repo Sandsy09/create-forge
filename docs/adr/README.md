@@ -54,6 +54,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0049 — Publish create-forge 0.4.0 and close the Engine-Default Cutover roadmap](0049-publish-0-4-0-and-close-roadmap-v3.md)
 - [0050 — Adopt the forge-template 0.6 Streamlit provider line](0050-adopt-the-0-6-streamlit-provider-line.md)
 - [0051 — Validate Streamlit through the installed create-forge candidate](0051-validate-installed-streamlit-generation.md)
+- [0052 — Contain every client filesystem target behind one shared boundary](0052-contain-every-client-filesystem-target.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

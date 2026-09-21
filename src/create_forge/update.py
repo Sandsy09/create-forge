@@ -26,6 +26,15 @@ module for exactly that reason). `UpdateTargetView`/`AppliedRenameView`
 mirror `descriptors.py`'s `DescriptorView` pattern: structural `Protocol`s the
 real `forge_template.UpdateTarget`/`AppliedRename` satisfy without this
 module importing either.
+
+Every string this module turns into a filesystem path -- plan targets, rename
+endpoints, the metadata filename, and the `output[].target` strings read back
+out of the project's own editable `.forge/generation.json` -- goes through
+`paths.ProjectBoundary` (ADR 0052). `preflight_update` validates the complete
+update before the first rename, write, or delete; each filesystem operation
+then revalidates its own target, which narrows but does not close the window
+for a concurrent mutation (`paths.py` states the threat model and claims no
+race-safety).
 """
 
 from __future__ import annotations
@@ -40,10 +49,10 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
-from create_forge import staging
+from create_forge import paths, staging
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
 COPIER_ANSWERS_FILE = ".copier-answers.yml"
 """The direct-Copier route's own recorded-source file (`runner.update`'s)."""
@@ -71,6 +80,24 @@ class UpdateError(Exception):
     """
 
 
+def _contain(boundary: paths.ProjectBoundary, target: str) -> Path:
+    """Resolve one target through the boundary, as an `UpdateError`.
+
+    Names the target and the rule it broke, never a filesystem path.
+    """
+    try:
+        return boundary.resolve(target)
+    except paths.PathContainmentError as exc:
+        msg = f"refusing an unsafe update target {exc}"
+        raise UpdateError(msg) from exc
+
+
+def _contain_all(boundary: paths.ProjectBoundary, targets: Iterable[str]) -> None:
+    """Validate every target before a caller acts on the first."""
+    for target in targets:
+        _contain(boundary, target)
+
+
 class Route(StrEnum):
     """Which update path a project's on-disk files select (ADR 0041 rule 7)."""
 
@@ -95,7 +122,8 @@ def route_for(project: Path, *, metadata_filename: str, legacy: bool) -> Route:
     helper is offered (ADR 0047 rule 2) -- no metadata is fabricated and no
     answers are invented.
     """
-    has_metadata = (project / metadata_filename).is_file()
+    boundary = paths.ProjectBoundary.for_project(project)
+    has_metadata = _contain(boundary, metadata_filename).is_file()
     has_answers = (project / COPIER_ANSWERS_FILE).is_file()
     if not has_metadata and not has_answers:
         msg = (
@@ -137,7 +165,7 @@ class RecordedDocument:
 
 def read_recorded(project: Path, *, metadata_filename: str) -> RecordedDocument:
     """Read and structurally parse the recorded generation-metadata document."""
-    path = project / metadata_filename
+    path = _contain(paths.ProjectBoundary.for_project(project), metadata_filename)
     try:
         raw = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -177,6 +205,16 @@ def read_recorded(project: Path, *, metadata_filename: str) -> RecordedDocument:
     return RecordedDocument(
         raw=raw, provider_version=version, spec=spec, digests=digests
     )
+
+
+def write_recorded(project: Path, *, metadata_filename: str, content: str) -> None:
+    """Write the refreshed generation-metadata document (rule 19: written last).
+
+    The counterpart of `read_recorded`: the filename is an engine-supplied
+    string, so it is resolved through the boundary here too (ADR 0052).
+    """
+    path = _contain(paths.ProjectBoundary.for_project(project), metadata_filename)
+    path.write_text(content, encoding="utf-8")
 
 
 def _digest(content: bytes) -> str:
@@ -270,15 +308,22 @@ def apply_renames(project: Path, renames: Sequence[AppliedRenameView]) -> None:
     So a local edit under the old path travels with the move, rather than
     being stranded. A source that no longer exists (already moved, or
     removed by the user) is skipped -- nothing to carry.
+
+    Both endpoints of every rename are validated before the first move, and
+    revalidated as each move happens (ADR 0052). `--` keeps a target that
+    begins with `-` from being read as a `git mv` option.
     """
+    boundary = paths.ProjectBoundary.for_project(project)
     for rename in renames:
-        source = project / rename.from_
+        _contain_all(boundary, (rename.from_, rename.to))
+    for rename in renames:
+        source = _contain(boundary, rename.from_)
         if not source.exists():
             continue
-        destination = project / rename.to
+        destination = _contain(boundary, rename.to)
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
-            _git_output(["mv", "-f", rename.from_, rename.to], project)
+            _git_output(["mv", "-f", "--", rename.from_, rename.to], project)
         except UpdateError:
             # An untracked source (a partially-applied prior update, say)
             # cannot be `git mv`-ed -- fall back to a plain filesystem move.
@@ -378,21 +423,25 @@ class UpdateOutcome:
         return sum(1 for result in self.results if result.status in statuses)
 
 
-def _write(path: Path, content: bytes, *, dry_run: bool) -> None:
+def _write(
+    boundary: paths.ProjectBoundary, target: str, content: bytes, *, dry_run: bool
+) -> None:
+    path = _contain(boundary, target)  # revalidated at the point of use
     if dry_run:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
 
 
-def _remove(path: Path, *, dry_run: bool) -> None:
+def _remove(boundary: paths.ProjectBoundary, target: str, *, dry_run: bool) -> None:
+    path = _contain(boundary, target)  # revalidated at the point of use
     if dry_run:
         return
     path.unlink(missing_ok=True)
 
 
 def _merge_changed(  # noqa: PLR0913 - one keyword per merge input; the working/old/new triad and dry_run cannot collapse further
-    project: Path,
+    boundary: paths.ProjectBoundary,
     target: str,
     classification: str,
     *,
@@ -403,7 +452,7 @@ def _merge_changed(  # noqa: PLR0913 - one keyword per merge input; the working/
 ) -> TargetResult:
     if old_bytes is not None and working_bytes == old_bytes:
         # Pristine: no local edit to preserve, take the new bytes outright.
-        _write(project / target, new_bytes, dry_run=dry_run)
+        _write(boundary, target, new_bytes, dry_run=dry_run)
         return TargetResult(target, classification, "clean")
     if working_bytes == new_bytes:
         return TargetResult(target, classification, "unchanged")
@@ -413,7 +462,7 @@ def _merge_changed(  # noqa: PLR0913 - one keyword per merge input; the working/
     merged, conflicted = merge_target(
         base=old_bytes or b"", ours=working_bytes, theirs=new_bytes
     )
-    _write(project / target, merged, dry_run=dry_run)
+    _write(boundary, target, merged, dry_run=dry_run)
     return TargetResult(target, classification, "conflict" if conflicted else "clean")
 
 
@@ -452,7 +501,15 @@ def apply_plan(  # noqa: PLR0913 - one keyword per render side plus renames and 
     renamed target's *old* content, keyed by its pre-move path. `dry_run`
     classifies and would-write every target exactly like a real run but
     writes nothing (rule 16's "genuine preview" is this same code path).
+
+    Every plan target -- including `skip-if-exists` and `unchanged` entries,
+    which are never written but are still provider-supplied strings -- is
+    validated before the first write or delete, so an invalid late target
+    leaves no partial mutation and a `--dry-run` reads nothing outside the
+    project (ADR 0052).
     """
+    boundary = paths.ProjectBoundary.for_project(project)
+    _contain_all(boundary, (item.target for item in targets))
     rename_source = {rename.to: rename.from_ for rename in renames}
     results: list[TargetResult] = []
     for item in sorted(targets, key=lambda target: target.target):
@@ -462,7 +519,7 @@ def apply_plan(  # noqa: PLR0913 - one keyword per render side plus renames and 
         old_key = rename_source.get(item.target, item.target)
         results.append(
             _apply_one(
-                project,
+                boundary,
                 item,
                 old_bytes=old.get(old_key),
                 new_bytes=new.get(item.target),
@@ -473,14 +530,14 @@ def apply_plan(  # noqa: PLR0913 - one keyword per render side plus renames and 
 
 
 def _apply_one(  # noqa: PLR0911 - one return per classification-dispatch branch; the table above each is exactly this function's contract
-    project: Path,
+    boundary: paths.ProjectBoundary,
     item: UpdateTargetView,
     *,
     old_bytes: bytes | None,
     new_bytes: bytes | None,
     dry_run: bool = False,
 ) -> TargetResult:
-    path = project / item.target
+    path = _contain(boundary, item.target)
     classification = item.classification
 
     if classification == "unchanged":
@@ -491,10 +548,10 @@ def _apply_one(  # noqa: PLR0911 - one return per classification-dispatch branch
             msg = f"the new render has no bytes for {item.target!r}"
             raise UpdateError(msg)
         if not path.exists():
-            _write(path, new_bytes, dry_run=dry_run)
+            _write(boundary, item.target, new_bytes, dry_run=dry_run)
             return TargetResult(item.target, classification, "clean")
         return _merge_changed(
-            project,
+            boundary,
             item.target,
             classification,
             working_bytes=path.read_bytes(),
@@ -514,7 +571,7 @@ def _apply_one(  # noqa: PLR0911 - one return per classification-dispatch branch
                 item.target, classification, "skipped", "deleted locally; left absent"
             )
         return _merge_changed(
-            project,
+            boundary,
             item.target,
             classification,
             working_bytes=path.read_bytes(),
@@ -531,7 +588,7 @@ def _apply_one(  # noqa: PLR0911 - one return per classification-dispatch branch
             return TargetResult(item.target, classification, "unchanged")
         working_bytes = path.read_bytes()
         if working_bytes == old_bytes:
-            _remove(path, dry_run=dry_run)
+            _remove(boundary, item.target, dry_run=dry_run)
             return TargetResult(item.target, classification, "clean")
         return TargetResult(
             item.target,
@@ -561,13 +618,21 @@ def degraded_plan(
     recorded digest is replaced outright; anything else is left completely
     alone and reported for manual review, since there is no way to tell a
     local edit from an old template default without the old render.
+
+    The recorded digest keys come from a file the user can edit, so they are
+    the least trusted strings in an update: every new-render target *and*
+    every recorded target is validated before anything is read, written, or
+    deleted (ADR 0052) -- a tampered `output[].target` cannot make a
+    `--dry-run` read outside the project either.
     """
+    boundary = paths.ProjectBoundary.for_project(project)
+    _contain_all(boundary, (*new, *recorded_digests))
     results: list[TargetResult] = []
     for target, new_bytes in sorted(new.items()):
-        path = project / target
+        path = _contain(boundary, target)
         recorded_digest = recorded_digests.get(target)
         if not path.exists():
-            _write(path, new_bytes, dry_run=dry_run)
+            _write(boundary, target, new_bytes, dry_run=dry_run)
             results.append(TargetResult(target, "added", "clean"))
             continue
         working_bytes = path.read_bytes()
@@ -575,7 +640,7 @@ def degraded_plan(
             results.append(TargetResult(target, "unchanged", "unchanged"))
             continue
         if recorded_digest is not None and _digest(working_bytes) == recorded_digest:
-            _write(path, new_bytes, dry_run=dry_run)
+            _write(boundary, target, new_bytes, dry_run=dry_run)
             results.append(TargetResult(target, "changed", "clean"))
             continue
         results.append(
@@ -588,12 +653,12 @@ def degraded_plan(
         )
 
     for target in sorted(set(recorded_digests) - set(new)):
-        path = project / target
+        path = _contain(boundary, target)
         if not path.exists():
             continue
         working_bytes = path.read_bytes()
         if _digest(working_bytes) == recorded_digests[target]:
-            _remove(path, dry_run=dry_run)
+            _remove(boundary, target, dry_run=dry_run)
             results.append(TargetResult(target, "removed", "clean"))
         else:
             results.append(
@@ -605,6 +670,37 @@ def degraded_plan(
                 )
             )
     return UpdateOutcome(tuple(results))
+
+
+def preflight_update(
+    project: Path,
+    *,
+    metadata_filename: str,
+    targets: Iterable[str] = (),
+    renames: Sequence[AppliedRenameView] = (),
+    recorded_targets: Iterable[str] = (),
+) -> None:
+    """Validate a complete update before its first rename, write, or delete.
+
+    ADR 0052. Covers every string the update will turn into a path: the
+    metadata filename, every plan or new-render target (including
+    `skip-if-exists` and `unchanged` entries, which are never written but are
+    still provider-supplied), both endpoints of every rename, and every
+    target recorded in `.forge/generation.json`. Reads and writes nothing
+    itself. `apply_renames`, `apply_plan`, and `degraded_plan` each also
+    validate their own inputs up front and revalidate at the point of use;
+    this is the one call that lets `cli.py` refuse the whole update before
+    `apply_renames`, the first mutating step on the normal path.
+
+    Raises:
+        UpdateError: naming the offending target and the rule it broke.
+    """
+    boundary = paths.ProjectBoundary.for_project(project)
+    _contain(boundary, metadata_filename)
+    for rename in renames:
+        _contain_all(boundary, (rename.from_, rename.to))
+    _contain_all(boundary, targets)
+    _contain_all(boundary, recorded_targets)
 
 
 def stage_result(project: Path) -> None:
