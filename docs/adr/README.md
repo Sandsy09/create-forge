@@ -57,6 +57,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0052 — Contain every client filesystem target behind one shared boundary](0052-contain-every-client-filesystem-target.md)
 - [0053 — Recover a failed update from the repository's actual Git state](0053-recover-updates-from-the-actual-git-state.md)
 - [0054 — Verify update safety through the installed console, and bind it to the release candidate](0054-verify-installed-update-safety-on-the-release-candidate.md)
+- [0055 — Capture subprocess output as bytes, and decode it by an explicit rule](0055-capture-subprocess-output-as-bytes-and-decode-by-rule.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

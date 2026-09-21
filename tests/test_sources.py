@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import subprocess
 import traceback
 from pathlib import Path
 from urllib.parse import quote
@@ -18,6 +17,7 @@ from typer.testing import CliRunner
 from create_forge import cli, runner, staging
 from create_forge.config import UserConfig
 from create_forge.sources import SourceError, display_source, validate_source
+from tests.process import run_text
 
 SECRET = "sentinel-credential!"  # noqa: S105 -- deliberately public test sentinel
 ENCODED = quote(SECRET, safe="")
@@ -286,13 +286,7 @@ def test_real_console_does_not_render_rejected_sources(
             yaml.safe_dump({"_src_path": source}), encoding="utf-8"
         )
         args = ["update", str(tmp_path)]
-    result = subprocess.run(  # noqa: S603 -- resolved installed console and test data
-        [create_forge_command, *args],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
+    result = run_text([create_forge_command, *args], timeout=30, check=False)
     assert result.returncode == 1
     _assert_hidden(result.stdout + result.stderr)
     assert "Traceback" not in result.stdout + result.stderr

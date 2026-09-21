@@ -370,9 +370,9 @@ def test_a_failing_status_falls_back_rather_than_guessing(
     repo = _make_repo(tmp_path)
     real = update_module._read_git
 
-    def _read(args: list[str], cwd: Path) -> tuple[int, str] | None:
+    def _read(args: list[str], cwd: Path) -> tuple[int, bytes] | None:
         if args and args[0] == "status":
-            return 128, ""
+            return 128, b""
         return real(args, cwd)
 
     monkeypatch.setattr(update_module, "_read_git", _read)

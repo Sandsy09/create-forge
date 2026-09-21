@@ -297,6 +297,21 @@ The canonical [update-safety validation](update-safety-validation.md) record
 maps every CF-22.03 acceptance criterion to a named test, and binds the evidence
 to the candidate with `uv run poe evidence:candidate`.
 
+## How the harness decodes child output
+
+Every capturing subprocess call in the test suite decodes with an encoding it
+names (CF-23.01, [ADR 0055](adr/0055-capture-subprocess-output-as-bytes-and-decode-by-rule.md),
+[subprocess output contract](subprocess-output.md)). `tests/process.py::run_text`,
+which `installed_client.run`, `legacy_template.git` and the e2e modules use,
+captures bytes and decodes them as UTF-8 with replacement, so a decode can never
+raise and leave `stdout`/`stderr` as `None`, which is what `text=True` did under
+a non-UTF-8 Windows console. Children disagree about encodings — `git` and `uv`
+write UTF-8, a Python child writes the locale's — so a test that deliberately
+runs a child under a non-UTF-8 setting passes `encoding=` for what that child
+writes. `tests/test_subprocess_policy.py` fails any other text-mode capture that
+does not name its encoding. `PYTHONUTF8=1` is not part of the harness and is not
+needed for correctness.
+
 ## Running it
 
 ```bash

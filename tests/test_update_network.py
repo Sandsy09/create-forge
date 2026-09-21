@@ -24,6 +24,7 @@ from plumbum import local as plumbum_local
 
 from create_forge.registry import load_registry
 from create_forge.runner import ScaffoldRequest, scaffold, update
+from tests.process import run_text
 
 pytestmark = pytest.mark.network
 
@@ -72,14 +73,7 @@ def _git_identity_for_template_tasks() -> Iterator[None]:
 
 
 def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603
-        ["git", *args],  # noqa: S607
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+    return run_text(["git", *args], cwd=cwd, check=True, timeout=30)
 
 
 def test_update_against_the_real_template(tmp_path: Path) -> None:

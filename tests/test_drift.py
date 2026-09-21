@@ -24,6 +24,7 @@ import yaml
 
 from create_forge.models import Choice, PromptKind, PromptSpec
 from create_forge.registry import load_registry
+from tests.process import run_text
 
 pytestmark = pytest.mark.network
 
@@ -42,12 +43,8 @@ def _version_key(tag: str) -> tuple[int, int, int]:
 
 def _latest_tag(url: str) -> str | None:
     """The tag `vcs_ref=None` actually resolves to for users."""
-    result = subprocess.run(  # noqa: S603
-        ["git", "ls-remote", "--tags", "--refs", url],  # noqa: S607
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
+    result = run_text(
+        ["git", "ls-remote", "--tags", "--refs", url], check=True, timeout=30
     )
     tags = [
         line.rsplit("refs/tags/", 1)[-1] for line in result.stdout.splitlines() if line
@@ -122,8 +119,8 @@ def copier_yml(
                 pytest.skip(f"{url} has no version tags yet")
 
             dst = tmp_path_factory.mktemp("forge-template") / "repo"
-            subprocess.run(  # noqa: S603
-                [  # noqa: S607
+            run_text(
+                [
                     "git",
                     "clone",
                     "--quiet",
@@ -136,8 +133,6 @@ def copier_yml(
                 ],
                 check=True,
                 timeout=60,
-                capture_output=True,
-                text=True,
             )
         except (
             OSError,

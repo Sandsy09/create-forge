@@ -13,22 +13,16 @@ share it.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
+
+from tests.process import run_text
 
 TEMPLATE_FIRST_TAG = "v1.0.0"
 TEMPLATE_SECOND_TAG = "v1.1.0"
 
 
 def git(*args: str, cwd: Path) -> str:
-    return subprocess.run(  # noqa: S603
-        ["git", *args],  # noqa: S607
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    ).stdout
+    return run_text(["git", *args], cwd=cwd, check=True, timeout=30).stdout
 
 
 def init_repo(path: Path) -> None:

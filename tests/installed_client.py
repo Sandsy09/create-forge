@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING
 
 from packaging.utils import canonicalize_name
 
+from tests.process import run_text
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
@@ -82,12 +84,10 @@ def run(
     expired bound raises `subprocess.TimeoutExpired` rather than returning, so
     the test fails -- a timeout is never retried or absorbed into an exit code.
     """
-    return subprocess.run(  # noqa: S603 - reviewed argv, no shell
+    return run_text(
         list(command),
         cwd=cwd,
         env=dict(env) if env is not None else None,
-        capture_output=True,
-        text=True,
         timeout=timeout,
         check=False,
     )

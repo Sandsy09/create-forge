@@ -46,19 +46,13 @@ from create_forge.update import (
     require_clean_tree,
     stage_result,
 )
+from tests.process import run_text
 
 METADATA_FILE = ".forge/generation.json"
 
 
 def _git(*args: str, cwd: Path) -> str:
-    return subprocess.run(  # noqa: S603
-        ["git", *args],  # noqa: S607
-        cwd=cwd,
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    ).stdout
+    return run_text(["git", *args], cwd=cwd, check=True, timeout=30).stdout
 
 
 def _init_repo(path: Path) -> None:
@@ -632,7 +626,7 @@ def test_real_console_update_on_a_freshly_generated_project(
     suite's fakes.
     """
     project = tmp_path / "update-smoke"
-    new_result = subprocess.run(  # noqa: S603
+    new_result = run_text(
         [
             create_forge_command,
             "new",
@@ -653,18 +647,14 @@ def test_real_console_update_on_a_freshly_generated_project(
             "--path",
             str(project),
         ],
-        capture_output=True,
-        text=True,
         timeout=300,
         check=False,
         env=e2e_child_env,
     )
     assert new_result.returncode == 0, new_result.stdout + new_result.stderr
 
-    update_result = subprocess.run(  # noqa: S603
+    update_result = run_text(
         [create_forge_command, "update", str(project)],
-        capture_output=True,
-        text=True,
         timeout=300,
         check=False,
         env=e2e_child_env,

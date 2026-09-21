@@ -51,7 +51,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
-from create_forge import paths, staging
+from create_forge import capture, paths, staging
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -236,17 +236,18 @@ def _digest(content: bytes) -> str:
     return "sha256:" + hashlib.sha256(content).hexdigest()
 
 
-def _git_output(args: Sequence[str], cwd: Path) -> str:
-    """Run one git command, returning stdout on success.
+def _git_output(args: Sequence[str], cwd: Path) -> bytes:
+    """Run one git command, returning its raw stdout bytes on success.
+
+    Bytes, never decoded here: the callers ask only whether output is empty
+    (CF-23.01, docs/subprocess-output.md).
 
     Raises `UpdateError` on a missing executable, a launch failure, or a
     non-zero exit -- never leaking raw stdout/stderr.
     """
     command = ["git", *args]
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
-            command, cwd=cwd, capture_output=True, text=True, check=False
-        )
+        result = capture.run_captured(command, cwd=cwd)
     except FileNotFoundError as exc:
         msg = "git is not on PATH; install git and retry"
         raise UpdateError(msg) from exc
@@ -262,16 +263,16 @@ def _git_output(args: Sequence[str], cwd: Path) -> str:
 def _is_git_repository(project: Path) -> bool:
     command = ["git", "rev-parse", "--is-inside-work-tree"]
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
-            command, cwd=project, capture_output=True, text=True, check=False
-        )
+        result = capture.run_captured(command, cwd=project)
     except FileNotFoundError as exc:
         msg = "git is not on PATH; install git and retry"
         raise UpdateError(msg) from exc
     except OSError as exc:
         msg = f"could not launch git: {exc}"
         raise UpdateError(msg) from exc
-    return result.returncode == 0 and result.stdout.strip() == "true"
+    # `true` is ASCII; anything else -- including bytes with no valid reading --
+    # is simply "not a repository", never a decode error.
+    return result.returncode == 0 and result.stdout.strip() == b"true"
 
 
 def require_clean_tree(project: Path) -> None:
@@ -362,34 +363,36 @@ class RecoveryGuidance:
         return tuple(lines)
 
 
-def _read_git(args: Sequence[str], cwd: Path) -> tuple[int, str] | None:
+def _read_git(args: Sequence[str], cwd: Path) -> tuple[int, bytes] | None:
     """Run one read-only git query, or `None` if git could not be consulted.
 
-    Output is read as bytes and decoded leniently so this never depends on the
-    console codepage. A missing executable, a launch failure, and a timeout are
-    all `None`: recovery guidance must not fail in the failure path.
+    Returns the raw stdout bytes; each caller decodes by the rule for what it
+    reads (CF-23.01, docs/subprocess-output.md). A missing executable, a launch
+    failure, and a timeout are all `None`: recovery guidance must not fail in
+    the failure path.
     """
     command = ["git", *args]
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, read-only args
-            command,
-            cwd=cwd,
-            capture_output=True,
-            check=False,
-            timeout=_INSPECTION_TIMEOUT_SECONDS,
+        result = capture.run_captured(
+            command, cwd=cwd, timeout=_INSPECTION_TIMEOUT_SECONDS
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    return result.returncode, result.stdout.decode("utf-8", errors="replace")
+    return result.returncode, result.stdout
 
 
 def _repository_root(project: Path) -> Path | None:
-    """The top of the repository containing `project`, or `None` if unknown."""
+    """The top of the repository containing `project`, or `None` if unknown.
+
+    The root is *path data*: `decode_path` round-trips it exactly, where a
+    replacement decode would name a different directory and the printed recovery
+    commands would run against the wrong one.
+    """
     toplevel = _read_git(["rev-parse", "--show-toplevel"], project)
     if toplevel is None or toplevel[0] != 0:
         return None
-    root_text = toplevel[1].rstrip("\r\n")
-    return Path(root_text) if root_text else None
+    root = toplevel[1].rstrip(b"\r\n")
+    return Path(capture.decode_path(root)) if root else None
 
 
 def _inspect_repository(root: Path) -> RecoveryGuidance:
@@ -403,7 +406,13 @@ def _inspect_repository(root: Path) -> RecoveryGuidance:
     status = _read_git(["status", "--porcelain", "--untracked-files=normal"], root)
     if status is None or status[0] != 0:
         return RecoveryGuidance(RecoveryState.UNKNOWN, root, has_untracked=True)
-    entries = [line for line in status[1].splitlines() if line.strip()]
+    # Only the two-character status prefix is read, and it is ASCII, so a lenient
+    # decode of the rest (paths, in whatever bytes) cannot change the answer.
+    entries = [
+        line
+        for line in capture.decode_diagnostic(status[1]).splitlines()
+        if line.strip()
+    ]
     if not entries:
         return RecoveryGuidance(RecoveryState.UNCHANGED, root, has_untracked=False)
     has_untracked = any(line.startswith("??") for line in entries)
@@ -511,9 +520,9 @@ def merge_target(*, base: bytes, ours: bytes, theirs: bytes) -> tuple[bytes, boo
             str(theirs_path),
         ]
         try:
-            result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
-                command, capture_output=True, check=False
-            )
+            # The merged content is *binary*: the file's own bytes, never decoded
+            # and never newline-translated (CF-23.01, docs/subprocess-output.md).
+            result = capture.run_captured(command)
         except FileNotFoundError as exc:
             msg = "git is not on PATH; install git and retry"
             raise UpdateError(msg) from exc

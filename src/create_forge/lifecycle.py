@@ -27,9 +27,10 @@ failure can carry package-index credentials.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from create_forge import capture
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -47,13 +48,9 @@ def _run_git(args: Sequence[str], dst: Path) -> str | None:
     command = ["git", *args]
     hint_command = " ".join(["git", "-C", str(dst), *args])
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
-            command,
-            cwd=dst,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        # Only the exit status is read; the bytes are never decoded
+        # (CF-23.01, docs/subprocess-output.md).
+        result = capture.run_captured(command, cwd=dst)
     except FileNotFoundError:
         return f"git is not on PATH; install git, then {_hint(hint_command)}"
     except OSError as exc:
@@ -82,12 +79,7 @@ def _run_pre_commit_install(dst: Path) -> str | None:
     ]
     hint_command = " ".join(args)
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
-            args,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = capture.run_captured(args)
     except FileNotFoundError:
         return f"uv is not on PATH; install uv>=0.12,<0.13, then {_hint(hint_command)}"
     except OSError as exc:

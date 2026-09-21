@@ -128,31 +128,33 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 
 | Field | Value |
 | --- | --- |
-| Commit | `7c802081ee9d37fc5c5f6d84d93001ec3b58c323` (`main` before this change; measured with this change applied, uncommitted) |
+| Commit | `a9c48c7fcb5706de828ec541be9fbb9f9baa8184` (`main` before CF-23.01; measured with that change applied, uncommitted) |
 | create-forge version | `0.4.0` |
-| create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:c5199599203d93f77d42982ea927ae6719592387af90f48f3cd7b1aa1f73ddfa` |
-| create-forge wheel content digest | `sha256:d2838f3fcf67fcdaa2650cae28779e560a1ac830bda1f84c3c95f591dd160c10` |
-| create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:d0e0e88981a59984a5aed683ae3a968eeadf526395ccb6cfee256c1bb79ac89f` |
-| create-forge sdist content digest | `sha256:ca289060599581f49d043f5ebd684f44eb8b20dd6e771ce6f2f6b120989edd56` |
+| create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:817f21ac554f53cda43a1aef4fbb1e6230357ee19b22df7edce0d33fa1cbb366` |
+| create-forge wheel content digest | `sha256:73cca7e903feb169313af97e0c93816be68a95b6254d2b4a451d7466a4472668` |
+| create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:af5ab5a4d074af9a9c1eea82fd1767e4dc87509f21d7853fc21246cb46a2f9c2` |
+| create-forge sdist content digest | `sha256:68a2c5007dccca587224373bfe5e697af7af9d2d41918a5bcb58516b831c1a15` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
 | forge-template sdist | `forge_template-0.6.0.tar.gz` `sha256:07e036a582d038f704c5678a75d93c75cec186e8fb138b75ae08d933dd0b9db8` |
 | forge-template wheel | `forge_template-0.6.0-py3-none-any.whl` `sha256:cf21152242a81b6a19d5298521a77f504063091759b5cca721b3f527c64ac742` |
 | uv | `uv 0.12.13 (0ebbd9274 2026-09-10 x86_64-pc-windows-msvc)` |
 | git | `git version 2.47.1.windows.2` |
 | Python | `3.13.1` |
-| Safety-relevant source digest | `sha256:fefc37535bf1e1b6f7d7215dbef50a9320d78cea675b609c7a020b6c9cac8748` |
+| Safety-relevant source digest | `sha256:2d4e809b9c70d30f45e1eb0b7b596139a7edc3ae99197f6b9c79dfbf77ca465c` |
 
 - **Bound to the content digest, not the archive hash.** Building the same source
   in two build environments gave wheels with byte-identical members, order,
   timestamps and attributes and different archive sha256 (`compress_size` differs
   on 21 of 25 members: the compressed streams differ). Repeated builds in one
   environment are identical, which hides this. The content digest — a sha256 over
-  each member's name and bytes — is independent of compression. **Measured: the
-  wheel built from this change and the wheel built from `7c80208` have different
-  archive hashes and the same content digest** (`d2838f3f…`), so this change
-  ships exactly what `main` already did; it changes nothing under `src/`. The
-  archive hashes are informational, and comparable with the file PyPI serves only
-  for the artefact the release job itself built.
+  each member's name and bytes — is independent of compression. **Measured for
+  CF-22.03:** the wheel built from that change and the wheel built from
+  `7c80208` had different archive hashes and the same content digest
+  (`d2838f3f…`), showing that change shipped exactly what `main` already did.
+  CF-23.01 changes `src/` (ADR 0055), so its content digest is different by
+  design: `73cca7e9…`, previously `d2838f3f…`. The archive hashes are
+  informational, and comparable with the file PyPI serves only for the artefact
+  the release job itself built.
 - **The sdist includes `tests/`,** so its digests change with any test edit. It
   is recorded for completeness and must be re-measured at release.
 - **`forge-template` is bound by the hashes `uv.lock` pins,** the published,
@@ -190,6 +192,36 @@ pull request are the evidence for the whole tier and for the Linux and Windows
 runs of the new suite. The CI run id and the artefact hashes CI produced are
 recorded on [#195](https://github.com/Sandsy09/create-forge/issues/195), not
 here, so no docs-only commit is needed to paste them.
+
+## Refresh history
+
+### CF-23.01 (#196, ADR 0055): subprocess capture moved behind `capture.py`
+
+The guard above went red on purpose: `update.py`, `staging.py` and the hashed
+`cli.py` functions now start processes through `capture.run_captured` and decode
+by an explicit rule, and the evidence was refreshed rather than the digest
+edited. Behaviour is intended to be unchanged.
+
+| | Before | After |
+| --- | --- | --- |
+| Safety-relevant source digest | `sha256:fefc3753…` | `sha256:2d4e809b…` |
+| Wheel content digest | `sha256:d2838f3f…` | `sha256:73cca7e9…` |
+
+What was re-run on the migrated code, on Windows 11 with Python 3.13.1 in ambient
+`cp1252` mode (no `PYTHONUTF8`):
+
+- the installed update-safety suite: **14 passed, 1 skipped**, identical to the
+  result recorded above;
+- the installed cutover module: 18 passed (18 before);
+- the fast suite: **1453 passed, 11 skipped, 0 failed** (1108 before this change
+  plus its new tests; the added skip is a POSIX-only path-bytes case).
+
+**Not completed locally:** the engine-generation, rollout, Copier-generation,
+Data Science, Streamlit and update/engine-source e2e modules, and the network
+tier. The run was stopped by the development environment for low system memory
+(319 MB free of 6 GB) after the cutover module, and was not restarted. Each of
+them passed on clean `main` before the change, in the same mode; the protected CI
+`e2e` and `e2e-windows` jobs are the evidence for them on the migrated code.
 
 ## Findings
 

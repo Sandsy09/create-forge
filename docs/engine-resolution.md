@@ -146,7 +146,10 @@ supersedes ADR 0011's "no dual direct-Copier path afterward" clause only).
 this mechanism: `engine_source.py` provisions the environment and runs an
 out-of-process worker (`_engine_worker.py`) inside it, since there is no
 supported way to hold two differently-versioned copies of `forge_template` in
-one process (rule 25 above) -- see the ADR for why. This is now the
+one process (rule 25 above) -- see the ADR for why. The worker's wire format
+is UTF-8 in both directions, read strictly, whatever either side's locale is
+(CF-23.01, [ADR 0055](adr/0055-capture-subprocess-output-as-bytes-and-decode-by-rule.md),
+[subprocess output contract](subprocess-output.md)). This is now the
 sanctioned cross-repository development path, replacing the pre-cutover
 `--legacy --template-url` workaround
 [`docs/cross-repository-workflow.md`](cross-repository-workflow.md) used to

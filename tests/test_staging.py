@@ -35,10 +35,14 @@ def test_create_uv_lock_runs_in_the_staged_project(
 
     def fake_run(
         command: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[bytes]:
         calls.append(command)
-        assert kwargs == {"capture_output": True, "text": True, "check": False}
-        return subprocess.CompletedProcess(command, 0, "", "")
+        # Captured as bytes and never decoded (CF-23.01): no `text`, `encoding`,
+        # `errors` or `universal_newlines` may reach `subprocess.run`.
+        assert kwargs["capture_output"] is True
+        assert kwargs["check"] is False
+        assert not {"text", "encoding", "errors", "universal_newlines"} & kwargs.keys()
+        return subprocess.CompletedProcess(command, 0, b"", b"")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 

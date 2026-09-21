@@ -34,7 +34,7 @@ from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from create_forge import compat, sources, staging
+from create_forge import capture, compat, sources, staging
 from create_forge.descriptors import Descriptor
 
 if TYPE_CHECKING:
@@ -172,11 +172,10 @@ def _run_uv(args: Sequence[str]) -> None:
         )
         raise EngineSourceError(msg)
     try:
-        result = subprocess.run(  # noqa: S603 - fixed executable, reviewed args
+        # Bytes, never decoded: only the exit status is read (CF-23.01,
+        # docs/subprocess-output.md), so nothing uv wrote can fail here.
+        result = capture.run_captured(
             [uv, *args],
-            capture_output=True,
-            text=True,
-            check=False,
             env=_isolated_env(),
             timeout=_PROVISION_TIMEOUT_SECONDS,
         )
@@ -253,12 +252,12 @@ def _call_worker(
         resources.files("create_forge").joinpath(_WORKER_MODULE)
     ) as worker_path:
         try:
-            result = subprocess.run(  # noqa: S603 - fixed argv, reviewed
+            # The protocol is UTF-8 in both directions, whatever either side's
+            # locale is (CF-23.01, docs/subprocess-output.md). The request is
+            # ASCII by construction (`json.dumps` escapes), which is valid UTF-8.
+            result = capture.run_captured(
                 [str(runtime.python), str(worker_path), op],
-                input=json.dumps(dict(request or {})),
-                capture_output=True,
-                text=True,
-                check=False,
+                stdin=json.dumps(dict(request or {})).encode("utf-8"),
                 env=_isolated_env(),
                 timeout=_WORKER_TIMEOUT_SECONDS,
             )
@@ -269,9 +268,11 @@ def _call_worker(
             msg = "the engine source worker timed out"
             raise EngineSourceError(msg) from exc
 
+    # Strict: malformed bytes, a byte order mark, an empty body or a body that
+    # is not JSON is refused, and stderr is never read for content.
     try:
-        response = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
+        response = capture.parse_protocol_json(result.stdout)
+    except capture.ProtocolDecodeError as exc:
         msg = f"the engine source worker produced an unreadable response for {op!r}"
         raise EngineSourceError(msg) from exc
 

@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.process import run_text
+
 ROOT = Path(__file__).resolve().parents[1]
 CHECKER = ROOT / "scripts/check_roadmaps.py"
 
@@ -24,9 +26,7 @@ def run_check(
     if mirror:
         command.extend(["--mirror", str(mirror)])
     # The command is the current interpreter and our repository-owned checker.
-    return subprocess.run(  # noqa: S603
-        command, capture_output=True, text=True, check=False
-    )
+    return run_text(command, check=False)
 
 
 @pytest.fixture
