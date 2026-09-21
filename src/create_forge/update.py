@@ -41,6 +41,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -57,11 +59,24 @@ if TYPE_CHECKING:
 COPIER_ANSWERS_FILE = ".copier-answers.yml"
 """The direct-Copier route's own recorded-source file (`runner.update`'s)."""
 
-ROLLBACK_HINT = "git restore . && git clean -fd"
-"""Rule 18's printed-not-run recovery command for any failed or cancelled
-engine-native update. `create-forge` never runs this itself -- a tool
-invoking `git clean -fd` can delete untracked files the user cared about.
+RESTORE_COMMAND = ("git", "restore", "--source=HEAD", "--staged", "--worktree", ".")
+"""Rule 18's recovery (ADR 0053): return the index *and* the working tree to
+`HEAD`. Correct for an unstaged, a staged, a partly-staged, and an interrupted
+`git mv` state alike -- `git restore .` alone restores the worktree from the
+*index*, which a successful update (and an interrupted rename) has already
+changed. `create-forge` prints this and never runs it.
 """
+
+CLEAN_PREVIEW_COMMAND = ("git", "clean", "-nd")
+"""Lists the untracked files `CLEAN_COMMAND` would delete, deleting nothing."""
+
+CLEAN_COMMAND = ("git", "clean", "-fd")
+"""Deletes untracked files (never ignored ones -- there is no `-x`). Only ever
+printed after `CLEAN_PREVIEW_COMMAND`: a tool invoking this can delete files
+the user cared about, so the review comes first and the choice stays theirs.
+"""
+
+_INSPECTION_TIMEOUT_SECONDS = 30
 
 _MERGE_CONFLICT_TRUNCATION = 127
 """`git merge-file`'s own documented cap: its exit status is the conflict
@@ -276,6 +291,141 @@ def require_clean_tree(project: Path) -> None:
             "an engine-native update requires a clean working tree."
         )
         raise UpdateError(msg)
+
+
+class RecoveryState(StrEnum):
+    """What the repository looks like after a failed or cancelled update."""
+
+    UNCHANGED = "unchanged"
+    RESTORABLE = "restorable"
+    NO_HEAD = "no-head"
+    UNKNOWN = "unknown"
+
+
+def _render(command: Sequence[str]) -> str:
+    """One command as a line the user can paste into their shell."""
+    if os.name == "nt":
+        return subprocess.list2cmdline(list(command))
+    return shlex.join(command)
+
+
+@dataclass(frozen=True, slots=True)
+class RecoveryGuidance:
+    """The recovery text for the repository's actual Git state (ADR 0053).
+
+    Never executed by `create-forge`: `commands()` exists so the guidance the
+    CLI prints is also the guidance the tests run, and so the two cannot drift.
+    """
+
+    state: RecoveryState
+    root: Path | None
+    has_untracked: bool
+
+    def commands(self) -> tuple[tuple[str, ...], ...]:
+        """The argv of each printed command, anchored at the repository root."""
+        if self.state in (RecoveryState.UNCHANGED, RecoveryState.NO_HEAD):
+            return ()
+        anchor = ("git", "-C", str(self.root)) if self.root else ("git",)
+        anchored = [(*anchor, *RESTORE_COMMAND[1:])]
+        if self.has_untracked:
+            anchored.append((*anchor, *CLEAN_PREVIEW_COMMAND[1:]))
+            anchored.append((*anchor, *CLEAN_COMMAND[1:]))
+        return tuple(anchored)
+
+    def lines(self) -> tuple[str, ...]:
+        """What `cli.py` prints, one entry per line."""
+        if self.state is RecoveryState.UNCHANGED:
+            return ("No project files were changed; nothing to recover.",)
+        if self.state is RecoveryState.NO_HEAD:
+            return (
+                "There is no commit to restore from. Inspect `git status` and "
+                "recover by hand; nothing was run for you.",
+            )
+        where = (
+            "Run this from the repository root"
+            if self.state is RecoveryState.UNKNOWN
+            else "To abandon the update"
+        )
+        rendered = [_render(command) for command in self.commands()]
+        lines = [
+            f"{where}. It returns the whole repository to its last commit (HEAD) "
+            "and discards any uncommitted work made since:",
+            f"  {rendered[0]}",
+        ]
+        if self.has_untracked:
+            lines += [
+                "Review the untracked files it would remove, then delete them "
+                "only if you are sure:",
+                f"  {rendered[1]}",
+                f"  {rendered[2]}",
+            ]
+        return tuple(lines)
+
+
+def _read_git(args: Sequence[str], cwd: Path) -> tuple[int, str] | None:
+    """Run one read-only git query, or `None` if git could not be consulted.
+
+    Output is read as bytes and decoded leniently so this never depends on the
+    console codepage. A missing executable, a launch failure, and a timeout are
+    all `None`: recovery guidance must not fail in the failure path.
+    """
+    command = ["git", *args]
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed executable, read-only args
+            command,
+            cwd=cwd,
+            capture_output=True,
+            check=False,
+            timeout=_INSPECTION_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.returncode, result.stdout.decode("utf-8", errors="replace")
+
+
+def _repository_root(project: Path) -> Path | None:
+    """The top of the repository containing `project`, or `None` if unknown."""
+    toplevel = _read_git(["rev-parse", "--show-toplevel"], project)
+    if toplevel is None or toplevel[0] != 0:
+        return None
+    root_text = toplevel[1].rstrip("\r\n")
+    return Path(root_text) if root_text else None
+
+
+def _inspect_repository(root: Path) -> RecoveryGuidance:
+    """Classify the repository at `root` from `HEAD` and `git status`."""
+    head = _read_git(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], root)
+    if head is None:
+        return RecoveryGuidance(RecoveryState.UNKNOWN, root, has_untracked=True)
+    if head[0] != 0:
+        return RecoveryGuidance(RecoveryState.NO_HEAD, root, has_untracked=False)
+
+    status = _read_git(["status", "--porcelain", "--untracked-files=normal"], root)
+    if status is None or status[0] != 0:
+        return RecoveryGuidance(RecoveryState.UNKNOWN, root, has_untracked=True)
+    entries = [line for line in status[1].splitlines() if line.strip()]
+    if not entries:
+        return RecoveryGuidance(RecoveryState.UNCHANGED, root, has_untracked=False)
+    has_untracked = any(line.startswith("??") for line in entries)
+    return RecoveryGuidance(RecoveryState.RESTORABLE, root, has_untracked)
+
+
+def recovery_guidance(project: Path) -> RecoveryGuidance:
+    """Inspect the repository and describe how to abandon a failed update.
+
+    Only meaningful once `require_clean_tree` has passed: it is that
+    precondition that makes "everything now dirty came from the update" true.
+    Called before it, a user's own uncommitted work would read as restorable,
+    which is why the caller gates on it (ADR 0053).
+
+    Read-only (`rev-parse`, `status`) and never raises. Anything git cannot
+    answer is `UNKNOWN`, which still gives the restore command and the
+    untracked review -- the safe superset, with the user told where to run it.
+    """
+    root = _repository_root(project)
+    if root is None:
+        return RecoveryGuidance(RecoveryState.UNKNOWN, None, has_untracked=True)
+    return _inspect_repository(root)
 
 
 class AppliedRenameView(Protocol):

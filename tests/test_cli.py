@@ -2088,9 +2088,13 @@ def test_engine_update_relock_warning_is_printed(
     assert "uv lock failed somehow" in result.output
 
 
-def test_engine_update_dirty_tree_exits_1_with_the_rollback_hint(
+def test_engine_update_dirty_tree_exits_1_and_prints_no_recovery_command(
     tmp_path: Path,
 ) -> None:
+    """CF-22.02 (ADR 0053): the update never started, and the dirty files are
+    the user's own work -- so no command that discards a working tree is
+    printed. (Published 0.4.0 printed `git restore . && git clean -fd` here.)
+    """
     project = _engine_project(tmp_path)
     (project / "untracked.txt").write_text("x", encoding="utf-8")
 
@@ -2098,10 +2102,12 @@ def test_engine_update_dirty_tree_exits_1_with_the_rollback_hint(
 
     assert result.exit_code == 1, result.output
     assert "uncommitted changes" in result.output
-    assert "git restore . && git clean -fd" in result.output
+    assert "git restore" not in result.output
+    assert "git clean" not in result.output
+    assert (project / "untracked.txt").read_text(encoding="utf-8") == "x"
 
 
-def test_engine_update_keyboard_interrupt_exits_130_with_the_rollback_hint(
+def test_engine_update_keyboard_interrupt_exits_130_and_reports_the_real_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project = _engine_project(tmp_path)
@@ -2115,7 +2121,9 @@ def test_engine_update_keyboard_interrupt_exits_130_with_the_rollback_hint(
 
     assert result.exit_code == 130, result.output
     assert "Cancelled." in result.output
-    assert "git restore . && git clean -fd" in result.output
+    # Interrupted before anything was written: nothing to recover, and no command.
+    assert "nothing to recover" in " ".join(result.output.split())
+    assert "git restore" not in result.output
 
 
 def test_engine_update_unavailable_release_declined_exits_3(

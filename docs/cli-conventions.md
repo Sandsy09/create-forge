@@ -368,8 +368,13 @@ shipped:
   `forge-template` release rendering the recorded spec verbatim — `--ref`
   (the Copier route's own target-version flag) is rejected outright there,
   exit `1`;
-- recovery from a failed or cancelled update is `git restore . && git clean
-  -fd`, which `create-forge` prints but never runs itself;
+- recovery from a failed or cancelled update is printed from the repository's
+  actual Git state and never run by `create-forge`
+  ([ADR 0053](adr/0053-recover-updates-from-the-actual-git-state.md)): `git
+  restore --source=HEAD --staged --worktree .`, with untracked files previewed
+  (`git clean -nd`) before any `git clean -fd`; "nothing to recover" when
+  nothing changed; and no command at all before the clean-tree precondition
+  passes, so a user's own uncommitted work is never offered for discard;
 - an unavailable recorded engine release fails closed, with an opt-in
   (`--degraded`, or an interactive prompt) two-way update that decides
   "pristine" from the recorded per-target digest and records

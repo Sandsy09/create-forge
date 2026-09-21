@@ -1442,8 +1442,13 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
     """The engine-native `update` route (ADR 0041 rules 9-23, ADR 0046)."""
     from create_forge import engine, pipeline, update  # noqa: PLC0415
 
+    # ADR 0053: recovery guidance is only ever printed once the clean-tree
+    # precondition has passed. Before it, whatever is dirty is the user's own
+    # work, and telling them to restore it away would destroy it.
+    started = False
     try:
         update.require_clean_tree(project)
+        started = True
         degraded_reason: str | None = None
 
         if degraded:
@@ -1527,19 +1532,35 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
         _report_update_result(outcome)
     except KeyboardInterrupt:
         err.print("\n[dim]Cancelled.[/dim]")
-        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        _print_recovery(project, started=started)
         raise typer.Exit(130) from None
     except (update.UpdateError, StagingError) as exc:
         err.print(f"[red]{exc}[/red]")
-        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        _print_recovery(project, started=started)
         raise typer.Exit(1) from exc
     except engine.EngineCompatibilityError as exc:
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
         err.print(f"[red]{engine.explain(exc)}[/red]")
-        err.print(f"[dim]Recover with: {update.ROLLBACK_HINT}[/dim]")
+        _print_recovery(project, started=started)
         raise typer.Exit(1) from exc
+
+
+def _print_recovery(project: Path, *, started: bool) -> None:
+    """Rule 18 (ADR 0053): guidance for the repository's *actual* Git state.
+
+    Read from Git at failure time, so a failure that changed nothing says so
+    rather than printing a command, and a staged or half-renamed tree gets one
+    that actually restores it. Printed, never run. `soft_wrap` and no markup or
+    highlighting keep a command on one line, unmangled, ready to paste.
+    """
+    if not started:
+        return
+    from create_forge import update  # noqa: PLC0415
+
+    for line in update.recovery_guidance(project).lines():
+        err.print(line, style="dim", markup=False, highlight=False, soft_wrap=True)
 
 
 def _markers(target: Console) -> tuple[str, str]:
