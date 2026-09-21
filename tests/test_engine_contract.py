@@ -48,7 +48,7 @@ DOCS_INDEX = REPO_ROOT / "docs" / "README.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
-ENGINE_REQUIREMENT = "forge-template>=0.5,<0.6"
+ENGINE_REQUIREMENT = "forge-template>=0.6,<0.7"
 UV_REQUIREMENT = "uv>=0.12,<0.13"
 
 # ADR 0038 raised the Copier floor past the destination-escape advisories

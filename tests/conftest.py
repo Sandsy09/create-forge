@@ -101,7 +101,7 @@ def installed_client(
     candidate_wheel: Path, e2e_child_env: dict[str, str]
 ) -> Iterator[InstalledClient]:
     """The candidate wheel installed with the reviewed
-    `forge-template 0.5.0` engine release in one isolated virtual environment.
+    `forge-template 0.6.0` engine release in one isolated virtual environment.
 
     `forge-template` is a required dependency since ADR 0040 (CF-18.01) --
     there is no more `[engine]` extra to opt into; `engine=` pins the exact

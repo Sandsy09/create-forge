@@ -209,7 +209,9 @@ everything else there.
 
 Before that protocol comparison, `engine._require_supported_package` checks
 the installed package version against `compat.SUPPORTED_ENGINE_RANGE`
-(`forge-template>=0.5,<0.6` as of
+(`forge-template>=0.6,<0.7` as of
+[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md) (CF-21.01);
+`>=0.5,<0.6` under
 [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)
 (CF-18.01); `>=0.4.1,<0.5` under ADR 0031, `>=0.4,<0.5` under ADR 0026, and
 `>=0.3.1,<0.4` under ADR 0018 before it) with `packaging.specifiers.SpecifierSet`
@@ -254,7 +256,8 @@ through [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md)
 [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)) then
 moved it into `[project.dependencies]` as a **required** dependency —
 `forge-template>=0.5,<0.6` — making `copier` the optional `legacy` extra
-instead. `create-forge` itself (`pip install create-forge`, or
+instead; [ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md) (CF-21.01)
+has since moved that range to `>=0.6,<0.7`. `create-forge` itself (`pip install create-forge`, or
 `uvx create-forge`) now always resolves the engine; no `[tool.uv.sources]`
 override, no dev-only dependency group. Either resolution is from PyPI like
 any other dependency.

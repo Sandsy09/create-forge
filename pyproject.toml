@@ -32,11 +32,12 @@ dependencies = [
     # moves from the optional `engine` extra into a required dependency. ADR
     # 0018 assigned the first released range; ADR 0026 moved it to the
     # `forge-template` 0.4 line; ADR 0031 raised the floor to the reviewed
-    # 0.4.1 release; this adopts the reviewed 0.5.0 cutover release (ADR 0042
-    # / docs/engine-cutover-acceptance.md). src/create_forge/engine.py stays
-    # the only module that imports it; src/create_forge/compat.py holds the
-    # range itself so `doctor` can report it without importing the engine.
-    "forge-template>=0.5,<0.6",
+    # 0.4.1 release; ADR 0042 adopted the reviewed 0.5.0 cutover release
+    # (docs/engine-cutover-acceptance.md); ADR 0050 (CF-21.01) adopts the
+    # reviewed 0.6.0 Streamlit provider release. src/create_forge/engine.py
+    # stays the only module that imports it; src/create_forge/compat.py holds
+    # the range itself so `doctor` can report it without importing the engine.
+    "forge-template>=0.6,<0.7",
     # ADR 0021 adds bounded uv to finalise the engine render's dynamic
     # lockfile; ADR 0038 reviewed that floor against the advisory record and
     # held it -- the whole `>=0.12,<0.13` range is already advisory-free. Now

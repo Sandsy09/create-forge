@@ -26,11 +26,14 @@ Git/hook lifecycle, and engine-native `update` remain open, filed as
 The `forge-template` dependency -- required since CF-18.01, previously the
 optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) -- is
-range-bound to `>=0.5,<0.6`
-([ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). That
-production catalogue ships fourteen descriptors, including `library`, the
-optionless `cli` archetype, and `data-science`, plus the `github` platform
-and eight tooling capabilities, which discovery returns unchanged.
+range-bound to `>=0.6,<0.7`
+([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md), following
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). That
+production catalogue ships fifteen descriptors, including `library`, the
+optionless `cli` and `streamlit` archetypes, and `data-science`, plus the
+`github` platform and eight tooling capabilities, which discovery returns
+unchanged. `streamlit` reaches the client through discovery alone: no shipped
+module names it, and it declares no requirements, conflicts or options.
 `pipeline.discover_catalogue()` wraps one `engine.discover()` call in a frozen
 `Catalogue` with kind-grouped access (`archetypes`, `of_kind`, `get`,
 `kind_of`, `required_ids`), so `cli.py` selects every component kind from a
@@ -54,13 +57,13 @@ itself, not that selection layer.
 
 1. call the public `forge_template.get_engine_info()` facade once;
 2. require the installed package version to fall within
-   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.5,<0.6`);
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.6,<0.7`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and
-   `create_forge.compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2)` as
-   of CF-08.02, since the `library`/`cli` manifests this pair discovers are
-   protocol-2); and
+   `create_forge.compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2, 3)`,
+   widened from `(1, 2)` at the `0.5.0` cutover for protocol-3 rename and
+   regeneration records; the `streamlit` manifest is protocol-2); and
 5. call the public `forge_template.discover_components()` facade.
 
 A package outside the range, or either disjoint protocol set, raises

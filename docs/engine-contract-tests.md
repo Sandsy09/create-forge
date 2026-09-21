@@ -8,19 +8,21 @@ moved that pair to, what #9 (ADR 0018) then did -- assign the first
 the range to the `forge-template` 0.4 compatibility line, what CF-14.01
 (ADR 0031) did by adopting its reviewed `0.4.1` release, and what CF-18.01
 (ADR 0040/0042) did by adopting the `0.5.0` engine-default cutover release
-and making the engine a required dependency. This is what a released
-`create-forge` install actually resolves.
+and making the engine a required dependency, and what CF-21.01 (ADR 0050) did
+by adopting the `0.6.0` Streamlit provider release. This is what a
+`create-forge` install on `main` resolves; the published `create-forge 0.4.0`
+still declares the `0.5` line until CF-21.03 releases.
 
 ## Supported range
 
 | Surface | Supported value |
 | --- | --- |
 | `forge-template` distribution | PyPI, a required `create-forge` dependency (ADR 0040 / CF-18.01) |
-| `forge-template` range | `>=0.5,<0.6` (current compatible release: `0.5.0`) |
+| `forge-template` range | `>=0.6,<0.7` (current compatible release: `0.6.0`) |
 | ProjectSpec protocol | `1` |
 | Component-manifest protocol | `1, 2, 3` |
 
-`pyproject.toml` declares `forge-template>=0.5,<0.6` in
+`pyproject.toml` declares `forge-template>=0.6,<0.7` in
 `[project.dependencies]` -- an ordinary, index-resolved, range-bounded
 dependency, exactly like `typer`, `pydantic`, or (since ADR 0040) `uv`, not
 a `[tool.uv.sources]`-pinned commit or tag. It stopped being the optional
@@ -56,10 +58,16 @@ contract against it.
 then raises the lower bound within that line to the provider-reviewed `0.4.1`
 release and reruns this same contract against the PyPI artefact.
 
-Any package version outside the range fails closed. `0.5.0` is both the
-declared lower bound and the current compatible release; `0.4.1` is now
-rejected. The [engine update policy](engine-updates.md)'s adoption rule
-governs later `0.5.x` patches.
+[CF-21.01 / #165](https://github.com/Sandsy09/create-forge/issues/165)
+([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) crossed the
+next compatibility line, moving the range to `>=0.6,<0.7` and rerunning this
+contract against the PyPI artefact.
+
+Any package version outside the range fails closed. `0.6.0` is both the
+declared lower bound and the current compatible release; `0.5.0`, the previous
+line, and `0.4.1` are rejected, as is `0.7.0` at the excluded upper bound. The
+[engine update policy](engine-updates.md)'s adoption rule governs later `0.6.x`
+patches.
 
 `forge-template 0.4.0` is
 [published](https://pypi.org/project/forge-template/0.4.0/) as the
@@ -76,6 +84,12 @@ total), widens the component-manifest protocol to `(1, 2, 3)`, and publishes
 protocol/manifest coverage rather than republishing it unchanged; the
 provider's own
 [cutover-provider-release record](https://github.com/Sandsy09/forge-template/blob/main/docs/cutover-provider-release.md)
+is that release's evidence. `forge-template 0.6.0` (adopted by CF-21.01) adds
+one archetype, `streamlit` (fifteen components total), and changes no protocol
+tuple, `metadata_version` or public signature -- the source diff over the
+facade is empty, so this contract's public-facade coverage carried across the
+move without a signature change; the provider's
+[Streamlit provider release record](https://github.com/Sandsy09/forge-template/blob/main/docs/streamlit-provider-release.md)
 is that release's evidence.
 
 ## What the executable contract proves
@@ -146,7 +160,7 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 Local path builds include current working-tree source, including uncommitted
 changes, and override the released PyPI resolution for that one run only --
 no `pyproject.toml` or `uv.lock` change is needed or made. The sibling
-package must satisfy `>=0.5,<0.6`; a version outside that range is
+package must satisfy `>=0.6,<0.7`; a version outside that range is
 unsupported and fails until the declared range, contract, and tests are moved
 together. The broader
 [cross-repository contributor workflow](cross-repository-workflow.md) defines
@@ -160,8 +174,8 @@ which silently tests against old sibling code rather than the one intended.
 
 ## Adopting a new compatible release
 
-A `forge-template` release inside the declared `>=0.5,<0.6` range (`0.5.0`
-today; a later `0.5.x` patch while `0.5.x` stays the compatibility line) may
+A `forge-template` release inside the declared `>=0.6,<0.7` range (`0.6.0`
+today; a later `0.6.x` patch while `0.6.x` stays the compatibility line) may
 be adopted once this contract passes against it, per the sibling-checkout
 validation above and the [engine update policy](engine-updates.md). A release
 that would require a minor bump -- pre-1.0, that is itself a new

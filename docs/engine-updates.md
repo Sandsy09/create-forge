@@ -20,13 +20,17 @@ since CF-18.01 ([ADR 0040](adr/0040-engine-default-selection-and-source-resoluti
 previously the optional `engine` extra (#9,
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) reachable
 only via the hidden `new --engine-preview` flag -- and now the default `new`
-path. Its range has crossed two compatibility lines since it was assigned:
+path. Its range has crossed three compatibility lines since it was assigned:
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md) moved it from
 `>=0.3.1,<0.4` to `>=0.4,<0.5` following the procedure below; CF-14.01
 ([ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md))
 adopted the reviewed `0.4.1` patch by raising the lower bound to
 `>=0.4.1,<0.5`; CF-18.01 then adopted the reviewed engine-default cutover
-release, moving it to `>=0.5,<0.6`. `copier`
+release, moving it to `>=0.5,<0.6`; and CF-21.01
+([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) adopted the
+reviewed `0.6.0` Streamlit provider release, moving it to `>=0.6,<0.7`
+(unreleased until CF-21.03; published `create-forge 0.4.0` declares
+`>=0.5,<0.6`). `copier`
 is now the compatibility-line dependency for the `--legacy` path instead,
 behind its own optional extra. **Two**
 compatibility-line dependencies exist simultaneously, each governing its
@@ -36,7 +40,7 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.4.x default `new` (required) | `forge-template` | `>=0.5,<0.6` | Current architecture (ADR 0042, CF-18.01) |
+| v0.4.x default `new` (required) | `forge-template` | `>=0.6,<0.7` | Current architecture (ADR 0042, CF-18.01); moved to the `0.6` line, unreleased (ADR 0050, CF-21.01) — published `0.4.0` declares `>=0.5,<0.6` |
 | v0.3.x default `new` | `copier` | `>=9.16,<10` | Now the `--legacy` route's dependency, behind the optional `legacy` extra (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Superseded by v0.4.x (ADR 0042) |
 | v0.2.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.3.1,<0.4` | Superseded by v0.3.x (ADR 0018) |
@@ -54,7 +58,9 @@ canonical [engine-default cutover acceptance contract](engine-cutover-acceptance
 fixes that release as **`create-forge 0.4.0`**, adopting
 `forge-template>=0.5,<0.6` — the same deliberate line crossing this document
 governs, performed by
-[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158). `typer`, `questionary`,
+[CF-18.01](https://github.com/Sandsy09/create-forge/issues/158). CF-21.01
+([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) crossed the
+next line, to `>=0.6,<0.7`, the same way. `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below. `platformdirs`
 ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) is likewise ordinary —
@@ -112,6 +118,11 @@ compatibility table in the same change.
 worked example: it moved `forge-template` from `>=0.3.1,<0.4` to
 `>=0.4,<0.5` with no `engine.py` edit, because `0.4.0` preserved both
 protocol tuples and every public signature.
+[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md) is the newest:
+it moved `forge-template` from `>=0.5,<0.6` to `>=0.6,<0.7` for the Streamlit
+provider release, again with no `engine.py` edit, because `0.6.0` changed
+neither protocol tuple nor the public facade -- its source diff over the
+facade is empty.
 
 Breaking changes then follow the sequence the
 [integration contract](integration-contract.md#release-coordination) already

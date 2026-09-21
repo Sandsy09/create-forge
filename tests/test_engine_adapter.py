@@ -38,7 +38,7 @@ _VALID_ANSWERS = {
 
 def _engine_info(
     *,
-    package_version: str = "0.5.0",
+    package_version: str = "0.6.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
     metadata_version: int = 1,
@@ -53,7 +53,7 @@ def _engine_info(
 
 def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
     """No exception -- the installed engine falls within the supported
-    `forge-template>=0.5,<0.6` range (ADR 0042) and both sides speak
+    `forge-template>=0.6,<0.7` range (ADR 0050) and both sides speak
     ProjectSpec protocol 1.
     """
     engine.negotiate_protocol()
@@ -62,8 +62,9 @@ def test_negotiate_protocol_accepts_the_real_installed_engine() -> None:
 @pytest.mark.parametrize(
     "package_version",
     [
-        "0.4.1",  # below the new lower bound -- the pre-cutover release
-        "0.6.0",  # at the excluded upper bound
+        "0.4.1",  # the pre-cutover release
+        "0.5.0",  # the previous line, just below the lower bound
+        "0.7.0",  # at the excluded upper bound
     ],
 )
 def test_negotiate_protocol_rejects_a_package_outside_the_supported_range(
@@ -91,7 +92,7 @@ def test_negotiate_protocol_rejects_a_disjoint_protocol_set(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.5.0",
+            package_version="0.6.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
             metadata_version=1,
@@ -252,7 +253,7 @@ def test_discover_rejects_incompatible_protocols_before_catalogue_access(
         engine.discover()
 
     assert discovered is False
-    assert "forge-template 0.5.0" in str(excinfo.value)
+    assert "forge-template 0.6.0" in str(excinfo.value)
 
 
 def test_discover_propagates_structured_engine_failure_without_fallback(
@@ -297,7 +298,7 @@ def test_build_project_spec_negotiates_before_parsing(
         engine,
         "get_engine_info",
         lambda: EngineInfo(
-            package_version="0.5.0",
+            package_version="0.6.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
             metadata_version=1,

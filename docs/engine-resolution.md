@@ -47,15 +47,20 @@ document otherwise describes — `--engine-source`/`--engine-ref` alongside a
 retained `--template-url` under `--legacy` — remains
 [CF-18.02](https://github.com/Sandsy09/create-forge/issues/159)'s, part of
 [CF-EPIC-18](https://github.com/Sandsy09/create-forge/issues/153).
+[CF-21.01](https://github.com/Sandsy09/create-forge/issues/165)
+([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) then crossed to
+the `forge-template>=0.6,<0.7` Streamlit provider line, unreleased until
+CF-21.03.
 
-`forge-template 0.5.0` is the lower bound of the current line and its current
-compatible release — the first to publish `metadata_version` and
-component-manifest protocol `3`. `create-forge 0.2.1` added
+`forge-template 0.6.0` is the lower bound of the current line and its current
+compatible release — the first to discover the `streamlit` archetype, changing
+no protocol tuple or `metadata_version`. `0.5.0` was the first to publish
+`metadata_version` and component-manifest protocol `3`. `create-forge 0.2.1` added
 `uv>=0.12,<0.13` to the same dependency set so the client can create the
 engine-generated project's lock before finalisation; it is now required
 alongside the engine rather than bundled in its extra.
 
-Adopting the 0.5 line keeps the Data Science components discoverable through
+Adopting the 0.5 and 0.6 lines keeps the Data Science components discoverable through
 `--archetype data-science`. CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting them — capabilities, platforms, component options —
@@ -66,8 +71,8 @@ it, and CF-13.05
 ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) proved the
 Data Science composition traverses the shared pipeline against the released
 engine. Normal
-resolution now rejects any engine below `0.5.0` or at/above `0.6.0`, and later
-`0.5.x` releases inside the range are adopted per the canonical
+resolution now rejects any engine below `0.6.0` or at/above `0.7.0`, and later
+`0.6.x` releases inside the range are adopted per the canonical
 [engine update policy](engine-updates.md).
 
 ## Normal installed resolution
@@ -87,7 +92,7 @@ or `uv sync --all-extras` — for `new --legacy` and `update`'s Copier route.
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Superseded by v0.4.x (ADR 0042) |
-| v0.4.x (required) | `forge-template>=0.5,<0.6` | `1` (supported) | Current architecture (ADR 0042, CF-18.01) |
+| v0.4.x (required) | `forge-template>=0.6,<0.7` | `1` (supported) | Current architecture (ADR 0042, CF-18.01); range advanced to the `0.6` line, unreleased (ADR 0050, CF-21.01). Published `create-forge 0.4.0` declares `forge-template>=0.5,<0.6` |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —
@@ -181,7 +186,7 @@ major version.
 | `integration.line` | `"v0.4.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
 | `integration.copier` | installed Copier version, `null` if the `legacy` extra isn't installed | `importlib.metadata`, never an import of Copier itself |
 | `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine fails closed at exit `1`, since it is a required dependency (ADR 0040 decision 1) |
-| `integration.engine_range` | `"forge-template>=0.5,<0.6"` | always -- this is what this CLI release declares, independent of what's installed |
+| `integration.engine_range` | `"forge-template>=0.6,<0.7"` | always -- this is what this CLI release declares, independent of what's installed |
 | `integration.projectspec_protocol.supported` | `"1"` | always, from `src/create_forge/compat.py` |
 | `integration.projectspec_protocol.detected` | the installed engine's advertised tuple, joined by commas | via a real `engine.get_info()` call whenever `engine_package` is not `null` -- see below |
 | `integration.component_manifest_protocol.supported` | `"1,2,3"` | always, from `src/create_forge/compat.py` |

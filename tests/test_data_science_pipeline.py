@@ -317,7 +317,7 @@ def test_an_undeclared_component_option_writes_nothing(
     assert not dest.exists()
 
 
-@pytest.mark.parametrize("package_version", ["0.4.1", "0.6.0"])
+@pytest.mark.parametrize("package_version", ["0.4.1", "0.5.0", "0.7.0"])
 def test_an_incompatible_engine_writes_nothing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -41,7 +41,7 @@ surface (`doctor --json`'s `integration.line`) reviewed by hand, not derived.
 literal against `pyproject.toml`'s own `major.minor`.
 """
 
-SUPPORTED_ENGINE_RANGE = ">=0.5,<0.6"
+SUPPORTED_ENGINE_RANGE = ">=0.6,<0.7"
 """The supported `forge-template` compatibility range.
 
 Pre-1.0, a supported range stays within one minor line -- see the
@@ -52,14 +52,17 @@ human-authored line crossing (ADR 0012), never a Dependabot proposal. ADR
 `forge-template` 0.4 line; ADR 0031 raised the lower bound to the reviewed
 `0.4.1` release. ADR 0040/0042 (CF-18.01) adopt the reviewed `0.5.0`
 engine-default cutover release, the first to publish `metadata_version` and
-component-manifest protocol `3`. `engine.py` checks an installed package
-against this range with `packaging.specifiers.SpecifierSet`.
+component-manifest protocol `3`. ADR 0050 (CF-21.01) adopts the reviewed
+`0.6.0` Streamlit provider release, which moves only the package version and
+the discovered catalogue (a fifteenth component) and no protocol tuple.
+`engine.py` checks an installed package against this range with
+`packaging.specifiers.SpecifierSet`.
 """
 
 SUPPORTED_PROJECTSPEC_PROTOCOLS: tuple[int, ...] = (1,)
 """ProjectSpec wire protocols this create-forge release has implemented
-against. Unchanged across the `0.3.x` through `0.5.x` engine lines
-(ADR 0026, ADR 0042).
+against. Unchanged across the `0.3.x` through `0.6.x` engine lines
+(ADR 0026, ADR 0042, ADR 0050).
 
 Deliberately not read from the installed engine's own advertised protocols
 -- negotiation in `engine.py` compares the two sides rather than assuming

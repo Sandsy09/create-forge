@@ -6,8 +6,8 @@
 # Every `key` below must match a question in forge-template's copier.yml
 # (invariant 1 in CLAUDE.md — Copier silently drops unknown `data` keys, so a
 # typo here produces a scaffold that looks fine and is subtly wrong). The
-# network drift suite checks the latest forge-template release (currently
-# v0.4.1), while --forge-template-root checks a pending sibling checkout.
+# network drift suite checks the latest forge-template release, while
+# --forge-template-root checks a pending sibling checkout.
 # Questions deliberately left unasked and
 # falling through to their copier.yml default via runner.py's `defaults=True`:
 # package_name, repo_name, repo_url, author_name, author_email,

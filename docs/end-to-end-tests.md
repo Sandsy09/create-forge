@@ -14,7 +14,7 @@ released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
 `tests/test_e2e_engine_generation.py` does the same for the default engine
 path (first reachable only via the hidden `--engine-preview` flag, now the
-default since CF-18.01), against the real installed `forge-template>=0.5,<0.6`
+default since CF-18.01), against the real installed `forge-template>=0.6,<0.7`
 engine (CF-08.04, [ADR 0020](adr/0020-engine-path-end-to-end-tests.md)), with
 client-owned lock finalisation from
 [ADR 0021](adr/0021-client-finalises-engine-lockfiles.md), which
@@ -92,12 +92,14 @@ running the full e2e suite there is a manual step before a PR touching
 `tests/test_e2e_engine_generation.py` covers the default `new` path (no flag
 needed since ADR 0040 / CF-18.01; reachable only via the hidden
 `--engine-preview` flag before that) against the real installed
-`forge-template>=0.5,<0.6` engine (CF-08.04,
+`forge-template>=0.6,<0.7` engine (CF-08.04,
 [ADR 0020](adr/0020-engine-path-end-to-end-tests.md); range moved by
 [ADR 0026](adr/0026-adopt-the-0-4-engine-compatibility-line.md), then by
 [ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md), then
 to the cutover release by
-[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). It
+[ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md), then to
+the Streamlit provider release by
+[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)). It
 differs from the Copier suite in ways worth being explicit about:
 
 - **No `_tasks` run.** The engine path creates `uv.lock` as a client
@@ -147,7 +149,7 @@ gap left deliberately by CF-13.05 and the provider's release audit. It builds
 a fresh create-forge candidate wheel, installs it into a temporary Python 3.13
 environment — `forge-template` resolves alongside it automatically as a
 required dependency (ADR 0040 / CF-18.01), pinned to exactly the published
-`forge-template 0.5.0` — and uses that environment's console script and `uv`
+`forge-template 0.6.0` — and uses that environment's console script and `uv`
 executable throughout.
 
 Both accepted Data Science compositions generate twice. Every rendered file
@@ -174,7 +176,7 @@ below covers those at the same boundary.
 regression and failure matrix CF-14.02 deliberately deferred. It reuses
 `tests/conftest.py`'s session `candidate_wheel` — one `uv build` shared with
 the Data Science suite — and installs it three ways: with the `legacy` extra
-and `forge-template 0.5.0` pinned alongside it, with the `legacy` extra but
+and `forge-template 0.6.0` pinned alongside it, with the `legacy` extra but
 `forge-template` uninstalled afterward, and with a real `forge-template 0.3.2`
 from PyPI forced in afterward that sits permanently below
 `compat.SUPPORTED_ENGINE_RANGE` (ADR 0040 / CF-18.01 made `forge-template` a
