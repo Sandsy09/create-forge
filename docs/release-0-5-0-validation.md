@@ -165,20 +165,26 @@ decision 5; the fixture refuses a wheel for another version).
 | Suite | Result |
 | --- | --- |
 | `tests/test_e2e_installed_update_safety.py` | **14 passed, 1 skipped in 61.20 s**; the skip is `test_a_symlinked_parent_that_escapes_is_refused`, POSIX-only |
-| `tests/test_e2e_installed_streamlit.py` | **Incomplete: 2 of 17 ran, both passed** (`composition[alone]`, `composition[jupyter]`); then the run was stopped by the development environment for low system memory (about 380 MB free of 6 GB) during the third test and was **not restarted** |
+| `tests/test_e2e_installed_streamlit.py` | **17 passed, 0 failed, 0 skipped**, in four foreground invocations (see below) |
 
-**The Streamlit suite gap is a gap in this evidence, not a result.** What stands
-in for the missing 15 tests is: the same suite passing in the release commit's
-protected CI on a wheel with the **identical content digest** (above), and the
-manual generation of `streamlit` alone and with `scientific-python` from the
-published wheel, each with `poe check` passing (previous section). Completing the
-suite against the published wheel is a one-command re-run on a machine with free
-memory:
+The Streamlit suite could not be run as one command on this host. A first
+background run reached 2 of 17 tests (`composition[alone]` and
+`composition[jupyter]`, both passed) and was then stopped by the development
+environment for low system memory (about 380 MB free of 6 GB) during the third
+test. It was not restarted on its own; when asked to complete it, it was re-run
+in **foreground chunks** selected with `-k`, each under the tool's ten-minute
+limit, and **every one of the 17 tests ran in one of them**:
 
-```
-CREATE_FORGE_CANDIDATE_WHEEL=<path to create_forge-0.5.0-py3-none-any.whl> \
-  uv run pytest -m e2e tests/test_e2e_installed_streamlit.py
-```
+| Chunk | Tests | Result |
+| --- | --- | --- |
+| Discovery, provider line and failure cases | `list_shows_streamlit_from_discovery`, `previous_provider_line_is_rejected_before_any_write`, `previous_provider_line_is_visible_in_doctor`, the four `selection_failure` cases, `non_empty_destination_is_preserved`, `lock_failure_leaves_no_partial_project` | 9 passed in 29.08 s |
+| The four compositions | `composition[alone]`, `[jupyter]`, `[scientific-python]`, `[jupyter-scientific-python]` | 4 passed in 420.55 s |
+| Python window edges | `full_streamlit_composition_passes_python_window_edge[3.11]`, `[3.14]` | 2 passed in 314.45 s |
+| Documented recipes | `documented_recipe_runs_through_the_installed_console[plain]`, `[scientific-python]` | 2 passed in 152.54 s |
+
+The chunks are separate pytest sessions, so each built its own isolated
+environment from the same wheel; the suite's session-scoped fixtures were not
+shared across them. The earlier partial run's two passes are not counted.
 
 ## Documentation
 
