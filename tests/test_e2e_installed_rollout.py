@@ -54,6 +54,7 @@ from tests.installed_client import (
     build_client,
     run,
 )
+from tests.process import run_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -147,16 +148,14 @@ def _forge_template_reachable() -> None:
     the same contract `tests/test_e2e_generation.py` keeps.
     """
     try:
-        subprocess.run(
-            [  # noqa: S607
+        run_text(
+            [
                 "git",
                 "ls-remote",
                 "--tags",
                 "--refs",
                 "https://github.com/Sandsy09/forge-template",
             ],
-            capture_output=True,
-            text=True,
             check=True,
             timeout=30,
         )

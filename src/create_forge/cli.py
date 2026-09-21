@@ -18,7 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from create_forge import compat
+from create_forge import capture, compat
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
     INTEGRATION_LINE,
@@ -1935,16 +1935,11 @@ def _uv_version(uv_path: str | None) -> str | None:
     if not uv_path:
         return None
     try:
-        result = subprocess.run(  # noqa: S603
-            [uv_path, "--version"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=5,
-        )
+        result = capture.run_captured([uv_path, "--version"], timeout=5)
     except (OSError, subprocess.TimeoutExpired):  # pragma: no cover
         return None
-    match result.stdout.split():
+    # A diagnostic read (CF-23.01): lenient, and only a validated token escapes.
+    match capture.decode_diagnostic(result.stdout).split():
         case [_, token, *_] if re.fullmatch(r"[0-9][0-9A-Za-z.+-]*", token):
             return token
         case _:
@@ -2094,13 +2089,9 @@ def config_show() -> None:
 
 def _git_config(key: str) -> str | None:
     try:
-        result = subprocess.run(  # noqa: S603
-            ["git", "config", "--get", key],  # noqa: S607
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=5,
-        )
+        result = capture.run_captured(["git", "config", "--get", key], timeout=5)
     except (OSError, subprocess.TimeoutExpired):  # pragma: no cover
         return None
-    return result.stdout.strip() or None
+    # A diagnostic read (CF-23.01): a name may be non-ASCII, and doctor only asks
+    # whether one is set, so a lenient decode is enough and cannot raise.
+    return capture.decode_diagnostic(result.stdout).strip() or None

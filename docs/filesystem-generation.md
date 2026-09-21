@@ -136,7 +136,9 @@ that finishes the step; `cli.py` prints every warning it gets back and `new`
 still exits `0` — the render is sound, and the convenience step is not worth
 discarding it for (ADR 0041 rule 4). No warning ever includes raw subprocess
 stdout or stderr, the same rule `create_uv_lock` and `engine_source.py`
-already apply. `--engine-source` gets the identical lifecycle (minus the
+already apply -- and none of those sites decodes the output at all: they read
+only the exit status, captured as bytes (CF-23.01,
+[subprocess output contract](subprocess-output.md)). `--engine-source` gets the identical lifecycle (minus the
 metadata document, above) — `git init` is unrelated to update-eligibility, and
 the success panel already says the project is not updatable.
 

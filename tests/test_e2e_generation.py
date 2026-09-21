@@ -33,6 +33,7 @@ import pytest
 import yaml
 
 from create_forge.registry import load_registry
+from tests.process import run_text
 
 pytestmark = pytest.mark.e2e
 
@@ -69,15 +70,7 @@ def _run_new(
         args += ["--data", f"{key}={value}"]
     args += extra_args or []
 
-    return subprocess.run(  # noqa: S603
-        args,
-        cwd=dest.parent,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
-    )
+    return run_text(args, cwd=dest.parent, env=env, timeout=600, check=False)
 
 
 @pytest.fixture(scope="session")
@@ -89,13 +82,7 @@ def _template_reachable() -> None:
     registry = load_registry()
     url = str(registry.get(registry.default_template).url)
     try:
-        subprocess.run(  # noqa: S603
-            ["git", "ls-remote", "--tags", "--refs", url],  # noqa: S607
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        )
+        run_text(["git", "ls-remote", "--tags", "--refs", url], check=True, timeout=30)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         pytest.skip(f"could not reach {url}: {exc}")
 
@@ -162,13 +149,8 @@ def test_generated_project_passes_its_own_check(generated_project: Path) -> None
     -- against exactly what a real user would run next, straight from the
     success panel's own advice (`cd <project> && uv run poe check`).
     """
-    result = subprocess.run(
-        ["uv", "run", "poe", "check"],  # noqa: S607
-        cwd=generated_project,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
+    result = run_text(
+        ["uv", "run", "poe", "check"], cwd=generated_project, timeout=600, check=False
     )
     assert result.returncode == 0, (
         f"generated project's `poe check` failed:\n"

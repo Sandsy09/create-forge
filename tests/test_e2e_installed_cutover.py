@@ -51,6 +51,7 @@ from tests.legacy_template import (
     init_repo,
     visible_files,
 )
+from tests.process import run_text
 from tests.recovery_recipes import CLEAN_ARGV, CLEAN_PREVIEW_ARGV, RESTORE_ARGV
 
 if TYPE_CHECKING:
@@ -107,16 +108,14 @@ def _forge_template_reachable() -> None:
     `tests/test_e2e_generation.py` keep.
     """
     try:
-        subprocess.run(
-            [  # noqa: S607
+        run_text(
+            [
                 "git",
                 "ls-remote",
                 "--tags",
                 "--refs",
                 "https://github.com/Sandsy09/forge-template",
             ],
-            capture_output=True,
-            text=True,
             check=True,
             timeout=30,
         )

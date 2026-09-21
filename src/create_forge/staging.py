@@ -16,13 +16,12 @@ from __future__ import annotations
 
 import contextlib
 import shutil
-import subprocess
 import tempfile
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from create_forge import paths
+from create_forge import capture, paths
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -101,12 +100,9 @@ def create_uv_lock(root: Path) -> None:
     """
     command = ["uv", "lock", "--directory", str(root)]
     try:
-        result = subprocess.run(  # noqa: S603 - reviewed fixed executable
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        # Only the exit status is read; uv's output is never decoded or shown
+        # (CF-23.01, docs/subprocess-output.md).
+        result = capture.run_captured(command)
     except FileNotFoundError as exc:
         msg = (
             "could not create uv.lock because the uv executable is unavailable; "

@@ -47,6 +47,7 @@ from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 from create_forge import compat
+from tests.process import run_text
 
 pytestmark = pytest.mark.e2e
 
@@ -143,15 +144,7 @@ def _run_engine_new(
         args += ["--data", f"{key}={value}"]
     args += _EXTRA_ARGS.get(archetype, [])
 
-    return subprocess.run(  # noqa: S603
-        args,
-        cwd=dest.parent,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
-    )
+    return run_text(args, cwd=dest.parent, env=env, timeout=600, check=False)
 
 
 @pytest.fixture(scope="session")
@@ -217,12 +210,10 @@ def test_generated_lockfile_is_current(
     e2e_child_env: dict[str, str],
 ) -> None:
     project = generated_engine_projects[archetype]
-    result = subprocess.run(
-        ["uv", "lock", "--check"],  # noqa: S607
+    result = run_text(
+        ["uv", "lock", "--check"],
         cwd=project,
         env=e2e_child_env,
-        capture_output=True,
-        text=True,
         timeout=600,
         check=False,
     )
@@ -298,12 +289,10 @@ def test_generated_project_passes_its_own_check(
     """
     project = generated_engine_projects[archetype]
 
-    result = subprocess.run(
-        ["uv", "run", "--locked", "poe", "check"],  # noqa: S607
+    result = run_text(
+        ["uv", "run", "--locked", "poe", "check"],
         cwd=project,
         env=e2e_child_env,
-        capture_output=True,
-        text=True,
         timeout=600,
         check=False,
     )
@@ -326,13 +315,7 @@ _LIFECYCLE_REPOSITORY_NAME = "e2e-engine-lifecycle"
 
 
 def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(  # noqa: S603
-        ["git", "-C", str(project), *args],  # noqa: S607
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,
-    )
+    return run_text(["git", "-C", str(project), *args], timeout=60, check=False)
 
 
 @pytest.fixture(scope="session")
@@ -366,14 +349,8 @@ def generated_lifecycle_project(
             continue
         args += ["--data", f"{key}={value}"]
 
-    result = subprocess.run(  # noqa: S603
-        args,
-        cwd=dest.parent,
-        env=e2e_child_env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
+    result = run_text(
+        args, cwd=dest.parent, env=e2e_child_env, timeout=600, check=False
     )
     if result.returncode != 0:
         pytest.fail(
@@ -484,15 +461,7 @@ def test_new_lifecycle_failure_keeps_the_project_and_warns(
     env["GIT_CONFIG_SYSTEM"] = str(tmp_path / "no-such-gitconfig-system")
     env["GIT_CONFIG_NOSYSTEM"] = "1"
 
-    result = subprocess.run(  # noqa: S603
-        args,
-        cwd=dest.parent,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
-    )
+    result = run_text(args, cwd=dest.parent, env=env, timeout=600, check=False)
 
     assert result.returncode == 0, result.stdout + result.stderr
     normalised = " ".join((result.stdout + result.stderr).split())
@@ -530,14 +499,8 @@ def test_new_cleanup_leaves_a_pre_existing_destination_untouched(
             continue
         args += ["--data", f"{key}={value}"]
 
-    result = subprocess.run(  # noqa: S603
-        args,
-        cwd=dest.parent,
-        env=e2e_child_env,
-        capture_output=True,
-        text=True,
-        timeout=600,
-        check=False,
+    result = run_text(
+        args, cwd=dest.parent, env=e2e_child_env, timeout=600, check=False
     )
 
     assert result.returncode == 1, result.stdout + result.stderr
@@ -553,16 +516,14 @@ def _forge_template_reachable() -> None:
     an installed package, not a cloned template.
     """
     try:
-        subprocess.run(
-            [  # noqa: S607
+        run_text(
+            [
                 "git",
                 "ls-remote",
                 "--tags",
                 "--refs",
                 "https://github.com/Sandsy09/forge-template",
             ],
-            capture_output=True,
-            text=True,
             check=True,
             timeout=30,
         )
@@ -603,27 +564,21 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
     dest = tmp_path / "proj"
     venv = tmp_path / "venv"
 
-    created = subprocess.run(  # noqa: S603
-        ["uv", "venv", "--python", "3.13", str(venv)],  # noqa: S607
-        capture_output=True,
-        text=True,
-        timeout=120,
-        check=False,
+    created = run_text(
+        ["uv", "venv", "--python", "3.13", str(venv)], timeout=120, check=False
     )
     assert created.returncode == 0, created.stdout + created.stderr
 
     python_path = _venv_python(venv)
-    installed = subprocess.run(  # noqa: S603
-        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],  # noqa: S607
-        capture_output=True,
-        text=True,
+    installed = run_text(
+        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],
         timeout=900,
         check=False,
     )
     assert installed.returncode == 0, installed.stdout + installed.stderr
 
-    forced = subprocess.run(  # noqa: S603
-        [  # noqa: S607
+    forced = run_text(
+        [
             "uv",
             "pip",
             "install",
@@ -632,15 +587,13 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
             "--reinstall",
             _OUT_OF_RANGE_ENGINE,
         ],
-        capture_output=True,
-        text=True,
         timeout=900,
         check=False,
     )
     assert forced.returncode == 0, forced.stdout + forced.stderr
 
     console = _venv_console(venv, "create-forge")
-    result = subprocess.run(  # noqa: S603
+    result = run_text(
         [
             str(console),
             "new",
@@ -651,8 +604,6 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
             "--path",
             str(dest),
         ],
-        capture_output=True,
-        text=True,
         timeout=120,
         check=False,
     )
@@ -677,36 +628,28 @@ def test_a_broken_install_with_no_engine_is_rejected_before_any_write(
     dest = tmp_path / "proj"
     venv = tmp_path / "venv"
 
-    created = subprocess.run(  # noqa: S603
-        ["uv", "venv", "--python", "3.13", str(venv)],  # noqa: S607
-        capture_output=True,
-        text=True,
-        timeout=120,
-        check=False,
+    created = run_text(
+        ["uv", "venv", "--python", "3.13", str(venv)], timeout=120, check=False
     )
     assert created.returncode == 0, created.stdout + created.stderr
 
     python_path = _venv_python(venv)
-    installed = subprocess.run(  # noqa: S603
-        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],  # noqa: S607
-        capture_output=True,
-        text=True,
+    installed = run_text(
+        ["uv", "pip", "install", "--python", str(python_path), str(REPO_ROOT)],
         timeout=900,
         check=False,
     )
     assert installed.returncode == 0, installed.stdout + installed.stderr
 
-    removed = subprocess.run(  # noqa: S603
-        ["uv", "pip", "uninstall", "--python", str(python_path), "forge-template"],  # noqa: S607
-        capture_output=True,
-        text=True,
+    removed = run_text(
+        ["uv", "pip", "uninstall", "--python", str(python_path), "forge-template"],
         timeout=120,
         check=False,
     )
     assert removed.returncode == 0, removed.stdout + removed.stderr
 
     console = _venv_console(venv, "create-forge")
-    result = subprocess.run(  # noqa: S603
+    result = run_text(
         [
             str(console),
             "new",
@@ -717,8 +660,6 @@ def test_a_broken_install_with_no_engine_is_rejected_before_any_write(
             "--path",
             str(dest),
         ],
-        capture_output=True,
-        text=True,
         timeout=120,
         check=False,
     )

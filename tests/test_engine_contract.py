@@ -44,6 +44,7 @@ INSTALLED_STREAMLIT_VALIDATION = (
     REPO_ROOT / "docs" / "installed-streamlit-validation.md"
 )
 UPDATE_SAFETY_VALIDATION = REPO_ROOT / "docs" / "update-safety-validation.md"
+SUBPROCESS_OUTPUT = REPO_ROOT / "docs" / "subprocess-output.md"
 CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
 ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validation.md"
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
@@ -103,6 +104,7 @@ _SHIPPED_MODULES = (
     "lifecycle",
     "update",
     "paths",
+    "capture",
 )
 
 # One of two compatibility-line dependencies ADR 0012 now governs -- Copier
@@ -421,6 +423,21 @@ def test_update_safety_validation_doc_is_linked_from_entry_points() -> None:
         )
 
     assert UPDATE_SAFETY_VALIDATION.is_file()
+
+
+def test_subprocess_output_contract_is_linked_from_entry_points() -> None:
+    """CF-23.01's subprocess output contract (ADR 0055) governs every process the
+    client starts, so the docs index, the engine-resolution contract that
+    describes the worker, and the end-to-end contract that describes the test
+    harness must all point at it.
+    """
+    link_re = re.compile(r"\([^)]*subprocess-output\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, ENGINE_RESOLUTION, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link subprocess-output.md"
+
+    assert SUBPROCESS_OUTPUT.is_file()
 
 
 def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None:

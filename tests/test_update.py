@@ -15,7 +15,6 @@ tags -- lives in test_update_network.py, not here.
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -28,6 +27,7 @@ from tests.legacy_template import commit as _commit
 from tests.legacy_template import git as _git
 from tests.legacy_template import init_repo as _init_repo
 from tests.legacy_template import visible_files as _visible_files
+from tests.process import run_text
 
 
 @pytest.fixture(autouse=True)
@@ -92,7 +92,7 @@ def test_documented_local_source_through_console(
 ) -> None:
     """Exercise the guide's local --template-url/--ref HEAD recipe without network."""
     dst = tmp_path / "local-trial"
-    result = subprocess.run(  # noqa: S603 -- installed console and disposable fixture
+    result = run_text(
         [
             create_forge_command,
             "new",
@@ -107,8 +107,6 @@ def test_documented_local_source_through_console(
             str(dst),
         ],
         env=e2e_child_env,
-        capture_output=True,
-        text=True,
         timeout=60,
         check=False,
     )

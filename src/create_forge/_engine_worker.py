@@ -148,6 +148,29 @@ def _dispatch(op: str, request: dict[str, object]) -> dict[str, object]:
     raise ValueError(msg)
 
 
+def _read_request() -> str:
+    """The request, as strict UTF-8 from the binary stdin.
+
+    The protocol is UTF-8 in both directions whatever this interpreter's locale
+    is (CF-23.01, docs/subprocess-output.md), so the text layer -- which would
+    decode with the locale -- is bypassed. A byte that is not valid UTF-8 raises
+    here and is reported as a structured error by `main`, like any other bad
+    request. This file cannot import `create_forge.capture`: it runs where
+    `create_forge` is not installed.
+    """
+    return sys.stdin.buffer.read().decode("utf-8")
+
+
+def _emit(response: dict[str, object]) -> None:
+    """Write exactly one JSON object and a newline, as UTF-8, to the binary stdout.
+
+    `json.dumps` keeps its default `ensure_ascii=True`, so the bytes are ASCII --
+    valid UTF-8 -- and there is no newline translation to differ by platform.
+    """
+    sys.stdout.buffer.write((json.dumps(response) + "\n").encode("utf-8"))
+    sys.stdout.buffer.flush()
+
+
 def main(argv: list[str]) -> int:
     """Read one JSON request from stdin, write one JSON response to stdout.
 
@@ -167,19 +190,19 @@ def main(argv: list[str]) -> int:
                 "details": [],
             },
         }
-        print(json.dumps(response))
+        _emit(response)
         return 0
 
     op = argv[1]
     try:
-        raw = sys.stdin.read()
+        raw = _read_request()
         request = json.loads(raw) if raw.strip() else {}
         result = _dispatch(op, request)
     except Exception as exc:
-        print(json.dumps({"ok": False, "error": _error_payload(exc)}))
+        _emit({"ok": False, "error": _error_payload(exc)})
         return 0
 
-    print(json.dumps({"ok": True, "result": result}))
+    _emit({"ok": True, "result": result})
     return 0
 
 

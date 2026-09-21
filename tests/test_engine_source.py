@@ -41,6 +41,7 @@ from create_forge import cli, compat, engine_source, pipeline
 from create_forge.descriptors import Descriptor
 from create_forge.sources import SourceError, validate_source
 from create_forge.spec import build_spec_payload
+from tests.process import run_text
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -436,7 +437,9 @@ def test_call_worker_runs_as_a_subprocess_under_the_provisioned_interpreter(
     seen: dict[str, object] = {}
 
     class _FakeCompleted:
-        stdout = json.dumps({"ok": True, "result": {"ok": "yes"}})
+        # Bytes, as `capture.run_captured` reads them (CF-23.01).
+        stdout = json.dumps({"ok": True, "result": {"ok": "yes"}}).encode("utf-8")
+        stderr = b""
         returncode = 0
 
     def fake_run(argv: list[str], **kwargs: object) -> _FakeCompleted:
@@ -456,6 +459,10 @@ def test_call_worker_runs_as_a_subprocess_under_the_provisioned_interpreter(
     assert argv[0] == str(runtime.python)
     assert argv[1].endswith("_engine_worker.py")
     assert argv[2] == "info"
+    kwargs = seen["kwargs"]
+    assert isinstance(kwargs, dict)
+    assert isinstance(kwargs["input"], bytes)  # the request is sent as UTF-8 bytes
+    assert not {"text", "encoding", "errors", "universal_newlines"} & kwargs.keys()
 
 
 def test_provisioning_environment_drops_virtualenv_and_pythonpath(
@@ -537,11 +544,9 @@ def test_uv_failure_output_is_not_echoed_verbatim(
 def _run_worker(
     op: str, request: Mapping[str, object] | None = None
 ) -> dict[str, object]:
-    result = subprocess.run(  # noqa: S603 - fixed interpreter/argv, test-only
+    result = run_text(
         [sys.executable, str(WORKER_PATH), op],
-        input=json.dumps(dict(request or {})),
-        capture_output=True,
-        text=True,
+        stdin=json.dumps(dict(request or {})),
         check=False,
         timeout=60,
     )
@@ -637,11 +642,9 @@ def test_worker_info_degrades_a_too_old_engine_missing_metadata_version(
     env = dict(os.environ)
     env["PYTHONPATH"] = str(fake_root)
 
-    result = subprocess.run(  # noqa: S603 - fixed interpreter/argv, test-only
+    result = run_text(
         [sys.executable, str(WORKER_PATH), "info"],
-        input="{}",
-        capture_output=True,
-        text=True,
+        stdin="{}",
         check=False,
         timeout=60,
         env=env,
@@ -776,7 +779,7 @@ def test_real_sibling_checkout_provisions_and_generates(
     tmp_path: Path, create_forge_command: str
 ) -> None:
     dst = tmp_path / "engine-source-smoke"
-    result = subprocess.run(  # noqa: S603 - resolved installed console, test data
+    result = run_text(
         [
             create_forge_command,
             "new",
@@ -799,8 +802,6 @@ def test_real_sibling_checkout_provisions_and_generates(
             "--path",
             str(dst),
         ],
-        capture_output=True,
-        text=True,
         timeout=600,
         check=False,
     )
