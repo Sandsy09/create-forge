@@ -1,7 +1,7 @@
 # Installation and versions
 
 create-forge supports four install modes. Each resolves the required
-`forge-template` engine (`>=0.5,<0.6`) automatically — it is a normal
+`forge-template` engine (`>=0.6,<0.7`) automatically — it is a normal
 dependency, not an extra.
 
 ## Run without a persistent install
@@ -9,12 +9,12 @@ dependency, not an extra.
 ```bash
 uvx create-forge new
 uvx create-forge@latest new
-uvx create-forge@0.4.0 new
+uvx create-forge@0.5.0 new
 ```
 
 `uvx` runs a tool in an isolated environment. A plain invocation may reuse
 a cached version or the version installed with `uv tool install`.
-`@latest` checks for the latest release; `@0.4.0` requests that exact CLI
+`@latest` checks for the latest release; `@0.5.0` requests that exact CLI
 version. These commands do not add Forge to your project's dependencies.
 
 ## Install a command for regular use
@@ -33,7 +33,7 @@ installed tools, and `uv tool uninstall create-forge` removes this one.
 ### Pin or change the installed version
 
 ```bash
-uv tool install "create-forge==0.4.0"
+uv tool install "create-forge==0.5.0"
 uv tool upgrade create-forge
 ```
 
@@ -80,14 +80,14 @@ resolved and, if so, at what version.
 
 | Selection | Controls |
 | --- | --- |
-| `create-forge@0.4.0` | The CLI package version used by uvx. |
+| `create-forge@0.5.0` | The CLI package version used by uvx. |
 | `new --engine-source <url> --engine-ref v1.2.3` | An isolated override of the engine itself, provisioned fresh for one run — not part of a normal install. |
 | `new --legacy --ref v0.4.1` | The template repository's Git tag on the `--legacy` Copier path. |
 
 Pin the CLI for a repeatable starting point:
 
 ```bash
-uvx create-forge@0.4.0 new "Pinned Library" --archetype library --yes
+uvx create-forge@0.5.0 new "Pinned Library" --archetype library --yes
 ```
 
 Pinning the CLI does not freeze dependency resolution; keep the generated

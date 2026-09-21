@@ -37,7 +37,7 @@ type](projects.md) for a recipe per archetype.
 ## Scripts and CI
 
 ```bash
-uvx create-forge@0.4.0 new "Automation Lib" --archetype library --yes --data author_name=Example --data author_email=example@example.com
+uvx create-forge@0.5.0 new "Automation Lib" --archetype library --yes --data author_name=Example --data author_email=example@example.com
 ```
 
 `--yes` requires `--archetype`, skips questions, and uses defaults for

@@ -9,11 +9,13 @@ not need to clone either repository to generate a project, and your
 generated application does not depend on Forge at runtime.
 
 This guide covers **create-forge 0.4.0 and later**, where the engine is the
-default `new` path. Library, CLI Application, Data Science, and reusable
-capabilities are all available directly — see [choosing a project
-type](projects.md). Coming from a `0.3.x` install or project? Start with
-[migration](migration.md). Direct Copier generation is still available
-through `--legacy` — see [installation](installation.md).
+default `new` path. Library, CLI Application, Data Science, Streamlit, and
+reusable capabilities are all available directly — see [choosing a project
+type](projects.md). The Streamlit archetype needs **create-forge 0.5.0 or
+later**; the other archetypes are available from 0.4.0. Coming from a `0.3.x`
+install or project? Start with [migration](migration.md). Direct Copier
+generation is still available through `--legacy` — see
+[installation](installation.md).
 
 ## Before you start
 
@@ -61,8 +63,8 @@ generated README for that project's tasks and contribution workflow.
 ## Choose your next step
 
 - [Install the tool or pin versions](installation.md).
-- [Choose a project type](projects.md), then follow a Library, CLI, or
-  Data Science recipe.
+- [Choose a project type](projects.md), then follow a Library, CLI,
+  Data Science, or Streamlit recipe.
 - [Automate generation and save answers](cli.md).
 - [Update your project or diagnose a problem](updates.md).
 - [Suggest a guide or report a problem](feedback.md).

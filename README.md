@@ -65,8 +65,8 @@ your terminal.
 
 ```bash
 uvx create-forge@latest new
-uvx create-forge@0.4.0 new
-uv tool install "create-forge==0.4.0"
+uvx create-forge@0.5.0 new
+uv tool install "create-forge==0.5.0"
 ```
 
 Plain `uvx create-forge` can reuse a cached or persistently installed
@@ -107,8 +107,10 @@ uv run --locked poe check
 uv run poe notebook
 ```
 
-Available types include Library, CLI Application, and Data Science (a Python
-package with a starter notebook and Jupyter tooling), plus optional
+Available types include Library, CLI Application, Data Science (a Python
+package with a starter notebook and Jupyter tooling), and Streamlit (an
+installable package with an interactive Streamlit application, from
+`create-forge 0.5.0`), plus optional
 **Jupyter** and **Scientific Python** capabilities (Data Science requires
 Jupyter; Scientific Python is optional and can accompany any archetype). The
 [project guide](https://sandsy09.github.io/create-forge/projects/) explains
@@ -158,8 +160,8 @@ it, `--legacy` exits `3` naming the remedy.
 ## What's next
 
 The Foundation, Data Science, and Engine-Default Cutover roadmaps are
-complete. The filed [Streamlit Archetype](docs/roadmap-v4/README.md) roadmap
-describes the next project type. Follow
+complete, and the Streamlit archetype shipped in `create-forge 0.5.0` (its plan
+is the [Streamlit Archetype](docs/roadmap-v4/README.md) roadmap). Follow
 [open work](https://github.com/Sandsy09/create-forge/issues) and
 [releases](https://github.com/Sandsy09/create-forge/releases) for updates, or
 suggest a project type, capability, or guide you would find useful.

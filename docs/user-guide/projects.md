@@ -10,6 +10,7 @@ supported, unaffected by any of this.
 | [Library](library.md) | Installable package, configurable packaging, Git hooks | `create-forge update` |
 | [CLI Application](cli-application.md) | Typer command, `python -m` entry point, command tests | `create-forge update` |
 | [Data Science](data-science.md) | Package, starter notebook, ignored working-data paths | `create-forge update` |
+| [Streamlit](streamlit.md) | Package, Streamlit application entry point, a test that renders the starter page | `create-forge update` |
 | [Legacy Copier library](library.md#legacy-copier-library-legacy) | Installable package, shared checks, three packaging modes | `create-forge update` (Copier route) |
 
 ## What every archetype shares
@@ -24,8 +25,8 @@ was rendered — installs pre-commit hooks. The first `uv run --locked poe
 check` installs remaining development dependencies and runs checks.
 
 The Library archetype's packaging choice is a component option (see
-below); CLI Application and Data Science are currently optionless beyond
-their capabilities.
+below); CLI Application, Data Science, and Streamlit are currently optionless
+beyond their capabilities.
 
 ## Add capabilities
 

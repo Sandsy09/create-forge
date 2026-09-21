@@ -128,4 +128,5 @@ full procedure and what each step discards.
 `create-forge 0.4.0` prints `git restore . && git clean -fd` after a failed
 update. Do not rely on it: it does not undo a staged update, and it is also
 printed when `create-forge` refuses to start because your tree has uncommitted
-changes, where running it would discard your own work.
+changes, where running it would discard your own work. `0.5.0` and later
+choose the guidance they print from the repository's actual Git state instead.

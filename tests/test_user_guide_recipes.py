@@ -146,9 +146,10 @@ def test_streamlit_guide_links_the_provider_contract_instead_of_restating_it() -
 
 
 def test_streamlit_guide_relative_links_resolve() -> None:
-    """The page is excluded from the site until CF-21.03 releases it
-    (`mkdocs.yml`'s `exclude_docs`), so the strict build never sees it. Its
-    relative links to sibling guide pages are checked here instead.
+    """The page was excluded from the site until CF-21.03 released it (ADR
+    0056), so the strict build did not see it and this test stood in for it.
+    It is on the site now and the strict build validates its links too; this
+    stays as a fast, offline check of the same relative links.
     """
     text = STREAMLIT.read_text(encoding="utf-8")
     targets = re.findall(r"\]\(([^)]+)\)", text)

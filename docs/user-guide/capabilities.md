@@ -39,6 +39,10 @@ dependencies and an import test. Add your analysis functions to the package
 and call them from a new Typer command. Scientific Python does not require
 Jupyter or add notebook tooling.
 
+For an interactive application instead, see
+[Add the scientific stack](streamlit.md#add-the-scientific-stack) on the
+Streamlit page.
+
 ## Selection rules
 
 - Repeat `--capability ID` to select several capabilities.
@@ -69,8 +73,8 @@ uvx create-forge new "Versioned Lib" --archetype library --capability jupyter --
 This selects Library's packaging and initial version without changing
 Jupyter. See [Library options](library.md#library) for accepted values.
 Options for unselected components, unknown options, and invalid values are
-rejected. CLI Application, Data Science, Jupyter, and Scientific Python
-currently expose no options.
+rejected. CLI Application, Data Science, Streamlit, Jupyter, and Scientific
+Python currently expose no options.
 
 The CLI consumes the engine's bundled catalogue. Installing an arbitrary
 Python package does not register a Forge capability. Request new
