@@ -230,7 +230,11 @@ See [docs/roadmap-v3/](docs/roadmap-v3/) and
 cutover contract, [docs/release-0-4-0-validation.md](docs/release-0-4-0-validation.md)
 for the published-artefact evidence, and [docs/README.md](docs/README.md) for
 everything else. The next roadmap is Streamlit
-([docs/roadmap-v4/](docs/roadmap-v4/)).
+([docs/roadmap-v4/](docs/roadmap-v4/)): `main` has adopted the reviewed
+`forge-template 0.6.0` Streamlit provider line (`>=0.6,<0.7`, CF-21.01,
+[ADR 0050](docs/adr/0050-adopt-the-0-6-streamlit-provider-line.md)) but it is
+**unreleased** — the published `0.4.0` still declares `>=0.5,<0.6`, so the user
+guide keeps that range until CF-21.03 releases.
 
 ## Gotchas already hit
 

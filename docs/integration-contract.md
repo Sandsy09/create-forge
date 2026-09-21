@@ -75,7 +75,7 @@ below).
 | v0.1.x | None; direct Copier integration | None | Superseded by v0.2.x |
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Superseded by v0.4.x (ADR 0042) |
-| v0.4.x | `forge-template>=0.5,<0.6` | 1 (supported) | Current architecture (ADR 0042, CF-18.01) |
+| v0.4.x | `forge-template>=0.6,<0.7` | 1 (supported) | Current architecture (ADR 0042, CF-18.01); range advanced to the `0.6` line, unreleased (ADR 0050, CF-21.01). Published `create-forge 0.4.0` declares `forge-template>=0.5,<0.6` |
 
 CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
 `engine` extra into `[project.dependencies]`, making the engine the default
@@ -86,6 +86,21 @@ engine-native `update` -- and CF-18.07 (ADR 0049) published it as
 `create-forge 0.4.0`. See
 [docs/engine-cutover-acceptance.md](https://github.com/Sandsy09/forge-template/blob/main/docs/engine-cutover-acceptance.md)
 in `forge-template` for the reviewed provider release this line pairs with.
+
+CF-21.01 ([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md))
+then crossed to the `0.6` line, adopting the reviewed
+[`forge-template 0.6.0`](https://github.com/Sandsy09/forge-template/releases/tag/v0.6.0)
+Streamlit provider release published to
+[PyPI](https://pypi.org/project/forge-template/0.6.0/). It moves exactly two
+versioned axes -- the package version, and the discovered catalogue, which
+gains the `streamlit` archetype (fifteen components) -- and leaves ProjectSpec
+protocol `1`, component-manifest protocols `(1, 2, 3)`, `metadata_version` `1`
+and the public engine facade unchanged, so no adapter changed. `streamlit`
+declares no `requires`, `conflicts` or options and is reached only through the
+generic archetype/component contract; no production module names it. The
+`0.5.x` line remains a stable fourteen-component catalogue for a client pinned
+there. This adoption does not release `create-forge` (CF-21.03) or validate
+installed Streamlit generation (CF-21.02).
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI

@@ -594,7 +594,7 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
 
     Since ADR 0040 (CF-18.01) made the engine a required dependency, a single
     `uv run --with <this checkout> --with <out-of-range pin>` would now
-    conflict with the checkout's own declared `>=0.5,<0.6` range and fail the
+    conflict with the checkout's own declared `>=0.6,<0.7` range and fail the
     resolver outright rather than installing the out-of-range version. A real
     venv plus a second, targeted `--reinstall` step reaches the same broken
     state deliberately instead.

@@ -55,10 +55,13 @@ git switch -c <type>/<cli-change>
 uv sync --all-groups --all-extras
 ```
 
-`--all-extras` is what pulls in the optional `engine` extra
-([ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) --
-`--all-groups` alone no longer does, since the engine moved out of the
-dev-only `engine` dependency group.
+`forge-template` is a required dependency
+([ADR 0040](adr/0040-engine-default-selection-and-source-resolution.md),
+CF-18.01), so a plain `uv sync` already resolves it. `--all-extras` adds the
+optional `legacy` extra -- `copier` and `platformdirs`, for `--legacy`,
+`update`'s Copier route and `runner.py` -- and `--all-groups` the development
+tools; omit `--all-extras` if the change touches neither the `--legacy` path
+nor `runner.py`.
 
 Template schema, rendering, generated files, and update compatibility belong
 in `forge-template`. CLI flags, prompts, registry presentation metadata,
@@ -88,8 +91,8 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 This builds current local source, including uncommitted changes, overriding
 create-forge's normal PyPI resolution for that one run only. It exercises
 only the top-level public `forge_template` facade. The sibling must still
-satisfy the declared range (`>=0.4.1,<0.5` since
-[ADR 0031](adr/0031-adopt-the-reviewed-forge-template-0-4-1-release.md)); a
+satisfy the declared range (`>=0.6,<0.7` since
+[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)); a
 version outside it fails until the range, contract, and tests are deliberately
 moved together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).

@@ -742,7 +742,7 @@ def test_engine_source_negotiate_rejects_a_disjoint_protocol(
 ) -> None:
     def fake_fetch_info(_runtime: object) -> engine_source.EngineSourceInfo:
         return engine_source.EngineSourceInfo(
-            package_version="0.5.0",
+            package_version="0.6.0",
             projectspec_protocols=(2,),
             component_manifest_protocols=(1,),
             metadata_version=1,

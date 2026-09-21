@@ -1,7 +1,7 @@
 """Executable create-forge/forge-template engine contract (ADR 0018).
 
-The normal suite exercises the released `forge-template>=0.5,<0.6` range
-(ADR 0042, CF-18.01) resolved into ``uv.lock`` from PyPI. The sibling-checkout
+The normal suite exercises the released `forge-template>=0.6,<0.7` range
+(ADR 0050, CF-21.01) resolved into ``uv.lock`` from PyPI. The sibling-checkout
 command in ``docs/cross-repository-workflow.md`` installs both working trees
 in isolation and runs this same file against pending local changes without
 exposing forge-template's private fixture-catalogue seam.
@@ -55,7 +55,7 @@ def _spec() -> ProjectSpec:
 
 def _info(
     *,
-    package_version: str = "0.5.0",
+    package_version: str = "0.6.0",
     projectspec_protocols: tuple[int, ...] = (1,),
     component_manifest_protocols: tuple[int, ...] = (1,),
     metadata_version: int = 1,
@@ -71,11 +71,12 @@ def _info(
 def test_real_engine_matches_the_supported_range() -> None:
     """ADR 0018 assigned the first released range; ADR 0026 moved it to the
     `forge-template` 0.4 line; ADR 0042 (CF-18.01) adopts the reviewed 0.5.0
-    engine-default cutover release. The installed engine must fall within the
-    declared range and advertise a compatible protocol pair."""
+    engine-default cutover release; ADR 0050 (CF-21.01) adopts the reviewed
+    0.6.0 Streamlit provider release. The installed engine must fall within
+    the declared range and advertise a compatible protocol pair."""
     info = get_engine_info()
 
-    assert info.package_version == "0.5.0"
+    assert info.package_version == "0.6.0"
     assert Version(info.package_version) in SpecifierSet(compat.SUPPORTED_ENGINE_RANGE)
     assert set(info.projectspec_protocols) & set(compat.SUPPORTED_PROJECTSPEC_PROTOCOLS)
     assert set(info.component_manifest_protocols) & set(
@@ -157,7 +158,7 @@ def test_selection_model_matches_the_documented_contract() -> None:
     assert re.match(option_pattern, "a-b") is None
 
 
-@pytest.mark.parametrize("package_version", ["0.4.1", "0.6.0"])
+@pytest.mark.parametrize("package_version", ["0.4.1", "0.5.0", "0.7.0"])
 def test_untested_package_is_rejected_before_every_public_engine_call(
     monkeypatch: pytest.MonkeyPatch,
     package_version: str,

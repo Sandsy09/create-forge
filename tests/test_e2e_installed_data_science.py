@@ -1,7 +1,7 @@
 """Installed-client Data Science end-to-end validation (CF-14.02).
 
 Builds the create-forge candidate wheel, installs it alongside the reviewed
-PyPI ``forge-template 0.5.0`` release into a clean virtual environment --
+PyPI ``forge-template 0.6.0`` release into a clean virtual environment --
 `forge-template` is a required dependency since ADR 0040 (CF-18.01), so no
 extra is needed to pull it in -- then drives the real installed
 ``create-forge`` console script through its default (engine) `new` path.
@@ -176,7 +176,7 @@ def test_candidate_wheel_installs_the_reviewed_pair(
     # now -- there is no more `engine` extra to gate them behind.
     engine = _base_requirement(requirements, "forge-template")
     uv = _base_requirement(requirements, "uv")
-    assert {str(specifier) for specifier in engine.specifier} == {">=0.5", "<0.6"}
+    assert {str(specifier) for specifier in engine.specifier} == {">=0.6", "<0.7"}
     assert {str(specifier) for specifier in uv.specifier} == {">=0.12", "<0.13"}
     assert Version(payload["uv_version"]) in uv.specifier
 

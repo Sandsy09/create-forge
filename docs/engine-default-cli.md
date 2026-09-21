@@ -72,7 +72,9 @@ decide" section below names their owning issues.
    ([ADR 0012](adr/0012-engine-dependency-update-policy.md)); adopting the
    `>=0.5,<0.6` cutover line is
    [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)'s, not this
-   contract's.
+   contract's (and the later `>=0.6,<0.7` Streamlit provider line is
+   [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165)'s, by
+   [ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)).
 
 3. **`copier` becomes the optional `legacy` extra.**
    `pip install 'create-forge[legacy]'` adds it back for the explicit legacy

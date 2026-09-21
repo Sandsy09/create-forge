@@ -142,6 +142,26 @@ def test_cli_archetype_declares_no_options_and_receives_none() -> None:
     assert request.spec.component_options == {}
 
 
+def test_streamlit_is_discovered_as_an_optionless_archetype() -> None:
+    """CF-21.01 (ADR 0050): the reviewed `0.6.0` provider's one catalogue
+    addition reaches this client through discovery alone. The parametrised
+    tests above already cover it generically; this names it so the line
+    silently losing it -- a pin drifting back below `0.6` -- fails loudly
+    rather than quietly shrinking the parametrisation.
+
+    `streamlit` declares no `requires`, `conflicts` or options, so it is pure
+    catalogue data behind the unchanged public facade.
+    """
+    descriptors = {d.id: d for d in engine.discover()}
+
+    assert "streamlit" in descriptors
+    streamlit = descriptors["streamlit"]
+    assert streamlit.kind == "archetype"
+    assert streamlit.requires == ()
+    assert streamlit.conflicts == ()
+    assert streamlit.options == ()
+
+
 def test_no_command_name_field_exists_anywhere() -> None:
     """Criterion 5: the CLI Application contract derives its console command
     solely from `ProjectSpec.project.repository_name`. `create-forge` must
@@ -212,4 +232,29 @@ def test_no_shipped_module_hardcodes_a_discovered_component_id() -> None:
             f"{path.name} contains hardcoded component id(s) "
             f"{sorted(hardcoded)} -- component identity must come from "
             "discovery (CF-08.03, ADR 0019; CF-13.05, ADR 0030), not a literal."
+        )
+
+
+def test_no_production_module_hardcodes_streamlit() -> None:
+    """CF-21.01 / CF-ROADMAP-02-AC-03 (ADR 0050): *no* production module names
+    `streamlit` to decide catalogue, validation, composition or generated
+    content behaviour.
+
+    The guard above scans only the modules that see component ids and reads
+    the ids from live discovery; the acceptance criterion is wider -- "no
+    production module" -- so this walks every module under `src/create_forge`
+    for the one literal, case-insensitively so a display-name comparison
+    (`"Streamlit"`) is caught too. Equality on a string constant only:
+    docstring and comment prose that merely mentions the provider cannot trip
+    it, exactly as in `_string_literals`.
+    """
+    modules = sorted(SRC_ROOT.rglob("*.py"))
+    assert modules, "expected to scan the shipped modules"
+
+    for path in modules:
+        hardcoded = {s for s in _string_literals(path) if s.lower() == "streamlit"}
+        assert not hardcoded, (
+            f"{path.name} hardcodes {sorted(hardcoded)} -- Streamlit must be "
+            "selected through the generic archetype/component contract "
+            "(CF-ROADMAP-02-AC-03, ADR 0050), never by name."
         )

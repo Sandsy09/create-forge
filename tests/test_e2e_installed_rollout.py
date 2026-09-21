@@ -14,7 +14,7 @@ always resolves a compatible engine now -- `engineless_client` and
 `out_of_range_client` each force a *broken* state afterward rather than
 reaching one through a normal install:
 
-* `installed_client` (conftest) -- `wheel` + `forge-template 0.5.0` pinned
+* `installed_client` (conftest) -- `wheel` + `forge-template 0.6.0` pinned
   alongside it; the engine-path (now default) regressions and the failure
   matrix.
 * `engineless_client` -- `wheel`, then `forge-template` uninstalled; the
@@ -132,7 +132,7 @@ def out_of_range_client(
 ) -> Iterator[InstalledClient]:
     """The candidate wheel with a real `forge-template` release below the
     supported range forced in afterward -- passing it to the main install
-    would conflict with the wheel's own declared `>=0.5,<0.6` requirement and
+    would conflict with the wheel's own declared `>=0.6,<0.7` requirement and
     fail the resolver outright, so this is a second, targeted reinstall.
     """
     with build_client(
