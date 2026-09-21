@@ -50,6 +50,7 @@ ROLLOUT_REGRESSION_VALIDATION = REPO_ROOT / "docs" / "rollout-regression-validat
 RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
 ENGINE_CUTOVER_VALIDATION = REPO_ROOT / "docs" / "engine-cutover-validation.md"
 RELEASE_0_4_0_VALIDATION = REPO_ROOT / "docs" / "release-0-4-0-validation.md"
+RELEASE_0_5_0_VALIDATION = REPO_ROOT / "docs" / "release-0-5-0-validation.md"
 DOCS_INDEX = REPO_ROOT / "docs" / "README.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
@@ -498,6 +499,21 @@ def test_release_0_4_0_validation_doc_is_linked_from_entry_points() -> None:
         )
 
     assert RELEASE_0_4_0_VALIDATION.is_file()
+
+
+def test_release_0_5_0_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-21.03's published-release evidence (ADR 0056) must stay discoverable,
+    mirroring the CF-18.07 guard above.
+    """
+    link_re = re.compile(r"\([^)]*release-0-5-0-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX,):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link release-0-5-0-validation.md"
+        )
+
+    assert RELEASE_0_5_0_VALIDATION.is_file()
 
 
 def test_compatibility_exit_status_is_documented_once() -> None:

@@ -84,12 +84,14 @@ Before you run either, know what they do:
   update never started.** There is nothing to recover. Commit or stash your
   changes, then run the update again.
 
-> **`create-forge 0.4.0` prints an older command.** After a failed update it
-> prints `git restore . && git clean -fd`. That command restores files from the
-> index, so it does not undo an update that is already staged or a rename that
-> has already been applied. Use the steps above instead. If your working tree
-> had uncommitted changes when `0.4.0` refused to update, it also printed that
-> command there — do not run it, because it would discard your own work.
+> **`create-forge 0.4.0` prints an older command; `0.5.0` and later do not.**
+> `0.4.0` prints `git restore . && git clean -fd` after a failed update. That
+> command restores files from the index, so it does not undo an update that is
+> already staged or a rename that has already been applied. Use the steps above
+> instead. If your working tree had uncommitted changes when `0.4.0` refused to
+> update, it also printed that command there — do not run it, because it would
+> discard your own work. From `0.5.0`, the guidance printed is chosen from the
+> repository's actual Git state.
 
 ## Update a `--legacy` Copier-generated project
 

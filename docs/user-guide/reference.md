@@ -14,7 +14,7 @@ This guide describes **create-forge 0.4.0 and later**, where the
 discovery, validation, planning, and in-memory rendering:
 
 ```bash
-uv add "forge-template>=0.5,<0.6"
+uv add "forge-template>=0.6,<0.7"
 ```
 
 Add it to the project implementing your client. It is not a required
@@ -60,10 +60,10 @@ engine-native and legacy `update` routes are supported. See
 [migration](migration.md) if you are moving a `0.3.x` install or project
 forward.
 
-Filed roadmap packs now track the
-[Streamlit Archetype](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v4/README.md),
-which proceeds now that the cutover contracts are accepted. This is an open
-plan, not an available feature yet.
+The Streamlit archetype is available from create-forge 0.5.0 — see
+[Start a Streamlit project](streamlit.md). Its plan is recorded in the
+[Streamlit Archetype](https://github.com/Sandsy09/create-forge/blob/main/docs/roadmap-v4/README.md)
+roadmap.
 
 Follow [CLI open work](https://github.com/Sandsy09/create-forge/issues),
 [template open work](https://github.com/Sandsy09/forge-template/issues), and

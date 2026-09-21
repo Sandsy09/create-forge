@@ -1,20 +1,11 @@
 site_name: Forge
-site_description: Create Python libraries, CLI applications, and Data Science projects with Forge.
+site_description: Create Python libraries, CLI applications, Data Science projects, and Streamlit applications with Forge.
 site_url: https://sandsy09.github.io/create-forge/
 repo_url: https://github.com/Sandsy09/create-forge
 repo_name: Sandsy09/create-forge
 edit_uri: edit/main/docs/user-guide/
 docs_dir: docs/user-guide
 site_dir: site
-
-# Written and tested ahead of the release that ships it (CF-21.02, ADR 0051):
-# this guide describes released behaviour, and published create-forge 0.4.0
-# cannot select Streamlit yet. CF-21.03 removes this entry and adds the nav
-# entry and cross-links when it releases. `tests/test_user_guide_recipes.py`
-# checks the page's recipes and relative links while it is excluded, since the
-# strict build does not see it.
-exclude_docs: |
-  streamlit.md
 
 theme:
   name: material
@@ -70,6 +61,7 @@ nav:
       - Library: library.md
       - CLI Application: cli-application.md
       - Data Science: data-science.md
+      - Streamlit: streamlit.md
   - Capabilities: capabilities.md
   - Updates and troubleshooting: updates.md
   - Migrating from 0.3.x: migration.md

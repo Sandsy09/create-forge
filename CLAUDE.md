@@ -221,33 +221,31 @@ repository-local (`./…`) references are the only exceptions.
 
 ## Current state
 
-`create-forge 0.4.0` is the latest **tagged and published** release — the
-Engine-Default Cutover (CF-EPIC-18, ADR 0049). The `forge-template` engine is
-the default, required `new` path (`forge-template>=0.5,<0.6`); `copier` moved
-to the optional `legacy` extra. It ships the isolated `--engine-source`/
-`--engine-ref` override (CF-18.02, ADR 0044), the engine `new` Git/hook
-lifecycle plus the committed `.forge/generation.json` metadata file
-(CF-18.03, ADR 0045), and engine-native `update` dispatch — a Git-backed
-three-way merge via `git merge-file`, a genuine per-target `--dry-run`, and
-an opt-in `--degraded` fallback (CF-18.04, ADR 0046). `--engine-preview` no
-longer exists. `create-forge 0.3.x` — the last direct-Copier default line —
-stays installable and supported for at least 90 days and at least one
-further tagged release past `0.4.0` (`uv tool install "create-forge==0.3.2"`).
-See [docs/roadmap-v3/](docs/roadmap-v3/) and
+`create-forge 0.5.0` is the latest **tagged and published** release — the
+Streamlit client release (CF-21.03, ADR 0056): it pairs with the
+`forge-template 0.6.0` provider line (`forge-template>=0.6,<0.7`, line
+`v0.5.x-engine`), which adds the `streamlit` archetype. It follows
+`create-forge 0.4.0`, the Engine-Default Cutover (CF-EPIC-18, ADR 0049), which
+made the `forge-template` engine the default, required `new` path and moved
+`copier` to the optional `legacy` extra; `0.4.x` keeps declaring
+`forge-template>=0.5,<0.6`. Since `0.4.0` it ships the isolated
+`--engine-source`/`--engine-ref` override (CF-18.02, ADR 0044), the engine
+`new` Git/hook lifecycle plus the committed `.forge/generation.json` metadata
+file (CF-18.03, ADR 0045), and engine-native `update` dispatch — a Git-backed
+three-way merge via `git merge-file`, a genuine per-target `--dry-run`, and an
+opt-in `--degraded` fallback (CF-18.04, ADR 0046); `0.5.0` adds the update
+safety work (contained targets, recovery from the actual Git state, decoded
+subprocess output — ADRs 0052–0055). `--engine-preview` no longer exists.
+`create-forge 0.3.x` — the last direct-Copier default line — stays installable
+and supported for at least 90 days and at least one further tagged release past
+`0.4.0` (`uv tool install "create-forge==0.3.2"`). See
+[docs/roadmap-v3/](docs/roadmap-v3/) and
 [docs/engine-cutover-acceptance.md](docs/engine-cutover-acceptance.md) for the
 cutover contract, [docs/release-0-4-0-validation.md](docs/release-0-4-0-validation.md)
-for the published-artefact evidence, and [docs/README.md](docs/README.md) for
-everything else. The next roadmap is Streamlit
-([docs/roadmap-v4/](docs/roadmap-v4/)): `main` has adopted the reviewed
-`forge-template 0.6.0` Streamlit provider line (`>=0.6,<0.7`, CF-21.01,
-[ADR 0050](docs/adr/0050-adopt-the-0-6-streamlit-provider-line.md)), and
-CF-21.03 ([ADR 0056](docs/adr/0056-publish-create-forge-0-5-0.md)) releases it
-as `create-forge 0.5.0` (line `v0.5.x-engine`). The release is dispatched by
-hand only after a dry run and an explicit maintainer go, and `main` is frozen
-until it is done. The user guide keeps the published `0.4.0`'s `>=0.5,<0.6`
-range and the Streamlit page stays excluded from the site until the published
-artefacts are verified (Phase B); check PyPI, not this paragraph, for what is
-actually published.
+and [docs/release-0-5-0-validation.md](docs/release-0-5-0-validation.md) for the
+published-artefact evidence, [docs/roadmap-v4/](docs/roadmap-v4/) for the
+Streamlit roadmap, and [docs/README.md](docs/README.md) for everything else.
+Check PyPI, not this paragraph, for what is actually published.
 
 ## Gotchas already hit
 
