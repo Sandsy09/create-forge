@@ -618,11 +618,15 @@ def test_a_bad_new_render_target_is_refused_before_a_degraded_update_writes(
     ],
     ids=["escaping-destination", "escaping-source", "absolute", "git-hook"],
 )
+@pytest.mark.parametrize("dry_run", [False, True], ids=["real", "dry-run"])
 def test_apply_renames_refuses_an_unsafe_endpoint(
-    world: _World, rename: _Rename
+    world: _World, rename: _Rename, dry_run: bool
 ) -> None:
+    """create-forge#209: a dry run refuses an unsafe endpoint identically to
+    a real run, before reading or moving anything.
+    """
     with pytest.raises(UpdateError, match="unsafe update target"):
-        apply_renames(world.project, [rename])
+        apply_renames(world.project, [rename], dry_run=dry_run)
 
     _assert_sentinel_untouched(world)
     assert (world.project / "a.txt").exists()
@@ -638,7 +642,7 @@ def test_a_valid_rename_is_not_applied_when_a_later_one_is_unsafe(
     ]
 
     with pytest.raises(UpdateError, match="unsafe update target"):
-        apply_renames(world.project, renames)
+        apply_renames(world.project, renames, dry_run=False)
 
     assert (world.project / "a.txt").exists()
     assert not (world.project / "moved.txt").exists()
@@ -655,7 +659,7 @@ def test_apply_renames_treats_a_leading_dash_as_a_path_not_an_option(
     (world.project / "-dash.txt").write_bytes(b"dash\n")
     _commit(world.project)
 
-    apply_renames(world.project, [_Rename("c", "-dash.txt", "dest.txt")])
+    apply_renames(world.project, [_Rename("c", "-dash.txt", "dest.txt")], dry_run=False)
 
     assert (world.project / "dest.txt").read_bytes() == b"dash\n"
     assert not (world.project / "-dash.txt").exists()
@@ -666,7 +670,9 @@ def test_apply_renames_treats_a_leading_dash_as_a_path_not_an_option(
 def test_a_legitimate_rename_still_carries_a_local_edit(world: _World) -> None:
     (world.project / "a.txt").write_bytes(b"locally edited\n")
 
-    apply_renames(world.project, [_Rename("c", "a.txt", "sub/moved.txt")])
+    apply_renames(
+        world.project, [_Rename("c", "a.txt", "sub/moved.txt")], dry_run=False
+    )
 
     assert (world.project / "sub" / "moved.txt").read_bytes() == b"locally edited\n"
     assert not (world.project / "a.txt").exists()

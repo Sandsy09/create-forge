@@ -1551,7 +1551,7 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
                     targets=[item.target for item in preparation.plan.targets],
                     renames=preparation.plan.renames,
                 )
-                update.apply_renames(project, preparation.plan.renames)
+                update.apply_renames(project, preparation.plan.renames, dry_run=dry_run)
                 outcome = update.apply_plan(
                     project,
                     preparation.plan.targets,

@@ -174,7 +174,9 @@ def _leave_state(repo: _Repo, state: str) -> None:
             dry_run=False,
         )
         return
-    apply_renames(project, _RENAMES)  # `git mv` stages the rename immediately
+    apply_renames(
+        project, _RENAMES, dry_run=False
+    )  # `git mv` stages the rename immediately
     if state == "after_git_mv":
         return
     apply_plan(project, _TARGETS, _RENAMES, old=_OLD, new=_NEW, dry_run=False)

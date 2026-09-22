@@ -215,13 +215,17 @@ re-implements it.
     `copier update` does. This is what makes § Rollback a `git` operation
     rather than a bespoke snapshot.
 
-11. **Renames are applied to the working tree before diffing.** When
-    `.forge/generation.json`'s recorded component versions and the current
-    ones straddle an owner-declared `{from, to, since}` rename record, the
-    client applies each move to the working tree first, so a user's local
-    edits travel with the moved path instead of being stranded
+11. **Renames are applied to the working tree before diffing -- on a real run
+    only.** When `.forge/generation.json`'s recorded component versions and
+    the current ones straddle an owner-declared `{from, to, since}` rename
+    record, the client applies each move to the working tree first, so a
+    user's local edits travel with the moved path instead of being stranded
     ([`generation-provenance.md`](https://github.com/Sandsy09/forge-template/blob/main/docs/generation-provenance.md);
-    the catalogue declares none today).
+    the catalogue declares none today). Under `--dry-run` the move is
+    **simulated, not applied**: nothing is moved or staged, and the preview
+    reads a renamed target's working bytes from its still-in-place old path
+    instead, so it classifies exactly as a real run would
+    ([create-forge#209](https://github.com/Sandsy09/create-forge/issues/209)).
 
 12. **Per-target three-way merge with inline conflict markers.** For each
     target `create-forge` computes the classification

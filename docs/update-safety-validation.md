@@ -246,8 +246,22 @@ them passed on clean `main` before the change, in the same mode; the protected C
    installed by the degraded route.
 3. **An archive hash is not a stable identity** — see [Candidate
    binding](#candidate-binding).
-4. **Known and tracked:** `--dry-run` runs `git mv` before its own check when the
-   plan has a rename ([#209](https://github.com/Sandsy09/create-forge/issues/209)).
+4. **Fixed:** `--dry-run` no longer runs `git mv` when the plan has a rename
+   ([#209](https://github.com/Sandsy09/create-forge/issues/209)).
+   `apply_renames` now takes a required `dry_run` keyword and returns after
+   validating both endpoints, before moving anything; `apply_plan` reads a
+   renamed target's working bytes from its still-in-place old path so the
+   preview classifies exactly as a real run would. There is still no
+   *installed* rename case: the rename plan comes from the provider, no
+   shipped component declares one (rule 11: "the catalogue declares none
+   today"), and the installed console cannot be made to emit one without a
+   fixture provider. The evidence is the fast suite instead, which runs on
+   both Linux and Windows: `tests/test_update_engine.py`'s
+   `test_a_dry_run_and_a_real_run_classify_a_rename_identically` (pristine and
+   locally-edited variants) and `tests/test_cli.py`'s
+   `test_engine_update_dry_run_with_a_rename_leaves_the_tree_and_index_untouched`,
+   the issue's own reproduction reduced to a test, confirmed to fail against
+   the pre-fix code.
 
 ## Release prerequisite
 
