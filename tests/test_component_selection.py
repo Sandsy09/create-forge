@@ -459,8 +459,10 @@ def test_zero_platform_descriptors_are_never_prompted(
     monkeypatch: pytest.MonkeyPatch,
     captured_selection: dict[str, object],
 ) -> None:
-    """The real 0.4 catalogue ships no platform component -- an interactive
-    run must skip that multi-select entirely, not offer an empty one.
+    """This test's fixture catalogue has no platform component -- see
+    `create-forge#218`: the real catalogue ships one (`github`). An
+    interactive run must skip the multi-select entirely when there is
+    nothing to offer, not present an empty one.
     """
 
     def fail(*_a: object, **_kw: object) -> object:

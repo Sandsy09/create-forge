@@ -31,6 +31,23 @@ USER_GUIDE = REPO_ROOT / "docs" / "user-guide"
 UPDATES = USER_GUIDE / "updates.md"
 MIGRATION = USER_GUIDE / "migration.md"
 STREAMLIT = USER_GUIDE / "streamlit.md"
+CAPABILITIES = USER_GUIDE / "capabilities.md"
+PROJECTS = USER_GUIDE / "projects.md"
+
+# create-forge#218: the catalogue's one platform, `github`, exercised through
+# the installed console by `test_e2e_installed_streamlit.py`'s
+# `dependabot-requires-github` failure case (without `--platform github`) --
+# there is no positive e2e recipe for the successful pair, so this is a
+# docs-accuracy guard, not an e2e-recipe drift guard like the others in this
+# file.
+GITHUB_PLATFORM_RECIPE = (
+    'uvx create-forge new "My Lib" --archetype library --platform github '
+    "--capability dependabot --yes --data license=mit"
+)
+_STALE_NO_PLATFORM_CLAIMS = (
+    "no platform components in the current engine catalogue",
+    "no platform components are currently shipped",
+)
 STREAMLIT_ARCHETYPE_CONTRACT = (
     "https://github.com/Sandsy09/forge-template/blob/main/docs/streamlit-archetype.md"
 )
@@ -143,6 +160,27 @@ def test_streamlit_guide_links_the_provider_contract_instead_of_restating_it() -
     `forge-template`, so the guide cannot go stale against what is generated.
     """
     assert STREAMLIT_ARCHETYPE_CONTRACT in STREAMLIT.read_text(encoding="utf-8")
+
+
+def test_capabilities_guide_documents_the_github_platform_recipe() -> None:
+    """create-forge#218: `dependabot` requires `github`, and the guide must
+    show a working `--platform github` pairing, not just the selection rule.
+    """
+    text = _normalised(CAPABILITIES)
+    assert GITHUB_PLATFORM_RECIPE in text, (
+        "capabilities.md no longer documents the --platform github recipe"
+    )
+
+
+def test_neither_guide_still_claims_the_catalogue_has_no_platform() -> None:
+    """create-forge#218: the catalogue has shipped the `github` platform since
+    the 0.4.0 cutover -- pin down the exact wrong sentences so they cannot
+    quietly return.
+    """
+    for guide in (PROJECTS, CAPABILITIES):
+        text = _normalised(guide)
+        for claim in _STALE_NO_PLATFORM_CLAIMS:
+            assert claim not in text, f"{guide.name} still claims {claim!r}"
 
 
 def test_streamlit_guide_relative_links_resolve() -> None:

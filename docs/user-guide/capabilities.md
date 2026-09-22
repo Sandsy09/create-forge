@@ -2,7 +2,9 @@
 
 Capabilities add tooling or dependencies to a project. Select one
 archetype, then zero or more compatible capabilities. The engine currently
-provides `jupyter` and `scientific-python`; both are optionless.
+provides `jupyter` and `scientific-python`; both are optionless. The
+catalogue also ships one platform component, `github`, selected separately
+with `--platform` — see below.
 
 ## Jupyter for a library
 
@@ -43,6 +45,21 @@ For an interactive application instead, see
 [Add the scientific stack](streamlit.md#add-the-scientific-stack) on the
 Streamlit page.
 
+## GitHub platform for automated dependency updates
+
+`github` is a platform component: it adds a GitHub repository, CI workflow,
+and issue/pull-request templates. The `dependabot` capability requires it —
+select both together with `--platform`:
+
+```bash
+uvx create-forge new "My Lib" --archetype library --platform github --capability dependabot --yes --data license=mit
+```
+
+This adds weekly, GitHub-native dependency-update configuration on top of the
+GitHub platform's own workflow and templates. Selecting `dependabot` without
+`--platform github` fails before a project is written, the same way
+selecting Data Science without Jupyter does.
+
 ## Selection rules
 
 - Repeat `--capability ID` to select several capabilities.
@@ -55,8 +72,11 @@ Streamlit page.
 - Non-interactive generation also requires `--data license=VALUE`. These
   recipes use `mit`; choose `proprietary` or `apache-2.0` instead when
   appropriate for your project. The interactive flow asks this question.
-- `--platform` and `--no-platforms` are selection flags, but no platform
-  components are currently shipped.
+- `--platform` selects a discovered platform (repeatable, like
+  `--capability`); `--no-platforms` explicitly selects none and conflicts
+  with `--platform`. `github` is the catalogue's one platform today; see
+  [GitHub platform for automated dependency updates](#github-platform-for-automated-dependency-updates)
+  above.
 
 Invalid or incompatible selections fail before a project is written.
 Choose from the interactive engine catalogue (`create-forge list`);

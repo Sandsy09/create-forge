@@ -46,10 +46,12 @@ Choose one archetype interactively:
 uvx create-forge new
 ```
 
-The CLI offers the archetypes and capabilities supplied by the installed
-engine — run `create-forge list` to see the discovered catalogue.
-`list --legacy` shows the separate, bundled Copier registry. There are no
-platform components in the current engine catalogue.
+The CLI offers the archetypes, capabilities, and platforms supplied by the
+installed engine — run `create-forge list` to see the discovered catalogue.
+`list --legacy` shows the separate, bundled Copier registry. The catalogue's
+one platform, `github`, adds a GitHub repository, CI workflow, and
+issue/pull-request templates; see [Add capabilities](capabilities.md) for how
+to select it.
 
 Non-interactive recipes explicitly choose a license with `--data license=mit`.
 Replace it with `proprietary` or `apache-2.0` to match your project.
