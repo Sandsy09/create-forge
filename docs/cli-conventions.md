@@ -324,7 +324,11 @@ success message. Omitting the flag preserves the normal update and its existing
 
 The engine-native route's `--dry-run` (CF-18.04, below) is a genuine preview
 instead: it has the classified plan in hand already, so it prints a
-per-target list rather than a change/no-change summary.
+per-target list rather than a change/no-change summary. It applies no rename
+either -- a plan target the provider classifies `renamed` is previewed from
+its still-in-place old path, so the classification list matches a real run's
+without moving or staging anything ([engine-project-lifecycle.md](engine-project-lifecycle.md)
+rule 11; [create-forge#209](https://github.com/Sandsy09/create-forge/issues/209)).
 
 ## Engine project lifecycle
 

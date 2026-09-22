@@ -128,7 +128,9 @@ def test_apply_renames_moves_the_working_tree_file(tmp_path: Path) -> None:
     _commit(tmp_path)
 
     apply_renames(
-        tmp_path, [_Rename(component_id="widget", from_="old.txt", to="new.txt")]
+        tmp_path,
+        [_Rename(component_id="widget", from_="old.txt", to="new.txt")],
+        dry_run=False,
     )
 
     assert not (tmp_path / "old.txt").exists()
@@ -141,10 +143,33 @@ def test_apply_renames_skips_an_already_moved_source(tmp_path: Path) -> None:
     _commit(tmp_path)
 
     apply_renames(
-        tmp_path, [_Rename(component_id="widget", from_="old.txt", to="new.txt")]
+        tmp_path,
+        [_Rename(component_id="widget", from_="old.txt", to="new.txt")],
+        dry_run=False,
     )  # must not raise -- old.txt never existed
 
     assert (tmp_path / "new.txt").read_text(encoding="utf-8") == "content"
+
+
+def test_apply_renames_dry_run_moves_nothing_and_stages_nothing(
+    tmp_path: Path,
+) -> None:
+    """create-forge#209: a dry run validates the rename but neither moves the
+    file nor stages anything -- rule 16's "writes nothing" promise.
+    """
+    _init_repo(tmp_path)
+    (tmp_path / "old.txt").write_text("content", encoding="utf-8")
+    _commit(tmp_path)
+
+    apply_renames(
+        tmp_path,
+        [_Rename(component_id="widget", from_="old.txt", to="new.txt")],
+        dry_run=True,
+    )
+
+    assert (tmp_path / "old.txt").read_text(encoding="utf-8") == "content"
+    assert not (tmp_path / "new.txt").exists()
+    assert _git("status", "--porcelain", cwd=tmp_path) == ""
 
 
 # --------------------------------------------------------------------------- #
@@ -358,6 +383,66 @@ def test_apply_plan_uses_the_pre_rename_path_for_old_bytes(tmp_path: Path) -> No
     expected = b"line1 (local)\nline2\nline3 (template)\n"
     assert (tmp_path / "new_name.txt").read_bytes() == expected
     assert outcome.results[0].status == "clean"
+
+
+def test_apply_plan_dry_run_classifies_a_rename_from_its_pre_move_path(
+    tmp_path: Path,
+) -> None:
+    """create-forge#209: under `dry_run`, `apply_renames` has moved nothing,
+    so `apply_plan` must read the renamed target's working bytes from its
+    still-in-place *old* path -- not report it as a plain "added" write
+    because nothing exists yet at the new path.
+    """
+    (tmp_path / "old_name.txt").write_bytes(b"line1\nline2\nline3\n")
+
+    outcome = apply_plan(
+        tmp_path,
+        [_Target(target="new_name.txt", classification="renamed")],
+        [_Rename(component_id="widget", from_="old_name.txt", to="new_name.txt")],
+        old={"old_name.txt": b"line1\nline2\nline3\n"},
+        new={"new_name.txt": b"line1\nline2\nline3 (template)\n"},
+        dry_run=True,
+    )
+
+    assert outcome.results[0].status == "clean"
+    assert (tmp_path / "old_name.txt").read_bytes() == b"line1\nline2\nline3\n"
+    assert not (tmp_path / "new_name.txt").exists()
+
+
+@pytest.mark.parametrize(
+    "working_content",
+    [
+        b"line1\nline2\nline3\n",  # pristine -- matches old_bytes
+        b"line1 (local)\nline2\nline3\n",  # locally edited -- merges
+    ],
+    ids=["pristine", "locally-edited"],
+)
+def test_a_dry_run_and_a_real_run_classify_a_rename_identically(
+    tmp_path: Path, working_content: bytes
+) -> None:
+    """create-forge#209 AC 2: the dry-run classification list for a plan with
+    a rename is identical to the real run's, pristine or conflicting alike.
+    """
+    renames = [_Rename(component_id="widget", from_="old_name.txt", to="new_name.txt")]
+    targets = [_Target(target="new_name.txt", classification="renamed")]
+    old = {"old_name.txt": b"line1\nline2\nline3\n"}
+    new = {"new_name.txt": b"line1\nline2\nline3 (template)\n"}
+
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "old_name.txt").write_bytes(working_content)
+    apply_renames(real, renames, dry_run=False)
+    real_outcome = apply_plan(real, targets, renames, old=old, new=new, dry_run=False)
+
+    preview = tmp_path / "preview"
+    preview.mkdir()
+    (preview / "old_name.txt").write_bytes(working_content)
+    apply_renames(preview, renames, dry_run=True)  # moves nothing
+    preview_outcome = apply_plan(
+        preview, targets, renames, old=old, new=new, dry_run=True
+    )
+
+    assert preview_outcome.results == real_outcome.results
 
 
 def test_apply_plan_dry_run_writes_nothing(tmp_path: Path) -> None:
@@ -592,7 +677,7 @@ def test_apply_renames_stages_the_move_so_an_interrupted_rename_is_not_unstaged(
     (tmp_path / "old.txt").write_text("content\n", encoding="utf-8")
     _commit(tmp_path)
 
-    apply_renames(tmp_path, [_Rename("c", "old.txt", "new.txt")])
+    apply_renames(tmp_path, [_Rename("c", "old.txt", "new.txt")], dry_run=False)
 
     assert _git("status", "--porcelain", cwd=tmp_path).split()[0] == "R"
 

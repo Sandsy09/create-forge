@@ -2067,7 +2067,8 @@ def test_engine_update_reports_nothing_changed_on_a_no_op(
         pipeline_module, "prepare_update", lambda project: fake_preparation
     )
     monkeypatch.setattr(
-        "create_forge.update.apply_renames", lambda project, renames: None
+        "create_forge.update.apply_renames",
+        lambda project, renames, dry_run=False: None,
     )
     monkeypatch.setattr(
         "create_forge.update.apply_plan",
@@ -2099,7 +2100,8 @@ def test_engine_update_reports_clean_and_conflicted_counts(
         pipeline_module, "prepare_update", lambda project: fake_preparation
     )
     monkeypatch.setattr(
-        "create_forge.update.apply_renames", lambda project, renames: None
+        "create_forge.update.apply_renames",
+        lambda project, renames, dry_run=False: None,
     )
     monkeypatch.setattr(
         "create_forge.update.apply_plan",
@@ -2136,7 +2138,8 @@ def test_engine_update_dry_run_prints_the_classification_list_and_writes_nothing
         pipeline_module, "prepare_update", lambda project: fake_preparation
     )
     monkeypatch.setattr(
-        "create_forge.update.apply_renames", lambda project, renames: None
+        "create_forge.update.apply_renames",
+        lambda project, renames, dry_run=False: None,
     )
     monkeypatch.setattr(
         "create_forge.update.apply_plan",
@@ -2154,6 +2157,111 @@ def test_engine_update_dry_run_prints_the_classification_list_and_writes_nothing
     assert _metadata_path(project).read_text(encoding="utf-8") == before
 
 
+@dataclass(frozen=True, slots=True)
+class _FakeUpdateTarget:
+    target: str
+    classification: str
+    regeneration: str = "replace"
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeAppliedRename:
+    component_id: str
+    from_: str
+    to: str
+    since: str = "1.1.0"
+
+
+def _git_text(*args: str, cwd: Path) -> str:
+    return subprocess.run(  # noqa: S603 - fixed executable, reviewed args
+        ["git", *args],  # noqa: S607
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    ).stdout
+
+
+def _git_run(*args: str, cwd: Path) -> None:
+    subprocess.run(  # noqa: S603 - fixed executable, reviewed args
+        ["git", *args],  # noqa: S607
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+
+def test_engine_update_dry_run_with_a_rename_leaves_the_tree_and_index_untouched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """create-forge#209's own reproduction: a dry run whose plan contains an
+    owner-declared rename alongside a changed, a removed and an added target
+    must not run `git mv` -- `apply_renames` and `apply_plan` run for real
+    here, only `prepare_update` is stubbed.
+    """
+    project = _engine_project(tmp_path)
+    (project / "moved-from.txt").write_bytes(b"moved content\n")
+    (project / "changed.txt").write_bytes(b"old changed\n")
+    (project / "removed.txt").write_bytes(b"old removed\n")
+    _git_run("add", "-A", cwd=project)
+    _git_run("commit", "--quiet", "-m", "seed", cwd=project)
+
+    before_status = _git_text("status", "--porcelain", cwd=project)
+    before_head = _git_text("rev-parse", "HEAD", cwd=project).strip()
+    before_metadata = _metadata_path(project).read_bytes()
+
+    fake_new = _FakeRendered(
+        files=(
+            _FakeFile("moved-to.txt", b"moved content (template)\n"),
+            _FakeFile("changed.txt", b"new changed\n"),
+            _FakeFile("added.txt", b"new added\n"),
+        ),
+        metadata=_synthetic_metadata(),
+    )
+    fake_preparation = pipeline_module.UpdatePreparation(
+        plan=cast(
+            Any,
+            _FakePlan(
+                targets=(
+                    _FakeUpdateTarget(target="moved-to.txt", classification="renamed"),
+                    _FakeUpdateTarget(target="changed.txt", classification="changed"),
+                    _FakeUpdateTarget(target="removed.txt", classification="removed"),
+                    _FakeUpdateTarget(target="added.txt", classification="added"),
+                ),
+                renames=(
+                    _FakeAppliedRename(
+                        component_id="widget", from_="moved-from.txt", to="moved-to.txt"
+                    ),
+                ),
+            ),
+        ),
+        new=cast(Any, fake_new),
+        old={
+            "moved-from.txt": b"moved content\n",
+            "changed.txt": b"old changed\n",
+            "removed.txt": b"old removed\n",
+        },
+        recorded=cast(Any, None),
+    )
+    monkeypatch.setattr(
+        pipeline_module, "prepare_update", lambda project: fake_preparation
+    )
+
+    result = runner.invoke(app, ["update", str(project), "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "Dry run complete." in result.output
+    assert _git_text("status", "--porcelain", cwd=project) == before_status == ""
+    assert _git_text("rev-parse", "HEAD", cwd=project).strip() == before_head
+    assert _metadata_path(project).read_bytes() == before_metadata
+    assert (project / "moved-from.txt").read_bytes() == b"moved content\n"
+    assert not (project / "moved-to.txt").exists()
+    assert (project / "changed.txt").read_bytes() == b"old changed\n"
+    assert (project / "removed.txt").read_bytes() == b"old removed\n"
+    assert not (project / "added.txt").exists()
+
+
 def test_engine_update_relock_warning_is_printed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2169,7 +2277,8 @@ def test_engine_update_relock_warning_is_printed(
         pipeline_module, "prepare_update", lambda project: fake_preparation
     )
     monkeypatch.setattr(
-        "create_forge.update.apply_renames", lambda project, renames: None
+        "create_forge.update.apply_renames",
+        lambda project, renames, dry_run=False: None,
     )
     monkeypatch.setattr(
         "create_forge.update.apply_plan", lambda *a, **k: _UpdateOutcome(results=())
@@ -2335,7 +2444,7 @@ def test_engine_update_refuses_an_unsafe_plan_target_before_any_mutation(
     mutated: list[str] = []
     monkeypatch.setattr(
         "create_forge.update.apply_renames",
-        lambda project, renames: mutated.append("apply_renames"),
+        lambda project, renames, dry_run=False: mutated.append("apply_renames"),
     )
     monkeypatch.setattr(
         "create_forge.update.apply_plan",

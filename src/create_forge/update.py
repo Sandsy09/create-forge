@@ -461,7 +461,9 @@ class AppliedRenameView(Protocol):
         ...
 
 
-def apply_renames(project: Path, renames: Sequence[AppliedRenameView]) -> None:
+def apply_renames(
+    project: Path, renames: Sequence[AppliedRenameView], *, dry_run: bool
+) -> None:
     """Rule 11: apply each owner-declared rename to the working tree before diffing.
 
     So a local edit under the old path travels with the move, rather than
@@ -471,10 +473,18 @@ def apply_renames(project: Path, renames: Sequence[AppliedRenameView]) -> None:
     Both endpoints of every rename are validated before the first move, and
     revalidated as each move happens (ADR 0052). `--` keeps a target that
     begins with `-` from being read as a `git mv` option.
+
+    `dry_run` is required, not defaulted: a dry run still validates every
+    endpoint (so an unsafe rename is refused identically either way) but
+    returns before touching the working tree or the index -- rule 16's
+    "writes nothing" promise. `apply_plan`'s own dry-run path reads a
+    renamed target's bytes from this unmoved source (`create-forge#209`).
     """
     boundary = paths.ProjectBoundary.for_project(project)
     for rename in renames:
         _contain_all(boundary, (rename.from_, rename.to))
+    if dry_run:
+        return
     for rename in renames:
         source = _contain(boundary, rename.from_)
         if not source.exists():
@@ -655,20 +665,27 @@ def apply_plan(  # noqa: PLR0913 - one keyword per render side plus renames and 
 ) -> UpdateOutcome:
     """Apply a provider-classified update plan to the working tree.
 
-    `renames` must already have been applied to the working tree
-    (`apply_renames`, before this call) -- this only needs them to look up a
-    renamed target's *old* content, keyed by its pre-move path. `dry_run`
-    classifies and would-write every target exactly like a real run but
-    writes nothing (rule 16's "genuine preview" is this same code path).
+    On a real run, `renames` must already have been applied to the working
+    tree (`apply_renames(..., dry_run=False)`, before this call) -- this only
+    needs them to look up a renamed target's *old* content, keyed by its
+    pre-move path. Under `dry_run`, `apply_renames` has moved nothing, so
+    this simulates each rename instead: `_apply_one` reads a renamed target's
+    working bytes from its still-in-place source path, so the preview
+    classifies identically to what a real run would produce
+    (`create-forge#209`). `dry_run` otherwise classifies and would-write
+    every target exactly like a real run but writes nothing (rule 16's
+    "genuine preview" is this same code path).
 
     Every plan target -- including `skip-if-exists` and `unchanged` entries,
     which are never written but are still provider-supplied strings -- is
     validated before the first write or delete, so an invalid late target
     leaves no partial mutation and a `--dry-run` reads nothing outside the
-    project (ADR 0052).
+    project (ADR 0052). Rename endpoints are validated too, matching
+    `apply_renames`'s own check.
     """
     boundary = paths.ProjectBoundary.for_project(project)
     _contain_all(boundary, (item.target for item in targets))
+    _contain_all(boundary, (endpoint for r in renames for endpoint in (r.from_, r.to)))
     rename_source = {rename.to: rename.from_ for rename in renames}
     results: list[TargetResult] = []
     for item in sorted(targets, key=lambda target: target.target):
@@ -683,20 +700,29 @@ def apply_plan(  # noqa: PLR0913 - one keyword per render side plus renames and 
                 old_bytes=old.get(old_key),
                 new_bytes=new.get(item.target),
                 dry_run=dry_run,
+                rename_from=rename_source.get(item.target),
             )
         )
     return UpdateOutcome(tuple(results))
 
 
-def _apply_one(  # noqa: PLR0911 - one return per classification-dispatch branch; the table above each is exactly this function's contract
+def _apply_one(  # noqa: PLR0911, PLR0912, PLR0913 - one return per classification-dispatch branch (the table above each is exactly this function's contract); rename_from adds one branch and one keyword to simulate a dry-run rename
     boundary: paths.ProjectBoundary,
     item: UpdateTargetView,
     *,
     old_bytes: bytes | None,
     new_bytes: bytes | None,
     dry_run: bool = False,
+    rename_from: str | None = None,
 ) -> TargetResult:
     path = _contain(boundary, item.target)
+    if dry_run and rename_from is not None:
+        # A real run's apply_renames would have moved this file to
+        # item.target already; a dry run leaves it at its pre-move path, so
+        # read the working bytes from there instead (create-forge#209).
+        source = _contain(boundary, rename_from)  # revalidated at point of use
+        if source.exists():
+            path = source
     classification = item.classification
 
     if classification == "unchanged":
