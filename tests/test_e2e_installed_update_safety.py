@@ -157,35 +157,6 @@ class Scenario:
         assert file_bytes(self.outside) == {"sentinel.txt": SENTINEL}
 
 
-def _same_but_for_metadata_eol(after: State, before: State) -> bool:
-    """`after == before`, tolerating one known difference: line endings in the
-    metadata file.
-
-    A no-op `update` rewrites `.forge/generation.json` with the same content,
-    documented as byte-identical (`docs/engine-project-lifecycle.md` rule 15).
-    On Windows the rewrite goes through `Path.write_text`, which translates
-    `\\n` to `\\r\\n`, so the bytes differ; generated projects ship
-    `.gitattributes` with `* text=auto eol=lf`, which is why Git still reports
-    nothing changed. That is a real, pre-existing defect the evidence record
-    lists under Findings -- it is neither hidden nor fixed here (this issue
-    changes nothing under `src/`). Everything else must match exactly, and
-    HEAD, the index and the status must match exactly on every host.
-    """
-
-    def normalised(files: dict[str, bytes]) -> dict[str, bytes]:
-        return {
-            name: content.replace(b"\r\n", b"\n") if name == METADATA else content
-            for name, content in files.items()
-        }
-
-    return (
-        after.head == before.head
-        and after.index == before.index
-        and after.status == before.status
-        and normalised(after.files) == normalised(before.files)
-    )
-
-
 def _text(result: subprocess.CompletedProcess[str]) -> str:
     """Both streams, whitespace-normalised (Rich wraps long lines)."""
     return " ".join(f"{result.stdout} {result.stderr}".split())
@@ -383,13 +354,18 @@ def test_the_suite_runs_against_the_candidate_and_the_pinned_provider(
 
 
 def test_normal_route_no_op_update_changes_nothing(scenario: Scenario) -> None:
+    """create-forge#214: rule 15's "byte-identical" is now an exact
+    comparison, including `.forge/generation.json` -- `write_recorded` no
+    longer goes through `Path.write_text`, so there is no line-ending
+    translation left to tolerate.
+    """
     before = _state(scenario.project)
 
     result = scenario.update()
 
     assert_success(result, "no-op engine-native update")
     assert "Nothing changed" in _text(result)
-    assert _same_but_for_metadata_eol(_state(scenario.project), before)
+    assert _state(scenario.project) == before
 
 
 def test_normal_route_update_preserves_a_committed_local_edit(
@@ -405,7 +381,7 @@ def test_normal_route_update_preserves_a_committed_local_edit(
 
     assert_success(result, "engine-native update over a local edit")
     assert readme.read_bytes() == edited
-    assert _same_but_for_metadata_eol(_state(scenario.project), before)
+    assert _state(scenario.project) == before
 
 
 def test_normal_route_dry_run_writes_nothing(scenario: Scenario) -> None:

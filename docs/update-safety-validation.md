@@ -64,8 +64,8 @@ file.
 
 | Group | Test | Proves |
 | --- | --- | --- |
-| Normal route | `test_normal_route_no_op_update_changes_nothing` | exit 0, "Nothing changed", HEAD, index and status untouched |
-| | `test_normal_route_update_preserves_a_committed_local_edit` | a committed local edit survives an update |
+| Normal route | `test_normal_route_no_op_update_changes_nothing` | exit 0, "Nothing changed", HEAD, index, status **and every file's bytes** (including `.forge/generation.json`) byte-identical -- an exact comparison since #214 |
+| | `test_normal_route_update_preserves_a_committed_local_edit` | a committed local edit survives an update, with the same exact-state comparison |
 | | `test_normal_route_dry_run_writes_nothing` | dry-run leaves the tree, index and status byte-identical |
 | Degraded route | `test_degraded_update_applies_a_real_changed_removed_and_added_target` | a real changed, removed and added target, all staged by the real `git add -A`, metadata refreshed with a degraded reason |
 | Dry-run | `test_degraded_dry_run_lists_every_target_and_writes_nothing` | the classification list for all three, nothing written, sentinel untouched |
@@ -131,7 +131,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | Commit | `a9c48c7fcb5706de828ec541be9fbb9f9baa8184` (`main` before CF-23.01; measured with that change applied, uncommitted) |
 | create-forge version | `0.4.0` |
 | create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:817f21ac554f53cda43a1aef4fbb1e6230357ee19b22df7edce0d33fa1cbb366` |
-| create-forge wheel content digest | `sha256:8cf4da8052c6adb6ab22086066cee492356ab6f383191a58f921f2aacfe8bc5d` |
+| create-forge wheel content digest | `sha256:b4a0b3def59d375d46809ba5ba0222d8f546594e084bbafeca79a85d14b6d948` |
 | create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:af5ab5a4d074af9a9c1eea82fd1767e4dc87509f21d7853fc21246cb46a2f9c2` |
 | create-forge sdist content digest | `sha256:68a2c5007dccca587224373bfe5e697af7af9d2d41918a5bcb58516b831c1a15` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
@@ -140,7 +140,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | uv | `uv 0.12.13 (0ebbd9274 2026-09-10 x86_64-pc-windows-msvc)` |
 | git | `git version 2.47.1.windows.2` |
 | Python | `3.13.1` |
-| Safety-relevant source digest | `sha256:1106ee20915a1c526dadcd974fca3dc3e413f144f19502729fd52bc4c8b6e45e` |
+| Safety-relevant source digest | `sha256:64adcb2094f2ab437f62c8babef3008d30bb5cf0869534138d215c8cf0be21fd` |
 
 - **Bound to the content digest, not the archive hash.** Building the same source
   in two build environments gave wheels with byte-identical members, order,
@@ -255,20 +255,55 @@ cutover, update/engine-source). This issue changes nothing they execute
 update-safety suite above); the protected CI `e2e`, `e2e-windows` and
 `network` jobs on the pull request are the evidence for them.
 
+### #214: `update` writes the metadata file as bytes, not text
+
+The guard above went red on purpose again: `update.write_recorded` changed to
+fix the issue (line-ending translation, [Findings](#findings) item 1), and
+the evidence was refreshed rather than the digest edited. Intended behaviour
+change: a no-op update no longer rewrites `.forge/generation.json` with
+different bytes on Windows.
+
+| | Before | After |
+| --- | --- | --- |
+| Safety-relevant source digest | `sha256:1106ee20…` | `sha256:64adcb20…` |
+| Wheel content digest | `sha256:8cf4da80…` | `sha256:b4a0b3de…` |
+
+What was re-run on the fixed code, on Windows 11 with Python 3.13.1 in ambient
+`cp1252` mode (no `PYTHONUTF8`):
+
+- the installed update-safety suite: **14 passed, 1 skipped**, identical to
+  the result recorded above -- and, unlike every prior run, this is now an
+  exact-bytes comparison with no metadata-eol tolerance to satisfy;
+- the fast suite (`uv run pytest -m 'not network and not e2e'`): **1485
+  passed, 11 skipped, 0 failed** before refreshing this record (1483 before
+  this change plus its new tests; the digest-guard test itself is the one
+  expected failure until this refresh);
+- `uv run poe evidence:candidate` on commit `62428efeffc3f1569f708937b360ebbd40c849d2`
+  (working tree clean), which produced the digests above.
+
+**Not completed locally:** the network tier and the remaining e2e modules
+(engine-generation, rollout, Copier-generation, Data Science, Streamlit,
+cutover, update/engine-source). This issue changes nothing they execute; the
+protected CI `e2e`, `e2e-windows` and `network` jobs on the pull request are
+the evidence for them.
+
 ## Findings
 
-1. **A no-op `update` rewrites the metadata file's line endings on Windows.**
+1. **Fixed:** a no-op `update` rewrote the metadata file's line endings on
+   Windows ([#214](https://github.com/Sandsy09/create-forge/issues/214)).
    [engine-project-lifecycle.md](engine-project-lifecycle.md) rule 15 says a
    repeated no-op update rewrites `.forge/generation.json` "to byte-identical
-   content". `update.write_recorded` (and the `cli.py` code it replaced) writes
-   with `Path.write_text`, which translates `\n` to `\r\n` on Windows, so the
-   bytes change. Generated projects hide it because they ship `.gitattributes`
-   with `* text=auto eol=lf`; a project without that file would show a spurious
-   diff on every no-op update. Pre-existing, not introduced by CF-22.01 or
-   CF-22.02, and not fixed here: this issue changes nothing under `src/`. The
-   installed suite compares that one file modulo line endings and everything else
-   exactly, and HEAD, the index and the status exactly. A separate issue is
-   proposed.
+   content". `update.write_recorded` used `Path.write_text`, which translates
+   `\n` to `\r\n` on Windows, so the bytes changed even though the content did
+   not; generated projects hid it because they ship `.gitattributes` with
+   `* text=auto eol=lf`. It now writes `content.encode("utf-8")` as bytes, so
+   no newline translation happens regardless of `.gitattributes`.
+   `tests/test_update_write_policy.py` is a source-policy tripwire (matching
+   `tests/test_subprocess_policy.py`'s idiom) so `write_text` cannot quietly
+   return to `update.py`; `config.py`'s own `write_text` for the user's config
+   file is deliberately out of its scope. The installed suite's no-op and
+   local-edit tests now compare every file's bytes, HEAD, the index and the
+   status exactly, with no tolerance left to remove.
 2. **On the engine-native route the provider refuses a tampered recorded
    document first.** A schema-valid recorded entry whose target escapes the
    project is refused by `forge-template` (`invalid-generation-metadata`: "the

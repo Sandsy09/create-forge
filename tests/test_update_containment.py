@@ -710,7 +710,24 @@ def test_write_recorded_writes_a_contained_metadata_file(world: _World) -> None:
 
     write_recorded(world.project, metadata_filename=METADATA_FILE, content="{}\n")
 
-    assert (world.project / METADATA_FILE).read_text(encoding="utf-8") == "{}\n"
+    assert (world.project / METADATA_FILE).read_bytes() == b"{}\n"
+
+
+def test_write_recorded_never_translates_newlines(world: _World) -> None:
+    """create-forge#214: rule 15's "byte-identical" no-op rewrite requires
+    `write_recorded` to write exactly the given bytes -- `Path.write_text`
+    would translate `\\n` to `\\r\\n` on Windows. Covers both a first write
+    and a rewrite with changed content landing as LF either way.
+    """
+    (world.project / ".forge").mkdir()
+    content = '{\n  "a": 1\n}\n'
+
+    write_recorded(world.project, metadata_filename=METADATA_FILE, content=content)
+    assert (world.project / METADATA_FILE).read_bytes() == content.encode("utf-8")
+
+    changed = '{\n  "a": 2\n}\n'
+    write_recorded(world.project, metadata_filename=METADATA_FILE, content=changed)
+    assert (world.project / METADATA_FILE).read_bytes() == changed.encode("utf-8")
 
 
 def test_preflight_accepts_a_fully_valid_update(world: _World) -> None:
