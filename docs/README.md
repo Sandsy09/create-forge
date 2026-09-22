@@ -59,6 +59,7 @@ Acceptance-checklist-to-named-test maps, each closing an epic or a release.
 | [subprocess-output.md](subprocess-output.md) | How every process the client starts is captured as bytes and decoded by an explicit rule (diagnostic, protocol, path/binary), the site inventory, the worker's UTF-8 wire format, and the test-harness rule (ADR 0055). |
 | [update-safety-validation.md](update-safety-validation.md) | Update containment and recovery proven through the installed candidate wheel, the candidate's hashes and safety-relevant source digest, and CF-21.03's release prerequisite (ADR 0054). |
 | [release-0-5-0-validation.md](release-0-5-0-validation.md) | The published `create-forge 0.5.0` / `forge-template 0.6.0` pair verified against its own artefacts, both installed suites run against the wheel PyPI serves, and the Streamlit client release close-out (ADR 0056). |
+| [installed-encoding-validation.md](installed-encoding-validation.md) | The installed console proven under a verified non-UTF-8 Windows setting, the console-encoding and provisioning-failure fixes it found, and the disposition of five previously reported failures (ADR 0057). |
 
 ## Process and security
 

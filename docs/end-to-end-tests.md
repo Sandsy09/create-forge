@@ -6,10 +6,11 @@ records the decision this document keeps current.
 
 ## Status
 
-Seven `e2e`-marked modules cover both generation paths, the installed
+Eight `e2e`-marked modules cover both generation paths, the installed
 Data Science release-candidate boundary, the installed rollout regression
 matrix, the installed cutover acceptance matrix, the installed Streamlit
-boundary, and the installed update-safety boundary. `tests/test_e2e_generation.py`
+boundary, the installed update-safety boundary, and the installed console
+encoding boundary. `tests/test_e2e_generation.py`
 runs the real `create-forge` console script against `forge-template`'s latest
 released tag, then the generated project's own `uv run poe check` — the
 Copier path (CF-07.06, [ADR 0016](adr/0016-end-to-end-reference-client-tests.md)).
@@ -42,12 +43,17 @@ route and the rejected preview-project transition; CF-18.06
 the rest of the installed cutover acceptance matrix. CF-21.02
 ([ADR 0051](adr/0051-validate-installed-streamlit-generation.md)) adds
 `tests/test_e2e_installed_streamlit.py`, which reuses the same wheel to validate
-the four accepted Streamlit compositions and their failure cases. See
+the four accepted Streamlit compositions and their failure cases. CF-23.02
+([ADR 0057](adr/0057-prove-the-installed-console-under-non-utf8-windows-settings.md))
+adds `tests/test_e2e_installed_encoding.py`, which reuses the same wheel to
+prove the installed console under a verified non-UTF-8 Windows setting. See
 [the engine path](#the-engine-path),
 [the installed Data Science path](#the-installed-data-science-path),
 [the installed rollout path](#the-installed-rollout-path),
-[the installed cutover path](#the-installed-cutover-path), and
-[the installed Streamlit path](#the-installed-streamlit-path) below.
+[the installed cutover path](#the-installed-cutover-path),
+[the installed Streamlit path](#the-installed-streamlit-path), and
+[the installed console encoding path](#the-installed-console-encoding-path)
+below.
 
 ## The three-tier test split
 
@@ -296,6 +302,31 @@ merge (`tests/test_update_engine.py` proves it) and renames
 The canonical [update-safety validation](update-safety-validation.md) record
 maps every CF-22.03 acceptance criterion to a named test, and binds the evidence
 to the candidate with `uv run poe evidence:candidate`.
+
+## The installed console encoding path
+
+`tests/test_e2e_installed_encoding.py` (CF-23.02,
+[ADR 0057](adr/0057-prove-the-installed-console-under-non-utf8-windows-settings.md))
+reuses the same candidate wheel, at the interpreter `CREATE_FORGE_E2E_PYTHON`
+names, to prove the installed console under a *verified* non-UTF-8 Windows
+setting -- `tests/encoding_lanes.py`'s `ambient`/`utf8-off`/`utf8-on` lanes,
+each checked against a probe rather than assumed. Non-ASCII generation,
+`doctor`, and `update`; a real, not-injected non-ASCII `git` identity; invalid
+diagnostic bytes from a real `git`/`uv` fault-injection shim
+(`tests/fake_tools.py`); the engine-source worker's strict protocol rejecting a
+corrupted response from a hand-built `forge_template` look-alike, for each of
+the four ways it can be malformed; a real failing `git commit` and a real
+engine-source connection failure, both showing only the fixed message. It runs
+on Windows in a dedicated CI job at the supported Python window's edges plus
+the default (3.11/3.13/3.14), and on Linux in the `e2e` job (`poe test:e2e`)
+as a UTF-8 control, where the two Windows-only lanes skip.
+
+The canonical
+[installed encoding validation](installed-encoding-validation.md) record maps
+every acceptance criterion to a named test, and records the two correctness
+fixes this issue found (a console crash on a path outside its codepage, and an
+`--engine-source` provisioning failure that escaped as a raw traceback) and the
+disposition of five previously reported failures.
 
 ## How the harness decodes child output
 

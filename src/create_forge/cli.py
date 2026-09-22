@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import shutil
@@ -77,6 +78,41 @@ app = typer.Typer(
 )
 console = Console()
 err = Console(stderr=True)
+
+
+def _harden_console_encoding() -> None:
+    r"""Make `console`/`err` degrade unencodable text instead of raising.
+
+    Rich resolves `sys.stdout`/`sys.stderr` fresh on every print (`Console.file`
+    is a property, not a frozen reference at construction), and on Windows,
+    whenever the process is not attached to a real console -- a pipe, a
+    redirect, a test harness -- `GetConsoleMode` fails exactly as it would on
+    an unsupported terminal, so Rich takes its "legacy Windows" path and writes
+    through the stream's own `.write`, which is `sys.stdout`/`sys.stderr`'s
+    default `errors="strict"`. A project name, path, or diagnostic outside the
+    console's codepage (a CJK path segment on a `cp1252` host, say) then raises
+    `UnicodeEncodeError` -- observed reaching the user *after* `new` had
+    already written and committed the project, which is a correctness bug, not
+    a cosmetic one (CF-23.02, ADR 0057). `backslashreplace` keeps every such
+    character visible (`\\uXXXX`) rather than losing the message, matching
+    Click's own choice for `CliRunner`'s stderr stream. Called at the top of
+    every invocation (`main()`, Typer's group callback) because CliRunner and
+    other harnesses swap `sys.stdout`/`sys.stderr` per call, after this module
+    is imported once -- reconfiguring at import time would hardcode whatever
+    stream was current then and miss every later swap.
+
+    Never touches path bytes, generated content, or what argument reaches a
+    subprocess -- console text only, and only when the stream supports
+    `reconfigure` (every real Windows console script and Click's own test
+    streams do; anything else is left as it was).
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        with contextlib.suppress(AttributeError, OSError, ValueError):
+            reconfigure(errors="backslashreplace")
+
 
 config_app = typer.Typer(
     name="config",
@@ -179,6 +215,7 @@ def main(
     ] = False,
 ) -> None:
     """create-forge."""
+    _harden_console_encoding()
 
 
 def _load_config_or_exit() -> UserConfig:
@@ -854,7 +891,21 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
         err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
-    with engine_source.provision(requirement) as runtime:
+    with contextlib.ExitStack() as stack:
+        try:
+            # `provision()`'s own body -- two `uv` invocations -- can raise
+            # `EngineSourceError` before ever yielding a runtime (CF-23.02:
+            # observed reaching the user as a raw traceback, because a bare
+            # `with engine_source.provision(...) as runtime:` has nothing
+            # here to catch an `__enter__`-time failure). `ExitStack.
+            # enter_context` still registers the cleanup once entry succeeds,
+            # so a later failure inside the block still removes the
+            # provisioned environment exactly as the `with` form would have.
+            runtime = stack.enter_context(engine_source.provision(requirement))
+        except engine_source.EngineSourceError as exc:
+            err.print(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+
         try:
             engine_source.negotiate(runtime)
         except compat.EngineCompatibilityError as exc:
