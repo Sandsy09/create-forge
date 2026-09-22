@@ -131,7 +131,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | Commit | `a9c48c7fcb5706de828ec541be9fbb9f9baa8184` (`main` before CF-23.01; measured with that change applied, uncommitted) |
 | create-forge version | `0.4.0` |
 | create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:817f21ac554f53cda43a1aef4fbb1e6230357ee19b22df7edce0d33fa1cbb366` |
-| create-forge wheel content digest | `sha256:73cca7e903feb169313af97e0c93816be68a95b6254d2b4a451d7466a4472668` |
+| create-forge wheel content digest | `sha256:8cf4da8052c6adb6ab22086066cee492356ab6f383191a58f921f2aacfe8bc5d` |
 | create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:af5ab5a4d074af9a9c1eea82fd1767e4dc87509f21d7853fc21246cb46a2f9c2` |
 | create-forge sdist content digest | `sha256:68a2c5007dccca587224373bfe5e697af7af9d2d41918a5bcb58516b831c1a15` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
@@ -140,7 +140,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | uv | `uv 0.12.13 (0ebbd9274 2026-09-10 x86_64-pc-windows-msvc)` |
 | git | `git version 2.47.1.windows.2` |
 | Python | `3.13.1` |
-| Safety-relevant source digest | `sha256:2d4e809b9c70d30f45e1eb0b7b596139a7edc3ae99197f6b9c79dfbf77ca465c` |
+| Safety-relevant source digest | `sha256:1106ee20915a1c526dadcd974fca3dc3e413f144f19502729fd52bc4c8b6e45e` |
 
 - **Bound to the content digest, not the archive hash.** Building the same source
   in two build environments gave wheels with byte-identical members, order,
@@ -222,6 +222,38 @@ tier. The run was stopped by the development environment for low system memory
 (319 MB free of 6 GB) after the cutover module, and was not restarted. Each of
 them passed on clean `main` before the change, in the same mode; the protected CI
 `e2e` and `e2e-windows` jobs are the evidence for them on the migrated code.
+
+### #209: `update --dry-run` simulates renames instead of applying them
+
+The guard above went red on purpose again: `update.py`'s `apply_renames` and
+`_apply_one`, and the `_run_engine_update` call site, changed to fix the issue
+(the rename simulation described in [Findings](#findings) item 4), and the
+evidence was refreshed rather than the digest edited. Intended behaviour
+change: a dry run with a rename in the plan no longer runs `git mv`.
+
+| | Before | After |
+| --- | --- | --- |
+| Safety-relevant source digest | `sha256:2d4e809b…` | `sha256:1106ee20…` |
+| Wheel content digest | `sha256:73cca7e9…` | `sha256:8cf4da80…` |
+
+What was re-run on the fixed code, on Windows 11 with Python 3.13.1 in ambient
+`cp1252` mode (no `PYTHONUTF8`):
+
+- the installed update-safety suite: **14 passed, 1 skipped**, identical to the
+  result recorded above;
+- the fast suite (`uv run pytest -m 'not network and not e2e'`): **1482 passed,
+  11 skipped, 0 failed** before refreshing this record (1453 before this
+  change plus its new tests; the digest-guard test itself is the one expected
+  failure until this refresh);
+- `uv run poe evidence:candidate` on commit `385dc9df8807760f6df6b989e002dee334146321`
+  (working tree clean), which produced the digests above.
+
+**Not completed locally:** the network tier and the remaining e2e modules
+(engine-generation, rollout, Copier-generation, Data Science, Streamlit,
+cutover, update/engine-source). This issue changes nothing they execute
+(`update.py`'s rename path is exercised by the fast suite and the installed
+update-safety suite above); the protected CI `e2e`, `e2e-windows` and
+`network` jobs on the pull request are the evidence for them.
 
 ## Findings
 
