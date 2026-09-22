@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -165,12 +166,22 @@ def fake_engine_wheel(e2e_child_env: dict[str, str]) -> Iterator[Path]:
 
 
 def _shim_env(
-    client: InstalledClient, shim_scripts_dir: Path, *, real_git: str, real_uv: str
+    client: InstalledClient, shim_scripts_dir: Path, *, real_uv: str
 ) -> dict[str, str]:
     """`client.env` with the shim ahead of it on `PATH`, and the real tools it
-    delegates to named -- never the client's own venv `uv`, which the shim
-    must not shadow itself when it delegates.
+    delegates to named by **absolute path**.
+
+    A bare name here would resolve through the very `PATH` the shim has just
+    been prepended to, finding the shim again instead of the real tool -- the
+    shim's own passthrough would then recurse into itself for any git
+    subcommand it does not specifically intercept (`init`, `add`, here), each
+    level spawning another, exhausting the host before any assertion runs.
+    Found by hand as an unbounded-recursion failure on CI, not locally, where
+    it was merely very slow rather than fatal. `shutil.which` is called from
+    this process's own (not-yet-shimmed) `PATH`, so it names the real binary.
     """
+    real_git = shutil.which("git")
+    assert real_git, "git must be on PATH to build the shim environment"
     env = dict(client.env)
     path_key = next((key for key in env if key.upper() == "PATH"), "PATH")
     env[path_key] = f"{shim_scripts_dir}{os.pathsep}{env.get(path_key, '')}"
@@ -343,7 +354,6 @@ def test_doctor_survives_undecodable_git_config_bytes(
         _shim_env(
             encoding_client,
             shim_scripts_dir,
-            real_git="git",
             real_uv=str(encoding_client.uv),
         ),
         lane,
@@ -368,7 +378,6 @@ def test_doctor_survives_undecodable_uv_version_bytes(
     env = _shim_env(
         encoding_client,
         shim_scripts_dir,
-        real_git="git",
         real_uv=str(encoding_client.uv),
     )
     env["CF_FAKE_UV_MODE"] = "bad-version-bytes"
@@ -391,7 +400,6 @@ def test_a_failing_git_commit_shows_the_fixed_warning_never_the_secret(
     env = _shim_env(
         encoding_client,
         shim_scripts_dir,
-        real_git="git",
         real_uv=str(encoding_client.uv),
     )
     env["CF_FAKE_GIT_MODE"] = "fail-commit"
