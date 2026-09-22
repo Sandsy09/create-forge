@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from tests.encoding_lanes import report_header_line
 from tests.installed_client import (
     ENGINE_VERSION,
     InstalledClient,
@@ -22,6 +23,16 @@ from tests.installed_client import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+
+def pytest_report_header() -> str:
+    """State the interpreter's own text-encoding mode in every job's log
+    (CF-23.02): what `main()`, `git`, and `uv` are decoded/decoding under is
+    exactly what the non-UTF-8 lanes in `tests/encoding_lanes.py` exist to
+    stop assuming and start measuring -- so it belongs in the log header
+    every run prints, not only in the tests that check it.
+    """
+    return report_header_line()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

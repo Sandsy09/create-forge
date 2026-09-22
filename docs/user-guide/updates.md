@@ -156,6 +156,22 @@ exact command, CLI version, template tag or engine version, operating
 system, and relevant error output through [feedback](feedback.md). Remove
 credentials and private data from commands and logs before posting.
 
+## Windows text encoding
+
+create-forge works on the encoding a plain Windows install starts with — no
+`PYTHONUTF8` or other global override is required for correctness, and setting
+one is not a supported workaround for anything short of the reported issues
+below. If output is redirected, piped, or captured by another program (a CI
+log, an IDE's run window, a test harness) rather than shown in an interactive
+console, a project name, path, or diagnostic value outside that console's
+codepage is shown with the affected characters replaced by a readable `\uXXXX`
+escape rather than the original text.
+
+| Symptom | Next step |
+| --- | --- |
+| A name or path prints with `\uXXXX` sequences instead of the original characters | Expected when that output is not going to an interactive console and the text is outside its codepage; the file or directory itself is created correctly — check it directly rather than the printed line. |
+| A diagnostic value in `doctor`'s output looks garbled | The underlying tool (`git`, `uv`) wrote something this process could not decode as UTF-8; `doctor` still completes. Check the tool directly (`git config --get user.name`, `uv --version`) for the exact value. |
+
 ## Redirect the template cache
 
 This section applies to the `--legacy` Copier route, which keeps a git

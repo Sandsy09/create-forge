@@ -8,7 +8,11 @@ first child of
 under
 [ADR 0055](adr/0055-capture-subprocess-output-as-bytes-and-decode-by-rule.md).
 The proof that the installed CLI behaves under a non-UTF-8 Windows setting is
-[CF-23.02 / #197](https://github.com/Sandsy09/create-forge/issues/197)'s.
+[CF-23.02 / #197](https://github.com/Sandsy09/create-forge/issues/197)'s,
+recorded in
+[installed-encoding-validation.md](installed-encoding-validation.md) (ADR 0057),
+which also fixed the CLI's own stdout/stderr encoding this contract deliberately
+left open.
 
 ## Status
 
@@ -127,9 +131,15 @@ reproduced when this contract was written.** Measured on 2026-09-21 on clean
 | `tests/test_update_engine.py`, `tests/test_engine_source.py` (e2e) | 3 passed |
 
 So the failures depend on something not present in that run; what differed is not
-established, and no hypothesis is asserted here. They stay open for
-[CF-23.02](https://github.com/Sandsy09/create-forge/issues/197), whose criteria
-are to reproduce them where fixtures allow and to record any that do not.
+established, and no hypothesis is asserted here.
+
+**Resolution (CF-23.02):** sought again at `c9a33cc` -- the commit closest to
+when the review is dated -- under the same ambient `cp1252` setting. None of
+the five reproduced there either; see
+[installed-encoding-validation.md](installed-encoding-validation.md#the-five-reported-failures)
+for the full disposition, including two suites in the table above that did not
+exist yet at that commit. What *did* reproduce, both times, is the mechanism
+this contract fixes.
 
 **What did reproduce is the mechanism.** On Windows the decode error is raised
 in `subprocess`'s reader thread, not in the caller, so `subprocess.run` returns

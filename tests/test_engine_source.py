@@ -369,6 +369,52 @@ def test_out_of_range_source_engine_exits_3_with_no_fallback(
     assert not dst.exists()
 
 
+def test_a_provisioning_failure_is_explained_not_traced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CF-23.02: `provision()`'s own body can raise `EngineSourceError` before
+    ever yielding a runtime -- a bare `with engine_source.provision(...) as
+    runtime:` had nothing there to catch it, so this reached the user as a raw
+    traceback instead of the fixed message every other `EngineSourceError`
+    site already shows (`docs/subprocess-output.md` never promised a fixed
+    message could be bypassed by *when* provisioning failed).
+    """
+
+    @contextlib.contextmanager
+    def failing_provision(
+        _requirement: str,
+    ) -> Iterator[engine_source.ProvisionedEngine]:
+        msg = "could not provision the engine source"
+        raise engine_source.EngineSourceError(msg)
+        yield _fake_runtime()  # type: ignore[unreachable]  # pragma: no cover
+
+    monkeypatch.setattr(engine_source, "provision", failing_provision)
+    dst = tmp_path / "untouched"
+
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "new",
+            "Example",
+            "--engine-source",
+            "../forge-template",
+            "--path",
+            str(dst),
+            "--yes",
+        ],
+    )
+
+    # `CliRunner` sets `exit_code == 1` for *both* a deliberate `typer.Exit(1)`
+    # and an uncaught exception propagating through it (Click's own default
+    # `except Exception` handler), so only `.exception`'s type tells them
+    # apart -- `SystemExit` here, the raw `EngineSourceError` before the fix.
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    assert result.exit_code == 1, result.output
+    assert "could not provision the engine source" in result.output
+    assert "Traceback" not in result.output
+    assert not dst.exists()
+
+
 # --------------------------------------------------------------------------- #
 # No generation-metadata document is ever written (rule 29)                    #
 # --------------------------------------------------------------------------- #

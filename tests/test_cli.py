@@ -17,6 +17,7 @@ import hashlib
 import importlib.metadata
 import json
 import subprocess
+import sys
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError
 from io import BytesIO, TextIOWrapper
@@ -49,7 +50,7 @@ import create_forge.runner as runner_module
 import create_forge.staging as staging_module
 from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
-from create_forge.cli import _markers, app
+from create_forge.cli import _harden_console_encoding, _markers, app
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
 from create_forge.pipeline import GenerationRequest
@@ -365,6 +366,102 @@ def test_markers_use_glyphs_when_the_encoding_allows() -> None:
     utf8_console = Console(file=TextIOWrapper(BytesIO(), encoding="utf-8"), width=80)
 
     assert _markers(utf8_console) == ("✓", "✗")
+
+
+# --------------------------------------------------------------------------- #
+# _harden_console_encoding (CF-23.02, ADR 0057)                               #
+# --------------------------------------------------------------------------- #
+#
+# `console`/`err` are `Console()`/`Console(stderr=True)` with no explicit
+# `file=` -- Rich resolves `sys.stdout`/`sys.stderr` fresh on every print
+# rather than freezing a reference, which is what lets the fix below reach
+# them by reconfiguring the two `sys` streams rather than the `Console`
+# objects themselves. This is the general, cross-platform half of the
+# mechanism: on real Windows, an unencodable character reaches this exact
+# `TextIOWrapper.write` call by a different route (Rich's own legacy-console
+# writer, `_win32_console.LegacyWindowsTerm.write_text`, which is literally
+# `sys.stdout.write` bound at print time) -- proven against the installed
+# console in `tests/test_e2e_installed_encoding.py`.
+
+
+def test_harden_console_encoding_relaxes_stdout_and_stderr_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out = TextIOWrapper(BytesIO(), encoding="cp1252")
+    err_stream = TextIOWrapper(BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err_stream)
+
+    _harden_console_encoding()
+
+    assert out.errors == "backslashreplace"
+    assert err_stream.errors == "backslashreplace"
+
+
+def test_harden_console_encoding_tolerates_a_stream_without_reconfigure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stream some other tool substituted (no `.reconfigure`, unlike every
+    real console script and Click's own test streams) is left exactly as it
+    was -- never a new failure mode of its own."""
+
+    class _NoReconfigure:
+        def write(self, _text: str) -> int:
+            return 0
+
+        def flush(self) -> None:
+            return None
+
+    monkeypatch.setattr(sys, "stdout", _NoReconfigure())
+    monkeypatch.setattr(sys, "stderr", _NoReconfigure())
+
+    _harden_console_encoding()  # must not raise
+
+
+def test_an_unencodable_character_raises_before_the_fix_is_applied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Establishes the regression `_harden_console_encoding` closes: printing
+    text outside the stream's codepage, with the stream's own default
+    `errors="strict"`, is exactly what CF-23.02 found reaching the user after
+    `new` had already written and committed the project.
+    """
+    bad_stdout = TextIOWrapper(BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", bad_stdout)
+
+    with pytest.raises(UnicodeEncodeError):
+        cli_module.console.print("项目")
+
+
+def test_the_console_degrades_a_character_its_stdout_cannot_encode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bad_stdout = TextIOWrapper(BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", bad_stdout)
+    _harden_console_encoding()
+
+    cli_module.console.print("项目")  # must not raise
+
+    bad_stdout.flush()
+    assert b"\\u9879\\u76ee" in bad_stdout.buffer.getvalue()
+
+
+def test_every_invocation_hardens_console_encoding_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`main()` is Typer's group callback, run before any subcommand -- the
+    only hook that sees a harness's swapped `sys.stdout`/`sys.stderr` (such as
+    `CliRunner`'s own, per invocation) rather than whatever was current when
+    this module was first imported.
+    """
+    calls: list[None] = []
+    monkeypatch.setattr(
+        cli_module, "_harden_console_encoding", lambda: calls.append(None)
+    )
+
+    runner.invoke(app, ["list"])
+
+    assert calls
 
 
 def _copier_project(tmp_path: Path) -> Path:

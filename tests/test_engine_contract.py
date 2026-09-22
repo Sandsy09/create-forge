@@ -51,6 +51,7 @@ RELEASE_0_3_0_VALIDATION = REPO_ROOT / "docs" / "release-0-3-0-validation.md"
 ENGINE_CUTOVER_VALIDATION = REPO_ROOT / "docs" / "engine-cutover-validation.md"
 RELEASE_0_4_0_VALIDATION = REPO_ROOT / "docs" / "release-0-4-0-validation.md"
 RELEASE_0_5_0_VALIDATION = REPO_ROOT / "docs" / "release-0-5-0-validation.md"
+INSTALLED_ENCODING_VALIDATION = REPO_ROOT / "docs" / "installed-encoding-validation.md"
 DOCS_INDEX = REPO_ROOT / "docs" / "README.md"
 SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
@@ -439,6 +440,23 @@ def test_subprocess_output_contract_is_linked_from_entry_points() -> None:
         assert link_re.search(text), f"{path.name} does not link subprocess-output.md"
 
     assert SUBPROCESS_OUTPUT.is_file()
+
+
+def test_installed_encoding_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-23.02's installed-console encoding evidence (ADR 0057) must stay
+    discoverable, mirroring the CF-21.02 guard above; it lives alongside the
+    subprocess output contract it completes, so `subprocess-output.md` links
+    it too.
+    """
+    link_re = re.compile(r"\([^)]*installed-encoding-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, END_TO_END_TESTS, SUBPROCESS_OUTPUT):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link installed-encoding-validation.md"
+        )
+
+    assert INSTALLED_ENCODING_VALIDATION.is_file()
 
 
 def test_rollout_regression_validation_doc_is_linked_from_entry_points() -> None:
