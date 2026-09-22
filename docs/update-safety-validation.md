@@ -131,7 +131,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | Commit | `a9c48c7fcb5706de828ec541be9fbb9f9baa8184` (`main` before CF-23.01; measured with that change applied, uncommitted) |
 | create-forge version | `0.4.0` |
 | create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:817f21ac554f53cda43a1aef4fbb1e6230357ee19b22df7edce0d33fa1cbb366` |
-| create-forge wheel content digest | `sha256:8cf4da8052c6adb6ab22086066cee492356ab6f383191a58f921f2aacfe8bc5d` |
+| create-forge wheel content digest | `sha256:b4a0b3def59d375d46809ba5ba0222d8f546594e084bbafeca79a85d14b6d948` |
 | create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:af5ab5a4d074af9a9c1eea82fd1767e4dc87509f21d7853fc21246cb46a2f9c2` |
 | create-forge sdist content digest | `sha256:68a2c5007dccca587224373bfe5e697af7af9d2d41918a5bcb58516b831c1a15` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
@@ -140,7 +140,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | uv | `uv 0.12.13 (0ebbd9274 2026-09-10 x86_64-pc-windows-msvc)` |
 | git | `git version 2.47.1.windows.2` |
 | Python | `3.13.1` |
-| Safety-relevant source digest | `sha256:1106ee20915a1c526dadcd974fca3dc3e413f144f19502729fd52bc4c8b6e45e` |
+| Safety-relevant source digest | `sha256:64adcb2094f2ab437f62c8babef3008d30bb5cf0869534138d215c8cf0be21fd` |
 
 - **Bound to the content digest, not the archive hash.** Building the same source
   in two build environments gave wheels with byte-identical members, order,
@@ -254,6 +254,38 @@ cutover, update/engine-source). This issue changes nothing they execute
 (`update.py`'s rename path is exercised by the fast suite and the installed
 update-safety suite above); the protected CI `e2e`, `e2e-windows` and
 `network` jobs on the pull request are the evidence for them.
+
+### #214: `update` writes the metadata file as bytes, not text
+
+The guard above went red on purpose again: `update.write_recorded` changed to
+fix the issue (line-ending translation, [Findings](#findings) item 1), and
+the evidence was refreshed rather than the digest edited. Intended behaviour
+change: a no-op update no longer rewrites `.forge/generation.json` with
+different bytes on Windows.
+
+| | Before | After |
+| --- | --- | --- |
+| Safety-relevant source digest | `sha256:1106ee20…` | `sha256:64adcb20…` |
+| Wheel content digest | `sha256:8cf4da80…` | `sha256:b4a0b3de…` |
+
+What was re-run on the fixed code, on Windows 11 with Python 3.13.1 in ambient
+`cp1252` mode (no `PYTHONUTF8`):
+
+- the installed update-safety suite: **14 passed, 1 skipped**, identical to
+  the result recorded above -- and, unlike every prior run, this is now an
+  exact-bytes comparison with no metadata-eol tolerance to satisfy;
+- the fast suite (`uv run pytest -m 'not network and not e2e'`): **1485
+  passed, 11 skipped, 0 failed** before refreshing this record (1483 before
+  this change plus its new tests; the digest-guard test itself is the one
+  expected failure until this refresh);
+- `uv run poe evidence:candidate` on commit `62428efeffc3f1569f708937b360ebbd40c849d2`
+  (working tree clean), which produced the digests above.
+
+**Not completed locally:** the network tier and the remaining e2e modules
+(engine-generation, rollout, Copier-generation, Data Science, Streamlit,
+cutover, update/engine-source). This issue changes nothing they execute; the
+protected CI `e2e`, `e2e-windows` and `network` jobs on the pull request are
+the evidence for them.
 
 ## Findings
 
