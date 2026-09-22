@@ -223,13 +223,20 @@ def read_recorded(project: Path, *, metadata_filename: str) -> RecordedDocument:
 
 
 def write_recorded(project: Path, *, metadata_filename: str, content: str) -> None:
-    """Write the refreshed generation-metadata document (rule 19: written last).
+    r"""Write the refreshed generation-metadata document (rule 19: written last).
 
     The counterpart of `read_recorded`: the filename is an engine-supplied
     string, so it is resolved through the boundary here too (ADR 0052).
+
+    Written as bytes, not `Path.write_text`: `write_text` translates `\n` to
+    `\r\n` on Windows, so a no-op update whose content is byte-for-byte the
+    same as what is on disk would still rewrite the file with different
+    bytes -- rule 15 says it rewrites "to byte-identical content"
+    (`create-forge#214`). `content` is the engine's own rendered JSON, which
+    already uses `\n`, so encoding it directly preserves that.
     """
     path = _contain(paths.ProjectBoundary.for_project(project), metadata_filename)
-    path.write_text(content, encoding="utf-8")
+    path.write_bytes(content.encode("utf-8"))
 
 
 def _digest(content: bytes) -> str:

@@ -64,8 +64,8 @@ file.
 
 | Group | Test | Proves |
 | --- | --- | --- |
-| Normal route | `test_normal_route_no_op_update_changes_nothing` | exit 0, "Nothing changed", HEAD, index and status untouched |
-| | `test_normal_route_update_preserves_a_committed_local_edit` | a committed local edit survives an update |
+| Normal route | `test_normal_route_no_op_update_changes_nothing` | exit 0, "Nothing changed", HEAD, index, status **and every file's bytes** (including `.forge/generation.json`) byte-identical -- an exact comparison since #214 |
+| | `test_normal_route_update_preserves_a_committed_local_edit` | a committed local edit survives an update, with the same exact-state comparison |
 | | `test_normal_route_dry_run_writes_nothing` | dry-run leaves the tree, index and status byte-identical |
 | Degraded route | `test_degraded_update_applies_a_real_changed_removed_and_added_target` | a real changed, removed and added target, all staged by the real `git add -A`, metadata refreshed with a degraded reason |
 | Dry-run | `test_degraded_dry_run_lists_every_target_and_writes_nothing` | the classification list for all three, nothing written, sentinel untouched |
@@ -257,18 +257,21 @@ update-safety suite above); the protected CI `e2e`, `e2e-windows` and
 
 ## Findings
 
-1. **A no-op `update` rewrites the metadata file's line endings on Windows.**
+1. **Fixed:** a no-op `update` rewrote the metadata file's line endings on
+   Windows ([#214](https://github.com/Sandsy09/create-forge/issues/214)).
    [engine-project-lifecycle.md](engine-project-lifecycle.md) rule 15 says a
    repeated no-op update rewrites `.forge/generation.json` "to byte-identical
-   content". `update.write_recorded` (and the `cli.py` code it replaced) writes
-   with `Path.write_text`, which translates `\n` to `\r\n` on Windows, so the
-   bytes change. Generated projects hide it because they ship `.gitattributes`
-   with `* text=auto eol=lf`; a project without that file would show a spurious
-   diff on every no-op update. Pre-existing, not introduced by CF-22.01 or
-   CF-22.02, and not fixed here: this issue changes nothing under `src/`. The
-   installed suite compares that one file modulo line endings and everything else
-   exactly, and HEAD, the index and the status exactly. A separate issue is
-   proposed.
+   content". `update.write_recorded` used `Path.write_text`, which translates
+   `\n` to `\r\n` on Windows, so the bytes changed even though the content did
+   not; generated projects hid it because they ship `.gitattributes` with
+   `* text=auto eol=lf`. It now writes `content.encode("utf-8")` as bytes, so
+   no newline translation happens regardless of `.gitattributes`.
+   `tests/test_update_write_policy.py` is a source-policy tripwire (matching
+   `tests/test_subprocess_policy.py`'s idiom) so `write_text` cannot quietly
+   return to `update.py`; `config.py`'s own `write_text` for the user's config
+   file is deliberately out of its scope. The installed suite's no-op and
+   local-edit tests now compare every file's bytes, HEAD, the index and the
+   status exactly, with no tolerance left to remove.
 2. **On the engine-native route the provider refuses a tampered recorded
    document first.** A schema-valid recorded entry whose target escapes the
    project is refused by `forge-template` (`invalid-generation-metadata`: "the
