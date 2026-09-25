@@ -87,16 +87,22 @@ def test_the_matrix_covers_both_edges_of_the_supported_python_window() -> None:
 def test_no_workflow_job_forces_a_utf8_environment_variable() -> None:
     """CF-23.02's outcome is that no global forced-UTF-8 workaround is
     required for correctness -- made executable rather than left as a claim:
-    neither variable may be *set* anywhere in this workflow, in any job, not
-    only the one this issue added. Matches a YAML `env:` key (`PYTHONUTF8:`)
-    or a shell assignment (`PYTHONUTF8=`), not the variable's name mentioned
-    in prose (this file's own explanatory comment names both, deliberately).
+    neither variable may be *set* anywhere in any workflow, in any job, not
+    only the one this issue added. Every file under `.github/workflows/` is
+    scanned, not just `ci.yml`: CF-24.01 moved the Linux jobs into a reusable
+    workflow, and the claim must not narrow to whichever file still holds the
+    Windows ones. Matches a YAML `env:` key (`PYTHONUTF8:`) or a shell
+    assignment (`PYTHONUTF8=`), not the variable's name mentioned in prose
+    (this file's own explanatory comment names both, deliberately).
     """
-    text = _ci_text()
+    workflows = sorted(CI.parent.glob("*.yml"))
+    assert CI in workflows, "the scan no longer finds ci.yml"
 
-    for variable in ("PYTHONUTF8", "PYTHONIOENCODING"):
-        assert not re.search(rf"{variable}\s*[:=]", text), (
-            f"{variable} is set in ci.yml -- CF-23.02's 'no forced UTF-8 "
-            "workaround required' claim no longer holds, and this must be "
-            "either removed or the claim corrected in the same change"
-        )
+    for workflow in workflows:
+        text = workflow.read_text(encoding="utf-8")
+        for variable in ("PYTHONUTF8", "PYTHONIOENCODING"):
+            assert not re.search(rf"{variable}\s*[:=]", text), (
+                f"{variable} is set in {workflow.name} -- CF-23.02's 'no forced "
+                "UTF-8 workaround required' claim no longer holds, and this "
+                "must be either removed or the claim corrected in the same change"
+            )

@@ -1,0 +1,243 @@
+name: Linux checks
+
+# The Linux half of CI, parameterised by runner image (ADR 0058). `ci.yml` calls
+# it with the pinned baseline, and `all-green` gates on that call;
+# `runner-canary.yml` calls it with the next candidate image and is never
+# gated. One definition means the canary cannot drift from the protected
+# checks -- see docs/ci-runner-baseline.md.
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: The GitHub-hosted Ubuntu runner label every job here runs on
+        type: string
+        required: true
+
+# Read-only, like every workflow here. `env` is not inherited across
+# `workflow_call`, so the uv pin is repeated from ci.yml.
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.12.0"
+
+jobs:
+  docs:
+    name: Documentation
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "uv==${{ env.UV_VERSION }}"
+      - run: uv sync --locked
+      - run: uv run --locked poe docs:build
+      - name: Upload site for review
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: forge-docs-${{ inputs.runner }}
+          path: site/
+          if-no-files-found: error
+  # ---------------------------------------------------------------------------
+  # Same gate as `uv run pre-commit run --all-files` locally: ruff, and the
+  # whitespace/EOF/toml/yaml hooks. Everything else waits on this so a
+  # formatting slip doesn't burn the matrix below.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Pre-commit
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Typecheck
+        run: uv run poe typecheck
+
+  # ---------------------------------------------------------------------------
+  # Fast tests (-m 'not network') across supported interpreters.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (py${{ matrix.python-version }})
+    runs-on: ${{ inputs.runner }}
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Test
+        run: uv run poe test
+
+  # ---------------------------------------------------------------------------
+  # Invariant 5: templates.toml must ship in the wheel. Passes locally and
+  # breaks on a user's first `uvx` run if this ever regresses.
+  # ---------------------------------------------------------------------------
+  wheel:
+    name: Wheel contents
+    runs-on: ${{ inputs.runner }}
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Check wheel
+        run: uv run poe check:wheel
+
+  # ---------------------------------------------------------------------------
+  # Runs the fast suite against the *lowest* versions the published metadata
+  # allows, so `copier>=9.15.2,<10` and the `engine` extra's
+  # `forge-template` / `uv` floors are tested claims rather than assertions --
+  # the advisory-cleared Copier floor (ADR 0038) has to hold at its own lower
+  # bound, not just at whatever CI happens to resolve. Every other job takes
+  # the newest satisfying release.
+  # ---------------------------------------------------------------------------
+  floor:
+    name: Dependency floor
+    runs-on: ${{ inputs.runner }}
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Fast suite against the advertised dependency floor
+        # --resolution lowest-direct pins every *direct* dependency to the
+        # bottom of its declared range; transitive deps still resolve normally.
+        # --no-default-groups --group test drops dev-only tooling -- whose
+        # floors are not part of the support contract -- so `poe` is absent
+        # and pytest is called directly. This re-resolves uv.lock inside the
+        # runner by design: never pair this job with a --locked check.
+        run: >
+          uv run --no-default-groups --group test --all-extras
+          --resolution lowest-direct
+          pytest -m 'not network and not e2e'
+
+  # ---------------------------------------------------------------------------
+  # Everything marked @pytest.mark.network: invariant 1's copier.yml drift
+  # guard (clones forge-template at its latest tag) and the real update()
+  # end-to-end (scaffolds forge-template's oldest tag, updates to its newest).
+  # Both skip (not fail) if GitHub is unreachable, so connectivity issues
+  # never masquerade as drift or a real regression. Also runs on the Monday
+  # cron, since forge-template moves independently of this repo and a
+  # push-only trigger would miss drift on weeks with no commits here.
+  # ---------------------------------------------------------------------------
+  network:
+    name: Network tests
+    runs-on: ${{ inputs.runner }}
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: Network tests
+        run: uv run pytest -m network
+
+  # ---------------------------------------------------------------------------
+  # Everything marked @pytest.mark.e2e: the real `create-forge` console
+  # script against both generation paths, and each generated project's own
+  # `uv run poe check`. A distinct job and marker from `network` above --
+  # this is dramatically slower (minutes, not seconds) and must stay
+  # separable from the drift guard. Git identity is supplied per-subprocess
+  # by the tests themselves, so no runner-level git config step is needed
+  # here. Skips (not fails) if GitHub is unreachable, and also runs on the
+  # Monday cron alongside `network` for the same reason.
+  #
+  # Four suites: `test_e2e_generation.py` (CF-07.06, ADR 0016) is the
+  # `--legacy` Copier path -- forge-template's latest released tag, its
+  # post-generation `_tasks` (git init, uv sync, pre-commit install).
+  # `test_e2e_engine_generation.py` (CF-08.04, ADR 0020) is the default
+  # engine path (ADR 0040 / CF-18.01; reachable only via the hidden
+  # `--engine-preview` flag before that) -- every discovered archetype, plus
+  # a real released-install compatibility boundary (an out-of-range engine,
+  # and a broken install with no engine at all, now that it is a required
+  # dependency), each rejected with nothing written. CF-13.05 (ADR 0030)
+  # added the Data Science composition there. `test_e2e_installed_data_science.py`
+  # (CF-14.02, ADR 0032) additionally builds and installs the client
+  # candidate wheel, exercises both Data Science compositions, and checks the
+  # full composition at the Python window edges. `test_e2e_installed_rollout.py`
+  # (CF-14.03, ADR 0033) reuses that wheel for the Library / CLI Application
+  # default engine paths, the `--legacy` Copier path in a wheel with no
+  # engine installed, a real out-of-range engine, and the full selection /
+  # option / destination / lock / cleanup failure matrix.
+  # `test_e2e_installed_streamlit.py` (CF-21.02, ADR 0051) reuses the same
+  # wheel for the four accepted Streamlit compositions (each restored from its
+  # committed lock and run under the provider's 600-second check/smoke bound),
+  # a real previous-line engine, and the Streamlit failure cases. Those
+  # scientific-Python/Jupyter dependency trees, live notebooks, and the extra
+  # installed environments hold the 60-minute budget.
+  # `test_e2e_installed_update_safety.py` (CF-22.03, ADR 0054) reuses the wheel
+  # once more for update safety through the installed console: real changed,
+  # removed and added targets, dry-run, containment refusals, and the recovery
+  # commands the console prints, against an outside sentinel file. It runs on
+  # Linux here and on Windows in `e2e-windows` (ci.yml); one CI run of the same
+  # candidate therefore covers both this and the Streamlit suite.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: End-to-end generation
+    runs-on: ${{ inputs.runner }}
+    needs: lint
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+
+      - name: End-to-end tests
+        run: uv run poe test:e2e

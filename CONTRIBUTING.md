@@ -89,7 +89,11 @@ passes, and run `pytest -m network` if `templates.toml` changed. Wait for
 ## What CI runs
 
 `.github/workflows/ci.yml` runs on every push to `main` and every pull
-request:
+request. Its Linux jobs (everything except `windows`, `e2e-windows*` and
+`all-green`) are defined once in `.github/workflows/linux-checks.yml` and called
+on the pinned `ubuntu-24.04` baseline, so their names appear as
+`Linux (ubuntu-24.04) / <job>`. No workflow uses `ubuntu-latest`; see
+[docs/ci-runner-baseline.md](docs/ci-runner-baseline.md).
 
 | Job | What |
 | --- | --- |
@@ -100,7 +104,8 @@ request:
 | `floor` | the fast suite with `uv --resolution lowest-direct`, so declared lower bounds are exercised, not just whatever CI resolves (see "Dependency floors" below) |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
 | `e2e` | `pytest -m e2e` — both generation paths, installed-candidate Data Science and rollout regression, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
-| `all-green` | an aggregate check; this is the one branch protection requires |
+| `all-green` | an aggregate check; this is the one branch protection requires. It gates the pinned Linux call and the Windows jobs, and never the canary |
+| `Runner canary` | `runner-canary.yml`: the identical Linux jobs on the *next* Ubuntu image (`ubuntu-26.04`). **Not required and not part of `all-green`** — a red canary is triaged, not a blocked merge. Ownership and promotion criteria: [docs/ci-runner-baseline.md](docs/ci-runner-baseline.md) |
 
 `network` and `e2e` also run on a Monday cron, independent of any push here —
 `forge-template` moves on its own schedule, so a PR is not the only thing that
