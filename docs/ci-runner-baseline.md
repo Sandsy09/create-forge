@@ -123,4 +123,28 @@ Image observed in `main` run 35789169581 (22 September 2026), all resolved from
 
 ### Validation of this change
 
-_Filled in from the pull request's real runs before merge._
+Pull request [#223](https://github.com/Sandsy09/create-forge/pull/223), head
+commit `eb5daad`. The image each job reports in its "Set up job" log:
+
+| Run | Workflow | Image | Version | Result |
+| --- | --- | --- | --- | --- |
+| [36195927931](https://github.com/Sandsy09/create-forge/actions/runs/36195927931) | `ci.yml`, baseline | `ubuntu-24.04` | `20260920.314.1` | all 10 Linux jobs and `All checks passed` green |
+| [36195927931](https://github.com/Sandsy09/create-forge/actions/runs/36195927931) | `ci.yml`, Windows | `windows-2025-vs2026` | `20260922.246.2` | all 5 Windows jobs green |
+| [36195927745](https://github.com/Sandsy09/create-forge/actions/runs/36195927745) | `runner-canary.yml` | `ubuntu-26.04` | `20260920.143.1` | all 10 Linux jobs green |
+
+The canary ran the whole client validation set on 26.04, not a subset: the
+installed-package and install-mode paths, engine and legacy generation and
+update, the Git lifecycle and generated-project checks (`End-to-end generation`,
+7m10s), the real `update()` against released tags (`Network tests`), the
+dependency floor, the wheel-contents check, the documentation build, and the
+full Python 3.11–3.14 matrix. The Windows-only installed-update-safety and
+encoding jobs are unchanged and stay on the protected gate.
+
+**One observation, not a finding:** a single green run is not the promotion
+evidence. Promotion needs the four scheduled Monday runs above, so this run
+proves the canary works and 26.04 is viable today, and starts the count.
+
+**Guard evidence:** reintroducing `ubuntu-latest` into `docs.yml` locally
+failed `test_real_workflows_have_no_errors`, `test_runner_labels_pass_on_real_set`
+and `test_protected_ubuntu_jobs_run_on_the_contract_baseline`; restoring it
+passed.
