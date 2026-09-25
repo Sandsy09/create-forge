@@ -93,8 +93,8 @@ Deliberately not proven here: **answer-combination coverage**
 (`forge-template` owns that via its own `poe combos` — see
 `docs/cross-repository-workflow.md`; one representative answer set is in
 scope, a matrix would duplicate a responsibility CF-07.06's own issue text
-assigns elsewhere) and **Windows** (the e2e CI job runs on `ubuntu-latest`
-only; the existing `windows` CI job covers the fast suite on Windows, and
+assigns elsewhere) and **Windows** (the e2e CI job runs on the pinned Ubuntu
+baseline, `docs/ci-runner-baseline.md`, only; the existing `windows` CI job covers the fast suite on Windows, and
 running the full e2e suite there is a manual step before a PR touching
 `cli.py`, `runner.py`, or `staging.py`).
 

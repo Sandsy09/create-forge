@@ -1,0 +1,33 @@
+name: Runner canary
+
+# Runs the identical Linux checks as CI on the *next* Ubuntu image, so a 26.04
+# incompatibility surfaces here, in advance, instead of on the day GitHub moves
+# `ubuntu-latest` (19 Oct - 19 Nov 2026 window). This workflow is
+# deliberately NOT part of the protected gate: it has no aggregate job, cannot
+# produce the required "All checks passed" context, and nothing in ci.yml
+# depends on it. A red canary is a signal to triage, not a blocked merge.
+# Ownership, promotion and rollback criteria: docs/ci-runner-baseline.md
+# (ADR 0058).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Same Monday slot as ci.yml: the promotion criteria count these runs.
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: Runner canary (ubuntu-26.04)
+    uses: ./.github/workflows/linux-checks.yml
+    with:
+      runner: ubuntu-26.04

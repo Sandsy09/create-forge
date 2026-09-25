@@ -95,7 +95,7 @@ where it happens to work, but it carries no proof row and no promise.
 
 | Platform | Claim | Proven by |
 | --- | --- | --- |
-| Linux (`ubuntu-latest`) | Supported | the full CI matrix and `e2e` job |
+| Linux (`ubuntu-24.04`, pinned) | Supported | the full CI matrix and `e2e` job, on the baseline in [ci-runner-baseline.md](ci-runner-baseline.md) (ADR 0058) |
 | Windows (`windows-latest`) | Supported | the `windows` fast-suite job, plus the acceptance-matrix Windows rows below for the engine `new` Git/hook lifecycle and the engine-native update |
 | macOS | Expected to work; **not** a support claim | nothing — no CI runner in either repository |
 
@@ -106,7 +106,7 @@ Windows run of the engine `new` finalisation
 ([CF-18.03](https://github.com/Sandsy09/create-forge/issues/160)) and the
 engine-native update
 ([CF-18.04](https://github.com/Sandsy09/create-forge/issues/161)) — coverage
-today's Windows job does not give, because `e2e` runs on `ubuntu-latest` only.
+today's Windows job does not give, because `e2e` runs on Linux only.
 A macOS runner is not added; if one is ever added, macOS moves to "Supported"
 in the same change.
 

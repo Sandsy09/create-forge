@@ -1,5 +1,6 @@
 """Checks that every GitHub Actions workflow pins its external actions to an
-immutable commit and keeps write permissions off the workflow level.
+immutable commit, keeps write permissions off the workflow level, and names an
+explicit Ubuntu runner image rather than the moving `ubuntu-latest` alias.
 
 A mutable reference -- a branch, or a `v7`/`v1.2.3` tag -- can be repointed
 after the workflow was reviewed, so a release-capable job could execute code
@@ -157,6 +158,58 @@ def check_permission_placement(paths: list[Path]) -> list[str]:
     return errors
 
 
+def _runs_on_labels(runs_on: Any) -> list[str]:
+    """Return the literal runner labels a job's `runs-on:` names.
+
+    A bare string or a list of strings are labels; a mapping (`group:`/
+    `labels:`) contributes its `labels`. An expression such as
+    `${{ inputs.runner }}` is returned as-is -- it is resolved by the caller,
+    whose own literal is what gets checked.
+    """
+    if isinstance(runs_on, str):
+        return [runs_on]
+    if isinstance(runs_on, list):
+        return [label for label in runs_on if isinstance(label, str)]
+    if isinstance(runs_on, dict):
+        return _runs_on_labels(runs_on.get("labels"))
+    return []
+
+
+def _caller_runner_labels(job: dict[str, Any]) -> list[str]:
+    """Return the `runner:` input a reusable-workflow caller job passes."""
+    with_ = job.get("with")
+    if isinstance(with_, dict) and isinstance(with_.get("runner"), str):
+        return [with_["runner"]]
+    return []
+
+
+def check_runner_labels(paths: list[Path]) -> list[str]:
+    """No job may run on the moving `ubuntu-latest` alias (ADR 0058).
+
+    GitHub repoints `ubuntu-latest` on its own schedule, so the effective
+    baseline would change without a reviewed commit. Every Ubuntu job names an
+    explicit image; both direct `runs-on:` labels and the `runner:` input a
+    caller hands a reusable workflow are checked. `windows-latest` is out of
+    scope by decision, not by omission -- docs/ci-runner-baseline.md.
+    """
+    errors = []
+    for path in paths:
+        jobs = _load(path).get("jobs")
+        if not isinstance(jobs, dict):
+            continue
+        for name, job in jobs.items():
+            if not isinstance(job, dict):
+                continue
+            labels = [*_runs_on_labels(job.get("runs-on")), *_caller_runner_labels(job)]
+            if any(label.strip() == "ubuntu-latest" for label in labels):
+                errors.append(
+                    f"{path.name}: job {name!r} runs on 'ubuntu-latest', a "
+                    "moving alias; pin an explicit label such as "
+                    "'ubuntu-24.04' (docs/ci-runner-baseline.md)"
+                )
+    return errors
+
+
 def check_all(workflow_dir: Path = WORKFLOW_DIR) -> list[str]:
     """Run every check and return the combined list of errors."""
     paths = discover(workflow_dir)
@@ -164,6 +217,7 @@ def check_all(workflow_dir: Path = WORKFLOW_DIR) -> list[str]:
         *check_pinned_references(paths),
         *check_declares_permissions(paths),
         *check_permission_placement(paths),
+        *check_runner_labels(paths),
     ]
 
 
@@ -175,7 +229,10 @@ def main() -> int:
     if errors:
         print(f"{len(errors)} workflow check(s) failed.", file=sys.stderr)
         return 1
-    print("ok: .github/workflows/ pins external actions and scopes permissions")
+    print(
+        "ok: .github/workflows/ pins external actions, scopes permissions "
+        "and names explicit Ubuntu runners"
+    )
     return 0
 
 

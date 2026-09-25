@@ -41,7 +41,10 @@ Two reference kinds sit **outside** the rule:
   ever added
 
 Reusable-workflow references (`owner/repo/.github/workflows/x.yml@<sha>`) follow
-the same SHA rule; there are none today.
+the same SHA rule; there are no external ones. The one reusable workflow,
+`linux-checks.yml`, is called by its repository-local path
+(`./.github/workflows/linux-checks.yml`), which is immutable by construction
+and so outside the rule (ADR 0058).
 
 ## The repository action allowlist
 
@@ -65,6 +68,8 @@ it needs one:
 | Workflow / job | Scope | Why |
 | --- | --- | --- |
 | `ci.yml` — all jobs | `contents: read` (inherited) | clone the repo; nothing here writes |
+| `linux-checks.yml` — all jobs | `contents: read` (declared, and the ceiling for a called workflow) | the Linux checks the gate and the canary share |
+| `runner-canary.yml` — all jobs | `contents: read` (inherited) | trial the next Ubuntu image; nothing here writes |
 | `release.yml` — `release` | `contents: write` | push the release tag, create the GitHub release |
 | `release.yml` — `publish` | `contents: read`, `id-token: write` | check out, then PyPI Trusted Publishing |
 | `docs.yml` — `build` | `contents: read` (inherited) | check out, build the site |
@@ -75,6 +80,16 @@ workflow level, and requires every workflow to declare a top-level
 `permissions:` key so it never falls back to the repository's default token
 scopes. Job-level scopes are not otherwise constrained: a new job that needs
 `packages: write`, say, places it on the job.
+
+## The runner rule
+
+No job runs on `ubuntu-latest`, whether through its own `runs-on:` or the
+`runner:` input handed to `linux-checks.yml`. The alias moves on GitHub's
+schedule, so the Linux baseline would change without a reviewed commit; every
+Ubuntu job names an explicit image instead, and a canary trials the next one.
+`windows-latest` is a known, tracked exception. See
+[ci-runner-baseline.md](ci-runner-baseline.md) and
+[ADR 0058](adr/0058-pin-the-ubuntu-runner-baseline-with-a-canary.md).
 
 ## Reviewing a Dependabot Action upgrade
 
@@ -104,4 +119,5 @@ It also runs inside `uv run poe check` via
 [`tests/test_workflows.py`](../tests/test_workflows.py), which the `test` job
 runs and the protected `all-green` aggregate check requires. When a rule above
 changes, update this document, `scripts/check_workflows.py`, and
-`tests/test_workflows.py` in the same pull request.
+`tests/test_workflows.py` in the same pull request. The pinning, permissions and
+runner checks all run there.

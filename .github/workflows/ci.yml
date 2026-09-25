@@ -24,85 +24,33 @@ env:
   UV_VERSION: "0.12.0"
 
 jobs:
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-      - run: python -m pip install "uv==${{ env.UV_VERSION }}"
-      - run: uv sync --locked
-      - run: uv run --locked poe docs:build
-      - name: Upload site for review
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: forge-docs
-          path: site/
-          if-no-files-found: error
   # ---------------------------------------------------------------------------
-  # Same gate as `uv run pre-commit run --all-files` locally: ruff, and the
-  # whitespace/EOF/toml/yaml hooks. Everything else waits on this so a
-  # formatting slip doesn't burn the matrix below.
+  # The Linux checks -- documentation, lint, the Python matrix, wheel contents,
+  # the dependency floor, network and end-to-end generation -- live in
+  # linux-checks.yml so the non-blocking canary in runner-canary.yml runs the
+  # identical set on the next Ubuntu image. The runner is an explicit, pinned
+  # label, never `ubuntu-latest`, whose target moves on GitHub's schedule
+  # (ADR 0058, docs/ci-runner-baseline.md). Moving the baseline is a reviewed
+  # change to this one string, in the contract, and in the other workflows.
   # ---------------------------------------------------------------------------
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: "3.13"
-
-      - name: Install dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: Pre-commit
-        run: uv run pre-commit run --all-files --show-diff-on-failure
-
-      - name: Typecheck
-        run: uv run poe typecheck
-
-  # ---------------------------------------------------------------------------
-  # Fast tests (-m 'not network') across supported interpreters.
-  # ---------------------------------------------------------------------------
-  test:
-    name: Test (py${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    needs: lint
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: Test
-        run: uv run poe test
+  linux:
+    name: Linux (ubuntu-24.04)
+    uses: ./.github/workflows/linux-checks.yml
+    with:
+      runner: ubuntu-24.04
 
   # ---------------------------------------------------------------------------
   # Windows smoke test -- path separators, line endings, console encoding.
   # Catches the platform this tool is actually developed on.
+  #
+  # `windows-latest` is deliberately still the moving alias: ADR 0058 scopes the
+  # baseline decision to Ubuntu and records this as a known, tracked gap. These
+  # jobs do not wait on the Linux lint job -- a job cannot depend on one inside
+  # a called workflow -- so a formatting slip no longer short-circuits them.
   # ---------------------------------------------------------------------------
   windows:
     name: Windows smoke
     runs-on: windows-latest
-    needs: lint
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -118,154 +66,6 @@ jobs:
 
       - name: Test
         run: uv run poe test
-
-  # ---------------------------------------------------------------------------
-  # Invariant 5: templates.toml must ship in the wheel. Passes locally and
-  # breaks on a user's first `uvx` run if this ever regresses.
-  # ---------------------------------------------------------------------------
-  wheel:
-    name: Wheel contents
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: "3.13"
-
-      - name: Install dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: Check wheel
-        run: uv run poe check:wheel
-
-  # ---------------------------------------------------------------------------
-  # Runs the fast suite against the *lowest* versions the published metadata
-  # allows, so `copier>=9.15.2,<10` and the `engine` extra's
-  # `forge-template` / `uv` floors are tested claims rather than assertions --
-  # the advisory-cleared Copier floor (ADR 0038) has to hold at its own lower
-  # bound, not just at whatever CI happens to resolve. Every other job takes
-  # the newest satisfying release.
-  # ---------------------------------------------------------------------------
-  floor:
-    name: Dependency floor
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: "3.11"
-
-      - name: Fast suite against the advertised dependency floor
-        # --resolution lowest-direct pins every *direct* dependency to the
-        # bottom of its declared range; transitive deps still resolve normally.
-        # --no-default-groups --group test drops dev-only tooling -- whose
-        # floors are not part of the support contract -- so `poe` is absent
-        # and pytest is called directly. This re-resolves uv.lock inside the
-        # runner by design: never pair this job with a --locked check.
-        run: >
-          uv run --no-default-groups --group test --all-extras
-          --resolution lowest-direct
-          pytest -m 'not network and not e2e'
-
-  # ---------------------------------------------------------------------------
-  # Everything marked @pytest.mark.network: invariant 1's copier.yml drift
-  # guard (clones forge-template at its latest tag) and the real update()
-  # end-to-end (scaffolds forge-template's oldest tag, updates to its newest).
-  # Both skip (not fail) if GitHub is unreachable, so connectivity issues
-  # never masquerade as drift or a real regression. Also runs on the Monday
-  # cron, since forge-template moves independently of this repo and a
-  # push-only trigger would miss drift on weeks with no commits here.
-  # ---------------------------------------------------------------------------
-  network:
-    name: Network tests
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: "3.13"
-
-      - name: Install dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: Network tests
-        run: uv run pytest -m network
-
-  # ---------------------------------------------------------------------------
-  # Everything marked @pytest.mark.e2e: the real `create-forge` console
-  # script against both generation paths, and each generated project's own
-  # `uv run poe check`. A distinct job and marker from `network` above --
-  # this is dramatically slower (minutes, not seconds) and must stay
-  # separable from the drift guard. Git identity is supplied per-subprocess
-  # by the tests themselves, so no runner-level git config step is needed
-  # here. Skips (not fails) if GitHub is unreachable, and also runs on the
-  # Monday cron alongside `network` for the same reason.
-  #
-  # Four suites: `test_e2e_generation.py` (CF-07.06, ADR 0016) is the
-  # `--legacy` Copier path -- forge-template's latest released tag, its
-  # post-generation `_tasks` (git init, uv sync, pre-commit install).
-  # `test_e2e_engine_generation.py` (CF-08.04, ADR 0020) is the default
-  # engine path (ADR 0040 / CF-18.01; reachable only via the hidden
-  # `--engine-preview` flag before that) -- every discovered archetype, plus
-  # a real released-install compatibility boundary (an out-of-range engine,
-  # and a broken install with no engine at all, now that it is a required
-  # dependency), each rejected with nothing written. CF-13.05 (ADR 0030)
-  # added the Data Science composition there. `test_e2e_installed_data_science.py`
-  # (CF-14.02, ADR 0032) additionally builds and installs the client
-  # candidate wheel, exercises both Data Science compositions, and checks the
-  # full composition at the Python window edges. `test_e2e_installed_rollout.py`
-  # (CF-14.03, ADR 0033) reuses that wheel for the Library / CLI Application
-  # default engine paths, the `--legacy` Copier path in a wheel with no
-  # engine installed, a real out-of-range engine, and the full selection /
-  # option / destination / lock / cleanup failure matrix.
-  # `test_e2e_installed_streamlit.py` (CF-21.02, ADR 0051) reuses the same
-  # wheel for the four accepted Streamlit compositions (each restored from its
-  # committed lock and run under the provider's 600-second check/smoke bound),
-  # a real previous-line engine, and the Streamlit failure cases. Those
-  # scientific-Python/Jupyter dependency trees, live notebooks, and the extra
-  # installed environments hold the 60-minute budget.
-  # `test_e2e_installed_update_safety.py` (CF-22.03, ADR 0054) reuses the wheel
-  # once more for update safety through the installed console: real changed,
-  # removed and added targets, dry-run, containment refusals, and the recovery
-  # commands the console prints, against an outside sentinel file. It runs on
-  # Linux here and on Windows in `e2e-windows` below; one CI run of the same
-  # candidate therefore covers both this and the Streamlit suite.
-  # ---------------------------------------------------------------------------
-  e2e:
-    name: End-to-end generation
-    runs-on: ubuntu-latest
-    needs: lint
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          python-version: "3.13"
-
-      - name: Install dependencies
-        run: uv sync --all-groups --all-extras
-
-      - name: End-to-end tests
-        run: uv run poe test:e2e
 
   # ---------------------------------------------------------------------------
   # CF-18.03 / ADR 0045: the engine `new` post-rename lifecycle (`git init`,
@@ -282,9 +82,9 @@ jobs:
   # suite: path containment (a symlink, a junction, a drive-qualified or
   # reserved name) and the recovery commands it prints are OS-sensitive by
   # construction, and CF-22.03's AC-02 requires Linux *and* Windows. This job
-  # runs them all rather than widening `e2e` into a matrix: only these cases
-  # need a second OS, not the full 60-minute suite. Exactly the evidence
-  # commands docs/engine-cutover-acceptance.md's finalisation,
+  # runs them all rather than widening the Linux `e2e` into a matrix: only
+  # these cases need a second OS, not the full 60-minute suite. Exactly the
+  # evidence commands docs/engine-cutover-acceptance.md's finalisation,
   # engine-native-update, and installed-cutover rows name, plus
   # docs/update-safety-validation.md's installed suite.
   #
@@ -295,7 +95,6 @@ jobs:
   e2e-windows:
     name: End-to-end lifecycle and update (Windows)
     runs-on: windows-latest
-    needs: lint
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -341,7 +140,6 @@ jobs:
   e2e-windows-encoding:
     name: Installed console encoding (Windows, py${{ matrix.python }})
     runs-on: windows-latest
-    needs: lint
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -366,30 +164,21 @@ jobs:
         run: uv run pytest -m e2e tests/test_e2e_installed_encoding.py
 
   # ---------------------------------------------------------------------------
-  # Single required status check for branch protection.
+  # Single required status check for branch protection. Gates on the *pinned*
+  # Linux call and the Windows jobs only -- never on the runner canary, which
+  # lives in its own workflow (runner-canary.yml) and cannot produce this
+  # check's name.
   # ---------------------------------------------------------------------------
   all-green:
     name: All checks passed
-    runs-on: ubuntu-latest
-    needs:
-      [
-        lint,
-        test,
-        windows,
-        wheel,
-        floor,
-        network,
-        e2e,
-        e2e-windows,
-        e2e-windows-encoding,
-        docs,
-      ]
+    runs-on: ubuntu-24.04
+    needs: [linux, windows, e2e-windows, e2e-windows-encoding]
     if: always()
     steps:
       - name: Verify
         run: |
-          if [ "${{ needs.docs.result }}" != "success" ]; then
-            echo "::error::Documentation checks did not pass"; exit 1
+          if [ "${{ needs.linux.result }}" != "success" ]; then
+            echo "::error::The Linux checks did not pass"; exit 1
           fi
           if echo "${{ join(needs.*.result, ',') }}" | grep -qE 'failure|cancelled'; then
             echo "::error::One or more jobs failed"; exit 1

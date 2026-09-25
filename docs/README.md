@@ -66,6 +66,7 @@ Acceptance-checklist-to-named-test maps, each closing an epic or a release.
 | Contract | Governs |
 | --- | --- |
 | [workflow-security.md](workflow-security.md) | SHA-pinning external Actions and per-job `permissions:` scoping (ADR 0037). |
+| [ci-runner-baseline.md](ci-runner-baseline.md) | The pinned Ubuntu runner baseline, the non-blocking next-image canary, and its ownership, promotion and rollback criteria (ADR 0058). |
 | [cross-repository-workflow.md](cross-repository-workflow.md) | Validating sibling `create-forge`/`forge-template` checkouts before merge or release. |
 | [ADR 0024](adr/0024-reference-client-not-framework-dependency.md) | `create-forge` is one reference client, not a framework dependency for the engine or generated projects. |
 | [ADR 0037](adr/0037-immutable-workflow-actions.md) | The SHA-pinning and permissions rule `workflow-security.md` records. |

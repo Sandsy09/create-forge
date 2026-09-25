@@ -192,8 +192,12 @@ def test_contract_names_the_supported_matrix_axes() -> None:
     ):
         assert install_mode in contract, f"contract does not name `{install_mode}`"
     assert "latest four final CPython" in contract
-    for platform in ("ubuntu-latest", "windows-latest", "macOS"):
+    # CF-24.01 / ADR 0058: Linux is a pinned image, not the moving alias.
+    for platform in ("ubuntu-24.04", "windows-latest", "macOS"):
         assert platform in contract, f"contract does not mention {platform}"
+    assert "`ubuntu-latest`" not in _section(contract, "Supported environment"), (
+        "the OS support table still names the moving `ubuntu-latest` alias"
+    )
 
 
 # --------------------------------------------------------------------------- #
