@@ -75,8 +75,9 @@ Acceptance-checklist-to-named-test maps, each closing an epic or a release.
 
 - [docs/adr/README.md](adr/README.md) — the full Architecture Decision Record
   index, in Nygard format.
-- [docs/roadmap-v1/](roadmap-v1/) through [docs/roadmap-v4/](roadmap-v4/) —
-  completed and in-flight cross-repository roadmaps.
+- [docs/roadmap-v1/](roadmap-v1/) through [docs/roadmap-v5/](roadmap-v5/) —
+  completed and in-flight cross-repository roadmaps; conventions for tracking
+  them are in [roadmap-tracking.md](roadmap-tracking.md).
 - [docs/user-guide/](user-guide/) — the published
   [Forge user guide](https://sandsy09.github.io/create-forge/) (end-user
   docs; source of `reference.md`'s own technical-reference index for engine

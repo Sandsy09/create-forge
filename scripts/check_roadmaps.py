@@ -7,13 +7,13 @@ import hashlib
 import json
 import re
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 SECTION_PARTS = 2
-ISSUE_COUNT = 38
 PACK_STATUSES = {"prepared-not-filed", "filed-open"}
 FILED_ISSUE_FIELDS = {"number", "url", "body_sha256"}
 HEADINGS = (
@@ -30,6 +30,52 @@ HEADINGS = (
     "Labels",
     "Required completion evidence",
 )
+# Roadmap 5 imports bodies exactly as they were filed by a later filing session,
+# which used a different section layout and carries no milestone or roadmap
+# section (that metadata is reconciled afterwards, and recorded in the manifest).
+HEADINGS_V5 = (
+    "Outcome",
+    "Issue context",
+    "Problem statement",
+    "Proposed resolution",
+    "Scope",
+    "Acceptance criteria",
+    "Exclusions",
+    "Dependencies and blocking requirements",
+    "Parent epic",
+    "Tracking and roadmap",
+    "Labels",
+    "Required completion evidence",
+)
+
+
+@dataclass(frozen=True)
+class Rules:
+    """What one roadmap pack must satisfy; v3 and v4 keep their original rules."""
+
+    version: int
+    counts: tuple[int, int]  # (epics, children)
+    stages: frozenset[int]
+    headings: tuple[str, ...]
+    dependencies_heading: str
+    filed_at_import: bool  # bodies imported as filed; metadata reconciled later
+
+
+LEGACY_HEADINGS_DEPENDENCIES = "Dependencies"
+PACKS = (
+    Rules(3, (5, 21), frozenset(range(15, 19)), HEADINGS, "Dependencies", False),
+    Rules(4, (3, 9), frozenset(range(19, 22)), HEADINGS, "Dependencies", False),
+    Rules(
+        5,
+        (10, 27),
+        frozenset(range(22, 30)),
+        HEADINGS_V5,
+        "Dependencies and blocking requirements",
+        True,
+    ),
+)
+LEGACY_VERSIONS = (3, 4)
+ALL_STAGES = frozenset(range(15, 30))
 
 
 def require(condition: bool, message: str) -> None:
@@ -59,8 +105,15 @@ def markdown_links(path: Path) -> None:
             require(anchor in anchors, f"{path}: missing anchor {target}")
 
 
-def validate_graph(issues: dict[str, dict[str, Any]]) -> None:
-    """Check native dependency and parent-completion edges for cycles."""
+def validate_graph(
+    issues: dict[str, dict[str, Any]], legacy_ids: set[str] | None = None
+) -> None:
+    """Check native dependency and parent-completion edges for cycles.
+
+    The named-issue assertions below encode roadmap v3 and v4 decisions, so they
+    apply only to those packs' issues (`legacy_ids`); the acyclicity check
+    covers every pack.
+    """
     visiting: set[str] = set()
     complete: set[str] = set()
 
@@ -78,10 +131,11 @@ def validate_graph(issues: dict[str, dict[str, Any]]) -> None:
 
     for identifier in issues:
         visit(identifier)
+    legacy = set(issues) if legacy_ids is None else legacy_ids
     actionable = {
         key
         for key, item in issues.items()
-        if item["kind"] == "child" and not item["blocked_by"]
+        if key in legacy and item["kind"] == "child" and not item["blocked_by"]
     }
     require(actionable == {"FT-15.01"}, "Unexpected initially actionable children")
     require(
@@ -123,6 +177,7 @@ def check_metadata(
     stage_info: dict[str, Any],
     labels: set[str],
     status: str,
+    rules: Rules,
 ) -> None:
     """Check an entry's owner, milestone, labels and filing identity."""
     identifier = item["id"]
@@ -162,7 +217,13 @@ def check_metadata(
         )
     stage = item["stage"]
     require(expected_repo in stage_info["owners"], "Unowned stage milestone")
-    stage_title = stage_info["title"]
+    # Roadmap 5 stages 24 and 25 have differently titled epics in each
+    # repository, so each owner records its own milestone title.
+    stage_title = (
+        stage_info["titles"][expected_repo]
+        if rules.filed_at_import
+        else stage_info["title"]
+    )
     require(
         item["milestone"] == f"{stage_title} — Stage {stage}",
         f"{identifier}: wrong milestone",
@@ -170,13 +231,30 @@ def check_metadata(
     assigned = item["labels"]
     require(len(assigned) == len(set(assigned)), "Duplicate label")
     require(set(assigned) <= labels, f"{identifier}: unknown label")
-    for group in ("type:", "priority:", "roadmap:"):
+    groups = (
+        ("type:", "priority:")
+        if rules.filed_at_import
+        else (
+            "type:",
+            "priority:",
+            "roadmap:",
+        )
+    )
+    for group in groups:
         require(
             sum(label.startswith(group) for label in assigned) == 1,
             f"{identifier}: expected one {group} label",
         )
-    require(f"roadmap:{stage}" in assigned, "Wrong stage label")
-    require("priority:medium" in assigned, "Wrong priority")
+    if rules.filed_at_import:
+        # The filed labels carry no roadmap label; reconciliation adds it.
+        require(
+            item["added_labels"] == [f"roadmap:{stage}"],
+            f"{identifier}: wrong reconciled roadmap label",
+        )
+        require(f"roadmap:{stage}" in labels, f"{identifier}: unknown roadmap label")
+    else:
+        require(f"roadmap:{stage}" in assigned, "Wrong stage label")
+        require("priority:medium" in assigned, "Wrong priority")
     require(
         ("status:blocked" in assigned) == bool(item["blocked_by"]),
         f"{identifier}: inconsistent blocked status",
@@ -190,16 +268,20 @@ def check_metadata(
             sum(label.startswith("size:") for label in assigned) == 1,
             f"{identifier}: missing size",
         )
-        require(
-            ("status:needs-decision" in assigned) == ("type:decision" in assigned),
-            f"{identifier}: inconsistent decision status",
-        )
+        if not rules.filed_at_import:
+            require(
+                ("status:needs-decision" in assigned) == ("type:decision" in assigned),
+                f"{identifier}: inconsistent decision status",
+            )
     else:
         require(item["parent"] is None, "Epics must not invent a parent")
-        require({"type:epic", "cross-repo"} <= set(assigned), "Epic labels")
+        required = (
+            {"type:epic"} if rules.filed_at_import else {"type:epic", "cross-repo"}
+        )
+        require(required <= set(assigned), "Epic labels")
 
 
-def check_body(item: dict[str, Any], folder: Path, status: str) -> str:
+def check_body(item: dict[str, Any], folder: Path, status: str, rules: Rules) -> str:
     """Check complete issue prose against its filing metadata."""
     identifier = item["id"]
     assigned = item["labels"]
@@ -215,7 +297,7 @@ def check_body(item: dict[str, Any], folder: Path, status: str) -> str:
             f"{identifier}: body hash mismatch",
         )
     require(body.startswith("# " + item["title"] + "\n"), "Body title mismatch")
-    for heading in HEADINGS:
+    for heading in rules.headings:
         sections = re.split(rf"(?m)^## {re.escape(heading)}\n", body)
         require(len(sections) == SECTION_PARTS, f"{identifier}: missing {heading}")
         require(
@@ -228,10 +310,12 @@ def check_body(item: dict[str, Any], folder: Path, status: str) -> str:
         re.findall(r"`([^`]+)`", label_section) == assigned,
         f"{identifier}: body/manifest labels differ",
     )
-    require(item["milestone"] in body, "Body milestone mismatch")
+    if not rules.filed_at_import:
+        require(item["milestone"] in body, "Body milestone mismatch")
     if item["parent"]:
         require(f"[{item['parent']}]" in body, "Body parent mismatch")
-    dependency_section = body.split("## Dependencies\n")[1].split("\n## ")[0]
+    heading = rules.dependencies_heading
+    dependency_section = body.split(f"## {heading}\n")[1].split("\n## ")[0]
     body_dependencies = re.findall(r"Blocked\s+by\s+\[([^\]]+)\]", dependency_section)
     require(body_dependencies == item["blocked_by"], "Body dependency mismatch")
     return body
@@ -272,6 +356,59 @@ def check_traceability(
                 " ".join(trace["criterion"].split()) in normalized,
                 "Body review criterion differs from traceability",
             )
+
+
+def derive_obligations(identifier: str, body: str) -> list[tuple[str, str, str]]:
+    """The (id, kind, text) obligations a filed body states.
+
+    Every checklist item under `## Acceptance criteria` and every paragraph under
+    `## Exclusions` is one obligation, numbered in order.
+    """
+    found: list[tuple[str, str, str]] = []
+    criteria = body.split("## Acceptance criteria\n")[1].split("\n## ", maxsplit=1)[0]
+    number = 0
+    for line in criteria.splitlines():
+        match = re.match(r"^- \[[ xX]\] (.+)$", line)
+        if match:
+            number += 1
+            found.append((f"{identifier}-AC-{number:02}", "acceptance", match[1]))
+    exclusions = body.split("## Exclusions\n")[1].split("\n## ", maxsplit=1)[0]
+    number = 0
+    for paragraph in re.split(r"\n\s*\n", exclusions.strip()):
+        text = " ".join(paragraph.split())
+        if text:
+            number += 1
+            found.append((f"{identifier}-EX-{number:02}", "exclusion", text))
+    return found
+
+
+def check_derived_traceability(
+    traces: list[dict[str, Any]],
+    entries: list[dict[str, Any]],
+    bodies: dict[str, str],
+) -> None:
+    """Require the obligations to be exactly those the filed bodies state."""
+    expected: dict[str, tuple[str, str, dict[str, Any]]] = {}
+    for item in entries:
+        for trace_id, kind, text in derive_obligations(item["id"], bodies[item["id"]]):
+            expected[trace_id] = (kind, " ".join(text.split()), item)
+    require(
+        len(traces) == len(expected) and {t["id"] for t in traces} == set(expected),
+        "Missing or duplicate filed obligations",
+    )
+    for trace in traces:
+        kind, text, item = expected[trace["id"]]
+        require(trace["source"] == "filed-body", "Unexpected traceability source")
+        require(trace["kind"] == kind, f"{trace['id']}: wrong obligation kind")
+        require(
+            " ".join(trace["criterion"].split()) == text,
+            f"{trace['id']}: obligation differs from the filed body",
+        )
+        require(trace["owner"] == item["id"], f"{trace['id']}: wrong owner")
+        require(
+            trace["epic"] == (item["parent"] or item["id"]),
+            f"{trace['id']}: wrong epic",
+        )
 
 
 def check_epics(issues: dict[str, dict[str, Any]]) -> None:
@@ -321,6 +458,25 @@ def check_filing(
         )
 
 
+def check_native_record(
+    manifest: dict[str, Any], entries: list[dict[str, Any]]
+) -> None:
+    """Require the recorded native-relationship counts to match the filed graph."""
+    native = manifest["filing"]["native"]
+    require(
+        native["sub_issues"] == sum(1 for item in entries if item["parent"]),
+        "Native sub-issue record differs from the manifest",
+    )
+    require(
+        native["blocked_by"] == sum(len(item["blocked_by"]) for item in entries),
+        "Native blocked-by record differs from the manifest",
+    )
+    require(
+        native["status"] in {"applied-and-verified", "body-links-only"},
+        "Unknown native relationship status",
+    )
+
+
 def check_resolved_issue_links(
     issues: dict[str, dict[str, Any]], bodies: dict[str, str], status: str
 ) -> None:
@@ -349,23 +505,25 @@ def check_global_invariants(
     issues: dict[str, dict[str, Any]],
     bodies: dict[str, str],
     traces: list[dict[str, Any]],
+    legacy_ids: set[str],
 ) -> None:
-    """Validate invariants spanning both roadmap manifests."""
-    require(set(stage_owners) == set(range(15, 22)), "Missing stage")
+    """Validate invariants spanning every roadmap manifest."""
+    require(set(stage_owners) == set(ALL_STAGES), "Missing stage")
     require(len(statuses) == 1, "Roadmap pack filing states differ")
     require(
-        len({item["title"] for item in issues.values()}) == ISSUE_COUNT,
+        len({item["title"] for item in issues.values()}) == len(issues),
         "Duplicate title",
     )
     require("breaking-change" in issues["CF-18.01"]["labels"], "Unmarked cutover")
     check_epics(issues)
-    validate_graph(issues)
-    check_traceability(traces, issues, bodies)
+    validate_graph(issues, legacy_ids)
+    legacy = {key: value for key, value in issues.items() if key in legacy_ids}
+    check_traceability(traces, legacy, bodies)
     check_resolved_issue_links(issues, bodies, next(iter(statuses)))
 
 
-def check_packs(root: Path, mirror: Path | None = None) -> None:
-    """Validate both manifests, complete bodies, traceability and mirrors."""
+def check_packs(root: Path, mirror: Path | None = None) -> str:
+    """Validate every manifest, complete bodies, traceability and mirrors."""
     labels_path = root / ".github/labels.toml"
     taxonomy = tomllib.loads(labels_path.read_text(encoding="utf-8"))
     labels = {
@@ -376,10 +534,13 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
     issues: dict[str, dict[str, Any]] = {}
     bodies: dict[str, str] = {}
     traces: list[dict[str, Any]] = []
+    obligations = 0
     statuses: set[str] = set()
     all_paths: set[Path] = {labels_path, root / "scripts/check_roadmaps.py"}
     stage_owners: dict[int, list[str]] = {}
-    for version, expected in ((3, (5, 21)), (4, (3, 9))):
+    legacy_ids: set[str] = set()
+    for rules in PACKS:
+        version = rules.version
         folder = root / f"docs/roadmap-v{version}"
         manifest_path = folder / "github-issues/filing-manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -392,12 +553,17 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
         counts = tuple(
             sum(item["kind"] == kind for item in entries) for kind in ("epic", "child")
         )
-        require(counts == expected, f"Roadmap {version}: incorrect issue counts")
+        require(counts == rules.counts, f"Roadmap {version}: incorrect issue counts")
+        require(
+            {stage["number"] for stage in manifest["stages"]} == set(rules.stages),
+            f"Roadmap {version}: incorrect stages",
+        )
         for stage in manifest["stages"]:
             number = stage["number"]
             require(number not in stage_owners, f"Duplicate stage: {number}")
             stage_owners[number] = stage["owners"]
             require(f"roadmap:{number}" in labels, f"Missing stage label: {number}")
+        pack_bodies: dict[str, str] = {}
         for item in entries:
             identifier = item["id"]
             require(identifier not in issues, f"Duplicate issue ID: {identifier}")
@@ -406,12 +572,21 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 for value in manifest["stages"]
                 if value["number"] == item["stage"]
             )
-            check_metadata(item, stage_info, labels, status)
-            body = check_body(item, folder, status)
+            check_metadata(item, stage_info, labels, status, rules)
+            body = check_body(item, folder, status, rules)
             issues[identifier] = item
             bodies[identifier] = body
-        traces.extend(manifest["traceability"])
+            pack_bodies[identifier] = body
+            if version in LEGACY_VERSIONS:
+                legacy_ids.add(identifier)
+        if version in LEGACY_VERSIONS:
+            traces.extend(manifest["traceability"])
+        else:
+            check_derived_traceability(manifest["traceability"], entries, pack_bodies)
+            obligations += len(manifest["traceability"])
         check_filing(manifest, entries, status)
+        if rules.filed_at_import and status == "filed-open":
+            check_native_record(manifest, entries)
         paths = {path for path in folder.rglob("*") if path.is_file()}
         all_paths.update(paths)
         expected_bodies = {folder / item["body"] for item in entries}
@@ -434,7 +609,7 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 f"Roadmap {version}: mirror inventory differs",
             )
 
-    check_global_invariants(stage_owners, statuses, issues, bodies, traces)
+    check_global_invariants(stage_owners, statuses, issues, bodies, traces, legacy_ids)
     if mirror:
         for path in all_paths:
             other = mirror / path.relative_to(root)
@@ -442,8 +617,11 @@ def check_packs(root: Path, mirror: Path | None = None) -> None:
                 other.is_file() and path.read_bytes() == other.read_bytes(),
                 f"Mirror differs: {path.relative_to(root)}",
             )
-    print(
-        "Roadmaps valid: 8 epics, 30 children, 45 review obligations; "
+    epics = sum(item["kind"] == "epic" for item in issues.values())
+    children = len(issues) - epics
+    return (
+        f"Roadmaps valid: {epics} epics, {children} children, "
+        f"{len(traces) + obligations} review obligations; "
         f"{next(iter(statuses))}; links and DAG OK."
     )
 
@@ -455,7 +633,11 @@ def main() -> None:
     parser.add_argument("--mirror", type=Path)
     args = parser.parse_args()
     try:
-        check_packs(args.root.resolve(), args.mirror.resolve() if args.mirror else None)
+        print(
+            check_packs(
+                args.root.resolve(), args.mirror.resolve() if args.mirror else None
+            )
+        )
     except (ValueError, KeyError, OSError, TypeError) as error:
         parser.exit(1, f"Roadmap validation failed: {error}\n")
 
