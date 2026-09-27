@@ -20,6 +20,7 @@ from rich.table import Table
 from rich.text import Text
 
 from create_forge import capture, compat
+from create_forge.commands import _legacy, _output
 from create_forge.compat import (
     ENGINE_DISTRIBUTION,
     INTEGRATION_LINE,
@@ -76,43 +77,6 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
-console = Console()
-err = Console(stderr=True)
-
-
-def _harden_console_encoding() -> None:
-    r"""Make `console`/`err` degrade unencodable text instead of raising.
-
-    Rich resolves `sys.stdout`/`sys.stderr` fresh on every print (`Console.file`
-    is a property, not a frozen reference at construction), and on Windows,
-    whenever the process is not attached to a real console -- a pipe, a
-    redirect, a test harness -- `GetConsoleMode` fails exactly as it would on
-    an unsupported terminal, so Rich takes its "legacy Windows" path and writes
-    through the stream's own `.write`, which is `sys.stdout`/`sys.stderr`'s
-    default `errors="strict"`. A project name, path, or diagnostic outside the
-    console's codepage (a CJK path segment on a `cp1252` host, say) then raises
-    `UnicodeEncodeError` -- observed reaching the user *after* `new` had
-    already written and committed the project, which is a correctness bug, not
-    a cosmetic one (CF-23.02, ADR 0057). `backslashreplace` keeps every such
-    character visible (`\\uXXXX`) rather than losing the message, matching
-    Click's own choice for `CliRunner`'s stderr stream. Called at the top of
-    every invocation (`main()`, Typer's group callback) because CliRunner and
-    other harnesses swap `sys.stdout`/`sys.stderr` per call, after this module
-    is imported once -- reconfiguring at import time would hardcode whatever
-    stream was current then and miss every later swap.
-
-    Never touches path bytes, generated content, or what argument reaches a
-    subprocess -- console text only, and only when the stream supports
-    `reconfigure` (every real Windows console script and Click's own test
-    streams do; anything else is left as it was).
-    """
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is None:
-            continue
-        with contextlib.suppress(AttributeError, OSError, ValueError):
-            reconfigure(errors="backslashreplace")
-
 
 config_app = typer.Typer(
     name="config",
@@ -198,7 +162,7 @@ def _parse_component_options(pairs: list[str]) -> dict[str, dict[str, str]]:
 def _version_callback(show: bool) -> None:
     """Print the version and exit, if `--version` was passed."""
     if show:
-        console.print(_version())
+        _output.console.print(_version())
         raise typer.Exit
 
 
@@ -215,7 +179,7 @@ def main(
     ] = False,
 ) -> None:
     """create-forge."""
-    _harden_console_encoding()
+    _output._harden_console_encoding()
 
 
 def _load_config_or_exit() -> UserConfig:
@@ -223,7 +187,7 @@ def _load_config_or_exit() -> UserConfig:
     try:
         return load_config()
     except ValueError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
 
@@ -242,7 +206,9 @@ def _select_template(
             else registry.default_template
         )
     except KeyError as exc:
-        err.print(f"[red]{config_path()} sets default_template: {exc.args[0]}[/red]")
+        _output.err.print(
+            f"[red]{config_path()} sets default_template: {exc.args[0]}[/red]"
+        )
         raise typer.Exit(1) from exc
 
     try:
@@ -253,13 +219,13 @@ def _select_template(
         else:
             template = choose_template(registry.selectable, preferred_id)
     except KeyError as exc:
-        err.print(f"[red]{exc.args[0]}[/red]")
+        _output.err.print(f"[red]{exc.args[0]}[/red]")
         raise typer.Exit(1) from exc
     except PromptAbortedError:
         raise typer.Exit(130) from None
 
     if template.status == "deprecated":
-        err.print(
+        _output.err.print(
             f"[yellow]{template.id} is deprecated. "
             f"Use {template.deprecated_in_favour_of} instead.[/yellow]"
         )
@@ -277,7 +243,7 @@ def _collect_answers(
     """Gather answers from --yes/--data, or by prompting for anything missing."""
     if yes:
         if "project_name" not in preset:
-            err.print("[red]--yes requires a project name.[/red]")
+            _output.err.print("[red]--yes requires a project name.[/red]")
             raise typer.Exit(1)
         return {**cfg_answers, **preset}
 
@@ -287,7 +253,7 @@ def _collect_answers(
             **ask_all(template, preset=preset, defaults=cfg_answers),
         }
     except PromptAbortedError:
-        err.print("\n[dim]Cancelled.[/dim]")
+        _output.err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
 
 
@@ -308,7 +274,7 @@ def _confirm_third_party(
     """
     if not template_url:
         return
-    err.print(
+    _output.err.print(
         Panel(
             Text.assemble(lead, (display_source(template_url), "bold"), detail),
             title=title,
@@ -319,37 +285,6 @@ def _confirm_third_party(
         raise typer.Exit(130)
 
 
-def _ensure_legacy_available(*, purpose: str = "to use --legacy") -> None:
-    """Import `create_forge.runner`, failing closed if `copier` is absent.
-
-    ADR 0040 decision 2 (CF-18.01) moves `copier` from a required dependency
-    to the optional `legacy` extra: `runner.py` imports it at module scope
-    (invariant 4), so this is now the lazy, guarded import -- reached only
-    from `--legacy` and `update`, mirroring the shape `engine`/`pipeline`'s
-    import had before the cutover. Decision 12 widens exit `3`'s
-    provider-availability class to cover exactly this: a missing generator,
-    not a usage error, so callers exit `3` rather than raising a bare
-    `ImportError` traceback. Callers reached only after this succeeds import
-    `create_forge.runner`'s names directly -- the module is already cached in
-    `sys.modules`, so that second import is free.
-
-    `purpose` distinguishes why the extra is needed (ADR 0047 rule 4): `new
-    --legacy` reads "to use --legacy", while `update`'s file-routed Copier
-    path -- reachable with no `--legacy` flag at all, whenever the project
-    records `.copier-answers.yml` -- supplies its own project-specific
-    wording instead.
-    """
-    try:
-        import create_forge.runner  # noqa: F401, PLC0415
-    except ImportError:
-        err.print(
-            "[red]The legacy Copier route isn't installed.[/red] Run "
-            r"`pip install 'create-forge\[legacy]'` (or `uv sync --all-extras` "
-            f"in a create-forge checkout) {purpose}."
-        )
-        raise typer.Exit(3) from None
-
-
 def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
     """Scaffold, translating a ScaffoldError into a clean exit.
 
@@ -358,10 +293,10 @@ def _run_scaffold(request: ScaffoldRequest, slug: str) -> None:
     from create_forge.runner import ScaffoldError, scaffold  # noqa: PLC0415
 
     try:
-        with console.status(f"Scaffolding {slug}…"):
+        with _output.console.status(f"Scaffolding {slug}…"):
             scaffold(request)
     except ScaffoldError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
 
@@ -424,13 +359,13 @@ def _validate_flag_ids(
         actual = catalogue.kind_of(component_id)
         if actual is None:
             valid = ", ".join(sorted(d.id for d in catalogue.of_kind(kind)))
-            err.print(
+            _output.err.print(
                 f"[red]Unknown {_flag_name(kind)} {component_id!r}. "
                 f"Available: {valid or 'none'}[/red]"
             )
             raise typer.Exit(1)
         if actual is not kind:
-            err.print(
+            _output.err.print(
                 f"[red]{_flag_name(kind)} {component_id!r} is not a "
                 f"{DESCRIPTOR_KIND[kind]} (it is the {DESCRIPTOR_KIND[actual]} "
                 f"{component_id!r}).[/red]"
@@ -532,7 +467,7 @@ def _resolve_engine_selection(
             catalogue, descriptor, flags, archetype_explicit=archetype_explicit, yes=yes
         )
     except PromptAbortedError:
-        err.print("\n[dim]Cancelled.[/dim]")
+        _output.err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
     return descriptor, selection
 
@@ -577,13 +512,13 @@ def _validate_component_option_owners(
     for owner in options:
         if catalogue.kind_of(owner) is None:
             available = ", ".join(sorted(d.id for d in catalogue.descriptors))
-            err.print(
+            _output.err.print(
                 f"[red]Unknown --component-option component {owner!r}. "
                 f"Available: {available}[/red]"
             )
             raise typer.Exit(1)
         if owner not in selected:
-            err.print(
+            _output.err.print(
                 f"[red]--component-option component {owner!r} is not selected. "
                 f"Selected: {', '.join(sorted(selected))}[/red]"
             )
@@ -613,7 +548,7 @@ def _select_archetype(
 
     if archetype is not None:
         if archetype not in by_id:
-            err.print(
+            _output.err.print(
                 f"[red]Unknown archetype {archetype!r}. Available: "
                 f"{', '.join(sorted(by_id))}[/red]"
             )
@@ -621,7 +556,7 @@ def _select_archetype(
         return by_id[archetype], True
 
     if yes:
-        err.print(
+        _output.err.print(
             "[red]--yes requires --archetype. "
             f"Available: {', '.join(sorted(by_id))}[/red]"
         )
@@ -630,7 +565,7 @@ def _select_archetype(
     try:
         chosen = choose_archetype(archetypes)
     except PromptAbortedError:
-        err.print("\n[dim]Cancelled.[/dim]")
+        _output.err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
     # `choose_archetype` itself skips the prompt when there is exactly one
     # archetype (mirroring `choose_template`) -- no alternative was ever
@@ -682,7 +617,7 @@ def _collect_engine_answers(  # noqa: PLR0913 - project answers plus per-compone
 
     if yes:
         if "project_name" not in project_preset:
-            err.print("[red]--yes requires a project name.[/red]")
+            _output.err.print("[red]--yes requires a project name.[/red]")
             raise typer.Exit(1)
         project_answers = {**cfg_answers, **project_preset}
         component_options = resolve_component_options(
@@ -699,7 +634,7 @@ def _collect_engine_answers(  # noqa: PLR0913 - project answers plus per-compone
             selected, presets=presets, prompt=True
         )
     except PromptAbortedError:
-        err.print("\n[dim]Cancelled.[/dim]")
+        _output.err.print("\n[dim]Cancelled.[/dim]")
         raise typer.Exit(130) from None
 
     return project_answers, component_options
@@ -750,7 +685,7 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
         try:
             ensure_available(path)
         except DestinationConflictError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
     try:
@@ -759,7 +694,7 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
         # real, direct import to type against.
         from create_forge import engine, pipeline  # noqa: PLC0415
     except ImportError:
-        err.print(
+        _output.err.print(
             "[red]forge-template is not installed.[/red] create-forge "
             f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
             "reinstall create-forge to restore it."
@@ -769,10 +704,10 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
     try:
         catalogue = pipeline.discover_catalogue()
     except engine.EngineCompatibilityError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
-        err.print(f"[red]{engine.explain(exc)}[/red]")
+        _output.err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
     descriptor, selection = _resolve_engine_selection(
@@ -791,7 +726,7 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
     try:
         ensure_available(dst)
     except DestinationConflictError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     try:
@@ -802,7 +737,7 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
             catalogue=catalogue,
         )
     except engine.EngineCompatibilityError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
         lines = [engine.explain(exc)]
@@ -810,23 +745,23 @@ def _run_engine(  # noqa: PLR0912, PLR0913, PLR0915 - one parameter per new()'s 
         if hint:
             lines.append(hint)
         message = "\n".join(lines)
-        err.print(f"[red]{message}[/red]")
+        _output.err.print(f"[red]{message}[/red]")
         raise typer.Exit(1) from exc
 
     if dry_run:
         for file in request.rendered.files:
-            console.print(f"[dim]would write[/dim] {file.target}")
-        console.print("[dim]Dry run — nothing written.[/dim]")
+            _output.console.print(f"[dim]would write[/dim] {file.target}")
+        _output.console.print("[dim]Dry run — nothing written.[/dim]")
         return
 
     try:
         warnings = pipeline.finalise_generation_request(request, dst)
     except StagingError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     for warning in warnings:
-        err.print(f"[yellow]{warning}[/yellow]")
+        _output.err.print(f"[yellow]{warning}[/yellow]")
     _report_created(project_answers["project_name"], dst, updatable=True)
 
 
@@ -863,7 +798,7 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
         try:
             ensure_available(path)
         except DestinationConflictError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
     _confirm_third_party(
@@ -878,7 +813,7 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
     try:
         from create_forge import engine_source, pipeline  # noqa: PLC0415
     except ImportError:
-        err.print(
+        _output.err.print(
             "[red]forge-template is not installed.[/red] create-forge "
             f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
             "reinstall create-forge to restore it."
@@ -888,7 +823,7 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
     try:
         requirement = engine_source.build_requirement(source, ref)
     except engine_source.EngineSourceError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     with contextlib.ExitStack() as stack:
@@ -903,22 +838,22 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
             # provisioned environment exactly as the `with` form would have.
             runtime = stack.enter_context(engine_source.provision(requirement))
         except engine_source.EngineSourceError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
         try:
             engine_source.negotiate(runtime)
         except compat.EngineCompatibilityError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(3) from exc
         except engine_source.EngineSourceError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
         try:
             descriptors = engine_source.discover(runtime)
         except engine_source.EngineSourceError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
         catalogue = pipeline.Catalogue(descriptors)
@@ -939,7 +874,7 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
         try:
             ensure_available(dst)
         except DestinationConflictError as exc:
-            err.print(f"[red]{exc}[/red]")
+            _output.err.print(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
 
         payload = build_spec_payload(
@@ -956,23 +891,23 @@ def _run_engine_source(  # noqa: PLR0912, PLR0913, PLR0915 - mirrors _run_engine
             hint = _missing_requirement_hint(catalogue, descriptor, selection)
             if hint:
                 lines.append(hint)
-            err.print(f"[red]{chr(10).join(lines)}[/red]")
+            _output.err.print(f"[red]{chr(10).join(lines)}[/red]")
             raise typer.Exit(1) from exc
 
     if dry_run:
         for target, _content in files:
-            console.print(f"[dim]would write[/dim] {target}")
-        console.print("[dim]Dry run — nothing written.[/dim]")
+            _output.console.print(f"[dim]would write[/dim] {target}")
+        _output.console.print("[dim]Dry run — nothing written.[/dim]")
         return
 
     try:
         warnings = pipeline.finalise_files(files, dst)
     except StagingError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     for warning in warnings:
-        err.print(f"[yellow]{warning}[/yellow]")
+        _output.err.print(f"[yellow]{warning}[/yellow]")
     _report_created(
         project_answers["project_name"], dst, updatable=False, engine_source=True
     )
@@ -1013,7 +948,7 @@ def _report_created(
             "[dim]Not yet update-eligible -- create-forge update does not "
             "apply to this project.[/dim]"
         )
-    console.print(
+    _output.console.print(
         Panel(
             f"[bold]{project_name}[/bold] created at [dim]{dst}[/dim]\n\n"
             f"  cd {dst.name}\n"
@@ -1124,41 +1059,43 @@ def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's optio
         try:
             validate_source(template_url)
         except SourceError as exc:
-            err.print(str(exc), style="red", markup=False)
+            _output.err.print(str(exc), style="red", markup=False)
             raise typer.Exit(1) from None
     if archetype is not None and legacy:
-        err.print("[red]--archetype and --legacy are contradictory.[/red]")
+        _output.err.print("[red]--archetype and --legacy are contradictory.[/red]")
         raise typer.Exit(1)
     if engine_ref is not None and engine_source is None:
-        err.print("[red]--engine-ref requires --engine-source.[/red]")
+        _output.err.print("[red]--engine-ref requires --engine-source.[/red]")
         raise typer.Exit(1)
     if engine_source is not None and legacy:
-        err.print("[red]--engine-source and --legacy are contradictory.[/red]")
+        _output.err.print("[red]--engine-source and --legacy are contradictory.[/red]")
         raise typer.Exit(1)
     if engine_source is not None:
         try:
             validate_source(engine_source, origin="--engine-source")
         except SourceError as exc:
-            err.print(str(exc), style="red", markup=False)
+            _output.err.print(str(exc), style="red", markup=False)
             raise typer.Exit(1) from None
     _any_component_flag = bool(
         capability or no_capabilities or platform or no_platforms or component_option
     )
     if _any_component_flag and legacy:
-        err.print(
+        _output.err.print(
             "[red]--capability/--no-capabilities/--platform/--no-platforms/"
             "--component-option require the default engine path and have no "
             "effect with --legacy.[/red]"
         )
         raise typer.Exit(1)
     if capability and no_capabilities:
-        err.print("[red]--capability and --no-capabilities are contradictory.[/red]")
+        _output.err.print(
+            "[red]--capability and --no-capabilities are contradictory.[/red]"
+        )
         raise typer.Exit(1)
     if platform and no_platforms:
-        err.print("[red]--platform and --no-platforms are contradictory.[/red]")
+        _output.err.print("[red]--platform and --no-platforms are contradictory.[/red]")
         raise typer.Exit(1)
     if not legacy and (template_id or template_url or ref):
-        err.print(
+        _output.err.print(
             "[red]--template/--template-url/--ref require --legacy and have "
             "no effect on the default engine path, which selects an archetype "
             "instead of a Copier template (ADR 0040).[/red]"
@@ -1173,7 +1110,7 @@ def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's optio
     cfg_answers = config.as_answers()
 
     if legacy:
-        _ensure_legacy_available()
+        _legacy._ensure_legacy_available()
         from create_forge.runner import ScaffoldRequest  # noqa: PLC0415
 
         registry = load_registry()
@@ -1194,7 +1131,7 @@ def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's optio
         )
 
         if dry_run:
-            console.print("[dim]Dry run — nothing written.[/dim]")
+            _output.console.print("[dim]Dry run — nothing written.[/dim]")
             return
 
         _report_created(answers["project_name"], dst)
@@ -1234,7 +1171,7 @@ def _list_legacy_registry() -> None:
     try:
         registry = load_registry()
     except RuntimeError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
     table = Table(box=None, pad_edge=False)
     table.add_column("ID", style="bold")
@@ -1251,7 +1188,7 @@ def _list_legacy_registry() -> None:
             template.id + default, template.name, template.description, marker
         )
 
-    console.print(table)
+    _output.console.print(table)
 
 
 @app.command("list")
@@ -1279,7 +1216,7 @@ def list_templates(
     try:
         from create_forge import engine, pipeline  # noqa: PLC0415
     except ImportError:
-        err.print(
+        _output.err.print(
             "[red]forge-template is not installed.[/red] create-forge "
             f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
             "reinstall create-forge to restore it."
@@ -1289,10 +1226,10 @@ def list_templates(
     try:
         catalogue = pipeline.discover_catalogue()
     except engine.EngineCompatibilityError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
-        err.print(f"[red]{engine.explain(exc)}[/red]")
+        _output.err.print(f"[red]{engine.explain(exc)}[/red]")
         raise typer.Exit(1) from exc
 
     table = Table(box=None, pad_edge=False)
@@ -1310,7 +1247,7 @@ def list_templates(
                 descriptor.description,
             )
 
-    console.print(table)
+    _output.console.print(table)
 
 
 @app.command("update")
@@ -1355,7 +1292,7 @@ def update_project(
     try:
         from create_forge import engine, update  # noqa: PLC0415
     except ImportError:
-        err.print(
+        _output.err.print(
             "[red]forge-template is not installed.[/red] create-forge "
             f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
             "reinstall create-forge to restore it."
@@ -1373,14 +1310,14 @@ def update_project(
         # for a project the engine never touches.
         if (resolved / update.COPIER_ANSWERS_FILE).is_file():
             if degraded:
-                err.print(
+                _output.err.print(
                     "[red]--degraded applies only to the engine-native "
                     "update route.[/red]"
                 )
                 raise typer.Exit(1) from None
             _run_copier_update(resolved, ref=ref, dry_run=dry_run)
             return
-        err.print(
+        _output.err.print(
             "[red]The installed forge-template engine is unusable.[/red] "
             f"create-forge requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
             "reinstall create-forge to restore it, or run `create-forge "
@@ -1393,12 +1330,12 @@ def update_project(
             resolved, metadata_filename=metadata_filename, legacy=legacy
         )
     except update.UpdateError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     if route is update.Route.COPIER:
         if degraded:
-            err.print(
+            _output.err.print(
                 "[red]--degraded applies only to the engine-native update route.[/red]"
             )
             raise typer.Exit(1)
@@ -1406,7 +1343,7 @@ def update_project(
         return
 
     if ref is not None:
-        err.print(
+        _output.err.print(
             "[red]--ref selects a Copier template revision and applies only "
             "to the --legacy route.[/red] The engine-native route always "
             "targets the installed forge-template release -- upgrade "
@@ -1421,7 +1358,7 @@ def _run_copier_update(project: Path, *, ref: str | None, dry_run: bool) -> None
     """The direct-Copier `update` route, unchanged from before CF-18.04."""
     from create_forge.update import COPIER_ANSWERS_FILE  # noqa: PLC0415
 
-    _ensure_legacy_available(
+    _legacy._ensure_legacy_available(
         purpose="to update this project, which records Copier answers in "
         f"{COPIER_ANSWERS_FILE}"
     )
@@ -1430,17 +1367,19 @@ def _run_copier_update(project: Path, *, ref: str | None, dry_run: bool) -> None
 
     try:
         status = "Checking update…" if dry_run else "Updating…"
-        with console.status(status):
+        with _output.console.status(status):
             copier_update(project, vcs_ref=ref, dry_run=dry_run)
     except ScaffoldError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     if dry_run:
-        console.print("[green]Dry run complete.[/green] No project files changed.")
+        _output.console.print(
+            "[green]Dry run complete.[/green] No project files changed."
+        )
         return
 
-    console.print(
+    _output.console.print(
         "[green]Updated.[/green] Review the diff before committing — "
         "conflicts are marked inline."
     )
@@ -1451,7 +1390,7 @@ def _confirm_degraded(reason: str) -> bool:
 
     Non-interactive or closed stdin behaves as a decline, not a raw traceback.
     """
-    err.print(
+    _output.err.print(
         Panel(
             f"{reason}\n\n"
             "A degraded two-way update can proceed instead: it compares only "
@@ -1480,8 +1419,8 @@ def _print_dry_run_summary(outcome: update_module.UpdateOutcome) -> None:
             continue
         marker = "CONFLICT" if result.status == "conflict" else result.status
         line = f"[dim]{result.classification:<9}[/dim] {marker:<10} {result.target}"
-        console.print(line)
-    console.print(f"[dim]{unchanged} unchanged target(s).[/dim]")
+        _output.console.print(line)
+    _output.console.print(f"[dim]{unchanged} unchanged target(s).[/dim]")
 
 
 def _report_update_result(outcome: update_module.UpdateOutcome) -> None:
@@ -1490,10 +1429,10 @@ def _report_update_result(outcome: update_module.UpdateOutcome) -> None:
     A no-op update (rule 15) reports that nothing changed instead.
     """
     if outcome.changed == 0:
-        console.print("[green]Updated.[/green] Nothing changed.")
+        _output.console.print("[green]Updated.[/green] Nothing changed.")
         return
     clean = outcome.changed - outcome.conflicts
-    console.print(
+    _output.console.print(
         "[green]Updated.[/green] Review the diff before committing — "
         f"conflicts are marked inline. {clean} clean, {outcome.conflicts} conflicted."
     )
@@ -1535,7 +1474,7 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
                 preparation = pipeline.prepare_update(project)
             except pipeline.UnavailableRecordedReleaseError as exc:
                 if not _confirm_degraded(str(exc)):
-                    err.print(f"[red]{exc}[/red]")
+                    _output.err.print(f"[red]{exc}[/red]")
                     raise typer.Exit(3) from exc
                 recorded, new = pipeline.prepare_degraded_update(project)
                 new_files = {file.target: file.content for file in new.files}
@@ -1575,7 +1514,9 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
 
         if dry_run:
             _print_dry_run_summary(outcome)
-            console.print("[green]Dry run complete.[/green] No project files changed.")
+            _output.console.print(
+                "[green]Dry run complete.[/green] No project files changed."
+            )
             return
 
         relock_warning = update.relock(project)
@@ -1591,21 +1532,21 @@ def _run_engine_update(  # noqa: PLR0915 - one branch per prepare/apply/degraded
         update.stage_result(project)
 
         if relock_warning:
-            err.print(f"[yellow]{relock_warning}[/yellow]")
+            _output.err.print(f"[yellow]{relock_warning}[/yellow]")
         _report_update_result(outcome)
     except KeyboardInterrupt:
-        err.print("\n[dim]Cancelled.[/dim]")
+        _output.err.print("\n[dim]Cancelled.[/dim]")
         _print_recovery(project, started=started)
         raise typer.Exit(130) from None
     except (update.UpdateError, StagingError) as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         _print_recovery(project, started=started)
         raise typer.Exit(1) from exc
     except engine.EngineCompatibilityError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(3) from exc
     except engine.ForgeEngineError as exc:
-        err.print(f"[red]{engine.explain(exc)}[/red]")
+        _output.err.print(f"[red]{engine.explain(exc)}[/red]")
         _print_recovery(project, started=started)
         raise typer.Exit(1) from exc
 
@@ -1623,7 +1564,9 @@ def _print_recovery(project: Path, *, started: bool) -> None:
     from create_forge import update  # noqa: PLC0415
 
     for line in update.recovery_guidance(project).lines():
-        err.print(line, style="dim", markup=False, highlight=False, soft_wrap=True)
+        _output.err.print(
+            line, style="dim", markup=False, highlight=False, soft_wrap=True
+        )
 
 
 def _markers(target: Console) -> tuple[str, str]:
@@ -2098,7 +2041,7 @@ def doctor(
     if as_json:
         typer.echo(json.dumps(_diagnostics_payload(diagnostics), indent=2))
     else:
-        _render_diagnostics_table(diagnostics, console)
+        _render_diagnostics_table(diagnostics, _output.console)
 
     if not diagnostics.ok:
         raise typer.Exit(1)
@@ -2111,9 +2054,11 @@ def config_init() -> None:
     existed = target.exists()
     write_example(target)
     if existed:
-        console.print(f"[dim]{target} already exists — left untouched.[/dim]")
+        _output.console.print(f"[dim]{target} already exists — left untouched.[/dim]")
     else:
-        console.print(f"[green]Wrote {target}.[/green] Edit it, then run `new` again.")
+        _output.console.print(
+            f"[green]Wrote {target}.[/green] Edit it, then run `new` again."
+        )
 
 
 @config_app.command("show")
@@ -2121,14 +2066,14 @@ def config_show() -> None:
     """Print resolved configuration and where each value came from."""
     target = config_path()
     if not target.is_file():
-        console.print(
+        _output.console.print(
             f"[dim]{target} does not exist.[/dim] Run `create-forge config init`."
         )
 
     try:
         config = load_config(target)
     except ValueError as exc:
-        err.print(f"[red]{exc}[/red]")
+        _output.err.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
 
     overridden = env_overrides()
@@ -2147,7 +2092,7 @@ def config_show() -> None:
             source = "unset"
         table.add_row(field, str(value) if value is not None else "—", source)
 
-    console.print(table)
+    _output.console.print(table)
 
 
 def _git_config(key: str) -> str | None:

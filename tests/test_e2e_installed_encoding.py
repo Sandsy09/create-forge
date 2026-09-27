@@ -17,7 +17,8 @@ What this proves, through the real built wheel's console script:
 - **A path outside the console's codepage does not crash generation, `doctor`,
   or `update`.** This is the CF-23.02 finding: printing such a path used to
   raise `UnicodeEncodeError` reaching the user *after* `new` had already
-  written and committed the project -- fixed by `cli._harden_console_encoding`
+  written and committed the project -- fixed by
+  `commands._output._harden_console_encoding`
   (see `tests/test_cli.py` for the fast, cross-platform half of this proof;
   this module is what confirms it against the real Windows console path Rich
   takes when there is no console at all, only a pipe).
@@ -222,7 +223,7 @@ def test_generation_into_a_non_ascii_path_survives_every_lane(
     """The regression: the success panel names the destination path, which
     used to raise `UnicodeEncodeError` on a `cp1252` console for a path
     outside its codepage -- *after* the project was already written and
-    committed (`cli._harden_console_encoding`, CF-23.02).
+    committed (`commands._output._harden_console_encoding`, CF-23.02).
     """
     if lane.windows_only and not is_windows():
         pytest.skip(f"lane {lane.name!r} is only meaningful on Windows")
