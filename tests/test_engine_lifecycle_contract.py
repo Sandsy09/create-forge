@@ -144,14 +144,29 @@ def test_the_engine_new_path_runs_the_git_and_hook_lifecycle() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _command_layer_text() -> str:
+    """Every production module that could hold `update`'s CLI-layer routing.
+
+    Today that's just `cli.py`. CF-25.02 (ADR 0060) plans to move this
+    routing into a `commands/` subpackage beside it -- once that exists, its
+    files join the scan with no edit needed here, so these markers stay
+    meaningful wherever the routing actually lands. Deliberately narrower
+    than "every production module" (`tests.source_tree.production_modules`):
+    `create_forge/update.py` itself mentions `` `runner.update` `` in a
+    docstring, which would falsely trip the negative assertion below if the
+    whole tree were searched.
+    """
+    paths = [SRC / "cli.py", *sorted((SRC / "commands").rglob("*.py"))]
+    return "\n".join(p.read_text(encoding="utf-8") for p in paths if p.is_file())
+
+
 def test_update_routes_by_file_not_by_flag() -> None:
     """ADR 0041 rule 7: routing reads the project's own files, never a flag
     (other than the explicit `--legacy` override) -- `update.route_for` is
     the one place this decision lives.
     """
     assert update.route_for.__module__ == "create_forge.update"
-    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
-    assert "update.route_for" in cli_source
+    assert "update.route_for" in _command_layer_text()
 
 
 def test_the_update_route_dispatches_to_the_engine_native_module() -> None:
@@ -160,11 +175,11 @@ def test_the_update_route_dispatches_to_the_engine_native_module() -> None:
     `runner.update`'s Copier path -- the tripwire this test replaces asserted
     the opposite.
     """
-    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
-    assert "pipeline.prepare_update" in cli_source
-    assert "update.apply_plan" in cli_source
-    assert "runner.update" not in cli_source  # still imported by name, unqualified
-    assert "import update as copier_update" in cli_source
+    command_source = _command_layer_text()
+    assert "pipeline.prepare_update" in command_source
+    assert "update.apply_plan" in command_source
+    assert "runner.update" not in command_source  # imported by name, unqualified
+    assert "import update as copier_update" in command_source
 
 
 def test_the_engine_native_route_merges_with_git_merge_file() -> None:
@@ -212,9 +227,9 @@ def test_the_copier_route_stays_reachable_without_a_usable_engine() -> None:
     """ADR 0047 rule 3: `update_project` must not resolve the engine-owned
     metadata filename unconditionally before routing -- a project that only
     records `.copier-answers.yml` does not depend on the engine at all."""
-    cli_source = (SRC / "cli.py").read_text(encoding="utf-8")
-    assert "EngineCompatibilityError" in cli_source
-    assert "COPIER_ANSWERS_FILE" in cli_source
+    command_source = _command_layer_text()
+    assert "EngineCompatibilityError" in command_source
+    assert "COPIER_ANSWERS_FILE" in command_source
 
 
 def test_adr_0047_exists_is_indexed_and_names_its_review_obligation() -> None:

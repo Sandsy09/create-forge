@@ -38,6 +38,7 @@ from create_forge.cli import app
 from create_forge.config import UserConfig, config_path
 from create_forge.pipeline import build_generation_request
 from create_forge.spec import SelectionKind, SelectionRequest
+from tests.staging_probe import staging_siblings
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -108,10 +109,6 @@ def _render(capabilities: Sequence[str]) -> RenderedProject:
 
 def _fake_lock(staging_dir: Path) -> None:
     (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")
-
-
-def _staging_siblings(dest: Path) -> list[Path]:
-    return [p for p in dest.parent.iterdir() if p.name.startswith(".create-forge-")]
 
 
 # --------------------------------------------------------------------------
@@ -233,7 +230,7 @@ def test_a_full_composition_stages_locks_and_finalises(
     assert on_disk == expected
     assert (dest / "uv.lock").is_file()
     assert (dest / ".forge" / "generation.json").is_file()
-    assert _staging_siblings(dest) == []
+    assert staging_siblings(dest) == []
     # The lifecycle is faked above, so these stay absent regardless --
     # `tests/test_lifecycle.py` and the e2e suite prove the real steps.
     assert not (dest / ".git").exists()
@@ -421,7 +418,7 @@ def test_a_lock_failure_leaves_no_partial_project(
 
     assert result.exit_code == 1, result.output
     assert not dest.exists()
-    assert _staging_siblings(dest) == []
+    assert staging_siblings(dest) == []
 
 
 # --------------------------------------------------------------------------

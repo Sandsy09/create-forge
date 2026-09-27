@@ -60,6 +60,7 @@ from create_forge.runner import ScaffoldError, ScaffoldRequest
 from create_forge.staging import StagingError
 from create_forge.update import RecordedDocument, TargetResult
 from create_forge.update import UpdateOutcome as _UpdateOutcome
+from tests.staging_probe import staging_siblings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -124,10 +125,105 @@ def _write_config(path: Path, contents: str) -> None:
     path.write_text(contents, encoding="utf-8")
 
 
+# --------------------------------------------------------------------------- #
+# --help (CF-25.01: nothing previously invoked this through CliRunner)        #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--help"],
+        ["new", "--help"],
+        ["list", "--help"],
+        ["update", "--help"],
+        ["doctor", "--help"],
+        ["config", "--help"],
+        ["config", "init", "--help"],
+        ["config", "show", "--help"],
+    ],
+    ids=" ".join,
+)
+def test_help_exits_zero(args: list[str]) -> None:
+    """A cheap, strong regression signal for a file-move refactor (CF-25.02):
+    Typer/Click builds `--help` from wherever a command's function is
+    actually registered, so a command that stops registering correctly after
+    moving to `commands/*` fails here, not just at runtime.
+    """
+    result = runner.invoke(app, args)
+    assert result.exit_code == 0, result.output
+
+
+def test_new_help_lists_every_route_and_selection_flag() -> None:
+    result = runner.invoke(app, ["new", "--help"])
+    assert result.exit_code == 0
+    for flag in (
+        "--template",
+        "--yes",
+        "--legacy",
+        "--archetype",
+        "--capability",
+        "--no-capabilities",
+        "--platform",
+        "--no-platforms",
+        "--component-option",
+        "--engine-source",
+        "--engine-ref",
+        "--dry-run",
+    ):
+        assert flag in result.output, f"{flag} missing from `new --help`"
+
+
+def test_update_help_lists_its_flags() -> None:
+    result = runner.invoke(app, ["update", "--help"])
+    assert result.exit_code == 0
+    for flag in ("--ref", "--dry-run", "--legacy", "--degraded"):
+        assert flag in result.output, f"{flag} missing from `update --help`"
+
+
+def test_no_args_is_help_and_exits_2() -> None:
+    """Typer's `no_args_is_help=True` prints help but is still a usage
+    non-answer, not a successful invocation -- matches `--help`'s own exit
+    `0` being a *different* case from calling the app with nothing at all.
+    """
+    result = runner.invoke(app, [])
+    assert result.exit_code == 2
+    assert "Usage" in result.output
+
+
+# --------------------------------------------------------------------------- #
+# list                                                                        #
+# --------------------------------------------------------------------------- #
+
+
 def test_list_shows_the_bundled_templates() -> None:
     result = runner.invoke(app, ["list", "--legacy"])
     assert result.exit_code == 0
     assert "library" in result.output
+
+
+def test_list_legacy_broken_registry_is_a_user_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CF-25.01: a real bug found while characterising `list`. Every other
+    command that reads the bundled registry (`doctor`, `new`'s
+    `_select_template`) catches `RuntimeError` and prints a clean message;
+    `_list_legacy_registry` did not, so a broken registry crashed with a raw
+    traceback instead of a plain exit `1` -- the one inconsistency in an
+    otherwise uniform "no traceback reaches the user" convention (CLAUDE.md).
+    """
+
+    def _broken_registry() -> object:
+        msg = "boom"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(cli_module, "load_registry", _broken_registry)
+
+    result = runner.invoke(app, ["list", "--legacy"])
+
+    assert result.exit_code == 1
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "boom" in result.output
 
 
 def test_list_shows_the_discovered_engine_catalogue_by_default() -> None:
@@ -138,6 +234,28 @@ def test_list_shows_the_discovered_engine_catalogue_by_default() -> None:
     assert result.exit_code == 0, result.output
     assert "library" in result.output
     assert "archetype" in result.output
+
+
+def test_list_exits_3_on_incompatible_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The default engine route's compatibility check applies to `list` the
+    same way it applies to `new` -- untested until CF-25.01.
+    """
+    monkeypatch.setattr(
+        engine_module,
+        "get_engine_info",
+        lambda: EngineInfo(
+            package_version="9.0.0",
+            projectspec_protocols=(99,),
+            component_manifest_protocols=(1,),
+            metadata_version=1,
+        ),
+    )
+
+    result = runner.invoke(app, ["list"])
+
+    assert result.exit_code == 3, result.output
 
 
 def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -986,6 +1104,37 @@ def test_new_removes_a_destination_it_created_on_failure(
 
     assert result.exit_code == 1, result.output
     assert not dest.exists()
+    # CF-25.01: the equivalent check on the engine route
+    # (`test_new_reports_lock_failure_and_writes_nothing`, below) already
+    # existed at the pipeline layer (`test_data_science_pipeline.py`) but
+    # never through `CliRunner` on either route.
+    assert staging_siblings(dest) == []
+
+
+def test_new_legacy_keyboard_interrupt_leaves_nothing_behind(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """CF-25.01: nothing previously exercised Ctrl-C mid-`new` through
+    `CliRunner`. `staging.discard_on_failure` already catches
+    `BaseException`, not just `Exception` -- this proves that reaches a real
+    `KeyboardInterrupt`, not only the ordinary failures every other test in
+    this module raises. `CliRunner` converts an uncaught `KeyboardInterrupt`
+    to `SystemExit(130)`, matching the existing Ctrl-C-at-a-prompt exit `130`.
+    """
+    dest = tmp_path / "proj"
+
+    def interrupting_run_copy(**kwargs: object) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runner_module, "run_copy", interrupting_run_copy)
+
+    result = runner.invoke(
+        app, ["new", "--legacy", "Foo", "--yes", "--path", str(dest)]
+    )
+
+    assert result.exit_code == 130
+    assert not dest.exists()
+    assert staging_siblings(dest) == []
 
 
 def test_new_leaves_a_pre_existing_destination_untouched_on_failure(
@@ -1459,8 +1608,57 @@ def test_new_reports_lock_failure_and_writes_nothing(
 
     assert result.exit_code == 1, result.output
     assert "uv lock failed" in result.output
+    assert staging_siblings(dest) == []
     assert recorder == []
     assert not dest.exists()
+
+
+def test_new_engine_keyboard_interrupt_leaves_nothing_behind(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """CF-25.01: the engine route's equivalent of
+    `test_new_legacy_keyboard_interrupt_leaves_nothing_behind`.
+    `staging.staged`'s `except BaseException` covers this, not just
+    `pipeline.finalise_files`'s own `StagingError` callers.
+    """
+    plan = GenerationPlan(
+        component_order=("library",),
+        files=(
+            PlannedFile(target="pyproject.toml", owner=ComponentOwner(id="library")),
+        ),
+    )
+    rendered = RenderedProject(
+        plan=plan,
+        files=(RenderedFile(target="pyproject.toml", content=b"[project]\n"),),
+        metadata=_synthetic_metadata(),
+    )
+    fake_request = GenerationRequest(spec=cast(Any, "unused-spec"), rendered=rendered)
+    monkeypatch.setattr(
+        pipeline_module, "build_generation_request", lambda *a, **k: fake_request
+    )
+
+    def interrupting_lock(_root: Path) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(staging_module, "create_uv_lock", interrupting_lock)
+    dest = tmp_path / "proj"
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "Engine Preview",
+            "--yes",
+            "--path",
+            str(dest),
+            *_ENGINE_ANSWERS,
+        ],
+    )
+
+    assert result.exit_code == 130
+    assert not dest.exists()
+    assert staging_siblings(dest) == []
 
 
 def test_new_archetype_with_legacy_is_rejected(
@@ -1994,6 +2192,19 @@ def test_config_show_reports_environment_source(
     assert "environment" in result.output
 
 
+def test_config_show_malformed_config_is_a_user_error(_isolated_config: Path) -> None:
+    """CF-25.01: `new`'s equivalent
+    (`test_new_malformed_config_is_a_user_error`) was tested; `config show`'s
+    own `_load_config_or_exit`-shaped handling was not.
+    """
+    _write_config(_isolated_config, "not = [valid toml")
+
+    result = runner.invoke(app, ["config", "show"])
+
+    assert result.exit_code == 1
+    assert "not valid TOML" in result.output
+
+
 # --------------------------------------------------------------------------- #
 # Engine-native `update` orchestration (CF-18.04, ADR 0041 rules 9-23,        #
 # ADR 0046) -- `create_forge.update`'s own apply/merge/degraded logic is      #
@@ -2344,6 +2555,29 @@ def test_engine_update_unavailable_release_declined_exits_3(
     monkeypatch.setattr(typer, "confirm", lambda *a, **k: False)
 
     result = runner.invoke(app, ["update", str(project)])
+
+    assert result.exit_code == 3, result.output
+    assert "0.4.9" in result.output
+
+
+def test_engine_update_unavailable_release_closed_stdin_declines_for_real(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CF-25.01: `_confirm_degraded`'s own docstring promises "closed stdin
+    behaves as a decline", but every other test of this path patches
+    `typer.confirm` directly, trusting the mock rather than proving the
+    claim. `input=""` gives `CliRunner` a real, immediately-closed stdin --
+    `typer.confirm` hits EOF for real and `_confirm_degraded`'s `except
+    typer.Abort` is what actually runs.
+    """
+    project = _engine_project(tmp_path)
+
+    def _unavailable(project: Path) -> object:
+        raise pipeline_module.UnavailableRecordedReleaseError("0.4.9", "not found")
+
+    monkeypatch.setattr(pipeline_module, "prepare_update", _unavailable)
+
+    result = runner.invoke(app, ["update", str(project)], input="")
 
     assert result.exit_code == 3, result.output
     assert "0.4.9" in result.output

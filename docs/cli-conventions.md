@@ -79,8 +79,9 @@ warning. It asks for confirmation unless `--yes` was supplied.
 supersedes ADR 0011 on one point: `--template-url`/`--ref` are *retained*,
 scoped to the explicit `--legacy` route, rather than replaced — the
 direct-Copier path stays supported. `--engine-source`/`--engine-ref` are a
-new, orthogonal pair that select the engine *distribution* itself, not yet
-implemented (CF-18.02).
+new, orthogonal pair that select the engine *distribution* itself,
+implemented by CF-18.02 ([ADR 0044](adr/0044-out-of-process-engine-source-overrides.md))
+— see the "`--engine-source` / `--engine-ref`" section below.
 
 ## The default engine `new` path
 
@@ -512,6 +513,11 @@ structured errors rather than reimplementing their predicates.
 
 ## Executable examples
 
+See also the canonical [CLI command map](cli-command-map.md) (CF-25.01) for
+each command's own inputs, prompts, outputs, exit codes, and config effects,
+recorded as the behavioural baseline the `commands/` extraction ([ADR
+0060](adr/0060-cli-command-module-seams.md)) must reproduce exactly.
+
 The contract is characterized by these tests:
 
 - [`tests/test_cli.py`](../tests/test_cli.py) covers resolved
@@ -523,17 +529,23 @@ The contract is characterized by these tests:
   `test_new_bad_data_format_is_rejected`, the two
   `test_new_aborting_*_exits_130` cases,
   `test_new_template_url_declined_scaffolds_nothing`, and the
-  `test_new_engine_preview_*`/`test_new_without_engine_preview_is_unchanged`
-  group covering the `--engine-preview` flag from ADR 0014, its ADR 0015
-  finalisation, and its ADR 0017 `--archetype` selection surface (explicit,
-  `--yes`-without-one, unknown-id, and interactive-prompt cases). The
-  "engine-native prompting" block (ADR 0025) covers #91's acceptance criteria
-  directly: `test_new_engine_preview_cli_archetype_asks_no_library_question`,
-  `test_new_engine_preview_library_archetype_asks_declared_options_only`
-  (including the resolved `component_options`), `test_new_engine_preview_never_loads_the_registry`,
-  `test_new_engine_preview_interactive_asks_what_are_you_building_once`,
-  `test_new_engine_preview_rejects_copier_only_flags`, and
-  `test_new_engine_preview_yes_legacy_data_still_derives_packaging_mode`.
+  default engine path's own `--archetype` selection surface (explicit,
+  `--yes`-without-one, unknown-id, and interactive-prompt cases):
+  `test_new_yes_without_archetype_is_rejected`,
+  `test_new_unknown_archetype_is_rejected`,
+  `test_new_prompts_when_archetype_is_omitted`, and
+  `test_new_aborting_archetype_choice_exits_130`. The "engine-native
+  prompting" group (ADR 0025) covers #91's acceptance criteria directly:
+  `test_new_cli_archetype_asks_no_library_question`,
+  `test_new_library_archetype_asks_declared_options_only`
+  (including the resolved `component_options`), `test_new_never_loads_the_registry`,
+  `test_new_interactive_asks_what_are_you_building_once`, and
+  `test_new_rejects_copier_only_flags_without_legacy`. `--help`, exit codes,
+  and the `[project.scripts]` entry point itself are covered by
+  `test_help_exits_zero`, `test_new_help_lists_every_route_and_selection_flag`,
+  `test_update_help_lists_its_flags`, and
+  `test_engine_contract.py::test_the_one_public_console_script_entry_point_is_unchanged`
+  (CF-25.01).
 - [`tests/test_engine_source.py`](../tests/test_engine_source.py) covers
   `--engine-source`/`--engine-ref` (ADR 0044): source validation ordering,
   the code-execution warning and confirmation gate, out-of-process worker

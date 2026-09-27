@@ -55,6 +55,7 @@ from tests.installed_client import (
     run,
 )
 from tests.process import run_text
+from tests.staging_probe import staging_siblings as _staging_siblings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -183,13 +184,6 @@ def _engine_new_args(archetype: str, dest: Path) -> list[str]:
         if key != "project_name":
             args += ["--data", f"{key}={value}"]
     return args
-
-
-def _staging_siblings(dest: Path) -> list[Path]:
-    parent = dest.parent
-    if not parent.is_dir():
-        return []
-    return [p for p in parent.iterdir() if p.name.startswith(".create-forge-")]
 
 
 def _declared_and_locked(project: Path) -> tuple[set[Any], set[Any]]:

@@ -1222,8 +1222,20 @@ def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's optio
 
 
 def _list_legacy_registry() -> None:
-    """Print the bundled Copier template registry (`list --legacy`)."""
-    registry = load_registry()
+    """Print the bundled Copier template registry (`list --legacy`).
+
+    `registry.py`'s own docstring calls a malformed bundled registry "a
+    packaging bug, not a user error", but every other reader of it in this
+    module (`doctor`, `_select_template`) still catches `RuntimeError` and
+    prints a clean message rather than letting a raw traceback reach the
+    user -- CLAUDE.md's own rule for every user-facing error. `list --legacy`
+    was the one place that didn't (CF-25.01).
+    """
+    try:
+        registry = load_registry()
+    except RuntimeError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
     table = Table(box=None, pad_edge=False)
     table.add_column("ID", style="bold")
     table.add_column("Name")
