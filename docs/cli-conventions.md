@@ -542,8 +542,8 @@ The contract is characterized by these tests:
   `test_new_interactive_asks_what_are_you_building_once`, and
   `test_new_rejects_copier_only_flags_without_legacy`. `--help`, exit codes,
   and the `[project.scripts]` entry point itself are covered by
-  `test_help_exits_zero`, `test_new_help_lists_every_route_and_selection_flag`,
-  `test_update_help_lists_its_flags`, and
+  `test_help_exits_zero`, `test_new_registers_every_route_and_selection_flag`,
+  `test_update_registers_its_flags`, and
   `test_engine_contract.py::test_the_one_public_console_script_entry_point_is_unchanged`
   (CF-25.01).
 - [`tests/test_engine_source.py`](../tests/test_engine_source.py) covers

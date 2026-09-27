@@ -117,12 +117,18 @@ Every command's `--help` exits `0` (`test_help_exits_zero`, parametrised over
 the top-level app and all seven subcommands/sub-subcommands). Invoking
 `create-forge` with no arguments exits `2` (Typer's `no_args_is_help=True`
 still prints help, but a bare invocation is a usage non-answer, not success —
-`test_no_args_is_help_and_exits_2`). `new --help` and `update --help` are
-checked for their full flag surface
-(`test_new_help_lists_every_route_and_selection_flag`,
-`test_update_help_lists_its_flags`) so a file move that breaks a command's
-registration in `commands/*` fails here immediately, independent of any
-behavioural test.
+`test_no_args_is_help_and_exits_2`). `new`'s and `update`'s full flag
+surfaces are checked (`test_new_registers_every_route_and_selection_flag`,
+`test_update_registers_its_flags`) against the live Click command object,
+not `--help`'s *rendered* text — CF-25.01 found that a text-scraping version
+of these two passed locally but failed on every CI runner with a flag
+missing from the rendered output despite exit `0` and no exception, an
+unexplained Rich-rendering divergence a much wider forced `COLUMNS` did not
+fix. Reading the command object instead sidesteps it entirely and is the
+same approach `test_engine_default_contract.py`/
+`test_engine_lifecycle_contract.py` already use for their own flag-presence
+checks. Either shape still fails when a file move breaks a command's
+registration in `commands/*`.
 
 ## Executable examples
 
