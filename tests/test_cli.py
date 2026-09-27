@@ -129,6 +129,15 @@ def _write_config(path: Path, contents: str) -> None:
 # --help (CF-25.01: nothing previously invoked this through CliRunner)        #
 # --------------------------------------------------------------------------- #
 
+# Typer's Rich-based help renderer wraps its option table to the detected
+# terminal width, which Click's CliRunner reads from the `COLUMNS`
+# environment variable when stdout isn't a real terminal -- a value that
+# differs by host (observed: a Linux/Windows CI runner wraps narrower than a
+# local dev machine, splitting an option's own name across the wrap and
+# breaking a substring check). Pinned wide so every `--help` assertion below
+# is deterministic regardless of who or what invokes the suite.
+_WIDE_TERMINAL = {"COLUMNS": "200"}
+
 
 @pytest.mark.parametrize(
     "args",
@@ -150,12 +159,12 @@ def test_help_exits_zero(args: list[str]) -> None:
     actually registered, so a command that stops registering correctly after
     moving to `commands/*` fails here, not just at runtime.
     """
-    result = runner.invoke(app, args)
+    result = runner.invoke(app, args, env=_WIDE_TERMINAL)
     assert result.exit_code == 0, result.output
 
 
 def test_new_help_lists_every_route_and_selection_flag() -> None:
-    result = runner.invoke(app, ["new", "--help"])
+    result = runner.invoke(app, ["new", "--help"], env=_WIDE_TERMINAL)
     assert result.exit_code == 0
     for flag in (
         "--template",
@@ -175,7 +184,7 @@ def test_new_help_lists_every_route_and_selection_flag() -> None:
 
 
 def test_update_help_lists_its_flags() -> None:
-    result = runner.invoke(app, ["update", "--help"])
+    result = runner.invoke(app, ["update", "--help"], env=_WIDE_TERMINAL)
     assert result.exit_code == 0
     for flag in ("--ref", "--dry-run", "--legacy", "--degraded"):
         assert flag in result.output, f"{flag} missing from `update --help`"
@@ -186,7 +195,7 @@ def test_no_args_is_help_and_exits_2() -> None:
     non-answer, not a successful invocation -- matches `--help`'s own exit
     `0` being a *different* case from calling the app with nothing at all.
     """
-    result = runner.invoke(app, [])
+    result = runner.invoke(app, [], env=_WIDE_TERMINAL)
     assert result.exit_code == 2
     assert "Usage" in result.output
 
