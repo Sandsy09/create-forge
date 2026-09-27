@@ -50,8 +50,9 @@ import create_forge.runner as runner_module
 import create_forge.staging as staging_module
 from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
-from create_forge.cli import _markers, app
+from create_forge.cli import app
 from create_forge.commands import _output as output_module
+from create_forge.commands import doctor as doctor_module
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
 from create_forge.pipeline import GenerationRequest
@@ -289,7 +290,7 @@ def test_doctor_reports_on_the_registry(monkeypatch: pytest.MonkeyPatch) -> None
     no global git identity configured -- unlike the author's own machine,
     where this always happened to pass. Monkeypatch it so the test verifies
     doctor's registry reporting, not the host's git config."""
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     result = runner.invoke(app, ["doctor"])
     assert result.exception is None
     assert "registry" in result.output
@@ -307,7 +308,7 @@ def _hide_engine_extra(monkeypatch: pytest.MonkeyPatch) -> None:
             raise PackageNotFoundError(name)
         return importlib.metadata.version(name)
 
-    monkeypatch.setattr(cli_module, "version", fake)
+    monkeypatch.setattr(doctor_module, "version", fake)
 
 
 def _show_engine_extra(monkeypatch: pytest.MonkeyPatch, installed_version: str) -> None:
@@ -320,7 +321,7 @@ def _show_engine_extra(monkeypatch: pytest.MonkeyPatch, installed_version: str) 
             return installed_version
         return importlib.metadata.version(name)
 
-    monkeypatch.setattr(cli_module, "version", fake)
+    monkeypatch.setattr(doctor_module, "version", fake)
 
 
 def test_doctor_fails_when_the_engine_is_not_installed(
@@ -331,7 +332,7 @@ def test_doctor_fails_when_the_engine_is_not_installed(
     failing check and exit `1`, not the informational "not installed" row
     the optional `engine` extra used to get.
     """
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     _hide_engine_extra(monkeypatch)
 
     result = runner.invoke(app, ["doctor"])
@@ -353,7 +354,7 @@ def test_doctor_reports_the_installed_engine_package_when_present(
     the installed version rather than "not installed", and the engine check
     passes.
     """
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     _show_engine_extra(monkeypatch, "0.6.0")
 
     table_result = runner.invoke(app, ["doctor"])
@@ -376,7 +377,7 @@ def test_doctor_json_emits_the_documented_shape(
     negotiated `*_detected` facts are genuinely populated (ADR 0040
     decision 6, CF-18.01), not left at a hardcoded `None`.
     """
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 0, result.output
 
@@ -408,13 +409,13 @@ def test_doctor_json_exits_1_when_a_check_fails(
     """The `--json` flag changes the output format only -- an unhealthy
     environment must still be reported through the exit status a script
     would check."""
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
 
     def _broken_registry() -> object:
         msg = "boom"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(cli_module, "load_registry", _broken_registry)
+    monkeypatch.setattr(doctor_module, "load_registry", _broken_registry)
 
     result = runner.invoke(app, ["doctor", "--json"])
 
@@ -432,7 +433,7 @@ def test_doctor_reports_the_copier_cache_and_uv(
     names Copier's cache directory, whether COPIER_CACHE_DIR overrides it, and
     whether it is writable, plus the `uv` binary it would actually run.
     """
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     override = tmp_path / "cache dir"
     override.mkdir()
     monkeypatch.setenv("COPIER_CACHE_DIR", str(override))
@@ -458,7 +459,7 @@ def test_doctor_fails_when_the_copier_cache_is_unwritable(
     the check fails and `doctor` exits 1 -- the schema stays additive, only
     the boolean flips.
     """
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     # `_tooling_diagnostics` imports `cache_probe` lazily from
     # `create_forge.runner` on every call (ADR 0040, CF-18.01), so the patch
     # lands there, not on `cli_module`.
@@ -488,7 +489,7 @@ def test_doctor_survives_a_console_that_cannot_encode_check_marks(
     capture goes through UTF-8, so this has to install a real cp1252 console
     to reproduce the crash; test_doctor_reports_on_the_registry above never
     could have caught this."""
-    monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     cp1252_console = Console(file=TextIOWrapper(BytesIO(), encoding="cp1252"), width=80)
     monkeypatch.setattr(output_module, "console", cp1252_console)
 
@@ -500,7 +501,7 @@ def test_doctor_survives_a_console_that_cannot_encode_check_marks(
 def test_markers_are_ascii_when_the_encoding_cannot_take_glyphs() -> None:
     cp1252_console = Console(file=TextIOWrapper(BytesIO(), encoding="cp1252"), width=80)
 
-    assert _markers(cp1252_console) == ("OK", "FAIL")
+    assert doctor_module._markers(cp1252_console) == ("OK", "FAIL")
 
 
 def test_markers_use_glyphs_when_the_encoding_allows() -> None:
@@ -509,7 +510,7 @@ def test_markers_use_glyphs_when_the_encoding_allows() -> None:
     everyone else the nicer marks."""
     utf8_console = Console(file=TextIOWrapper(BytesIO(), encoding="utf-8"), width=80)
 
-    assert _markers(utf8_console) == ("✓", "✗")
+    assert doctor_module._markers(utf8_console) == ("✓", "✗")
 
 
 # --------------------------------------------------------------------------- #
