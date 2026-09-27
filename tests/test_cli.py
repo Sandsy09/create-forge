@@ -50,7 +50,8 @@ import create_forge.runner as runner_module
 import create_forge.staging as staging_module
 from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
-from create_forge.cli import _harden_console_encoding, _markers, app
+from create_forge.cli import _markers, app
+from create_forge.commands import _output as output_module
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
 from create_forge.pipeline import GenerationRequest
@@ -489,7 +490,7 @@ def test_doctor_survives_a_console_that_cannot_encode_check_marks(
     could have caught this."""
     monkeypatch.setattr(cli_module, "_git_config", lambda _key: "test")
     cp1252_console = Console(file=TextIOWrapper(BytesIO(), encoding="cp1252"), width=80)
-    monkeypatch.setattr(cli_module, "console", cp1252_console)
+    monkeypatch.setattr(output_module, "console", cp1252_console)
 
     result = runner.invoke(app, ["doctor"])
 
@@ -535,7 +536,7 @@ def test_harden_console_encoding_relaxes_stdout_and_stderr_errors(
     monkeypatch.setattr(sys, "stdout", out)
     monkeypatch.setattr(sys, "stderr", err_stream)
 
-    _harden_console_encoding()
+    output_module._harden_console_encoding()
 
     assert out.errors == "backslashreplace"
     assert err_stream.errors == "backslashreplace"
@@ -558,7 +559,7 @@ def test_harden_console_encoding_tolerates_a_stream_without_reconfigure(
     monkeypatch.setattr(sys, "stdout", _NoReconfigure())
     monkeypatch.setattr(sys, "stderr", _NoReconfigure())
 
-    _harden_console_encoding()  # must not raise
+    output_module._harden_console_encoding()  # must not raise
 
 
 def test_an_unencodable_character_raises_before_the_fix_is_applied(
@@ -573,7 +574,7 @@ def test_an_unencodable_character_raises_before_the_fix_is_applied(
     monkeypatch.setattr(sys, "stdout", bad_stdout)
 
     with pytest.raises(UnicodeEncodeError):
-        cli_module.console.print("项目")
+        output_module.console.print("项目")
 
 
 def test_the_console_degrades_a_character_its_stdout_cannot_encode(
@@ -581,9 +582,9 @@ def test_the_console_degrades_a_character_its_stdout_cannot_encode(
 ) -> None:
     bad_stdout = TextIOWrapper(BytesIO(), encoding="cp1252")
     monkeypatch.setattr(sys, "stdout", bad_stdout)
-    _harden_console_encoding()
+    output_module._harden_console_encoding()
 
-    cli_module.console.print("项目")  # must not raise
+    output_module.console.print("项目")  # must not raise
 
     bad_stdout.flush()
     assert b"\\u9879\\u76ee" in bad_stdout.buffer.getvalue()
@@ -599,7 +600,7 @@ def test_every_invocation_hardens_console_encoding_first(
     """
     calls: list[None] = []
     monkeypatch.setattr(
-        cli_module, "_harden_console_encoding", lambda: calls.append(None)
+        output_module, "_harden_console_encoding", lambda: calls.append(None)
     )
 
     runner.invoke(app, ["list"])

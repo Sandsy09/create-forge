@@ -15,6 +15,7 @@ from rich.console import Console
 from typer.testing import CliRunner
 
 from create_forge import cli, runner, staging
+from create_forge.commands import _output as output_module
 from create_forge.config import UserConfig
 from create_forge.sources import SourceError, display_source, validate_source
 from tests.process import run_text
@@ -170,7 +171,7 @@ def test_warning_renders_source_as_literal_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     console = Console(width=180, record=True)
-    monkeypatch.setattr(cli, "err", console)
+    monkeypatch.setattr(output_module, "err", console)
     cli._confirm_third_party("./[bold]local-template", yes=True)
     assert "./[bold]local-template" in console.export_text()
     cli._confirm_third_party(
