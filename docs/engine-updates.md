@@ -176,6 +176,13 @@ adopted. The **lower** bound is a separate question with its own rule, set by
   resolve and pass: it runs the fast suite under
   `uv sync --resolution lowest-direct`, so `>=9.16` and the `engine` extra's
   `forge-template` / `uv` floors are tested, not assumed.
+- The [dependency audit](dependency-audit.md) (ADR 0059) is the standing
+  advisory evidence for the *locked* graph, alongside the manual `copier`
+  probe above. A `[runtime]`/`[legacy]` audit finding starts this floor
+  review; per that contract's [lower-bound
+  review](dependency-audit.md#lower-bound-review), fixing the lock
+  (`uv lock --upgrade-package`) is never automatically a floor change on its
+  own.
 
 ## Existing generated projects
 

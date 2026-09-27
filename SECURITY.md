@@ -38,6 +38,15 @@ These safeguards do not sandbox trusted template tasks or manage credentials
 stored by Git, shells, or other external tools. See
 [ADR 0036](docs/adr/0036-template-source-credentials.md).
 
+This repository's own resolved dependencies (including `forge-template`) are
+audited for known vulnerabilities on every pull request, push, weekly
+schedule and release — see the [dependency audit
+contract](docs/dependency-audit.md) and [ADR
+0059](docs/adr/0059-audit-resolved-dependencies-with-uv-audit.md). A clean
+audit is not a claim that the dependencies are secure: it says only that no
+advisory in the queried database matched a locked version at the time of the
+query. It does not cover a generated project's own dependencies.
+
 The release and documentation workflows are a second supply-chain boundary:
 they hold `contents: write`, `id-token: write` (PyPI Trusted Publishing) and
 `pages: write`. Every external GitHub Action is pinned to a full commit SHA so

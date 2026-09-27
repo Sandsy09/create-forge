@@ -1,0 +1,13 @@
+# Reviewed, scoped, expiring exceptions for scripts/audit_dependencies.py.
+# See docs/dependency-audit.md (ADR 0059) for the full contract.
+#
+# Ships empty. Add an entry only for a finding that cannot yet be fixed, and
+# review it like code, in the PR that adds it:
+#
+# [[exception]]
+# id = "GHSA-xxxx-xxxx-xxxx"    # one advisory ID or alias -- never a wildcard
+# package = "some-package"      # one locked package -- never a wildcard
+# rationale = "why this can't be fixed or upgraded right now"
+# owner = "github-username"     # re-reviews this before it expires
+# added = 2026-09-27
+# expires = 2026-11-25          # at most 90 days after `added`; renew, don't extend

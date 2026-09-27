@@ -221,6 +221,11 @@ docs = "mkdocs serve"
 # via tests/test_adr.py; this is the standalone entry point.
 "check:adr" = "python scripts/adr.py"
 
+# Audits the locked dependency graph for known vulnerabilities (ADR 0059).
+# Needs network access. Add `-- --on-outage warn` to report an unreachable
+# advisory service instead of failing -- see scripts/audit_dependencies.py.
+audit = "python scripts/audit_dependencies.py"
+
 # Verifies every workflow pins its external actions to a full commit SHA and
 # keeps write permissions off the workflow level (ADR 0037). Also runs inside
 # the fast test suite via tests/test_workflows.py; this is the standalone

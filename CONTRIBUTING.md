@@ -104,7 +104,8 @@ on the pinned `ubuntu-24.04` baseline, so their names appear as
 | `floor` | the fast suite with `uv --resolution lowest-direct`, so declared lower bounds are exercised, not just whatever CI resolves (see "Dependency floors" below) |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
 | `e2e` | `pytest -m e2e` — both generation paths, installed-candidate Data Science and rollout regression, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
-| `all-green` | an aggregate check; this is the one branch protection requires. It gates the pinned Linux call and the Windows jobs, and never the canary |
+| `audit` | `scripts/audit_dependencies.py` — audits `uv.lock` for known vulnerabilities. Fails on any finding; warns (does not fail) on an unreachable advisory service, only on a pull request or push. See "Dependency audit" below |
+| `all-green` | an aggregate check; this is the one branch protection requires. It gates `audit`, the pinned Linux call and the Windows jobs, and never the canary |
 | `Runner canary` | `runner-canary.yml`: the identical Linux jobs on the *next* Ubuntu image (`ubuntu-26.04`). **Not required and not part of `all-green`** — a red canary is triaged, not a blocked merge. Ownership and promotion criteria: [docs/ci-runner-baseline.md](docs/ci-runner-baseline.md) |
 
 `network` and `e2e` also run on a Monday cron, independent of any push here —
@@ -180,6 +181,19 @@ release — before other release content. See
 [ADR 0038](docs/adr/0038-dependency-floor-review.md) and
 [docs/engine-updates.md](docs/engine-updates.md).
 
+## Dependency audit
+
+`scripts/audit_dependencies.py` (`uv run poe audit`, needs network) audits
+`uv.lock` for known vulnerabilities across three scopes — `runtime`,
+`legacy`, and `full` — with `uv audit`. Any unsuppressed finding fails,
+including a development-only one. To accept a finding that cannot yet be
+fixed, add a reviewed, expiring entry to
+[`.github/audit-exceptions.toml`](.github/audit-exceptions.toml) (one
+package, one advisory, an owner, a rationale, at most 90 days) in the same
+PR — review it like code. Full contract:
+[docs/dependency-audit.md](docs/dependency-audit.md),
+[ADR 0059](docs/adr/0059-audit-resolved-dependencies-with-uv-audit.md).
+
 ## Labels
 
 [.github/labels.toml](.github/labels.toml) is the source of truth for this
@@ -209,7 +223,9 @@ tag — see [ADR 0009](docs/adr/0009-pyproject-as-the-single-version-source.md).
    changelog: `uv run git-cliff --tag vX.Y.Z --output CHANGELOG.md`.
 2. Merge it. Wait for `All checks passed` on `main`.
 3. Actions → Release → Run workflow, with `dry_run` checked. Confirm the
-   computed tag and generated notes in the run summary.
+   computed tag and generated notes in the run summary. This also runs the
+   dependency audit, which `release` needs and which fails the workflow on
+   any finding or an OSV outage — see "Dependency audit" above.
 4. Run it again with `dry_run` unchecked. This tags `main`, pushes the tag,
    publishes the GitHub release, and publishes `create-forge` to PyPI via
    Trusted Publishing (OIDC; no stored token, gated by the `pypi` GitHub

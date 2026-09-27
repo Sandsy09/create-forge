@@ -197,6 +197,17 @@ repository-local (`./…`) references are the only exceptions.
 [ADR 0037](docs/adr/0037-immutable-workflow-actions.md) and the canonical
 [workflow security contract](docs/workflow-security.md).
 
+### 7. Resolved dependencies are audited for known vulnerabilities
+
+`scripts/audit_dependencies.py` (`uv run poe audit`) audits `uv.lock` across
+three derived scopes — `runtime`, `legacy`, and `full` — with `uv audit`.
+Every unsuppressed finding fails, including a development-only one; only
+`.github/audit-exceptions.toml` (reviewed, scoped, expiring) may suppress
+one. The `audit` job in `ci.yml` joins `All checks passed`, and `release.yml`
+gates `release` on it with no bypass. See
+[ADR 0059](docs/adr/0059-audit-resolved-dependencies-with-uv-audit.md) and the
+canonical [dependency audit contract](docs/dependency-audit.md).
+
 ## Conventions
 
 - Canonical contracts governing CLI behaviour, the engine boundary, and

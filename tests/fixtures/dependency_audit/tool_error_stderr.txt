@@ -1,0 +1,8 @@
+warning: `uv audit` is experimental and may change without warning. Pass `--preview-features audit-command` to disable this warning.
+warning: The `--output-format json` option is experimental and the schema may change without warning. Pass `--preview-features json-output` to disable this warning.
+error: Failed to parse `uv.lock`
+  Caused by: TOML parse error at line 114, column 5
+        |
+    114 | not valid toml {{{
+        |     ^
+    key with no value, expected `=`
