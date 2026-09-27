@@ -36,16 +36,26 @@ import pytest
 from create_forge import engine, pipeline
 from create_forge.pipeline import Catalogue
 from create_forge.spec import SelectionKind, SelectionRequest, build_spec_payload
+from tests.source_tree import SRC_ROOT, production_modules
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 TEMPLATES_TOML = SRC_ROOT / "templates.toml"
 
 # Every shipped module that could plausibly branch on a component identity --
 # the discovery adapter itself, its two callers, and the spec/prompt layers
 # selection flows through. `runner`/`registry`/`models`/`config`/`staging`
 # never see a component id at all (they predate the engine or are Copier-only).
-_SCANNED_MODULES = ("cli", "prompts", "pipeline", "spec", "engine")
+#
+# CF-25.01: matched by module *stem* against the discovered tree
+# (`tests.source_tree`), rather than the previous fixed `SRC_ROOT /
+# f"{name}.py"` path -- a stem is found wherever it lives, so a same-named
+# module moved under a subpackage (e.g. `commands/`, ADR 0060) stays covered
+# with no edit here. This removes the *fixed-path* assumption only: when
+# CF-25.02 actually splits `cli.py`'s selection logic into new files with new
+# names (its own ADR 0060 names `commands/new.py`/`commands/selection.py`),
+# those new stems must be added to this set explicitly, same as adding any
+# other module that starts branching on a component identity.
+_SCANNED_STEMS = frozenset({"cli", "prompts", "pipeline", "spec", "engine"})
 
 _VALID_ANSWERS = {
     "project_name": "Credit Risk Utils",
@@ -168,7 +178,7 @@ def test_no_command_name_field_exists_anywhere() -> None:
     never add a duplicate `command_name` input, model field, or registry
     prompt key for it.
     """
-    for path in SRC_ROOT.glob("*.py"):
+    for path in production_modules():
         assert "command_name" not in path.read_text(encoding="utf-8"), (
             f"{path.name} references command_name -- CLI Application command "
             "identity comes only from repository_name (see the canonical "
@@ -225,13 +235,18 @@ def test_no_shipped_module_hardcodes_a_discovered_component_id() -> None:
     component_ids = {d.id for d in engine.discover()}
     assert component_ids, "the installed catalogue must be non-empty for this guard"
 
-    for module_name in _SCANNED_MODULES:
-        path = SRC_ROOT / f"{module_name}.py"
+    scanned = [p for p in production_modules() if p.stem in _SCANNED_STEMS]
+    assert {p.stem for p in scanned} == _SCANNED_STEMS, (
+        "a name in _SCANNED_STEMS no longer matches any module under "
+        "src/create_forge -- update the stem set to wherever it moved."
+    )
+    for path in scanned:
         hardcoded = _string_literals(path) & component_ids
         assert not hardcoded, (
-            f"{path.name} contains hardcoded component id(s) "
-            f"{sorted(hardcoded)} -- component identity must come from "
-            "discovery (CF-08.03, ADR 0019; CF-13.05, ADR 0030), not a literal."
+            f"{path.relative_to(SRC_ROOT)} contains hardcoded component "
+            f"id(s) {sorted(hardcoded)} -- component identity must come "
+            "from discovery (CF-08.03, ADR 0019; CF-13.05, ADR 0030), not a "
+            "literal."
         )
 
 
@@ -248,7 +263,7 @@ def test_no_production_module_hardcodes_streamlit() -> None:
     docstring and comment prose that merely mentions the provider cannot trip
     it, exactly as in `_string_literals`.
     """
-    modules = sorted(SRC_ROOT.rglob("*.py"))
+    modules = production_modules()
     assert modules, "expected to scan the shipped modules"
 
     for path in modules:

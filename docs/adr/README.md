@@ -62,6 +62,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0057 — Prove the installed console under non-UTF-8 Windows settings](0057-prove-the-installed-console-under-non-utf8-windows-settings.md)
 - [0058 — Pin the Ubuntu runner baseline and trial the next image with a canary](0058-pin-the-ubuntu-runner-baseline-with-a-canary.md)
 - [0059 — Audit resolved dependencies with uv audit](0059-audit-resolved-dependencies-with-uv-audit.md)
+- [0060 — Split cli.py behind a commands/ subpackage, along command seams](0060-cli-command-module-seams.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

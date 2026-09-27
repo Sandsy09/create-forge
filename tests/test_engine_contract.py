@@ -18,6 +18,7 @@ from typing import Any
 import yaml
 
 from create_forge.compat import INTEGRATION_LINE
+from tests.source_tree import production_modules
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = REPO_ROOT / "pyproject.toml"
@@ -34,6 +35,8 @@ COMPONENT_SELECTION = REPO_ROOT / "docs" / "component-selection.md"
 ENGINE_DEFAULT_CLI = REPO_ROOT / "docs" / "engine-default-cli.md"
 ENGINE_PROJECT_LIFECYCLE = REPO_ROOT / "docs" / "engine-project-lifecycle.md"
 ENGINE_CUTOVER_ACCEPTANCE = REPO_ROOT / "docs" / "engine-cutover-acceptance.md"
+CLI_COMMAND_MAP = REPO_ROOT / "docs" / "cli-command-map.md"
+ADR_0060 = REPO_ROOT / "docs" / "adr" / "0060-cli-command-module-seams.md"
 DATA_SCIENCE_PREVIEW_VALIDATION = (
     REPO_ROOT / "docs" / "data-science-preview-validation.md"
 )
@@ -90,24 +93,20 @@ def test_diagnostic_integration_line_matches_package_release_line() -> None:
 # process" -- the second and only other module permitted to import
 # `forge_template`, since it never runs in the parent's own interpreter (see
 # `tests/test_engine_source.py`'s own guard on that file).
-_SHIPPED_MODULES = (
-    "cli",
-    "prompts",
-    "runner",
-    "registry",
-    "models",
-    "config",
-    "spec",
-    "staging",
-    "compat",
-    "sources",
-    "descriptors",
-    "engine_source",
-    "lifecycle",
-    "update",
-    "paths",
-    "capture",
-)
+#
+# CF-25.01: discovered from the real tree (`tests.source_tree`) rather than
+# hand-listed, so a future `commands/` subpackage (CF-25.02, ADR 0060) is
+# scanned automatically instead of silently escaping this guard.
+_ENGINE_BOUNDARY_EXCEPTIONS = frozenset({"engine", "pipeline", "_engine_worker"})
+
+
+def _shipped_modules() -> list[Path]:
+    return [
+        path
+        for path in production_modules()
+        if path.stem not in _ENGINE_BOUNDARY_EXCEPTIONS
+    ]
+
 
 # One of two compatibility-line dependencies ADR 0012 now governs -- Copier
 # for the default `new` path. `forge-template` (ADR 0018) is the other, and
@@ -184,6 +183,21 @@ def test_engine_dependency_is_a_required_dependency() -> None:
     required = _required_dependencies()
     assert required.get("forge-template") == ENGINE_REQUIREMENT
     assert required.get("uv") == UV_REQUIREMENT
+
+
+def test_the_one_public_console_script_entry_point_is_unchanged() -> None:
+    """CF-25.01 (ADR 0060): the sole thing every install mode (`uvx`, `uv
+    tool install`, `pip install`, the `legacy` extra) actually resolves.
+    CF-25.02's `commands/` split must not move or rename this -- `cli.py`
+    keeps the `app` object regardless of where each command's own
+    orchestration lives. `src/create_forge/__main__.py` does not exist, so
+    `python -m create_forge` is deliberately not a supported entry point
+    (docs/cli-command-map.md records this explicitly rather than leaving it
+    implicit).
+    """
+    data = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
+    assert data["project"]["scripts"] == {"create-forge": "create_forge.cli:app"}
+    assert not (SRC_ROOT / "__main__.py").exists()
 
 
 def test_engine_extra_is_retired_and_legacy_extra_holds_copier() -> None:
@@ -329,6 +343,22 @@ def test_engine_default_cli_doc_is_linked_from_canonical_entry_points() -> None:
         assert link_re.search(text), f"{path.name} does not link engine-default-cli.md"
 
     assert ENGINE_DEFAULT_CLI.is_file()
+
+
+def test_cli_command_map_doc_and_adr_are_linked_and_exist() -> None:
+    """CF-25.01's own living contract (ADR 0060) must remain discoverable the
+    same way, mirroring the two guards above.
+    """
+    link_re = re.compile(r"\([^)]*cli-command-map\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, CLI_CONVENTIONS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), f"{path.name} does not link cli-command-map.md"
+
+    assert CLI_COMMAND_MAP.is_file()
+    assert ADR_0060.is_file()
+    index = (REPO_ROOT / "docs" / "adr" / "README.md").read_text(encoding="utf-8")
+    assert "0060" in index
 
 
 def test_engine_project_lifecycle_doc_is_linked_from_canonical_entry_points() -> None:
@@ -691,11 +721,10 @@ def test_shipped_cli_modules_do_not_import_the_engine() -> None:
     protocol change touches one module instead of every module that reaches
     `cli.py`'s shipped entry point.
     """
-    for module_name in _SHIPPED_MODULES:
-        path = SRC_ROOT / f"{module_name}.py"
+    for path in _shipped_modules():
         imported = _imported_top_level_names(path)
         assert "forge_template" not in imported, (
-            f"{path.name} imports forge_template directly -- only engine.py "
-            "may (ADR 0013). Route the call through create_forge.engine "
-            "instead."
+            f"{path.relative_to(SRC_ROOT)} imports forge_template directly -- "
+            "only engine.py may (ADR 0013). Route the call through "
+            "create_forge.engine instead."
         )

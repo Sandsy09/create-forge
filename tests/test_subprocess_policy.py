@@ -23,8 +23,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from tests.source_tree import SRC_ROOT, production_modules
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SRC = REPO_ROOT / "src" / "create_forge"
+SRC = SRC_ROOT
 TESTS = REPO_ROOT / "tests"
 
 _SPAWNERS = frozenset({"run", "Popen", "check_output", "check_call", "call"})
@@ -162,15 +164,18 @@ def test_the_tests_rule_requires_an_encoding_for_text_mode() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _production_modules() -> list[Path]:
-    return sorted(SRC.glob("*.py"))
-
-
 def test_capture_is_the_only_production_module_that_spawns_a_process() -> None:
+    # CF-25.01: walked recursively (`tests.source_tree`) and keyed by the
+    # path relative to `src/create_forge/`, not the bare filename -- CF-25.02
+    # is expected to add a `commands/update.py` alongside the existing
+    # top-level `update.py`, and a `.name`-keyed dict would silently merge
+    # two different files' offences under one key.
     offenders = {
-        path.name: production_violations(path.read_text(encoding="utf-8"))
-        for path in _production_modules()
-        if path.name != "capture.py"
+        str(path.relative_to(SRC)): production_violations(
+            path.read_text(encoding="utf-8")
+        )
+        for path in production_modules()
+        if path != SRC / "capture.py"
     }
 
     assert not {name: found for name, found in offenders.items() if found}, (
@@ -189,9 +194,11 @@ def test_capture_itself_never_asks_subprocess_to_decode() -> None:
 
 def test_no_test_captures_text_without_an_explicit_encoding() -> None:
     offenders = {
-        path.name: text_mode_violations(path.read_text(encoding="utf-8"))
-        for path in sorted(TESTS.glob("*.py"))
-        if path.name != Path(__file__).name
+        str(path.relative_to(TESTS)): text_mode_violations(
+            path.read_text(encoding="utf-8")
+        )
+        for path in sorted(TESTS.rglob("*.py"))
+        if path != Path(__file__)
     }
 
     bad = {name: found for name, found in offenders.items() if found}

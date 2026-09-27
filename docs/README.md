@@ -18,6 +18,7 @@ still usually cites the ADR that authorised it.
 | Contract | Governs |
 | --- | --- |
 | [cli-conventions.md](cli-conventions.md) | Input precedence, prompt-skipping, interactive/non-interactive parity, validation ownership, exit statuses. |
+| [cli-command-map.md](cli-command-map.md) | Per-command inputs, prompts, outputs, exit codes, and config effects, as a behavioural baseline for the `commands/` extraction (ADR 0060). |
 | [component-selection.md](component-selection.md) | `--capability`/`--platform`/`--component-option` flags, absent-vs-explicit-empty, precedence, prompt order (ADR 0027). |
 | [engine-default-cli.md](engine-default-cli.md) | The post-cutover command surface: engine as the default `new` path, `--legacy`, `--engine-source`/`--engine-ref` (ADR 0040). |
 | [engine-project-lifecycle.md](engine-project-lifecycle.md) | Post-generation `git init`/commit/hooks, `.forge/generation.json`, and `update` dispatch (ADR 0041). |
