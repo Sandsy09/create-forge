@@ -131,7 +131,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | Commit | `a9c48c7fcb5706de828ec541be9fbb9f9baa8184` (`main` before CF-23.01; measured with that change applied, uncommitted) |
 | create-forge version | `0.4.0` |
 | create-forge wheel (archive) | `create_forge-0.4.0-py3-none-any.whl` `sha256:817f21ac554f53cda43a1aef4fbb1e6230357ee19b22df7edce0d33fa1cbb366` |
-| create-forge wheel content digest | `sha256:b4a0b3def59d375d46809ba5ba0222d8f546594e084bbafeca79a85d14b6d948` |
+| create-forge wheel content digest | `sha256:6a4bb06beb2c633d21bb3ea5a8f2e8c3099fa253887cf1dea15e4915f82962c9` |
 | create-forge sdist (archive) | `create_forge-0.4.0.tar.gz` `sha256:af5ab5a4d074af9a9c1eea82fd1767e4dc87509f21d7853fc21246cb46a2f9c2` |
 | create-forge sdist content digest | `sha256:68a2c5007dccca587224373bfe5e697af7af9d2d41918a5bcb58516b831c1a15` |
 | forge-template version | `0.6.0` (from `uv.lock`) |
@@ -140,7 +140,7 @@ binding is produced, and CF-21.03 re-runs it on the release commit.
 | uv | `uv 0.12.13 (0ebbd9274 2026-09-10 x86_64-pc-windows-msvc)` |
 | git | `git version 2.47.1.windows.2` |
 | Python | `3.13.1` |
-| Safety-relevant source digest | `sha256:64adcb2094f2ab437f62c8babef3008d30bb5cf0869534138d215c8cf0be21fd` |
+| Safety-relevant source digest | `sha256:cdb379cc9354b47d31dbfb4d658592b3b67d98ecf84bcdae2a5f2b6e6b886b69` |
 
 - **Bound to the content digest, not the archive hash.** Building the same source
   in two build environments gave wheels with byte-identical members, order,
@@ -286,6 +286,45 @@ What was re-run on the fixed code, on Windows 11 with Python 3.13.1 in ambient
 cutover, update/engine-source). This issue changes nothing they execute; the
 protected CI `e2e`, `e2e-windows` and `network` jobs on the pull request are
 the evidence for them.
+
+### CF-25.02 slice 1 (#202, ADR 0060): `_run_engine_update`/`_print_recovery`/`_confirm_degraded` requalify their console calls
+
+The guard above went red as an unplanned but expected consequence of ADR
+0060's `commands/` extraction: slice 1 moved `console`/`err` into a new
+`commands/_output.py`, requalifying every `console.print(...)`/
+`err.print(...)` call site to `_output.console.print(...)`/
+`_output.err.print(...)` -- including inside `_run_engine_update`,
+`_print_recovery` and `_confirm_degraded`, three of the four hashed
+functions. `CLI_FILE` itself does not move until slice 5, but
+`safety_digest` hashes each named function's literal source text, and that
+text changed here even though its *logic* did not. No intended behaviour
+change: every call still reaches the exact same `Console` objects, just
+through a module-qualified reference instead of a bare module-level name.
+
+| | Before | After |
+| --- | --- | --- |
+| Safety-relevant source digest | `sha256:64adcb20…` | `sha256:cdb379cc…` |
+| Wheel content digest | `sha256:b4a0b3de…` | `sha256:6a4bb06b…` |
+
+What was re-run on the migrated code, on Windows 11 with Python 3.13.1 in
+ambient `cp1252` mode (no `PYTHONUTF8`):
+
+- the installed update-safety suite: **14 passed, 1 skipped**, identical to
+  the result recorded above;
+- the fast suite (`uv run pytest -m 'not network and not e2e'`): **1590
+  passed, 11 skipped, 1 failed** before refreshing this record (the
+  digest-guard test itself is the one expected failure until this refresh);
+- `uv run poe evidence:candidate` on commit
+  `c668ddfb5ad54c1a08dc590efe2ff0831b2a1555` (working tree clean), which
+  produced the digests above.
+
+**Not completed locally:** the network tier and the remaining e2e modules
+(engine-generation, rollout, Copier-generation, Data Science, Streamlit,
+cutover, update/engine-source). This slice changes nothing they execute
+(no ProjectSpec, render, staging, or Git-lifecycle logic is touched -- only
+which module `console`/`err`/the legacy-availability check live in); the
+protected CI `e2e` and `e2e-windows` jobs on the pull request are the
+evidence for them.
 
 ## Findings
 
