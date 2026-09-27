@@ -244,7 +244,9 @@ and supported for at least 90 days and at least one further tagged release past
 cutover contract, [docs/release-0-4-0-validation.md](docs/release-0-4-0-validation.md)
 and [docs/release-0-5-0-validation.md](docs/release-0-5-0-validation.md) for the
 published-artefact evidence, [docs/roadmap-v4/](docs/roadmap-v4/) for the
-Streamlit roadmap, and [docs/README.md](docs/README.md) for everything else.
+Streamlit roadmap, [docs/roadmap-v5/](docs/roadmap-v5/) for Stages 22–29 (mirrored
+byte-for-byte from forge-template; see
+[docs/roadmap-tracking.md](docs/roadmap-tracking.md)), and [docs/README.md](docs/README.md) for everything else.
 Check PyPI, not this paragraph, for what is actually published.
 
 ## Gotchas already hit

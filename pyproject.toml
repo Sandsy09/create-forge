@@ -128,6 +128,9 @@ ignore = ["D107", "ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D", "ANN", "S101", "PLR2004"]
+# Byte-identical to forge-template's copy (`check_roadmaps.py --mirror`), whose
+# ruff configuration does not select the PL complexity limits.
+"scripts/check_roadmaps.py" = ["PLR0913", "PLR0915", "PLR0917"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

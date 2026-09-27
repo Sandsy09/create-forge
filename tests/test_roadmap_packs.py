@@ -32,10 +32,14 @@ def run_check(
 @pytest.fixture
 def pack(tmp_path: Path) -> Path:
     """Copy roadmap metadata into a disposable validation fixture."""
-    for version in (3, 4):
+    for version in (3, 4, 5):
         shutil.copytree(
             ROOT / f"docs/roadmap-v{version}", tmp_path / f"docs/roadmap-v{version}"
         )
+    # The v5 README links out of its pack to the living tracking contract.
+    shutil.copyfile(
+        ROOT / "docs/roadmap-tracking.md", tmp_path / "docs/roadmap-tracking.md"
+    )
     (tmp_path / ".github").mkdir()
     shutil.copyfile(ROOT / ".github/labels.toml", tmp_path / ".github/labels.toml")
     (tmp_path / "scripts").mkdir()
@@ -47,13 +51,13 @@ def test_filed_roadmaps_are_complete() -> None:
     """The filed packs have complete bodies, identities, links and a valid DAG."""
     result = run_check(ROOT)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "8 epics, 30 children, 45 review obligations" in result.stdout
+    assert "18 epics, 57 children, 253 review obligations" in result.stdout
     assert "filed-open" in result.stdout
 
 
 def test_prepared_manifest_state_remains_supported(pack: Path) -> None:
     """The checker still accepts complete packs before GitHub identities exist."""
-    for version in (3, 4):
+    for version in (3, 4, 5):
         manifest_path = (
             pack / f"docs/roadmap-v{version}/github-issues/filing-manifest.json"
         )
@@ -127,6 +131,58 @@ def test_mirror_drift_is_rejected(pack: Path) -> None:
     """A changed mirror cannot pass the shared-artifact validation."""
     page = pack / "docs/roadmap-v3/README.md"
     page.write_text(page.read_text(encoding="utf-8") + "\nDrift.\n", encoding="utf-8")
+    result = run_check(ROOT, pack)
+    assert result.returncode == 1
+    assert "Mirror differs" in result.stderr
+
+
+@pytest.fixture
+def v5(pack: Path) -> tuple[Path, dict[str, object]]:
+    """The v5 manifest path and content inside a disposable fixture."""
+    path = pack / "docs/roadmap-v5/github-issues/filing-manifest.json"
+    return path, json.loads(path.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("hash", "body hash mismatch"),
+        ("obligation", "Missing or duplicate filed obligations"),
+        ("milestone", "milestone"),
+        ("parent", "parent"),
+    ],
+)
+def test_v5_pack_fails_closed(
+    pack: Path,
+    v5: tuple[Path, dict[str, object]],
+    mutation: str,
+    message: str,
+) -> None:
+    """The v5 pack rejects hash, obligation, milestone and parent drift."""
+    path, manifest = v5
+    issues = manifest["issues"]
+    assert isinstance(issues, list)
+    item = next(row for row in issues if row["id"] == "FT-25.02")
+    if mutation == "hash":
+        item["body_sha256"] = "0" * 64
+    elif mutation == "obligation":
+        traceability = manifest["traceability"]
+        assert isinstance(traceability, list)
+        traceability.pop()
+    elif mutation == "milestone":
+        item["milestone"] = "Stale — Stage 25"
+    else:
+        item["parent"] = "FT-EPIC-24"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    result = run_check(pack)
+    assert result.returncode == 1
+    assert message in result.stderr
+
+
+def test_v5_mirror_drift_is_rejected(pack: Path) -> None:
+    """One changed byte in the v5 mirror is rejected."""
+    page = pack / "docs/roadmap-v5/README.md"
+    page.write_text(page.read_text(encoding="utf-8") + "x", encoding="utf-8")
     result = run_check(ROOT, pack)
     assert result.returncode == 1
     assert "Mirror differs" in result.stderr

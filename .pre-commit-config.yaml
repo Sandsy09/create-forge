@@ -13,7 +13,10 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
+      # Not the roadmap-v5 issue bodies: each is recorded exactly as filed and
+      # hash-pinned, and its Markdown hard-break spaces are part of that text.
       - id: trailing-whitespace
+        exclude: ^docs/roadmap-v5/github-issues/(forge-template|create-forge)/(FT|CF)-[^/]+\.md$
       - id: mixed-line-ending
 
   # The user-facing entry points; historical contracts and ADRs retain

@@ -104,6 +104,17 @@ family = "orange"
 "20" = { color = "ea580c", description = "Forge roadmap Stage 20 — Streamlit Provider Implementation and Release" }
 "21" = { color = "c2410c", description = "Forge roadmap Stage 21 — Streamlit Client Adoption and Rollout" }
 
+# Stages 22-29 (roadmap-v5). Titles are neutral where the two repositories'
+# epics differ (stages 24 and 25); each repository's milestone keeps its own.
+"22" = { color = "fef3c7", description = "Forge roadmap Stage 22 — Update Safety and Release Assurance" }
+"23" = { color = "fde68a", description = "Forge roadmap Stage 23 — Windows Subprocess Reliability" }
+"24" = { color = "fcd34d", description = "Forge roadmap Stage 24 — CI, Dependency Auditing and Roadmap Hygiene" }
+"25" = { color = "fbbf24", description = "Forge roadmap Stage 25 — Internal Decomposition" }
+"26" = { color = "f59e0b", description = "Forge roadmap Stage 26 — Composition Validation Capacity" }
+"27" = { color = "d97706", description = "Forge roadmap Stage 27 — Pipeline and Batch Job Architecture Contracts" }
+"28" = { color = "b45309", description = "Forge roadmap Stage 28 — Pipeline Provider Implementation and Release" }
+"29" = { color = "92400e", description = "Forge roadmap Stage 29 — Pipeline Client Adoption and Rollout" }
+
 # Repository-wide metadata that is clearer without a namespace. GitHub
 # special-cases `good first issue` and `help wanted` in its discovery UI.
 [unprefixed]
