@@ -25,6 +25,41 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # ADR 0059: audits uv.lock for known vulnerabilities. Independent of the
+  # runner image (it never installs the dependencies, just resolves and
+  # queries OSV against the lock), so it lives here rather than in
+  # linux-checks.yml -- the canary would only repeat it for no reason. A pull
+  # request or push only warns on an OSV outage, since that isn't the
+  # change's fault; the schedule and workflow_dispatch fail on one, so a
+  # persistent outage is visible rather than silently green forever.
+  # ---------------------------------------------------------------------------
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Audit locked dependencies
+        # --no-project: the script only shells out to `uv audit`/`uv export`
+        # and reads pyproject.toml/uv.lock itself -- it needs uv's managed
+        # Python, not the project's own dependencies installed.
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            mode=fail
+          else
+            mode=warn
+          fi
+          uv run --no-project python scripts/audit_dependencies.py --on-outage "$mode"
+
+  # ---------------------------------------------------------------------------
   # The Linux checks -- documentation, lint, the Python matrix, wheel contents,
   # the dependency floor, network and end-to-end generation -- live in
   # linux-checks.yml so the non-blocking canary in runner-canary.yml runs the
@@ -172,7 +207,7 @@ jobs:
   all-green:
     name: All checks passed
     runs-on: ubuntu-24.04
-    needs: [linux, windows, e2e-windows, e2e-windows-encoding]
+    needs: [audit, linux, windows, e2e-windows, e2e-windows-encoding]
     if: always()
     steps:
       - name: Verify

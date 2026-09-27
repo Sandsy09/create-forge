@@ -1,0 +1,73 @@
+{
+  "schema": {
+    "version": "preview"
+  },
+  "summary": {
+    "audited_packages": 3,
+    "vulnerabilities": 3,
+    "adverse_statuses": 0
+  },
+  "vulnerabilities": [
+    {
+      "dependency": {
+        "name": "jinja2",
+        "version": "3.1.2"
+      },
+      "id": "GHSA-cpwx-vrp4-4pq7",
+      "display_id": "GHSA-cpwx-vrp4-4pq7",
+      "aliases": [
+        "CVE-2025-27516",
+        "PYSEC-2026-1471"
+      ],
+      "summary": "Jinja2 vulnerable to sandbox breakout through attr filter selecting format method",
+      "description": "An oversight in how the Jinja sandboxed environment interacts with the `|attr` filter allows an attacker that controls the content of a template to execute arbitrary Python code.\n\nTo exploit the vulnerability, an attacker needs to control the content of a template. Whether that is the case depends on the type of application using Jinja. This vulnerability impacts users of applications which execute untrusted templates.\n\nJinja's sandbox does catch calls to `str.format` and ensures they don't escape the sandbox. However, it's possible to use the `|attr` filter to get a reference to a string's plain format method, bypassing the sandbox. After the fix, the `|attr` filter no longer bypasses the environment's attribute lookup.",
+      "link": "https://nvd.nist.gov/vuln/detail/CVE-2025-27516",
+      "fix_versions": [
+        "3.1.6"
+      ],
+      "published": "2025-03-05T20:40:14Z",
+      "modified": "2026-09-10T03:49:48.526758681Z"
+    },
+    {
+      "dependency": {
+        "name": "jinja2",
+        "version": "3.1.2"
+      },
+      "id": "GHSA-gmj6-6f8f-6699",
+      "display_id": "GHSA-gmj6-6f8f-6699",
+      "aliases": [
+        "CVE-2024-56201",
+        "PYSEC-2026-1472"
+      ],
+      "summary": "Jinja has a sandbox breakout through malicious filenames",
+      "description": "A bug in the Jinja compiler allows an attacker that controls both the content and filename of a template to execute arbitrary Python code, regardless of if Jinja's sandbox is used.\n\nTo exploit the vulnerability, an attacker needs to control both the filename and the contents of a template. Whether that is the case depends on the type of application using Jinja. This vulnerability impacts users of applications which execute untrusted templates where the template author can also choose the template filename.",
+      "link": "https://nvd.nist.gov/vuln/detail/CVE-2024-56201",
+      "fix_versions": [
+        "3.1.5"
+      ],
+      "published": "2024-12-23T17:54:12Z",
+      "modified": "2026-09-10T03:50:56.152882717Z"
+    },
+    {
+      "dependency": {
+        "name": "urllib3",
+        "version": "1.26.4"
+      },
+      "id": "PYSEC-2021-108",
+      "display_id": "PYSEC-2021-108",
+      "aliases": [
+        "CVE-2021-33503",
+        "GHSA-q2q7-5pp4-w6pg"
+      ],
+      "summary": null,
+      "description": "An issue was discovered in urllib3 before 1.26.5. When provided with a URL containing many @ characters in the authority component, the authority regular expression exhibits catastrophic backtracking, causing a denial of service if a URL were passed as a parameter or redirected to via an HTTP redirect.",
+      "link": "https://github.com/advisories/GHSA-q2q7-5pp4-w6pg",
+      "fix_versions": [
+        "1.26.5"
+      ],
+      "published": "2021-06-29T11:15:00Z",
+      "modified": "2026-06-08T10:15:12.134263625Z"
+    }
+  ],
+  "adverse_statuses": []
+}

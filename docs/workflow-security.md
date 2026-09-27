@@ -70,6 +70,7 @@ it needs one:
 | `ci.yml` — all jobs | `contents: read` (inherited) | clone the repo; nothing here writes |
 | `linux-checks.yml` — all jobs | `contents: read` (declared, and the ceiling for a called workflow) | the Linux checks the gate and the canary share |
 | `runner-canary.yml` — all jobs | `contents: read` (inherited) | trial the next Ubuntu image; nothing here writes |
+| `ci.yml` / `release.yml` — `audit` | `contents: read` (inherited) | audit `uv.lock` for known vulnerabilities (ADR 0059); read-only, no bypass |
 | `release.yml` — `release` | `contents: write` | push the release tag, create the GitHub release |
 | `release.yml` — `publish` | `contents: read`, `id-token: write` | check out, then PyPI Trusted Publishing |
 | `docs.yml` — `build` | `contents: read` (inherited) | check out, build the site |
