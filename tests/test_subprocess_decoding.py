@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from create_forge import capture, engine_source, lifecycle, staging, update
-from create_forge import cli as cli_module
+from create_forge.commands import doctor as doctor_module
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -228,7 +228,7 @@ def test_a_uv_version_survives_undecodable_bytes_around_the_token(
 ) -> None:
     _script(monkeypatch, _always(0, out=b"uv 0.12.13 " + UNDECODABLE + b"\n"))
 
-    assert cli_module._uv_version("uv") == "0.12.13"
+    assert doctor_module._uv_version("uv") == "0.12.13"
 
 
 def test_a_uv_version_that_is_entirely_undecodable_is_simply_untrusted(
@@ -236,7 +236,7 @@ def test_a_uv_version_that_is_entirely_undecodable_is_simply_untrusted(
 ) -> None:
     _script(monkeypatch, _always(0, out=UNDECODABLE))
 
-    assert cli_module._uv_version("uv") is None
+    assert doctor_module._uv_version("uv") is None
 
 
 def test_a_git_config_value_with_non_ascii_is_a_value(
@@ -244,7 +244,7 @@ def test_a_git_config_value_with_non_ascii_is_a_value(
 ) -> None:
     _script(monkeypatch, _always(0, out="José 项目\n".encode()))
 
-    assert cli_module._git_config("user.name") == "José 项目"
+    assert doctor_module._git_config("user.name") == "José 项目"
 
 
 def test_an_undecodable_git_config_value_still_counts_as_set(
@@ -252,7 +252,7 @@ def test_an_undecodable_git_config_value_still_counts_as_set(
 ) -> None:
     _script(monkeypatch, _always(0, out=UNDECODABLE + b"\n"))
 
-    assert cli_module._git_config(
+    assert doctor_module._git_config(
         "user.name"
     )  # doctor's identity check only asks "set?"
 
@@ -260,7 +260,7 @@ def test_an_undecodable_git_config_value_still_counts_as_set(
 def test_an_unset_git_config_key_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
     _script(monkeypatch, _always(1))
 
-    assert cli_module._git_config("user.name") is None
+    assert doctor_module._git_config("user.name") is None
 
 
 # --------------------------------------------------------------------------- #
