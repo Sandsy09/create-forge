@@ -52,6 +52,7 @@ from create_forge import engine as engine_module
 from create_forge import pipeline as pipeline_module
 from create_forge.cli import app
 from create_forge.commands import _output as output_module
+from create_forge.commands import catalogue as catalogue_module
 from create_forge.commands import doctor as doctor_module
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
@@ -244,7 +245,7 @@ def test_list_legacy_broken_registry_is_a_user_error(
         msg = "boom"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(cli_module, "load_registry", _broken_registry)
+    monkeypatch.setattr(catalogue_module, "load_registry", _broken_registry)
 
     result = runner.invoke(app, ["list", "--legacy"])
 

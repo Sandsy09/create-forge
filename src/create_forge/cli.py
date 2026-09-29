@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 
 from create_forge import compat
 from create_forge.commands import _legacy, _output
+from create_forge.commands import catalogue as _catalogue_command
 from create_forge.commands import config as _config_command
 from create_forge.commands import doctor as _doctor_command
 from create_forge.compat import ENGINE_DISTRIBUTION, SUPPORTED_ENGINE_RANGE
@@ -1109,39 +1109,6 @@ def new(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917 - a CLI entry point's optio
     _run_engine(preset, cfg_answers, path, archetype, flags, dry_run=dry_run, yes=yes)
 
 
-def _list_legacy_registry() -> None:
-    """Print the bundled Copier template registry (`list --legacy`).
-
-    `registry.py`'s own docstring calls a malformed bundled registry "a
-    packaging bug, not a user error", but every other reader of it in this
-    module (`doctor`, `_select_template`) still catches `RuntimeError` and
-    prints a clean message rather than letting a raw traceback reach the
-    user -- CLAUDE.md's own rule for every user-facing error. `list --legacy`
-    was the one place that didn't (CF-25.01).
-    """
-    try:
-        registry = load_registry()
-    except RuntimeError as exc:
-        _output.err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    table = Table(box=None, pad_edge=False)
-    table.add_column("ID", style="bold")
-    table.add_column("Name")
-    table.add_column("Description", style="dim")
-    table.add_column("Status")
-
-    for template in registry.templates:
-        marker = "" if template.status == "stable" else f"[yellow]{template.status}[/]"
-        default = (
-            " [dim](default)[/dim]" if template.id == registry.default_template else ""
-        )
-        table.add_row(
-            template.id + default, template.name, template.description, marker
-        )
-
-    _output.console.print(table)
-
-
 @app.command("list")
 def list_templates(
     legacy: Annotated[
@@ -1160,45 +1127,7 @@ def list_templates(
     the pre-cutover registry table, the only place it is listed after the
     cutover.
     """
-    if legacy:
-        _list_legacy_registry()
-        return
-
-    try:
-        from create_forge import engine, pipeline  # noqa: PLC0415
-    except ImportError:
-        _output.err.print(
-            "[red]forge-template is not installed.[/red] create-forge "
-            f"requires {ENGINE_DISTRIBUTION}{SUPPORTED_ENGINE_RANGE}; "
-            "reinstall create-forge to restore it."
-        )
-        raise typer.Exit(3) from None
-
-    try:
-        catalogue = pipeline.discover_catalogue()
-    except engine.EngineCompatibilityError as exc:
-        _output.err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(3) from exc
-    except engine.ForgeEngineError as exc:
-        _output.err.print(f"[red]{engine.explain(exc)}[/red]")
-        raise typer.Exit(1) from exc
-
-    table = Table(box=None, pad_edge=False)
-    table.add_column("ID", style="bold")
-    table.add_column("Kind")
-    table.add_column("Name")
-    table.add_column("Description", style="dim")
-
-    for kind in DESCRIPTOR_KIND:
-        for descriptor in catalogue.of_kind(kind):
-            table.add_row(
-                descriptor.id,
-                DESCRIPTOR_KIND[kind],
-                descriptor.name,
-                descriptor.description,
-            )
-
-    _output.console.print(table)
+    _catalogue_command.list_templates(legacy=legacy)
 
 
 @app.command("update")
