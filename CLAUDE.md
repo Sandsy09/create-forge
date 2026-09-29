@@ -56,7 +56,7 @@ src/create_forge/
 ├── spec.py           Pure ProjectSpec wire-payload builder. No engine import.
 ├── compat.py         Engine range/protocol constants + the shared
 │                     compatibility check. No engine import; shared by
-│                     cli.py's doctor, engine.py, and engine_source.py.
+│                     commands/doctor.py, engine.py, and engine_source.py.
 ├── engine.py         Touches the installed forge-template engine, in
 │                     process.
 ├── engine_source.py  --engine-source/--engine-ref: provisions an isolated
@@ -66,25 +66,34 @@ src/create_forge/
 │                     never imported. Touches forge-template out of process.
 ├── pipeline.py       Shared discover→build→validate→render→finalise pipeline,
 │                     plus `Catalogue` (one discovery, grouped by kind).
-└── cli.py            Typer app: new, list, update, doctor.
+├── commands/         One module per command's orchestration (ADR 0060):
+│                     _output.py (console/err/encoding, shared), _legacy.py
+│                     (the --legacy availability check, shared), new.py,
+│                     selection.py, catalogue.py, update.py, config.py,
+│                     doctor.py. Never import cli.py or forge_template/copier
+│                     except lazily inside their own functions.
+└── cli.py            The thin Typer layer: app/config_app registration,
+                      --data/--component-option parsing, and one delegated
+                      call per command into commands/*.
 ```
 
-Dependency direction is one-way: `cli` → `prompts`/`runner`/`registry`/
-`staging` → `models`. Nothing lower imports anything higher. `engine.py` (in
-process) and `_engine_worker.py` (out of process, run inside a provisioned
-`--engine-source` environment that never has `create-forge` installed) are
-the only two modules whose *source* imports `forge_template`
+Dependency direction is one-way: `cli` and `commands/*` → `prompts`/
+`runner`/`registry`/`staging` → `models`. Nothing lower imports anything
+higher, and `commands/*` never imports `cli` (ADR 0060 decision 3).
+`engine.py` (in process) and `_engine_worker.py` (out of process, run inside
+a provisioned `--engine-source` environment that never has `create-forge`
+installed) are the only two modules whose *source* imports `forge_template`
 (ADR 0013 as amended by ADR 0044,
 [tests/test_engine_contract.py](tests/test_engine_contract.py)); `pipeline.py`
 depends on `engine.py` but imports `forge_template` only under
 `TYPE_CHECKING`. `copier` is behind the optional `legacy` extra, so
-`runner.py` is imported lazily by `cli.py`'s `--legacy` route and by `update`.
-`compat.py`, `staging.py`, `paths.py`, `capture.py`, `sources.py`,
-`descriptors.py`, and `engine_source.py` are engine-free by construction (no `forge_template`
-import, not even under `TYPE_CHECKING`) and are imported unconditionally —
-see the canonical [filesystem generation contract](docs/filesystem-generation.md)
-(ADR 0015) and [engine resolution contract](docs/engine-resolution.md)
-(ADR 0044).
+`runner.py` is imported lazily by `commands/new.py`'s `--legacy` route and by
+`commands/update.py`. `compat.py`, `staging.py`, `paths.py`, `capture.py`,
+`sources.py`, `descriptors.py`, and `engine_source.py` are engine-free by
+construction (no `forge_template` import, not even under `TYPE_CHECKING`) and
+are imported unconditionally — see the canonical
+[filesystem generation contract](docs/filesystem-generation.md) (ADR 0015)
+and [engine resolution contract](docs/engine-resolution.md) (ADR 0044).
 
 ## Change process
 
