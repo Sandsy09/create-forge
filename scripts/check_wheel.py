@@ -1,9 +1,12 @@
-"""Verify `templates.toml` actually ships in the built wheel.
+"""Verify `templates.toml` and every shipped module actually ship in the built wheel.
 
-Editable installs read `templates.toml` straight from `src/`; a built wheel
-only carries it if Hatchling's package-data rules are still correct. That is
-invariant 5 in CLAUDE.md — a missing registry passes every other test and
-breaks on a user's first `uvx` run.
+Editable installs read `src/` directly; a built wheel only carries what
+Hatchling's package-data rules say to. That is invariant 5 in CLAUDE.md — a
+missing registry passes every other test and breaks on a user's first
+`uvx` run. The module check (CF-25.03) closes the same gap one level wider:
+a future packaging change that drops `commands/` (or any other package
+subdirectory) from `[tool.hatch.build.targets.wheel]` would pass every local
+and editable-install test too, and only fail for a user on first import.
 
 This replaces a one-line `shell` task
 (`uv build && python -m zipfile -l dist/*.whl | grep templates.toml`) that had
@@ -21,7 +24,23 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 _REGISTRY_MEMBER = "create_forge/templates.toml"
+
+
+def _expected_module_members() -> list[str]:
+    """Every `.py` file under `src/create_forge/`, as its wheel member path.
+
+    Derived from the real source tree, not hard-coded -- the same reasoning
+    `tests/source_tree.py` documents for its own guards: a hard-coded list
+    silently stops covering a module the moment it moves under a new
+    subpackage.
+    """
+    return sorted(
+        f"create_forge/{path.relative_to(SRC_ROOT).as_posix()}"
+        for path in SRC_ROOT.rglob("*.py")
+    )
 
 
 def _build_wheel(out_dir: Path) -> Path:
@@ -38,11 +57,11 @@ def _build_wheel(out_dir: Path) -> Path:
 
 
 def main() -> int:
-    """Build a wheel and fail loudly if the registry did not make it in."""
+    """Build a wheel and fail loudly if the registry or a module is missing."""
     with tempfile.TemporaryDirectory() as tmp:
         wheel = _build_wheel(Path(tmp))
         with zipfile.ZipFile(wheel) as archive:
-            names = archive.namelist()
+            names = set(archive.namelist())
 
         if _REGISTRY_MEMBER not in names:
             print(
@@ -53,7 +72,17 @@ def main() -> int:
             )
             return 1
 
-    print(f"ok: {_REGISTRY_MEMBER!r} found in {wheel.name}")
+        missing = [m for m in _expected_module_members() if m not in names]
+        if missing:
+            print(
+                f"error: {len(missing)} module(s) missing from {wheel.name}:\n  "
+                + "\n  ".join(missing)
+                + "\ncheck [tool.hatch.build.targets.wheel] in pyproject.toml.",
+                file=sys.stderr,
+            )
+            return 1
+
+    print(f"ok: {_REGISTRY_MEMBER!r} and every shipped module found in {wheel.name}")
     return 0
 
 
