@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from candidate_evidence import (
+    SAFETY_CLI_FILE,
     SAFETY_CLI_FUNCTIONS,
     SAFETY_FILES,
     LockedPackage,
@@ -71,7 +72,8 @@ def _write_repo(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(f"# {relative}\n".encode())
     cli = _CLI.format(body=unrelated)
-    (root / "src/create_forge/cli.py").write_bytes(
+    (root / SAFETY_CLI_FILE).parent.mkdir(parents=True, exist_ok=True)
+    (root / SAFETY_CLI_FILE).write_bytes(
         (cli.replace("\n", "\r\n") if crlf else cli).encode()
     )
     return root
@@ -122,7 +124,7 @@ def test_the_digest_changes_when_a_safety_cli_function_changes(
 ) -> None:
     repo = _write_repo(tmp_path)
     before = safety_digest(repo)
-    cli = repo / "src/create_forge/cli.py"
+    cli = repo / SAFETY_CLI_FILE
 
     cli.write_text(
         cli.read_text(encoding="utf-8").replace(
@@ -135,7 +137,7 @@ def test_the_digest_changes_when_a_safety_cli_function_changes(
 
 
 def test_the_digest_ignores_an_unrelated_cli_function(tmp_path: Path) -> None:
-    """The point of hashing functions rather than the whole 2000-line file."""
+    """The point of hashing functions rather than the whole file."""
     before = safety_digest(_write_repo(tmp_path / "a"))
     after = safety_digest(
         _write_repo(tmp_path / "b", unrelated="return 12345  # a different body")
@@ -149,7 +151,7 @@ def test_a_decorator_change_on_the_update_command_changes_the_digest(
 ) -> None:
     repo = _write_repo(tmp_path)
     before = safety_digest(repo)
-    cli = repo / "src/create_forge/cli.py"
+    cli = repo / SAFETY_CLI_FILE
 
     cli.write_text(
         cli.read_text(encoding="utf-8").replace(
@@ -165,7 +167,7 @@ def test_a_missing_safety_function_fails_loudly_instead_of_dropping_out(
     tmp_path: Path,
 ) -> None:
     repo = _write_repo(tmp_path)
-    cli = repo / "src/create_forge/cli.py"
+    cli = repo / SAFETY_CLI_FILE
     cli.write_text(
         cli.read_text(encoding="utf-8").replace("_print_recovery", "_renamed"),
         encoding="utf-8",
