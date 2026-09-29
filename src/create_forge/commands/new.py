@@ -2,8 +2,9 @@
 
 `cli.py`'s thin `new()` wrapper keeps every flag-contradiction check and the
 raw `--data`/`--component-option` parsing (they're pure, unconditional, and
-proven order-safe -- see ADR 0060's implementation notes), then makes one
-call into `new()` below with the parsed inputs.
+proven order-safe -- see docs/cli-command-map.md's `new` section, "Why
+cli.py's new() wrapper parses eagerly"), then makes one call into `new()`
+below with the parsed inputs.
 """
 
 from __future__ import annotations

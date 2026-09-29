@@ -73,6 +73,21 @@ whichever `commands/*` module now holds it — the shape [ADR
 | **Exit codes** | `0` success, `--dry-run`, `--help`. `1`: unknown template/archetype/component id, contradictory flags, malformed config, non-empty destination, staging/lock failure, scaffold/render failure, an unselected `--component-option` owner. `2`: malformed `--data`/`--component-option`, unrecognised option (Typer). `3`: engine missing or incompatible, `--legacy` without the extra installed, `--engine-source`'s provisioned engine incompatible. `130`: any prompt cancelled, `--template-url`/`--engine-source` confirmation declined, Ctrl-C mid-render (both routes verified clean via `staging.staged`'s and `staging.discard_on_failure`'s `except BaseException`). |
 | **Config effects** | `default_template` (legacy route only); `author_name`/`author_email`/`github_org` pre-fill answers on both routes (`cfg_answers`), overridable by prompt or `--data`/`--component-option`. |
 
+**Why `cli.py`'s `new()` wrapper parses eagerly, unconditionally, before its
+one delegated call (CF-25.02):** every flag-contradiction check (e.g.
+`_any_component_flag and legacy` → exit 1) runs before `_parse_data`/
+`_parse_component_options`/`ComponentFlags` construction, and depends only on
+raw flag *presence*, never a parsed value. In particular, the legacy route
+can only reach the parsing step with `capability`/`no_capabilities`/
+`platform`/`no_platforms`/`component_option` all falsy — the contradiction
+check already exited `1` otherwise. So building `ComponentFlags`
+unconditionally (rather than only on the engine branch, as the pre-CF-25.02
+code did) cannot change any exit code: `_parse_component_options([])` and
+`_normalise_kind_flag(None, none_flag=False)` are both pure and
+exception-free on empty/falsy input. This is what lets the wrapper make
+exactly one delegated call into `commands/new.py::new()` instead of
+threading partial calls through two branches.
+
 ## `list`
 
 | | |
