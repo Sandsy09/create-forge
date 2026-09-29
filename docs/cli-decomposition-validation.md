@@ -74,7 +74,7 @@ introduced, so no new ADR accompanies it.
 | | |
 | --- | --- |
 | Repository commit (CF-25.03 slice 1, test reorganisation) | `7e4dfc2` |
-| Repository commit (CF-25.03 slice 2, this record) | filled in after merge |
+| Repository commit (CF-25.03 slice 2, this record) | this record's own squash-merge commit, [PR #242](https://github.com/Sandsy09/create-forge/pull/242) |
 | `forge-template` (engine) | `0.6.0`, pinned by `pyproject.toml`'s `forge-template>=0.6,<0.7` |
 | `copier` (legacy extra) | `>=9.16,<10` |
 
@@ -86,16 +86,12 @@ so only one venv/wheel build pays for the whole suite.
 
 ## Recorded validation
 
-To be filled in after a real CI run on the PR that lands this record, per
-CONTRIBUTING's rule against a success claim based solely on local-green
-tests:
-
 | Command | Result |
 | --- | --- |
-| `uv run poe check` | |
-| `uv run poe check:wheel` | |
-| `uv run pytest tests/test_e2e_installed_layout.py -q` (local, above) | 16 passed |
-| CI run (`All checks passed`) | |
+| `uv run poe check` | 1594 passed, 11 skipped |
+| `uv run poe check:wheel` | ok: `templates.toml` and every shipped module found |
+| `uv run pytest tests/test_e2e_installed_layout.py -q` (local) | 16 passed |
+| CI run ([PR #242](https://github.com/Sandsy09/create-forge/pull/242), `All checks passed`) | green — commit `42a3e41`, run [36595611565](https://github.com/Sandsy09/create-forge/actions/runs/36595611565). Its first attempt's "End-to-end generation" jobs failed on an unrelated, pre-existing external issue (`fonttools==4.66.1` publishes no `cp313` wheel, affecting Data Science/Streamlit `scientific-python` compositions this issue does not touch); re-run clean. Neither this PR's own new tests nor anything it changed was implicated. |
 
 ## Boundaries retained
 
