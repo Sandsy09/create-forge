@@ -401,7 +401,9 @@ are the evidence for them.
    fixture provider. The evidence is the fast suite instead, which runs on
    both Linux and Windows: `tests/test_update_engine.py`'s
    `test_a_dry_run_and_a_real_run_classify_a_rename_identically` (pristine and
-   locally-edited variants) and `tests/test_cli.py`'s
+   locally-edited variants) and
+   `tests/commands/test_update_engine_route.py`'s (CF-25.03 moved this out of
+   `tests/test_cli.py`, same test unchanged)
    `test_engine_update_dry_run_with_a_rename_leaves_the_tree_and_index_untouched`,
    the issue's own reproduction reduced to a test, confirmed to fail against
    the pre-fix code.

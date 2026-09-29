@@ -55,15 +55,17 @@ terminal; on that path Rich writes through the stream's own `.write`, i.e.
 `Café`, a `cp1252`-representable name, did not reproduce it; only a character
 genuinely outside the console's codepage does.
 
-The fix, `cli._harden_console_encoding` (called at the top of `main()`, Typer's
-group callback, so it applies to whatever `sys.stdout`/`sys.stderr` are current
-at invocation time -- including a test harness's own swapped streams):
-reconfigures both to `errors="backslashreplace"`. Confirmed fixed under all
-three lanes, through the real console script, in
+The fix, `commands._output._harden_console_encoding` (called at the top of
+`main()`, Typer's group callback, so it applies to whatever
+`sys.stdout`/`sys.stderr` are current at invocation time -- including a test
+harness's own swapped streams; CF-25.03 moved this function's own file out of
+`cli.py` into `commands/_output.py`, unchanged): reconfigures both to
+`errors="backslashreplace"`. Confirmed fixed under all three lanes, through
+the real console script, in
 `tests/test_e2e_installed_encoding.py::test_generation_into_a_non_ascii_path_survives_every_lane`;
 the cross-platform half of the same mechanism (any codepage mismatch, not only
 Rich's Windows-specific writer) is proven fast, in-process, in
-`tests/test_cli.py`.
+`tests/commands/test_output.py`.
 
 `decode_diagnostic`'s own substitution character (`U+FFFD`) is *also* outside
 `cp1252`, so the same fix independently protects genuinely undecodable

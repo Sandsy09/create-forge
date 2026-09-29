@@ -494,14 +494,18 @@ Every rule this contract decided — rules 1-5 (`new` finalisation) and rules
   console script end to end (`new` then `update`) and provision the
   `../forge-template` sibling checkout as a stand-in recorded release to
   exercise the provisioning branch for real.
-- `tests/test_cli.py`'s engine-native `update` section characterises the
-  CLI orchestration: success/no-op/conflict reporting, the dry-run list, the
-  relock warning, and the exit-status mapping for a dirty tree, `Ctrl-C`, and
-  a declined or accepted degraded fallback. Its own `-k legacy`-selectable
-  section (CF-18.05, ADR 0047) characterises rule 8's retention specifics:
-  source validation on `new --legacy --template-url`, `_src_path`
-  re-validation surviving the CLI's file-based routing, and the Copier route
-  staying reachable when the installed engine cannot be imported.
+- [`tests/commands/test_update_engine_route.py`](../tests/commands/test_update_engine_route.py)
+  characterises the engine-native `update` CLI orchestration:
+  success/no-op/conflict reporting, the dry-run list, the relock warning,
+  and the exit-status mapping for a dirty tree, `Ctrl-C`, and a declined or
+  accepted degraded fallback. `tests/commands -k legacy` (CF-18.05, ADR
+  0047; CF-25.03 moved this section into `tests/commands/` -- the selector's
+  shape unchanged) characterises rule 8's retention specifics: source
+  validation on `new --legacy --template-url`
+  (`tests/commands/test_new_copier_route.py`), `_src_path` re-validation
+  surviving the CLI's file-based routing, and the Copier route staying
+  reachable when the installed engine cannot be imported
+  (`tests/commands/test_update_copier_route.py`).
 - [`tests/test_update_routing.py`](../tests/test_update_routing.py)'s own
   `-k preview`-selectable tests (CF-18.05) characterise rule 8's rejection
   message and its no-fabrication guarantee.

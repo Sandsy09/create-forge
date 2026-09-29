@@ -271,7 +271,7 @@ by the time either can occur.
   metadata document landing in staging before the rename, `metadata is None`
   failing closed with nothing written, and the lifecycle running only after
   a successful rename with its warnings propagated to the caller.
-- [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new` path
+- [`tests/commands/test_new_engine_route.py`](../tests/commands/test_new_engine_route.py) — the default engine `new` path
   (`test_new_rejects_a_non_empty_destination_before_the_engine`) against a
   non-empty destination exits before the engine is touched;
   `test_new_dry_run_lists_targets_and_writes_nothing` neither writes nor

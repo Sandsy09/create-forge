@@ -20,12 +20,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import questionary
 from typer.testing import CliRunner
 
 import create_forge.lifecycle as lifecycle_module
 import create_forge.staging as staging_module
 from create_forge.cli import app
-from create_forge.commands import selection as selection_module
 from create_forge.config import UserConfig, config_path
 from create_forge.pipeline import build_generation_request
 from create_forge.spec import SelectionRequest
@@ -119,6 +119,25 @@ def test_a_non_interactive_run_selects_streamlit_generically(tmp_path: Path) -> 
     _assert_finalised(dest)
 
 
+class _Answer:
+    """Stands in for questionary's `Question`, returning a canned value --
+    the same pattern `tests/commands/test_new_selection.py` uses for the
+    identical engine-native prompting flow. Patches `questionary` itself
+    rather than `commands.selection`'s re-exported `ask_project_answers`/
+    `choose_archetype`/`choose_components` names (CF-25.03's coupling rule:
+    those are `commands/selection.py`'s own seam, tested in
+    `tests/commands/test_new_selection.py`), so this proves discovery offers
+    `streamlit` at the real prompt layer, not just that a mocked function
+    was called.
+    """
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def ask(self) -> object:
+        return self._value
+
+
 def test_an_interactive_run_offers_and_selects_streamlit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -126,22 +145,29 @@ def test_an_interactive_run_offers_and_selects_streamlit(
     `0.6.0` provider's archetype is offered beside the others with no prompt
     change, and choosing it generates the project.
     """
-    monkeypatch.setattr(
-        selection_module,
-        "ask_project_answers",
-        lambda *_a, **_kw: {**_ANSWERS, "github_org": "test-org"},
-    )
-    # This is about archetype selection; skip the capability multi-select the
-    # real catalogue would otherwise reach.
-    monkeypatch.setattr(selection_module, "choose_components", lambda *_a, **_kw: ())
-
     offered: list[str] = []
 
-    def choose(archetypes: object) -> object:
-        offered.extend(a.id for a in archetypes)  # type: ignore[attr-defined]
-        return next(a for a in archetypes if a.id == _ARCHETYPE)  # type: ignore[attr-defined]
+    def fake_select(message: str, *, choices: object, **_kw: object) -> _Answer:
+        if message == "What are you building?":
+            offered.extend(c.value.id for c in choices)  # type: ignore[attr-defined]
+            chosen = next(c for c in choices if c.value.id == _ARCHETYPE)  # type: ignore[attr-defined]
+            return _Answer(chosen.value)
+        if message == "License":
+            return _Answer("mit")
+        raise AssertionError(f"unexpected select prompt: {message!r}")
 
-    monkeypatch.setattr(selection_module, "choose_archetype", choose)
+    def fake_text(message: str, **_kw: object) -> _Answer:
+        if message == "Project name":
+            return _Answer(_ANSWERS["project_name"])
+        if message == "Short description":
+            return _Answer(_ANSWERS["project_description"])
+        raise AssertionError(f"unexpected text prompt: {message!r}")
+
+    # This is about archetype selection; skip the capability/platform
+    # multi-select the real catalogue would otherwise reach.
+    monkeypatch.setattr(questionary, "checkbox", lambda *_a, **_kw: _Answer([]))
+    monkeypatch.setattr(questionary, "select", fake_select)
+    monkeypatch.setattr(questionary, "text", fake_text)
 
     dest = tmp_path / "insight-board"
     result = runner.invoke(app, ["new", "--path", str(dest)])

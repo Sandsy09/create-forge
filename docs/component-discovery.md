@@ -206,7 +206,7 @@ The exact installed/sibling pair and public rendering boundary are covered by
 grouping and direct-only `required_ids`, and the single-discovery guarantee
 are covered by [`tests/test_pipeline.py`](../tests/test_pipeline.py),
 [`tests/test_component_selection.py`](../tests/test_component_selection.py),
-and [`tests/test_cli.py`](../tests/test_cli.py).
+and [`tests/commands/`](../tests/commands/).
 [`tests/test_archetype_parity.py`](../tests/test_archetype_parity.py) and
 [`tests/test_data_science_pipeline.py`](../tests/test_data_science_pipeline.py)
 (CF-13.05) parametrise over `Catalogue(engine.discover()).archetypes`, each

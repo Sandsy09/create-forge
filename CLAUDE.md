@@ -95,6 +95,12 @@ are imported unconditionally — see the canonical
 [filesystem generation contract](docs/filesystem-generation.md) (ADR 0015)
 and [engine resolution contract](docs/engine-resolution.md) (ADR 0044).
 
+Tests mirror this layout: `tests/test_cli.py` tests `cli.py` itself,
+`tests/commands/` has one module per `commands/*.py` module. See
+[docs/cli-command-map.md](docs/cli-command-map.md)'s "Test map" for the
+full mirror table and the private-module-coupling rule
+`tests/test_command_layout.py` enforces (CF-25.03).
+
 ## Change process
 
 Run this loop for every issue or change:

@@ -14,6 +14,12 @@ This record extends
 the rollout suite's pre-existing coverage already discharges most of the
 row, so nothing is silently uncounted.
 
+**CF-25.03 moved the two `tests/test_cli.py` tests row 221 names below into
+`tests/commands/` (one module per `src/create_forge/commands/*.py` module —
+see [`cli-command-map.md`](cli-command-map.md)'s "Test map"), reproducing
+this row's evidence exactly; node ids below are as they were recorded at
+the time, node ids in [`cli-command-map.md`](cli-command-map.md) are current.
+
 ## Environments
 
 `tests/test_e2e_installed_cutover.py` (CF-18.05, extended by CF-18.06)

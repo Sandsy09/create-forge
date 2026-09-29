@@ -400,9 +400,11 @@ by
   `command_name` anywhere, `repository_name` as the sole command identity,
   and an AST guard against any shipped module hardcoding a component id
   again.
-- [`tests/test_cli.py`](../tests/test_cli.py) — the default engine `new`
-  path's outcomes (the engine failing to import, a real generated project,
-  exit `3` on an incompatible engine, a pre-existing destination conflict),
+- [`tests/commands/test_new_engine_route.py`](../tests/commands/test_new_engine_route.py) —
+  the default engine `new` path's outcomes (the engine failing to import, a
+  real generated project, exit `3` on an incompatible engine, a pre-existing
+  destination conflict).
+  [`tests/commands/test_new_selection.py`](../tests/commands/test_new_selection.py) —
   `--archetype`'s explicit, `--yes`-without-one, unknown-id, and
   interactive-prompt paths, and that `--legacy` reaches the unchanged
   direct-Copier route instead. Its engine-native-prompting block (#91,

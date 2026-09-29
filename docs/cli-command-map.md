@@ -6,7 +6,10 @@ moved any code — every command's inputs, prompts, outputs, and config
 effects. [CF-25.02](https://github.com/Sandsy09/create-forge/issues/202) has
 since completed the `commands/` extraction it describes, reproducing every
 behaviour recorded here exactly; the "Lazy import call sites" section below
-is kept current to name each function's actual post-extraction home. It is a
+is kept current to name each function's actual post-extraction home.
+[CF-25.03](https://github.com/Sandsy09/create-forge/issues/203) then
+reorganised the *tests* to mirror that same layout, with no behaviour
+change — see "Test map" below. It is a
 companion to two other documents, not a replacement for either:
 
 - [`cli-conventions.md`](cli-conventions.md) stays the authoritative source
@@ -162,6 +165,58 @@ same approach `test_engine_default_contract.py`/
 `test_engine_lifecycle_contract.py` already use for their own flag-presence
 checks. Either shape still fails when a file move breaks a command's
 registration in `commands/*`.
+
+## Test map
+
+CF-25.03 reorganised the tests behind this document's per-command sections:
+`tests/test_cli.py` shrank to what tests `cli.py` itself (`--help`, exit
+codes, the full `new`/`update` flag surface, the `main()` callback); every
+command's own orchestration moved into `tests/commands/`, one module per
+`src/create_forge/commands/*.py` module. No test was deleted, renamed, or
+had its assertions changed by the move — see the PR's collected-node-id
+diff for the mechanical proof.
+
+| `src` module | Test module(s) |
+| --- | --- |
+| `cli.py` | `tests/test_cli.py` |
+| `commands/_output.py` | `tests/commands/test_output.py` (unit-level; `test_cli.py::test_every_invocation_hardens_console_encoding_first` proves the call site) |
+| `commands/catalogue.py` | `tests/commands/test_catalogue.py` |
+| `commands/doctor.py` | `tests/commands/test_doctor.py`; `tests/test_subprocess_decoding.py` also calls `_uv_version`/`_git_config` directly (CF-23.01's own decoding-policy contract, not doctor's orchestration) |
+| `commands/config.py` | `tests/commands/test_config_command.py` — named to stay distinct from `tests/test_config.py`, which unit-tests `create_forge.config` itself |
+| `commands/update.py` | `tests/commands/test_update_copier_route.py` (the `.copier-answers.yml`-routed path) and `tests/commands/test_update_engine_route.py` (the engine-native path, CF-18.04/ADR 0046, plus target containment, CF-22.01/ADR 0052) |
+| `commands/new.py` | `tests/commands/test_new_copier_route.py` (`--legacy`) and `tests/commands/test_new_engine_route.py` (the default engine route's render/finalise/failure paths) |
+| `commands/selection.py` | `tests/commands/test_new_selection.py` (archetype/flag selection and engine-native prompting, #91/ADR 0025) — `commands/new.py`'s engine route reaches these through `commands/selection.py`, so this file is also `commands/new.py`'s third mirror for that slice |
+| `commands/_legacy.py` | exercised through whichever route reaches `_ensure_legacy_available` (`tests/commands/test_new_copier_route.py`, `tests/commands/test_update_copier_route.py`); no test calls it directly |
+
+**Private-module coupling stays inside a module's own mirror file(s)
+above** (CF-25.03's own acceptance criterion, "remove accidental
+private-module coupling"): a `monkeypatch.setattr` onto a `cli`/
+`commands.*` module, or a direct call through one, is enforced by
+`tests/test_command_layout.py` to be reached only from that module's mirror
+test file, from `_output.console`/`_output.err` (the one designated shared
+patch point, usable from anywhere), or from a reasoned entry in that
+guard's `_ALLOWED_CROSS_MODULE_COUPLING` allowlist — the deliberate
+exceptions are `_confirm_third_party`, unit-tested directly from
+`tests/test_sources.py`/`tests/test_engine_source.py` to prove its
+credential-hiding is real defence in depth, independent of `cli.py`'s own
+upstream `validate_source` gate. Anything else drives the behaviour through
+the public CLI (`CliRunner`), a lower-level module (`runner`/`pipeline`/
+`engine`/`staging`/`update`), or `questionary` directly — `tests/commands/
+test_new_selection.py`'s engine-native-prompting tests are the reference
+shape for the last one. The same guard also re-verifies ADR 0014/0060's
+lazy-import rule (`cli.py` and every `commands/*` module import `copier`/
+`runner`/`pipeline`/`engine`/`engine_source`/`update` only inside a
+function body, never at module scope) and ADR 0060 decision 3
+(`commands/*` never imports `cli.py`) — both previously documented here but
+not actually tested until CF-25.03.
+
+Shared fixtures: `tests/commands/conftest.py` holds `_isolated_config`
+(autouse; every command reads config/env) and `recorder` (needed by every
+`new` route's test module plus `test_update_copier_route.py`, which drives
+`new --legacy` in one of its own tests). `tests/commands/support.py` holds
+the non-fixture helpers more than one module needs (`write_config`,
+`ENGINE_ANSWERS`, `synthetic_metadata`); a helper only one file uses stays
+defined in that file.
 
 ## Executable examples
 
