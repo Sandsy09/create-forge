@@ -224,10 +224,26 @@ def test_plain_install_new_legacy_exits_3_naming_the_remedy(
 
 
 def test_plain_install_doctor_json_succeeds(plain_client: InstalledClient) -> None:
+    """A fresh CI runner has no global git identity configured -- unlike a
+    contributor's own machine, where `ok: true` always happened to hold --
+    so a real identity is supplied through git's own `GIT_CONFIG_COUNT`/
+    `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` environment mechanism (`git
+    config --get` reads these; it does not read `GIT_AUTHOR_NAME`). This is
+    about the install layout, not the host's git config -- the same
+    reasoning `tests/commands/test_doctor.py` documents for patching
+    `_git_config` in the fast suite, applied at the real-subprocess layer
+    since there is no Python object to patch here.
+    """
+    env = {
+        **plain_client.env,
+        "GIT_CONFIG_COUNT": "2",
+        "GIT_CONFIG_KEY_0": "user.name",
+        "GIT_CONFIG_VALUE_0": "Test",
+        "GIT_CONFIG_KEY_1": "user.email",
+        "GIT_CONFIG_VALUE_1": "test@example.invalid",
+    }
     result = run(
-        [str(plain_client.console), "doctor", "--json"],
-        plain_client.root,
-        env=plain_client.env,
+        [str(plain_client.console), "doctor", "--json"], plain_client.root, env=env
     )
     assert_success(result, "installed create-forge doctor --json")
     payload = json.loads(result.stdout)
