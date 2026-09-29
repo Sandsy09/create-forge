@@ -50,12 +50,14 @@ TEMPLATES_TOML = SRC_ROOT / "templates.toml"
 # (`tests.source_tree`), rather than the previous fixed `SRC_ROOT /
 # f"{name}.py"` path -- a stem is found wherever it lives, so a same-named
 # module moved under a subpackage (e.g. `commands/`, ADR 0060) stays covered
-# with no edit here. This removes the *fixed-path* assumption only: when
-# CF-25.02 actually splits `cli.py`'s selection logic into new files with new
-# names (its own ADR 0060 names `commands/new.py`/`commands/selection.py`),
-# those new stems must be added to this set explicitly, same as adding any
-# other module that starts branching on a component identity.
-_SCANNED_STEMS = frozenset({"cli", "prompts", "pipeline", "spec", "engine"})
+# with no edit here.
+#
+# CF-25.02 slice 6: `cli.py`'s selection logic moved into `commands/new.py`
+# and `commands/selection.py` -- both added here, `cli` kept since a thin
+# `cli.py` still declares the Typer option shapes.
+_SCANNED_STEMS = frozenset(
+    {"cli", "prompts", "pipeline", "spec", "engine", "new", "selection"}
+)
 
 _VALID_ANSWERS = {
     "project_name": "Credit Risk Utils",

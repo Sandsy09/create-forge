@@ -2,9 +2,12 @@
 
 This is the behavioural baseline [CF-25.01](https://github.com/Sandsy09/create-forge/issues/201)
 recorded before [CF-25.02](https://github.com/Sandsy09/create-forge/issues/202)
-moves any code: every command's inputs, prompts, outputs, and config effects,
-as they exist today. It is a companion to two other documents, not a
-replacement for either:
+moved any code — every command's inputs, prompts, outputs, and config
+effects. [CF-25.02](https://github.com/Sandsy09/create-forge/issues/202) has
+since completed the `commands/` extraction it describes, reproducing every
+behaviour recorded here exactly; the "Lazy import call sites" section below
+is kept current to name each function's actual post-extraction home. It is a
+companion to two other documents, not a replacement for either:
 
 - [`cli-conventions.md`](cli-conventions.md) stays the authoritative source
   for *why* — prompt-skipping rules, interactive/non-interactive parity,
@@ -12,8 +15,8 @@ replacement for either:
   cross-references it rather than restating it.
 - [ADR 0060](adr/0060-cli-command-module-seams.md) is the *architecture*
   decision — the `commands/` subpackage layout, dependency direction, and
-  the approved extraction sequence. This document is *behaviour*: what each
-  command does today, which CF-25.02's slices must reproduce exactly.
+  the approved extraction sequence this document's behaviour baseline held
+  through.
 
 ## The one public entry point
 
@@ -27,23 +30,38 @@ This is the only way `create-forge` is invoked — `uvx`, `uv tool install`,
 **`python -m create_forge` is not a supported entry point**: `src/
 create_forge/__main__.py` does not exist, and CF-25.01 deliberately did not
 add one — pinned by `tests/test_engine_contract.py::
-test_the_one_public_console_script_entry_point_is_unchanged`. CF-25.02 must
-not move, rename, or duplicate this line; `cli.py` keeps the `app` object
-regardless of where each command's own orchestration lives (ADR 0060 decision
-2).
+test_the_one_public_console_script_entry_point_is_unchanged`. This line is
+unmoved by CF-25.02: `cli.py` keeps the `app` object regardless of where each
+command's own orchestration lives (ADR 0060 decision 2).
 
 ## Lazy import call sites
 
-Verified against the current source (not assumed): `cli.py`'s only
-module-scope imports are `capture`, `compat`, `config`, `prompts`,
-`registry`, `sources`, `spec`, `staging`. None of `runner`/`pipeline`/
-`engine`/`engine_source`/`update` is imported outside a function body — the
-shape [ADR 0014](adr/0014-lazy-engine-reachability.md) established and [ADR
-0060](adr/0060-cli-command-module-seams.md) extends to `commands/*`. The
-twelve call sites today: `_ensure_legacy_available`, `new`'s legacy branch,
-`_run_scaffold`, `_run_engine`, `_run_engine_source`, `list_templates`,
-`update_project`, `_run_copier_update`, `_run_engine_update`,
-`_print_recovery`, `_tooling_diagnostics`, `_gather_diagnostics`.
+Post-CF-25.02 (verified against the current source, not assumed): `cli.py`
+itself has no module-scope import of `runner`/`pipeline`/`engine`/
+`engine_source`/`update` at all — it imports only `typer`, `commands/*`, and
+`create_forge.sources`. Every lazy import moved with its function, into
+whichever `commands/*` module now holds it — the shape [ADR
+0014](adr/0014-lazy-engine-reachability.md) established, extended to
+`commands/*` by [ADR 0060](adr/0060-cli-command-module-seams.md):
+
+- `commands/_legacy.py`: `_ensure_legacy_available` (`import
+  create_forge.runner`).
+- `commands/new.py`: `new`'s legacy branch (`from create_forge.runner import
+  ScaffoldRequest`), `_run_scaffold` (`from create_forge.runner import
+  ScaffoldError, scaffold`), `_run_engine` (`from create_forge import engine,
+  pipeline`), `_run_engine_source` (`from create_forge import engine_source,
+  pipeline`).
+- `commands/catalogue.py`: `list_templates` (`from create_forge import
+  engine, pipeline`).
+- `commands/update.py`: `update_project` (`from create_forge import engine,
+  update`), `_run_copier_update` (`from create_forge.update import
+  COPIER_ANSWERS_FILE`; `from create_forge.runner import ScaffoldError`; `from
+  create_forge.runner import update as copier_update`), `_run_engine_update`
+  (`from create_forge import engine, pipeline, update`), `_print_recovery`
+  (`from create_forge import update`).
+- `commands/doctor.py`: `_tooling_diagnostics` (`from create_forge.runner
+  import cache_probe, copier_cache_location`), `_gather_diagnostics` (`from
+  create_forge import engine as _engine`).
 
 ## `new`
 

@@ -54,6 +54,8 @@ from create_forge.cli import app
 from create_forge.commands import _output as output_module
 from create_forge.commands import catalogue as catalogue_module
 from create_forge.commands import doctor as doctor_module
+from create_forge.commands import new as new_module
+from create_forge.commands import selection as selection_module
 from create_forge.config import UserConfig, config_path
 from create_forge.models import Registry, Template
 from create_forge.pipeline import GenerationRequest
@@ -463,7 +465,7 @@ def test_doctor_fails_when_the_copier_cache_is_unwritable(
     monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
     # `_tooling_diagnostics` imports `cache_probe` lazily from
     # `create_forge.runner` on every call (ADR 0040, CF-18.01), so the patch
-    # lands there, not on `cli_module`.
+    # lands there, not on `doctor_module`.
     monkeypatch.setattr(
         runner_module,
         "cache_probe",
@@ -791,9 +793,9 @@ def test_new_interactive_resolves_template_and_answers(
 ) -> None:
     registry = load_registry()
     template = registry.get(registry.default_template)
-    monkeypatch.setattr(cli_module, "choose_template", lambda *_a, **_kw: template)
+    monkeypatch.setattr(new_module, "choose_template", lambda *_a, **_kw: template)
     monkeypatch.setattr(
-        cli_module,
+        new_module,
         "ask_all",
         lambda *_a, **_kw: {
             "project_name": "Interactive Project",
@@ -816,7 +818,7 @@ def test_new_aborting_the_template_choice_exits_130(
     def _abort(*_args: object, **_kwargs: object) -> None:
         raise PromptAbortedError
 
-    monkeypatch.setattr(cli_module, "choose_template", _abort)
+    monkeypatch.setattr(new_module, "choose_template", _abort)
 
     result = runner.invoke(app, ["new", "--legacy"])
 
@@ -830,7 +832,7 @@ def test_new_aborting_the_answers_exits_130(
     def _abort(*_args: object, **_kwargs: object) -> dict[str, object]:
         raise PromptAbortedError
 
-    monkeypatch.setattr(cli_module, "ask_all", _abort)
+    monkeypatch.setattr(new_module, "ask_all", _abort)
 
     result = runner.invoke(app, ["new", "--legacy"])
 
@@ -842,7 +844,7 @@ def test_new_aborting_the_answers_exits_130(
 def test_new_warns_about_a_deprecated_template(
     recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(cli_module, "load_registry", _deprecated_registry)
+    monkeypatch.setattr(new_module, "load_registry", _deprecated_registry)
 
     result = runner.invoke(
         app,
@@ -870,7 +872,7 @@ def test_new_template_url_declined_scaffolds_nothing(
     recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        cli_module,
+        new_module,
         "ask_all",
         lambda *_a, **_kw: {"project_name": "Foo", "project_description": "d"},
     )
@@ -895,7 +897,7 @@ def test_new_template_url_accepted_forwards_local_source_ref_and_warning(
     recorder: list[ScaffoldRequest], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(
-        cli_module,
+        new_module,
         "ask_all",
         lambda *_a, **_kw: {"project_name": "Foo", "project_description": "d"},
     )
@@ -1784,7 +1786,7 @@ def test_new_prompts_when_archetype_is_omitted(
     path any more, so nothing here mentions `choose_template`.
     """
     monkeypatch.setattr(
-        cli_module,
+        selection_module,
         "ask_project_answers",
         lambda *_a, **_kw: {
             "project_name": "Engine Preview",
@@ -1796,11 +1798,13 @@ def test_new_prompts_when_archetype_is_omitted(
             "python_version": "3.13",
         },
     )
-    monkeypatch.setattr(cli_module, "resolve_component_options", lambda *_a, **_kw: {})
+    monkeypatch.setattr(
+        selection_module, "resolve_component_options", lambda *_a, **_kw: {}
+    )
     # CF-13.03: the real 0.4 catalogue has capability descriptors, so an
     # interactive run now reaches a capability multi-select; this test is
     # about archetype selection only, so short-circuit it.
-    monkeypatch.setattr(cli_module, "choose_components", lambda *_a, **_kw: ())
+    monkeypatch.setattr(selection_module, "choose_components", lambda *_a, **_kw: ())
 
     seen_archetypes: list[str] = []
 
@@ -1809,7 +1813,7 @@ def test_new_prompts_when_archetype_is_omitted(
         seen_archetypes.extend(ids)
         return next(a for a in archetypes if a.id == "cli")  # type: ignore[attr-defined]
 
-    monkeypatch.setattr(cli_module, "choose_archetype", fake_choose_archetype)
+    monkeypatch.setattr(selection_module, "choose_archetype", fake_choose_archetype)
 
     dest = tmp_path / "proj"
     result = runner.invoke(app, ["new", "--path", str(dest)])
@@ -1832,7 +1836,7 @@ def test_new_aborting_archetype_choice_exits_130(
     def _abort(*_args: object, **_kwargs: object) -> object:
         raise PromptAbortedError
 
-    monkeypatch.setattr(cli_module, "choose_archetype", _abort)
+    monkeypatch.setattr(selection_module, "choose_archetype", _abort)
 
     dest = tmp_path / "proj"
     result = runner.invoke(app, ["new", "--path", str(dest)])
@@ -1994,7 +1998,7 @@ def test_new_never_loads_the_registry(
     def fail_load_registry() -> None:
         raise AssertionError("the engine path must not load the registry")
 
-    monkeypatch.setattr(cli_module, "load_registry", fail_load_registry)
+    monkeypatch.setattr(new_module, "load_registry", fail_load_registry)
 
     def fake_lock(staging_dir: Path) -> None:
         (staging_dir / "uv.lock").write_text("version = 1\n", encoding="utf-8")

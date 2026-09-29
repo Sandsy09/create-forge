@@ -39,6 +39,7 @@ from typer.testing import CliRunner
 
 from create_forge import cli, compat, engine_source, pipeline
 from create_forge.commands import _output as output_module
+from create_forge.commands import new as new_module
 from create_forge.descriptors import Descriptor
 from create_forge.sources import SourceError, validate_source
 from create_forge.spec import build_spec_payload
@@ -325,7 +326,7 @@ def test_warning_renders_source_as_literal_text(
 ) -> None:
     console = Console(width=180, record=True)
     monkeypatch.setattr(output_module, "err", console)
-    cli._confirm_third_party(
+    new_module._confirm_third_party(
         "./[bold]local-engine",
         yes=True,
         title="[yellow]Engine source override[/yellow]",

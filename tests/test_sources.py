@@ -16,6 +16,7 @@ from typer.testing import CliRunner
 
 from create_forge import cli, runner, staging
 from create_forge.commands import _output as output_module
+from create_forge.commands import new as new_module
 from create_forge.config import UserConfig
 from create_forge.sources import SourceError, display_source, validate_source
 from tests.process import run_text
@@ -95,7 +96,7 @@ def test_new_rejects_before_prompts_or_effects(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     for name in ("_select_template", "_collect_answers"):
-        monkeypatch.setattr(cli, name, _unexpected)
+        monkeypatch.setattr(new_module, name, _unexpected)
     monkeypatch.setattr(runner, "scaffold", _unexpected)
     monkeypatch.setattr(typer, "confirm", _unexpected)
     monkeypatch.setattr(runner, "run_copy", _unexpected)
@@ -136,11 +137,11 @@ def test_safe_sources_keep_warning_and_forwarding(
     source: str, mode: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr(cli, "_load_config_or_exit", UserConfig)
+    monkeypatch.setattr(new_module, "_load_config_or_exit", UserConfig)
     monkeypatch.setattr(
-        cli, "_collect_answers", lambda *_a, **_k: {"project_name": "Example"}
+        new_module, "_collect_answers", lambda *_a, **_k: {"project_name": "Example"}
     )
-    monkeypatch.setattr(cli, "_select_template", lambda *_a, **_k: None)
+    monkeypatch.setattr(new_module, "_select_template", lambda *_a, **_k: None)
     calls: list[runner.ScaffoldRequest] = []
     monkeypatch.setattr(runner, "scaffold", calls.append)
     args = [
@@ -172,9 +173,9 @@ def test_warning_renders_source_as_literal_text(
 ) -> None:
     console = Console(width=180, record=True)
     monkeypatch.setattr(output_module, "err", console)
-    cli._confirm_third_party("./[bold]local-template", yes=True)
+    new_module._confirm_third_party("./[bold]local-template", yes=True)
     assert "./[bold]local-template" in console.export_text()
-    cli._confirm_third_party(
+    new_module._confirm_third_party(
         f"https://user:{ENCODED}@example.invalid/t?{SECRET}", yes=True
     )
     _assert_hidden(console.export_text())
@@ -242,7 +243,7 @@ def test_downstream_failure_text_is_not_rendered(
 
     monkeypatch.setattr(runner, "run_copy", fail)
     monkeypatch.setattr(runner, "run_update", fail)
-    monkeypatch.setattr(cli, "_load_config_or_exit", UserConfig)
+    monkeypatch.setattr(new_module, "_load_config_or_exit", UserConfig)
     if operation == "new":
         args = [
             "new",

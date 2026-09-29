@@ -22,10 +22,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import create_forge.cli as cli_module
 import create_forge.lifecycle as lifecycle_module
 import create_forge.staging as staging_module
 from create_forge.cli import app
+from create_forge.commands import selection as selection_module
 from create_forge.config import UserConfig, config_path
 from create_forge.pipeline import build_generation_request
 from create_forge.spec import SelectionRequest
@@ -127,13 +127,13 @@ def test_an_interactive_run_offers_and_selects_streamlit(
     change, and choosing it generates the project.
     """
     monkeypatch.setattr(
-        cli_module,
+        selection_module,
         "ask_project_answers",
         lambda *_a, **_kw: {**_ANSWERS, "github_org": "test-org"},
     )
     # This is about archetype selection; skip the capability multi-select the
     # real catalogue would otherwise reach.
-    monkeypatch.setattr(cli_module, "choose_components", lambda *_a, **_kw: ())
+    monkeypatch.setattr(selection_module, "choose_components", lambda *_a, **_kw: ())
 
     offered: list[str] = []
 
@@ -141,7 +141,7 @@ def test_an_interactive_run_offers_and_selects_streamlit(
         offered.extend(a.id for a in archetypes)  # type: ignore[attr-defined]
         return next(a for a in archetypes if a.id == _ARCHETYPE)  # type: ignore[attr-defined]
 
-    monkeypatch.setattr(cli_module, "choose_archetype", choose)
+    monkeypatch.setattr(selection_module, "choose_archetype", choose)
 
     dest = tmp_path / "insight-board"
     result = runner.invoke(app, ["new", "--path", str(dest)])
