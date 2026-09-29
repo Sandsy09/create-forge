@@ -54,11 +54,12 @@ SAFETY_FILES = (
     "src/create_forge/staging.py",
 )
 
-# `cli.py` is a large file with much unrelated to update safety, so only the
-# functions that route an update, orchestrate it, gate the degraded fallback and
-# print recovery guidance are hashed. An unrelated edit elsewhere in `cli.py`
-# must not force an evidence refresh.
-CLI_FILE = "src/create_forge/cli.py"
+# `commands/update.py` holds the functions that route an update, orchestrate
+# it, gate the degraded fallback and print recovery guidance (CF-25.02 slice
+# 5, ADR 0060 -- moved here from `cli.py`, which held them before the
+# `commands/` extraction). Named explicitly rather than hashing the whole
+# file so an unrelated edit to it does not force an evidence refresh.
+SAFETY_CLI_FILE = "src/create_forge/commands/update.py"
 SAFETY_CLI_FUNCTIONS = (
     "update_project",
     "_run_engine_update",
@@ -92,9 +93,9 @@ def _function_sources(text: str, names: tuple[str, ...]) -> dict[str, str]:
     missing = [name for name in names if name not in found]
     if missing:
         msg = (
-            f"{CLI_FILE} no longer defines {', '.join(missing)} at module level; "
-            "re-point SAFETY_CLI_FUNCTIONS in scripts/candidate_evidence.py at "
-            "wherever the update path lives now (and refresh the evidence)"
+            f"{SAFETY_CLI_FILE} no longer defines {', '.join(missing)} at module "
+            "level; re-point SAFETY_CLI_FUNCTIONS in scripts/candidate_evidence.py "
+            "at wherever the update path lives now (and refresh the evidence)"
         )
         raise ValueError(msg)
     return found
@@ -112,10 +113,12 @@ def safety_digest(repo_root: Path = REPO_ROOT) -> str:
     digest = hashlib.sha256()
     for relative in SAFETY_FILES:
         _feed(digest, relative, _normalise((repo_root / relative).read_bytes()))
-    cli_text = _normalise((repo_root / CLI_FILE).read_bytes()).decode("utf-8")
-    sources = _function_sources(cli_text, SAFETY_CLI_FUNCTIONS)
+    safety_cli_text = _normalise((repo_root / SAFETY_CLI_FILE).read_bytes()).decode(
+        "utf-8"
+    )
+    sources = _function_sources(safety_cli_text, SAFETY_CLI_FUNCTIONS)
     for name in SAFETY_CLI_FUNCTIONS:
-        _feed(digest, f"{CLI_FILE}::{name}", sources[name].encode("utf-8"))
+        _feed(digest, f"{SAFETY_CLI_FILE}::{name}", sources[name].encode("utf-8"))
     return f"sha256:{digest.hexdigest()}"
 
 
