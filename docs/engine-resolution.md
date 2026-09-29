@@ -274,7 +274,7 @@ Stage 06 development contract used before a real release existed.
   `test_negotiate_protocol_rejects_a_package_outside_the_supported_range`
   characterizes both edges of the range (below the lower bound, at the
   excluded upper bound) against the real installed engine.
-- [`tests/test_cli.py`](../tests/test_cli.py) --
+- [`tests/commands/test_doctor.py`](../tests/commands/test_doctor.py) --
   `test_doctor_fails_when_the_engine_is_not_installed`,
   `test_doctor_reports_the_installed_engine_package_when_present`, and
   `test_doctor_json_emits_the_documented_shape` characterize the diagnostics

@@ -550,8 +550,9 @@ def test_an_out_of_range_engine_is_rejected_before_any_write(
     `compat.SUPPORTED_ENGINE_RANGE` at exit status 3 (ADR 0011), with nothing
     written -- against a real, isolated install of a genuinely incompatible
     engine version, not a monkeypatched `EngineInfo`
-    (`test_cli.py::test_new_exits_3_on_incompatible_engine` proves the same
-    boundary cheaply, in the fast suite).
+    (`tests/commands/test_new_engine_route.py::
+    test_new_exits_3_on_incompatible_engine` proves the same boundary
+    cheaply, in the fast suite).
 
     Since ADR 0040 (CF-18.01) made the engine a required dependency, a single
     `uv run --with <this checkout> --with <out-of-range pin>` would now
@@ -621,9 +622,10 @@ def test_a_broken_install_with_no_engine_is_rejected_before_any_write(
     """ADR 0040 decision 12 (CF-18.01): a broken environment where the
     required engine cannot be imported at all fails closed at exit `3` with
     an actionable message, not a raw `ImportError` traceback -- exercising
-    for real what `test_cli.py`'s monkeypatched `builtins.__import__` proves
-    cheaply in the fast suite. Needs no network: installing this checkout
-    then removing `forge-template` affords no GitHub round trip.
+    for real what `tests/commands/test_new_engine_route.py`'s monkeypatched
+    `builtins.__import__` proves cheaply in the fast suite. Needs no
+    network: installing this checkout then removing `forge-template`
+    affords no GitHub round trip.
     """
     dest = tmp_path / "proj"
     venv = tmp_path / "venv"

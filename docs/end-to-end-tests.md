@@ -395,12 +395,13 @@ it skips rather than fails when GitHub is unreachable.
   required-capability pre-locking.
 - [`tests/conftest.py`](../tests/conftest.py) — the `create_forge_command`
   and `e2e_child_env` fixtures both suites share.
-- [`tests/test_cli.py`](../tests/test_cli.py) —
+- [`tests/commands/test_new_copier_route.py`](../tests/commands/test_new_copier_route.py) —
   `test_new_rejects_a_non_empty_destination_before_copier`,
   `test_new_removes_a_destination_it_created_on_failure`, and
   `test_new_leaves_a_pre_existing_destination_untouched_on_failure` prove the
   same conflict/cleanup behaviour at the CLI layer, with only `runner.run_copy`
-  faked, for a cost this fast suite can afford on every run;
+  faked, for a cost this fast suite can afford on every run.
+  [`tests/commands/test_new_engine_route.py`](../tests/commands/test_new_engine_route.py) —
   `test_new_exits_3_on_incompatible_engine` and
   `test_new_fails_closed_when_the_engine_cannot_be_imported` prove the engine
   path's equivalent boundaries the same cheap way.

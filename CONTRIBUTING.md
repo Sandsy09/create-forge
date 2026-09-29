@@ -30,6 +30,15 @@ resolves `copier` and `platformdirs`, the optional `legacy` extra. Omit
 
 ## Running the tests
 
+**Where tests live**: `tests/test_cli.py` tests `cli.py` itself (`--help`,
+exit codes, the flag surface, the `main()` callback); `tests/commands/` has
+one module per `src/create_forge/commands/*.py` module, mirroring the
+source layout. A command module's own private/use-site seams may only be
+reached from its mirror test file(s) — `tests/test_command_layout.py`
+enforces this, and [docs/cli-command-map.md](docs/cli-command-map.md)'s
+"Test map" has the full mirror table and the exceptions it allows, each
+with a reason.
+
 Three tiers, run at different points:
 
 **Fast suite** — every commit, matrixed in CI across Python 3.11–3.14:
@@ -104,6 +113,8 @@ on the pinned `ubuntu-24.04` baseline, so their names appear as
 | `floor` | the fast suite with `uv --resolution lowest-direct`, so declared lower bounds are exercised, not just whatever CI resolves (see "Dependency floors" below) |
 | `network` | `pytest -m network` — the `copier.yml` drift guard, plus the real `update()` end-to-end. Per [ADR 0012](docs/adr/0012-engine-dependency-update-policy.md), this is the proof a compatibility-line dependency bump (e.g. Copier) requires before `all-green` allows the merge |
 | `e2e` | `pytest -m e2e` — both generation paths, installed-candidate Data Science and rollout regression, real destinations, and generated-project checks ([end-to-end contract](docs/end-to-end-tests.md)) |
+| `e2e-windows` ("End-to-end lifecycle and update (Windows)") | a hand-picked, OS-sensitivity-focused slice on `windows-latest`: engine lifecycle, engine-native `update`, installed-cutover install-modes/legacy, and installed update-safety |
+| `e2e-windows-encoding` ("Installed console encoding (Windows, py3.11/3.13/3.14)") | `pytest -m e2e tests/test_e2e_installed_encoding.py` — the non-UTF-8 console lanes (CF-23.02, ADR 0057), one job per supported Python |
 | `audit` | `scripts/audit_dependencies.py` — audits `uv.lock` for known vulnerabilities. Fails on any finding; warns (does not fail) on an unreachable advisory service, only on a pull request or push. See "Dependency audit" below |
 | `all-green` | an aggregate check; this is the one branch protection requires. It gates `audit`, the pinned Linux call and the Windows jobs, and never the canary |
 | `Runner canary` | `runner-canary.yml`: the identical Linux jobs on the *next* Ubuntu image (`ubuntu-26.04`). **Not required and not part of `all-green`** — a red canary is triaged, not a blocked merge. Ownership and promotion criteria: [docs/ci-runner-baseline.md](docs/ci-runner-baseline.md) |

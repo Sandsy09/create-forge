@@ -63,7 +63,7 @@ def test_every_test_the_record_cites_exists() -> None:
     test must fail here, not leave a map pointing at nothing.
     """
     defined: set[str] = set()
-    for path in TESTS.glob("test_*.py"):
+    for path in TESTS.rglob("test_*.py"):
         defined.update(_DEFINED_TEST.findall(path.read_text(encoding="utf-8")))
 
     cited = set(_CITED_TEST.findall(_record()))

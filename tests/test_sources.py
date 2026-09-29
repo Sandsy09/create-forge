@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import pytest
+import questionary
 import typer
 import yaml
 from copier.errors import CopierError
@@ -17,7 +18,6 @@ from typer.testing import CliRunner
 from create_forge import cli, runner, staging
 from create_forge.commands import _output as output_module
 from create_forge.commands import new as new_module
-from create_forge.config import UserConfig
 from create_forge.sources import SourceError, display_source, validate_source
 from tests.process import run_text
 
@@ -95,8 +95,14 @@ def test_new_rejects_before_prompts_or_effects(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    for name in ("_select_template", "_collect_answers"):
-        monkeypatch.setattr(new_module, name, _unexpected)
+    # Nothing may prompt at all: the rejected source must be caught before
+    # `_select_template`/`_collect_answers` ever reach a real questionary
+    # call, proven at the prompt layer itself rather than by patching
+    # `commands.new`'s private helpers directly (CF-25.03's coupling rule --
+    # those two are `commands/new.py`'s own seam, tested in
+    # `tests/commands/test_new_copier_route.py`).
+    for name in ("select", "text", "confirm", "checkbox"):
+        monkeypatch.setattr(questionary, name, _unexpected)
     monkeypatch.setattr(runner, "scaffold", _unexpected)
     monkeypatch.setattr(typer, "confirm", _unexpected)
     monkeypatch.setattr(runner, "run_copy", _unexpected)
@@ -131,17 +137,40 @@ def test_direct_scaffold_rejects_before_destination_checks(
     assert not (tmp_path / "new").exists()
 
 
+class _AnyAnswer:
+    """Stands in for questionary's `Question`, returning a canned value --
+    used here only to let template selection/answer collection complete
+    without touching real stdin, which this test reserves for the later
+    `typer.confirm("Continue?")` prompt (`_confirm_third_party` uses
+    `typer.confirm`, not `questionary`, so the two never compete for input).
+    Generic rather than keyed to the bundled registry's exact prompt set,
+    unlike patching `commands.new`'s private `_select_template`/
+    `_collect_answers` directly (CF-25.03's coupling rule -- those are
+    `commands/new.py`'s own seam, tested in
+    `tests/commands/test_new_copier_route.py`).
+    """
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def ask(self) -> object:
+        return self._value
+
+
 @pytest.mark.parametrize("source", SAFE)
 @pytest.mark.parametrize("mode", ["continue", "abort", "yes"])
 def test_safe_sources_keep_warning_and_forwarding(
     source: str, mode: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setattr(new_module, "_load_config_or_exit", UserConfig)
     monkeypatch.setattr(
-        new_module, "_collect_answers", lambda *_a, **_k: {"project_name": "Example"}
+        questionary,
+        "select",
+        lambda _msg, *, choices, **_kw: _AnyAnswer(choices[0].value),
     )
-    monkeypatch.setattr(new_module, "_select_template", lambda *_a, **_k: None)
+    monkeypatch.setattr(questionary, "text", lambda _msg, **_kw: _AnyAnswer("x"))
+    monkeypatch.setattr(questionary, "confirm", lambda _msg, **_kw: _AnyAnswer(False))
+    monkeypatch.setattr(questionary, "checkbox", lambda _msg, **_kw: _AnyAnswer([]))
     calls: list[runner.ScaffoldRequest] = []
     monkeypatch.setattr(runner, "scaffold", calls.append)
     args = [
@@ -243,7 +272,12 @@ def test_downstream_failure_text_is_not_rendered(
 
     monkeypatch.setattr(runner, "run_copy", fail)
     monkeypatch.setattr(runner, "run_update", fail)
-    monkeypatch.setattr(new_module, "_load_config_or_exit", UserConfig)
+    # Isolate config the same way `_isolated_config` does elsewhere, rather
+    # than patching `commands.new._load_config_or_exit` directly (CF-25.03's
+    # coupling rule): `--yes` below needs no real prompt, so a config-free
+    # `XDG_CONFIG_HOME` is enough for `_load_config_or_exit()` to return a
+    # plain default `UserConfig`.
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     if operation == "new":
         args = [
             "new",

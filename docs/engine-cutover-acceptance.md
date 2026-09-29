@@ -173,7 +173,7 @@ the rest of the matrix below.
 | Check | Evidence command | Owner | First required at |
 | --- | --- | --- | --- |
 | A plain `uvx create-forge` / `pip install create-forge` resolves `forge-template>=0.5,<0.6`; `create-forge new "<name>"` with no route flag constructs a ProjectSpec, discovers the catalogue, validates, renders and finalises through the public facade, with no production-catalogue branch | `uv run pytest tests/test_e2e_engine_generation.py` | CF-18.01 | CF-18.01 |
-| `list` and `doctor` run against the discovered catalogue and negotiate the real engine while staying offline; `doctor --json` reports package version and both protocol tuples | `uv run pytest tests/test_cli.py -k "doctor or list"` | CF-18.01 | CF-18.01 |
+| `list` and `doctor` run against the discovered catalogue and negotiate the real engine while staying offline; `doctor --json` reports package version and both protocol tuples | `uv run pytest tests/commands tests/test_cli.py -k "doctor or list"` | CF-18.01 | CF-18.01 |
 | Data still flows `create-forge → ProjectSpec → forge-template render → create-forge finalisation`; no component semantics or resources are copied downstream (**CF-ROADMAP-01-AC-02**) | `uv run pytest tests/test_engine_contract.py` (AST guard, widened) | CF-18.01 | CF-18.01 |
 | Each of the four install modes resolves the engine and generates from an isolated environment | `uv run pytest tests/test_e2e_installed_cutover.py -k install_modes` | CF-18.06 | CF-18.06 |
 
@@ -208,7 +208,7 @@ the rest of the matrix below.
 | Check | Evidence command | Owner | First required at |
 | --- | --- | --- | --- |
 | `create-forge[legacy]` installs `copier`; `new --legacy` and `update` against a recorded `.copier-answers.yml` project run real tagged Copier generation and update, preserving local edits and reaching HEAD; `--legacy` without the extra exits `3` naming the remedy | `uv run pytest tests/test_e2e_installed_cutover.py -k legacy` | CF-18.05 | CF-18.05 |
-| `--template` / `--template-url` / `--ref` and `_src_path` source validation are retained under `--legacy`; custom sources, user edits and `--dry-run` all work | `uv run pytest tests/test_cli.py -k legacy` | CF-18.05 | CF-18.05 |
+| `--template` / `--template-url` / `--ref` and `_src_path` source validation are retained under `--legacy`; custom sources, user edits and `--dry-run` all work | `uv run pytest tests/commands tests/test_cli.py -k legacy` | CF-18.05 | CF-18.05 |
 | A `create-forge` pinned to `forge-template>=0.4.1,<0.5` still resolves, installs and generates after `0.5.0` publishes | `create-forge` regression suite against the `0.4.1` pin (see `forge-template` matrix, FT-18.01 row) | FT-18.01 | FT-18.01 |
 
 ### Preview-project transition
@@ -224,7 +224,7 @@ the rest of the matrix below.
 | --- | --- | --- | --- |
 | A missing or incompatible engine, an invalid selection, and a render / finalise failure each fail with a stable status (`1`, `3`, or `130`) and never silently fall back to Copier or the bundled registry (**CF-ROADMAP-01-AC-04**) | `uv run pytest tests/test_e2e_installed_cutover.py -k "incompatible or invalid or failure"` | CF-18.06 | CF-18.06 |
 | An out-of-range engine and no-engine install write nothing and are visible in `doctor` | `uv run pytest tests/test_e2e_installed_cutover.py -k boundary` | CF-18.06 | CF-18.06 |
-| Diagnostics never echo raw argv, stdout, stderr, source or ref; source secrets are stripped | `uv run pytest tests/test_cli.py tests/test_runner.py -k "credential or secret"` | CF-18.06 | CF-18.06 |
+| Diagnostics never echo raw argv, stdout, stderr, source or ref; source secrets are stripped | `uv run pytest tests/commands tests/test_runner.py -k "credential or secret"` | CF-18.06 | CF-18.06 |
 
 ### Cross-repository integrated validation
 

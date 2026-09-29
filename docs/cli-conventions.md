@@ -520,32 +520,38 @@ recorded as the behavioural baseline the `commands/` extraction ([ADR
 
 The contract is characterized by these tests:
 
-- [`tests/test_cli.py`](../tests/test_cli.py) covers resolved
-  `ScaffoldRequest` values, exit statuses, cancellation without scaffolding,
-  config and `--data` precedence, the third-party warning, and application
-  error presentation. In particular, see
+- **`tests/test_cli.py`** covers `--help`, exit codes, the full `new`/`update`
+  flag surface, and the `main()` callback: `test_help_exits_zero`,
+  `test_new_registers_every_route_and_selection_flag`,
+  `test_update_registers_its_flags`,
+  `test_every_invocation_hardens_console_encoding_first`, and
+  `test_engine_contract.py::test_the_one_public_console_script_entry_point_is_unchanged`
+  (CF-25.01). **`tests/commands/`** (CF-25.03; one module per
+  `src/create_forge/commands/*.py` module — see
+  [`cli-command-map.md`](cli-command-map.md)'s "Test map" for the full
+  mirror table) covers each command's own orchestration: resolved
+  `ScaffoldRequest` values, cancellation without scaffolding, config and
+  `--data` precedence, and the third-party warning
+  (`tests/commands/test_new_copier_route.py`'s
   `test_new_dry_run_records_the_request_and_writes_nothing`,
-  the `test_update_*` command cases,
   `test_new_bad_data_format_is_rejected`, the two
   `test_new_aborting_*_exits_130` cases,
-  `test_new_template_url_declined_scaffolds_nothing`, and the
-  default engine path's own `--archetype` selection surface (explicit,
-  `--yes`-without-one, unknown-id, and interactive-prompt cases):
+  `test_new_template_url_declined_scaffolds_nothing`), the copier- and
+  engine-route `update` cases (`tests/commands/test_update_copier_route.py`,
+  `tests/commands/test_update_engine_route.py`), and the default engine
+  path's own `--archetype` selection surface plus the "engine-native
+  prompting" group (ADR 0025, #91's acceptance criteria) — all in
+  `tests/commands/test_new_selection.py`:
   `test_new_yes_without_archetype_is_rejected`,
   `test_new_unknown_archetype_is_rejected`,
-  `test_new_prompts_when_archetype_is_omitted`, and
-  `test_new_aborting_archetype_choice_exits_130`. The "engine-native
-  prompting" group (ADR 0025) covers #91's acceptance criteria directly:
+  `test_new_prompts_when_archetype_is_omitted`,
+  `test_new_aborting_archetype_choice_exits_130`,
   `test_new_cli_archetype_asks_no_library_question`,
   `test_new_library_archetype_asks_declared_options_only`
-  (including the resolved `component_options`), `test_new_never_loads_the_registry`,
+  (including the resolved `component_options`),
+  `test_new_never_loads_the_registry`,
   `test_new_interactive_asks_what_are_you_building_once`, and
-  `test_new_rejects_copier_only_flags_without_legacy`. `--help`, exit codes,
-  and the `[project.scripts]` entry point itself are covered by
-  `test_help_exits_zero`, `test_new_registers_every_route_and_selection_flag`,
-  `test_update_registers_its_flags`, and
-  `test_engine_contract.py::test_the_one_public_console_script_entry_point_is_unchanged`
-  (CF-25.01).
+  `test_new_rejects_copier_only_flags_without_legacy`.
 - [`tests/test_engine_source.py`](../tests/test_engine_source.py) covers
   `--engine-source`/`--engine-ref` (ADR 0044): source validation ordering,
   the code-execution warning and confirmation gate, out-of-process worker
@@ -594,13 +600,14 @@ The contract is characterized by these tests:
   and the version-match short-circuit against the real installed engine. See
   the canonical [engine project lifecycle contract](engine-project-lifecycle.md)'s
   own Executable examples for the full list, including the CLI-orchestration
-  cases in `tests/test_cli.py`.
+  cases in `tests/commands/test_update_engine_route.py`.
 - CF-18.05 ([ADR 0047](adr/0047-legacy-copier-retention-and-preview-transition.md))
   added `tests/test_update_routing.py -k preview` (the pre-cutover
   `--engine-preview` rejection message and its no-fabrication guarantee),
-  `tests/test_cli.py -k legacy` (retained `--template-url` source validation,
-  `_src_path` re-validation, and the Copier route surviving an unusable
-  engine), and
+  `tests/commands tests/test_cli.py -k legacy` (retained `--template-url`
+  source validation, `_src_path` re-validation, and the Copier route
+  surviving an unusable engine — CF-25.03 moved these into
+  `tests/commands/`, the selector's shape unchanged), and
   [`tests/test_e2e_installed_cutover.py`](../tests/test_e2e_installed_cutover.py)
   (`create-forge[legacy]` resolving `copier`, a real local tagged Copier
   generation and update through the installed console, `--legacy` without the

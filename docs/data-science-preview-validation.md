@@ -54,13 +54,14 @@ option name, a wrong-typed value, a composition conflict — all stay engine
 verdicts, surfaced through `engine.explain` before any destination effect.
 `create-forge` adds no component to complete a selection; when `data-science`
 is selected without `jupyter`, the request reaches the engine unchanged and
-`cli._missing_requirement_hint` then names the flag that fixes it.
+`commands.selection._missing_requirement_hint` then names the flag that
+fixes it.
 
 ## CF-EPIC-13 acceptance criteria
 
 | # | Criterion | Proven by |
 | --- | --- | --- |
-| 1 | #91 remains the engine-native option-prompting prerequisite | `tests/test_cli.py::test_new_engine_preview_interactive_asks_what_are_you_building_once`, and #91 itself (merged) |
+| 1 | #91 remains the engine-native option-prompting prerequisite | `tests/commands/test_new_selection.py::test_new_interactive_asks_what_are_you_building_once` (this row has cited a stale pre-cutover name since #91 merged; fixed here -- CF-25.03 also moved the test itself out of `tests/test_cli.py`), and #91 itself (merged) |
 | 2 | The CLI discovers archetypes and applicable capabilities through the facade, without copying a catalogue or hard-coding IDs | `tests/test_engine_adapter.py::test_discover_returns_the_real_production_catalogue`; `tests/test_archetype_parity.py::test_no_shipped_module_hardcodes_a_discovered_component_id` (widened) |
 | 3 | Interactive and non-interactive inputs select Data Science and its capability combinations, including explicit-empty optional selections | `tests/test_data_science_pipeline.py::test_interactive_selection_pre_locks_the_required_capability`, `::test_selected_capabilities_round_trip_into_the_projectspec`, `::test_a_missing_required_capability_writes_nothing[--no-capabilities]` |
 | 4 | Declared component options are prompted and serialised under their owning component namespaces | `tests/test_component_selection.py`'s `--component-option` section (CF-13.04); `tests/test_data_science_pipeline.py::test_an_undeclared_component_option_writes_nothing` (Data Science components declare none) |
