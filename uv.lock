@@ -500,7 +500,7 @@ requires-dist = [
     { name = "questionary", specifier = ">=2.0" },
     { name = "rich", specifier = ">=13.9" },
     { name = "typer", specifier = ">=0.16" },
-    { name = "uv", specifier = ">=0.12,<0.13" },
+    { name = "uv", specifier = ">=0.12.18,<0.13" },
 ]
 provides-extras = ["legacy"]
 

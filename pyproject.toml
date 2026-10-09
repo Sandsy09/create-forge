@@ -40,10 +40,12 @@ dependencies = [
     # the range itself so `doctor` can report it without importing the engine.
     "forge-template>=0.7,<0.8",
     # ADR 0021 adds bounded uv to finalise the engine render's dynamic
-    # lockfile; ADR 0038 reviewed that floor against the advisory record and
-    # held it -- the whole `>=0.12,<0.13` range is already advisory-free. Now
-    # required alongside the engine itself rather than bundled in its extra.
-    "uv>=0.12,<0.13",
+    # lockfile; ADR 0038 reviewed that floor and held it at `0.12` while every
+    # published advisory was fixed below it. ADR 0063 (CF-29.03) raises it to
+    # 0.12.18, the release that fixes GHSA-2cv4-cqwr-gwf7 (Windows wheel
+    # extraction path traversal). Now required alongside the engine itself
+    # rather than bundled in its extra.
+    "uv>=0.12.18,<0.13",
     # >=0.16: typer 0.15.0-0.15.3 declare an uncapped click and break against
     # click >=8.2 (TyperArgument.make_metavar), and 0.15.4 pins click <8.2.
     # 0.16.0 is the first release that works with current click. The CI
