@@ -18,6 +18,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from tests import batch_recipes
 from tests.recovery_recipes import (
     CLEAN_COMMAND,
     CLEAN_PREVIEW_COMMAND,
@@ -31,6 +32,7 @@ USER_GUIDE = REPO_ROOT / "docs" / "user-guide"
 UPDATES = USER_GUIDE / "updates.md"
 MIGRATION = USER_GUIDE / "migration.md"
 STREAMLIT = USER_GUIDE / "streamlit.md"
+BATCH = USER_GUIDE / "batch.md"
 CAPABILITIES = USER_GUIDE / "capabilities.md"
 PROJECTS = USER_GUIDE / "projects.md"
 
@@ -50,6 +52,9 @@ _STALE_NO_PLATFORM_CLAIMS = (
 )
 STREAMLIT_ARCHETYPE_CONTRACT = (
     "https://github.com/Sandsy09/forge-template/blob/main/docs/streamlit-archetype.md"
+)
+BATCH_ARCHETYPE_CONTRACT = (
+    "https://github.com/Sandsy09/forge-template/blob/main/docs/batch-archetype.md"
 )
 
 
@@ -196,3 +201,43 @@ def test_streamlit_guide_relative_links_resolve() -> None:
     for target in relative:
         filename = target.partition("#")[0]
         assert (USER_GUIDE / filename).is_file(), f"streamlit.md links {target!r}"
+
+
+def test_batch_guide_documents_every_recipe_the_e2e_suite_runs() -> None:
+    """CF-29.02 (ADR 0062): `test_documented_recipe_runs_through_the_installed_console`
+    (`tests/test_e2e_installed_batch.py`) runs each of these commands, then the
+    documented check and run, through the installed console. Both read the
+    strings from `tests/batch_recipes.py`, so the guide, the e2e evidence, and
+    this guard cannot drift apart.
+    """
+    text = _normalised(BATCH)
+    for recipe in batch_recipes.RECIPES:
+        assert recipe.command in text, (
+            f"batch.md no longer documents the {recipe.id!r} recipe"
+        )
+        assert f"cd {recipe.directory}" in text, (
+            f"batch.md no longer tells the reader to `cd {recipe.directory}`"
+        )
+    assert batch_recipes.CHECK_COMMAND in text
+    assert batch_recipes.RUN_COMMAND in text
+
+
+def test_batch_guide_links_the_provider_contract_instead_of_restating_it() -> None:
+    """CF-29.02 AC-5: generated-project details stay linked to `forge-template`,
+    so the guide cannot go stale against what is generated.
+    """
+    assert BATCH_ARCHETYPE_CONTRACT in BATCH.read_text(encoding="utf-8")
+
+
+def test_batch_guide_relative_links_resolve() -> None:
+    """The page is excluded from the site until CF-29.03 releases it (ADR 0062),
+    so the strict build does not see it and this test stands in for it: every
+    relative link must reach a real sibling guide page.
+    """
+    text = BATCH.read_text(encoding="utf-8")
+    targets = re.findall(r"\]\(([^)]+)\)", text)
+    relative = [t for t in targets if not re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", t)]
+    assert relative, "expected at least one link to a sibling guide page"
+    for target in relative:
+        filename = target.partition("#")[0]
+        assert (USER_GUIDE / filename).is_file(), f"batch.md links {target!r}"
