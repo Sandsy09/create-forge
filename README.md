@@ -65,8 +65,8 @@ your terminal.
 
 ```bash
 uvx create-forge@latest new
-uvx create-forge@0.5.0 new
-uv tool install "create-forge==0.5.0"
+uvx create-forge@0.6.0 new
+uv tool install "create-forge==0.6.0"
 ```
 
 Plain `uvx create-forge` can reuse a cached or persistently installed
@@ -108,9 +108,10 @@ uv run poe notebook
 ```
 
 Available types include Library, CLI Application, Data Science (a Python
-package with a starter notebook and Jupyter tooling), and Streamlit (an
+package with a starter notebook and Jupyter tooling), Streamlit (an
 installable package with an interactive Streamlit application, from
-`create-forge 0.5.0`), plus optional
+`create-forge 0.5.0`), and Batch Job (an installable package with a
+scheduling-neutral batch job, from `create-forge 0.6.0`), plus optional
 **Jupyter** and **Scientific Python** capabilities (Data Science requires
 Jupyter; Scientific Python is optional and can accompany any archetype). The
 [project guide](https://sandsy09.github.io/create-forge/projects/) explains
@@ -160,8 +161,10 @@ it, `--legacy` exits `3` naming the remedy.
 ## What's next
 
 The Foundation, Data Science, and Engine-Default Cutover roadmaps are
-complete, and the Streamlit archetype shipped in `create-forge 0.5.0` (its plan
-is the [Streamlit Archetype](docs/roadmap-v4/README.md) roadmap). Follow
+complete, the Streamlit archetype shipped in `create-forge 0.5.0` (its plan is
+the [Streamlit Archetype](docs/roadmap-v4/README.md) roadmap), and the Batch Job
+archetype shipped in `create-forge 0.6.0` (its plan is the
+[Stages 22 to 29](docs/roadmap-v5/README.md) roadmap). Follow
 [open work](https://github.com/Sandsy09/create-forge/issues) and
 [releases](https://github.com/Sandsy09/create-forge/releases) for updates, or
 suggest a project type, capability, or guide you would find useful.

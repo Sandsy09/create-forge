@@ -230,9 +230,10 @@ def test_batch_guide_links_the_provider_contract_instead_of_restating_it() -> No
 
 
 def test_batch_guide_relative_links_resolve() -> None:
-    """The page is excluded from the site until CF-29.03 releases it (ADR 0062),
-    so the strict build does not see it and this test stands in for it: every
-    relative link must reach a real sibling guide page.
+    """The page was excluded from the site until CF-29.03 released it (ADR 0062,
+    ADR 0064), so the strict build did not see it and this test stood in for it.
+    It is on the site now and the strict build validates its links too; this
+    stays as a fast, offline check of the same relative links.
     """
     text = BATCH.read_text(encoding="utf-8")
     targets = re.findall(r"\]\(([^)]+)\)", text)
