@@ -11,9 +11,9 @@ the range to the `forge-template` 0.4 compatibility line, what CF-14.01
 and making the engine a required dependency, what CF-21.01 (ADR 0050) did
 by adopting the `0.6.0` Streamlit provider release, and what CF-29.01 (ADR
 0061) did by adopting the `0.7.0` batch provider release. This is what a
-`create-forge` install on `main` resolves. The published `create-forge 0.5.0`
-(CF-21.03, ADR 0056) still declares the `0.6` line, and `create-forge 0.4.0`
-the `0.5` line; the `0.7` range is unreleased until CF-29.03.
+`create-forge` install on `main` resolves, and what `create-forge 0.6.0`
+(CF-29.03, ADR 0064) publishes. `create-forge 0.5.0` (CF-21.03, ADR 0056) keeps
+declaring the `0.6` line, and `create-forge 0.4.0` the `0.5` line.
 
 ## Supported range
 

@@ -32,8 +32,9 @@ reviewed `0.6.0` Streamlit provider release, moving it to `>=0.6,<0.7`
 (released as `create-forge 0.5.0` by CF-21.03, [ADR 0056](adr/0056-publish-create-forge-0-5-0.md);
 `create-forge 0.4.0` keeps declaring `>=0.5,<0.6`); and CF-29.01
 ([ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)) adopted the
-reviewed `0.7.0` batch provider release, moving it to `>=0.7,<0.8` (unreleased
-until CF-29.03; published `create-forge 0.5.0` keeps declaring `>=0.6,<0.7`). `copier`
+reviewed `0.7.0` batch provider release, moving it to `>=0.7,<0.8` (released as
+`create-forge 0.6.0` by CF-29.03, [ADR 0064](adr/0064-publish-create-forge-0-6-0.md);
+`create-forge 0.5.0` keeps declaring `>=0.6,<0.7`). `copier`
 is now the compatibility-line dependency for the `--legacy` path instead,
 behind its own optional extra. **Two**
 compatibility-line dependencies exist simultaneously, each governing its
@@ -43,7 +44,8 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.5.x default `new` (required) | `forge-template` | `>=0.7,<0.8` | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), **unreleased** -- published `create-forge 0.5.0` (ADR 0056, CF-21.03) declares `>=0.6,<0.7` (ADR 0050, CF-21.01) |
+| v0.6.x default `new` (required) | `forge-template` | `>=0.7,<0.8` | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), released as `create-forge 0.6.0` (ADR 0064, CF-29.03) |
+| v0.5.x default `new` (required) | `forge-template` | `>=0.6,<0.7` | Superseded by v0.6.x (ADR 0064); the Streamlit client release, adopting the `0.6` provider line (ADR 0050, CF-21.01), published as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
 | v0.4.x default `new` (required) | `forge-template` | `>=0.5,<0.6` | Superseded by v0.5.x (ADR 0056); the engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
 | v0.3.x default `new` | `copier` | `>=9.16,<10` | Now the `--legacy` route's dependency, behind the optional `legacy` extra (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Superseded by v0.4.x (ADR 0042) |
