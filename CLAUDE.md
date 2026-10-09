@@ -247,19 +247,16 @@ canonical [dependency audit contract](docs/dependency-audit.md).
 
 ## Current state
 
-`create-forge 0.5.0` is the latest **tagged and published** release — the
-Streamlit client release (CF-21.03, ADR 0056): it pairs with the
-`forge-template 0.6.0` provider line (`forge-template>=0.6,<0.7`, line
-`v0.5.x-engine`), which adds the `streamlit` archetype. `main` is ahead of it:
-CF-29.01 (ADR 0061) moved the declared range to the `forge-template 0.7.0` batch
-provider line (`>=0.7,<0.8`), which adds the `batch` archetype, and made
-`doctor`'s `engine` check apply that range; CF-29.03 (ADR 0064) prepares
-`create-forge 0.6.0` (line `v0.6.x-engine`) to publish it. Until that release is
-dispatched `0.5.0` remains the latest **published** version and the user guide
-keeps naming it. `0.5.0` follows
-`create-forge 0.4.0`, the Engine-Default Cutover (CF-EPIC-18, ADR 0049), which
-made the `forge-template` engine the default, required `new` path and moved
-`copier` to the optional `legacy` extra; `0.4.x` keeps declaring
+`create-forge 0.6.0` is the latest **tagged and published** release — the
+batch client release (CF-29.03, ADR 0064): it pairs with the
+`forge-template 0.7.0` provider line (`forge-template>=0.7,<0.8`, line
+`v0.6.x-engine`), which adds the `batch` archetype (ADR 0061); its `doctor`
+applies the declared engine range rather than checking presence alone, and it
+requires `uv>=0.12.18` (ADR 0063). It follows `create-forge 0.5.0`, the
+Streamlit client release (CF-21.03, ADR 0056; `forge-template>=0.6,<0.7`, line
+`v0.5.x-engine`), which follows `0.4.0`, the Engine-Default Cutover (CF-EPIC-18,
+ADR 0049), which made the `forge-template` engine the default, required `new`
+path and moved `copier` to the optional `legacy` extra; `0.4.x` keeps declaring
 `forge-template>=0.5,<0.6`. Since `0.4.0` it ships the isolated
 `--engine-source`/`--engine-ref` override (CF-18.02, ADR 0044), the engine
 `new` Git/hook lifecycle plus the committed `.forge/generation.json` metadata
@@ -273,8 +270,9 @@ and supported for at least 90 days and at least one further tagged release past
 `0.4.0` (`uv tool install "create-forge==0.3.2"`). See
 [docs/roadmap-v3/](docs/roadmap-v3/) and
 [docs/engine-cutover-acceptance.md](docs/engine-cutover-acceptance.md) for the
-cutover contract, [docs/release-0-4-0-validation.md](docs/release-0-4-0-validation.md)
-and [docs/release-0-5-0-validation.md](docs/release-0-5-0-validation.md) for the
+cutover contract, [docs/release-0-4-0-validation.md](docs/release-0-4-0-validation.md),
+[docs/release-0-5-0-validation.md](docs/release-0-5-0-validation.md) and
+[docs/release-0-6-0-validation.md](docs/release-0-6-0-validation.md) for the
 published-artefact evidence, [docs/roadmap-v4/](docs/roadmap-v4/) for the
 Streamlit roadmap, [docs/roadmap-v5/](docs/roadmap-v5/) for Stages 22–29 (mirrored
 byte-for-byte from forge-template; see
