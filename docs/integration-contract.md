@@ -76,7 +76,8 @@ below).
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | 1 (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | 1 (supported) | Superseded by v0.4.x (ADR 0042) |
 | v0.4.x | `forge-template>=0.5,<0.6` | 1 (supported) | Superseded by v0.5.x (ADR 0056). The engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
-| v0.5.x | `forge-template>=0.7,<0.8` | 1 (supported) | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), **unreleased** -- published `create-forge 0.5.0` (ADR 0056, CF-21.03) still declares the `0.6` Streamlit provider line, `forge-template>=0.6,<0.7` (ADR 0050, CF-21.01), and rejects `0.7.0` with exit `3` |
+| v0.5.x | `forge-template>=0.6,<0.7` | 1 (supported) | Superseded by v0.6.x (ADR 0064). The Streamlit client release, adopting the `0.6` provider line (ADR 0050, CF-21.01), published as `create-forge 0.5.0` (ADR 0056, CF-21.03); it rejects `forge-template 0.7.0` with exit `3` |
+| v0.6.x | `forge-template>=0.7,<0.8` | 1 (supported) | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), released as `create-forge 0.6.0` (ADR 0064, CF-29.03) |
 
 CF-18.01 adopted the `v0.4.x` line: `forge-template` moved from the optional
 `engine` extra into `[project.dependencies]`, making the engine the default
@@ -117,9 +118,11 @@ and the public engine facade unchanged, so no adapter changed. `batch`
 declares no `requires`, `conflicts` or options and is reached only through the
 generic archetype/component contract; no production module names it. The
 `0.6.x` line remains a stable fifteen-component catalogue for a client pinned
-there. That adoption did not itself release `create-forge`: CF-29.02 validates
-installed batch generation and CF-29.03 releases the line, and the user guide
-keeps naming the released range until it does.
+there. That adoption did not itself release `create-forge`: CF-29.02
+([ADR 0062](adr/0062-validate-batch-through-the-installed-candidate.md))
+validated installed batch generation, and CF-29.03
+([ADR 0064](adr/0064-publish-create-forge-0-6-0.md)) released the line as
+`create-forge 0.6.0`.
 
 `forge-template` `0.3.1` -- a packaging-only patch over the `0.3.0` production
 catalogue CF-08.02 adopted -- was the first version published to PyPI

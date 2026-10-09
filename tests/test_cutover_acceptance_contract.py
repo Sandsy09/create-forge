@@ -238,10 +238,11 @@ def test_diagnostic_line_tracks_the_cutover_release() -> None:
     pair: `compat.INTEGRATION_LINE` moved to the published release's line, and
     the acceptance contract's own Status section no longer claims the cutover
     hasn't shipped. ADR 0056 (CF-21.03) moved the line on to `v0.5.x-engine`
-    for the Streamlit provider release; the contract's text stays a statement
-    about the 0.4.0 cutover, which is why only the line literal moved.
+    for the Streamlit provider release, and ADR 0064 (CF-29.03) to
+    `v0.6.x-engine` for the batch provider release; the contract's text stays a
+    statement about the 0.4.0 cutover, which is why only the line literal moved.
     """
-    assert compat.INTEGRATION_LINE == "v0.5.x-engine"
+    assert compat.INTEGRATION_LINE == "v0.6.x-engine"
     text = " ".join(_contract().split())
     assert "has published yet" not in text
     assert "create-forge 0.4.0" in text

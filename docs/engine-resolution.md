@@ -98,7 +98,8 @@ or `uv sync --all-extras` — for `new --legacy` and `update`'s Copier route.
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Superseded by v0.4.x (ADR 0042) |
 | v0.4.x (required) | `forge-template>=0.5,<0.6` | `1` (supported) | Superseded by v0.5.x (ADR 0056). The engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
-| v0.5.x (required) | `forge-template>=0.7,<0.8` | `1` (supported) | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), **unreleased** -- published `create-forge 0.5.0` (ADR 0056, CF-21.03) declares `>=0.6,<0.7` (ADR 0050, CF-21.01) |
+| v0.5.x (required) | `forge-template>=0.6,<0.7` | `1` (supported) | Superseded by v0.6.x (ADR 0064). The Streamlit client release, adopting the `0.6` provider line (ADR 0050, CF-21.01), published as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
+| v0.6.x (required) | `forge-template>=0.7,<0.8` | `1` (supported) | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), released as `create-forge 0.6.0` (ADR 0064, CF-29.03) |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —

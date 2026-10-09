@@ -27,18 +27,19 @@ from packaging.version import Version
 ENGINE_DISTRIBUTION = "forge-template"
 """The PyPI distribution name the engine dependency declares."""
 
-INTEGRATION_LINE = "v0.5.x-engine"
+INTEGRATION_LINE = "v0.6.x-engine"
 """The create-forge release line and its default generation architecture.
 
 This is explicit rather than derived from installed metadata so a new release
 line requires a deliberate compatibility review. ADR 0040 (CF-18.01) makes the
 engine the default `new` architecture; `new` is Copier-backed only under the
 explicit `--legacy` flag. ADR 0049 (CF-18.07) moved this from `v0.3.x-engine`
-to `v0.4.x-engine` for the published cutover release, and ADR 0056 (CF-21.03)
-moves it to `v0.5.x-engine` for the release that crosses to the `forge-template`
-`0.6` provider line (client `0.N.x` pairs with provider `0.(N+1)`) -- a shipped
-diagnostic surface (`doctor --json`'s `integration.line`) reviewed by hand, not
-derived.
+to `v0.4.x-engine` for the published cutover release, ADR 0056 (CF-21.03)
+moved it to `v0.5.x-engine` for the release that crossed to the `forge-template`
+`0.6` provider line, and ADR 0064 (CF-29.03) moves it to `v0.6.x-engine` for the
+release that crosses to the `0.7` provider line (client `0.N.x` pairs with
+provider `0.(N+1)`) -- a shipped diagnostic surface (`doctor --json`'s
+`integration.line`) reviewed by hand, not derived.
 `tests/test_engine_contract.py`'s
 `test_diagnostic_integration_line_matches_package_release_line` checks this
 literal against `pyproject.toml`'s own `major.minor`.
