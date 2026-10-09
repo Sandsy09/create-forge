@@ -65,6 +65,7 @@ format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - [0060 — Split cli.py behind a commands/ subpackage, along command seams](0060-cli-command-module-seams.md)
 - [0061 — Adopt the forge-template 0.7 batch provider line](0061-adopt-the-0-7-batch-provider-line.md)
 - [0062 — Validate batch through the installed create-forge candidate](0062-validate-batch-through-the-installed-candidate.md)
+- [0063 — Raise the uv floor past the wheel-extraction advisory](0063-raise-the-uv-floor-to-0-12-18.md)
 
 Add a new record by copying the most recent one and incrementing the number.
 Records are immutable: supersede them rather than editing.

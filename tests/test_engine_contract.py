@@ -61,7 +61,7 @@ SRC_ROOT = REPO_ROOT / "src" / "create_forge"
 ENGINE_ADAPTER = SRC_ROOT / "engine.py"
 
 ENGINE_REQUIREMENT = "forge-template>=0.7,<0.8"
-UV_REQUIREMENT = "uv>=0.12,<0.13"
+UV_REQUIREMENT = "uv>=0.12.18,<0.13"
 
 # ADR 0038 raised the Copier floor past the destination-escape advisories
 # (9.14.1) to 9.15.2. ADR 0039 raised it again to 9.16 -- the first release
