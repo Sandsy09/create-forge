@@ -101,9 +101,20 @@ _ANSWERS = {
 _NON_ASCII_SEGMENT = "项目"
 
 
-def _new_args(name: str, dest: Path) -> list[str]:
-    args = ["new", name, "--archetype", "library", "--yes", "--path", str(dest)]
-    for key, value in _ANSWERS.items():
+def _new_args(
+    name: str,
+    dest: Path,
+    *,
+    archetype: str = "library",
+    description: str | None = None,
+) -> list[str]:
+    """`new` args; `archetype` and `description` default to what every
+    pre-existing caller already gets, so only CF-29.02's batch case differs."""
+    answers = dict(_ANSWERS)
+    if description is not None:
+        answers["project_description"] = description
+    args = ["new", name, "--archetype", archetype, "--yes", "--path", str(dest)]
+    for key, value in answers.items():
         args += ["--data", f"{key}={value}"]
     return args
 
@@ -240,6 +251,67 @@ def test_generation_into_a_non_ascii_path_survives_every_lane(
     assert "Traceback" not in result.stdout + result.stderr
     assert (dest / "pyproject.toml").is_file()
     assert (dest / ".forge" / "generation.json").is_file()
+
+
+# A name and description with characters outside `cp1252` (the CJK) and inside
+# it (the accents), so a codepage-dependent write or read would corrupt or crash
+# on one of them in the lanes that are genuinely non-UTF-8.
+_BATCH_NAME = "Café Batch"
+_BATCH_DESCRIPTION = "Données du soir — 项目 résumé"
+
+
+@pytest.mark.parametrize("lane", LANES, ids=_lane_id)
+def test_batch_generation_and_job_survive_every_lane(
+    encoding_client: InstalledClient, lane: EncodingLane, tmp_path: Path
+) -> None:
+    """CF-29.02 AC-4 (ADR 0062): the batch archetype under every lane. A
+    non-ASCII project name and description generate into a CJK destination
+    path with the metadata and rendered files intact as UTF-8; then the
+    generated job -- standard library only, so no environment sync -- runs from
+    the project root with plain `python -m` under the lane's own encoding and
+    produces its output. The job's encoding handling belongs to the provider;
+    what is client-owned, and proven here, is that nothing the client wrote
+    for it is codepage-dependent.
+    """
+    if lane.windows_only and not is_windows():
+        pytest.skip(f"lane {lane.name!r} is only meaningful on Windows")
+    env = lane_env(encoding_client.env, lane)
+    require_lane(lane, probe(encoding_client.python, env))
+
+    dest = tmp_path / _NON_ASCII_SEGMENT / "cafe-batch"
+    result = run(
+        [
+            str(encoding_client.console),
+            *_new_args(
+                _BATCH_NAME, dest, archetype="batch", description=_BATCH_DESCRIPTION
+            ),
+        ],
+        tmp_path,
+        env=env,
+    )
+    assert_success(result, f"batch generation (lane {lane.name})")
+    assert "Traceback" not in result.stdout + result.stderr
+
+    recorded = json.loads(
+        (dest / ".forge" / "generation.json").read_text(encoding="utf-8")
+    )
+    assert recorded["spec"]["components"]["archetype"] == "batch"
+    assert recorded["spec"]["project"]["name"] == _BATCH_NAME
+    assert recorded["spec"]["project"]["description"] == _BATCH_DESCRIPTION
+    # Every text file the client wrote decodes as UTF-8.
+    text_suffixes = {".py", ".toml", ".json", ".md", ".txt", ".typed"}
+    for path in dest.rglob("*"):
+        in_git = ".git" in path.relative_to(dest).parts
+        if path.is_file() and not in_git and path.suffix in text_suffixes:
+            path.read_bytes().decode("utf-8")
+
+    package = recorded["spec"]["project"]["package_name"]
+    sample = json.loads((dest / "data" / "sample_input.json").read_text("utf-8"))
+    job_env = {**env, "PYTHONPATH": "src"}
+    ran = run([str(encoding_client.python), "-m", package], dest, env=job_env)
+    assert_success(ran, f"batch job via python -m (lane {lane.name})")
+    output = json.loads((dest / "data" / "output.json").read_text(encoding="utf-8"))
+    assert len(output) == len(sample)
 
 
 @pytest.mark.parametrize("lane", LANES, ids=_lane_id)

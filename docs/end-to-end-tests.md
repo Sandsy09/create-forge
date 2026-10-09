@@ -288,6 +288,22 @@ through the installed console, including the terminating `run` task. The job's
 transformation, idempotency and fail-fast contract, and the wheel and sdist
 contents, are provider-owned and deliberately not re-audited here.
 
+The same issue's second pull request adds the cross-cutting evidence around that
+suite, each piece in the module that already owns its mechanism:
+`test_install_modes_select_batch_generically` and the two `--engine-source` cases
+(the immutable public `v0.7.0` tag generates, `v0.6.0` exits `3`) in
+`tests/test_e2e_installed_cutover.py`;
+`test_batch_generation_and_job_survive_every_lane` in
+`tests/test_e2e_installed_encoding.py`; the `test_batch_*` update cases in
+`tests/test_e2e_installed_update_safety.py`; and
+`tests/test_e2e_installed_cross_line.py`, which generates `library`, `cli`,
+`data-science` and `streamlit` through the **published** `create-forge 0.5.0`
+(on its own `0.6` engine) and the candidate (on `0.7.0`) and requires every file
+to be byte-identical apart from `uv.lock` and the provider version recorded in
+`.forge/generation.json`. The Windows job names an "Installed batch tests" step
+(the `alone` composition plus the fast tests), and
+`tests/test_installed_batch_evidence.py` fails the fast suite if it is dropped.
+
 The canonical
 [installed batch validation](installed-batch-validation.md) record maps every
 CF-29.02 acceptance criterion to a named test.
@@ -321,7 +337,11 @@ runs on Linux in the `e2e` job and on Windows in `e2e-windows`, which names it
 explicitly because that job's test list is hand-picked; the symlinked-parent
 case is POSIX-only. Not covered installed: the normal route's real three-way
 merge (`tests/test_update_engine.py` proves it) and renames
-([#209](https://github.com/Sandsy09/create-forge/issues/209)).
+([#209](https://github.com/Sandsy09/create-forge/issues/209)). CF-29.02 extends
+the suite with batch cases (a no-op update, a preserved local `job.py` edit and
+git-ignored output, `--dry-run`, and a changed degraded target); batch's real
+merge waits for a batch change in an `0.7.x` patch, since `0.7.0` is its first
+render.
 
 The canonical [update-safety validation](update-safety-validation.md) record
 maps every CF-22.03 acceptance criterion to a named test, and binds the evidence
