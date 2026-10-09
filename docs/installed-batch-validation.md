@@ -14,9 +14,11 @@ the Streamlit adoption. The provider owns the archetype's own evidence; this
 repository owns the installed client, filesystem, lock, and CLI path, and
 **links** the provider's records rather than restating them.
 
-CF-29.02 ships as two pull requests under one issue. This record states which
-one delivers each row; rows marked **second pull request** are decided in the
-ADR and not yet implemented when only the first has merged.
+CF-29.02 shipped as two pull requests under one issue: the first
+([#249](https://github.com/Sandsy09/create-forge/pull/249)) delivered the core
+installed suite, the recipes and the guide page; the second delivered the
+cross-cutting evidence (installation modes, Windows and non-UTF-8, update, and
+the released-client comparison). Each row below names its evidence.
 
 ## Installed pair
 
@@ -55,10 +57,10 @@ project's `poe check` still need proving at the floor and the ceiling.
 | Criterion | Evidence |
 | --- | --- |
 | AC-1: generic selection, lock restoration, checks and the bounded example job through the installed console | `test_installed_console_validates_batch_composition`, parametrised over the four compositions; `test_full_batch_composition_passes_python_window_edge` at 3.11 and 3.14. Each restores with `uv sync --all-groups --locked`, runs `uv run --locked poe check` and `uv run --locked pytest tests/test_job.py` under the provider's 600-second bound (a timeout fails and is never retried), then runs the job through the console script and `python -m`. Generic selection: every test generates with `--archetype batch --yes`, and `test_installed_list_shows_batch_from_discovery`. Interactive selection is proven in-process by CF-29.01's `tests/test_batch_adoption.py` against the real `0.7.0` engine |
-| AC-1 (installation modes) | **second pull request**: `uvx`, `uv tool install`, `pip install`, the `[legacy]` extra, and `--engine-source` at immutable tags |
+| AC-1 (installation modes) | `test_install_modes_select_batch_generically`, parametrised over `uvx`, `uv tool install`, `pip install` and the `[legacy]` extra, each asserting the committed metadata names `batch` and the `0.7.0` provider; `test_install_modes_engine_source_at_the_released_tag_generates_batch` (the immutable public `v0.7.0` tag generates) and `test_install_modes_engine_source_at_the_previous_tag_exits_3` (`v0.6.0`: exit `3`, nothing created). The helpers gained a defaulted `archetype` argument, so the existing library cases are unchanged |
 | AC-2: invalid options, incompatible providers, destination conflicts and lock failures leave no partial project or staging state | `test_previous_provider_line_is_rejected_before_any_write` (a real `0.6.0`, exit `3`) and `test_previous_provider_line_fails_doctor_not_just_new` (exit `1`, negotiation still passing); `test_installed_batch_selection_failure_is_rejected_cleanly` over four invalid selections, including an undeclared option; `test_installed_non_empty_destination_is_preserved`; `test_installed_lock_failure_leaves_no_partial_project` (a real failure, `uv` absent from `PATH`); `test_legacy_route_cannot_select_batch` |
-| AC-3: engine-native update, containment and recovery, local-data preservation; existing archetype and legacy coverage retained | **second pull request**: batch update cases and the released-client comparison. The existing modules are unchanged by the first |
-| AC-4: Windows, non-UTF-8 and Linux under the accepted support policy | Linux: the full module runs in the existing `e2e` job. **Second pull request**: batch cases in the encoding suite and the Windows `e2e-windows` list |
+| AC-3: engine-native update, containment and recovery, local-data preservation; existing archetype and legacy coverage retained | Update: `test_batch_no_op_update_changes_nothing`, `test_batch_update_preserves_a_local_job_edit_and_the_generated_output`, `test_batch_dry_run_writes_nothing` and `test_batch_degraded_update_applies_a_changed_job_and_keeps_the_output` in `tests/test_e2e_installed_update_safety.py`, using CF-22.03's techniques; the existing containment and recovery cases run unchanged. Existing archetypes: `test_existing_archetype_output_is_unchanged_across_the_provider_line` generates `library`, `cli`, `data-science` and `streamlit` through the **published** `create-forge 0.5.0` (on its own `0.6` engine) and through the candidate (on `0.7.0`) and finds every file byte-identical except `uv.lock` and the provider version in `.forge/generation.json`; `test_the_released_client_runs_on_the_previous_provider_line` and `test_the_released_client_does_not_know_batch` keep that honest. Legacy: the existing `--legacy` cases are unchanged and `test_legacy_route_cannot_select_batch` shows the registry stays Library-only |
+| AC-4: Windows, non-UTF-8 and Linux under the accepted support policy | Linux: every module above runs in the existing `e2e` job. Windows: the `e2e-windows` job gained an "Installed batch tests" step (the `alone` composition end to end plus the ten fast tests: 11 in all), and the batch install-mode and update cases ride its existing `install_modes or legacy` selection and update-safety module; `test_batch_generation_and_job_survive_every_lane` in the encoding suite runs under the `ambient`, `utf8-off` and `utf8-on` lanes on Windows Python 3.11, 3.13 and 3.14, with a non-ASCII name and description, a CJK destination, and the job run by plain `python -m` with no sync. `tests/test_installed_batch_evidence.py` fails the fast suite if the Windows step, or the `alone` composition inside it, is dropped |
 | AC-5: exact artefacts and user recipes recorded; provider specifications not duplicated | `docs/user-guide/batch.md`; `test_documented_recipe_runs_through_the_installed_console` runs each documented command, then the documented check and run; `tests/test_user_guide_recipes.py` keeps the guide and those commands in step and checks the provider link and the page's relative links. Artefacts are recorded below |
 | No batch content or validation in `create-forge` | no change under `src/`; `tests/test_archetype_parity.py::test_no_production_module_hardcodes_batch` (CF-29.01) still holds; the suite asserts no provider-owned artefact detail |
 
@@ -79,6 +81,20 @@ The job assertions are deliberately client-level: both entry points exit `0`,
 produce the output file with the sample input's record count, and agree byte for
 byte. The transformation itself, its idempotency, and its fail-fast behaviour
 are the provider's.
+
+Gaps, recorded rather than hidden:
+
+- **The real three-way merge across provider versions is not covered for
+  `batch`.** `0.7.0` is the first release containing it, so there is no older
+  batch render to differ from; `tests/test_update_engine.py` proves the merge for
+  the archetypes that have one. The batch update cases use the digest-edit
+  technique of [update-safety-validation.md](update-safety-validation.md)
+  instead. A batch change in an `0.7.x` patch is the point at which the real
+  merge can be exercised.
+- **A local-data case uses committed edits and git-ignored output, not an
+  untracked file**: an update refuses a dirty tree, so an untracked file would
+  test the refusal, which the update-safety suite already covers.
+- **Four of 640 compositions** is deliberate (see above).
 
 ## Provider-owned evidence, linked and not repeated
 
@@ -119,6 +135,33 @@ The existing e2e modules are unchanged by this pull request. They were run in
 full, module by module, against the exact `0.7.0` pair for CF-29.01
 ([#248](https://github.com/Sandsy09/create-forge/pull/248)): 161 passed and 1
 skipped (a POSIX-only symlink case) of 162.
+
+The second pull request was validated on the same machine on 2026-10-09, on
+`main` at `6f15a9f` (the first pull request) plus this change. It edits three
+existing modules and adds one, and changes nothing under `src/` or in the shared
+harness, so those three were re-run **in full** and the rest stand on the runs
+above.
+
+| Command | Result |
+| --- | --- |
+| `uv run pytest -m e2e tests/test_e2e_installed_cutover.py` | 24 passed in 153.44s: the 18 existing cases and the 6 new ones (four install modes, `--engine-source` at `v0.7.0` and at `v0.6.0`) |
+| `uv run pytest -m e2e tests/test_e2e_installed_encoding.py` | 23 passed in 72.47s, including `test_batch_generation_and_job_survive_every_lane` under `ambient`, `utf8-off` and `utf8-on`, each lane verified non-UTF-8 or the test fails |
+| `uv run pytest -m e2e tests/test_e2e_installed_update_safety.py` | 18 passed, 1 skipped (POSIX-only symlinked parent) in 63.81s, including the 4 new batch cases |
+| `uv run pytest -m e2e tests/test_e2e_installed_cross_line.py` | 6 passed in 40.32s: the two controls and the four archetypes |
+| `uv run poe check` | 1616 passed, 11 skipped, 207 deselected; format, lint and mypy strict clean |
+| `uv run poe check:adr`, `check:workflows`, `check:wheel`, strict `docs:build`, `poe audit` | passed; the batch page is still absent from the site; the audit is clean in all three scopes |
+
+The guards added here were mutation-checked rather than assumed. Dropping the
+batch module from the Windows job fails two of the three cases in
+`tests/test_installed_batch_evidence.py`, and excluding the `alone` composition
+from its selection fails the third; perturbing one byte of the candidate's
+`README.md` makes the released-client comparison fail with `['README.md']`.
+
+The first pull request's protected CI run
+([37915766414](https://github.com/Sandsy09/create-forge/actions/runs/37915766414))
+is the CI-runtime evidence for the batch suite: the Linux `e2e` job went from
+about 4 minutes to 8m05s, against its 60-minute limit, and the Windows lifecycle
+job took 3m17s against 45.
 
 ## Boundaries retained
 

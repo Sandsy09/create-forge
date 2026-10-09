@@ -156,6 +156,15 @@ jobs:
       - name: Installed update-safety tests
         run: uv run pytest tests/test_e2e_installed_update_safety.py
 
+      # CF-29.02 / ADR 0062: the batch suite's OS-sensitive half -- the `alone`
+      # composition end to end (lock restoration and the job through both entry
+      # points), the failure matrix, and the previous-line engine. The heavier
+      # compositions, the Python window edges and the recipes add no second-OS
+      # information and are Linux-only. Hand-picked, so
+      # tests/test_installed_batch_evidence.py guards that this step stays.
+      - name: Installed batch tests
+        run: uv run pytest tests/test_e2e_installed_batch.py -k "not window_edge and not recipe and not jupyter and not scientific"
+
   # ---------------------------------------------------------------------------
   # CF-23.02 / ADR 0057: proves the installed console under a *verified*
   # non-UTF-8 Windows interpreter setting, across the full supported Python

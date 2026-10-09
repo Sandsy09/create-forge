@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -165,17 +166,21 @@ def _tool_bin_script(bin_dir: Path) -> Path:
 
 
 def _engine_new_args(
-    dest: Path, *, project_name: str = "Cutover Install Mode"
+    dest: Path,
+    *,
+    project_name: str = "Cutover Install Mode",
+    archetype: str = "library",
 ) -> list[str]:
-    """`new --archetype library --yes` args for a plain engine-path
+    """`new --archetype <archetype> --yes` args for a plain engine-path
     generation -- no capabilities, matching the answers every install-mode
-    test needs and nothing more.
+    test needs and nothing more. `archetype` defaults to `library`, so every
+    pre-existing caller is unchanged; CF-29.02 (ADR 0062) passes `batch`.
     """
     args = [
         "new",
         project_name,
         "--archetype",
-        "library",
+        archetype,
         "--yes",
         "--path",
         str(dest),
@@ -196,6 +201,159 @@ def _assert_engine_generation(dest: Path) -> None:
     assert (dest / "pyproject.toml").is_file()
     assert (dest / ".forge" / "generation.json").is_file()
     assert (dest / "uv.lock").is_file()
+
+
+# --------------------------------------------------------------------------
+# CF-29.02 (ADR 0062): the batch archetype through every install mode
+# --------------------------------------------------------------------------
+
+_BATCH = "batch"
+_INSTALL_MODES = ("uvx", "uv-tool", "pip", "legacy-extra")
+
+
+def _assert_generated_archetype(dest: Path, archetype: str) -> None:
+    """The committed metadata names the archetype the console was asked for and
+    the reviewed engine that rendered it -- a client-level proof that the
+    install mode generated *batch*, not merely some project, without restating
+    anything about what a batch project contains.
+    """
+    _assert_engine_generation(dest)
+    recorded = json.loads(
+        (dest / ".forge" / "generation.json").read_text(encoding="utf-8")
+    )
+    assert recorded["spec"]["components"]["archetype"] == archetype
+    assert recorded["provider"] == {
+        "distribution": "forge-template",
+        "version": ENGINE_VERSION,
+    }
+
+
+@contextmanager
+def _console_for_mode(
+    mode: str,
+    candidate_wheel: Path,
+    e2e_child_env: dict[str, str],
+    installed_client: InstalledClient,
+    root: Path,
+) -> Iterator[tuple[list[str], Path, Mapping[str, str]]]:
+    """The argv prefix, working directory and environment of one install mode's
+    console, built the same way the pre-existing per-mode tests build theirs
+    (`uvx --from <wheel>`, `uv tool install <wheel>`, a pip-style virtual
+    environment, and the shared `[legacy]`-extra client).
+    """
+    if mode == "uvx":
+        env = _isolated_tool_env(e2e_child_env, root / "config")
+        yield ["uvx", "--from", str(candidate_wheel), "create-forge"], root, env
+    elif mode == "uv-tool":
+        install_env = dict(e2e_child_env)
+        install_env["UV_TOOL_DIR"] = str(root / "tools")
+        install_env["UV_TOOL_BIN_DIR"] = str(root / "bin")
+        installed = run(
+            ["uv", "tool", "install", str(candidate_wheel)], root, env=install_env
+        )
+        assert_success(installed, "uv tool install create-forge")
+        console = _tool_bin_script(root / "bin")
+        assert console.is_file(), console
+        yield [str(console)], root, _isolated_tool_env(e2e_child_env, root / "config")
+    elif mode == "pip":
+        with build_client(candidate_wheel, e2e_child_env) as client:
+            yield [str(client.console)], client.root, client.env
+    else:
+        assert mode == "legacy-extra", mode
+        yield (
+            [str(installed_client.console)],
+            installed_client.root,
+            installed_client.env,
+        )
+
+
+@pytest.mark.parametrize("mode", _INSTALL_MODES)
+def test_install_modes_select_batch_generically(
+    mode: str,
+    candidate_wheel: Path,
+    e2e_child_env: dict[str, str],
+    installed_client: InstalledClient,
+    tmp_path: Path,
+) -> None:
+    """CF-29.02 AC-1: each contractual install mode resolves the required
+    engine and generates `batch` through the generic `--archetype` contract --
+    there is no batch-specific install path or flag. Named `install_modes` so
+    the hand-picked Windows job's `-k "install_modes or legacy"` selection runs
+    it there too, where `uvx` and `uv tool install` console scripts differ most.
+    """
+    root = tmp_path / mode
+    root.mkdir()
+    with _console_for_mode(
+        mode, candidate_wheel, e2e_child_env, installed_client, root
+    ) as (prefix, cwd, env):
+        dest = cwd / f"batch-{mode}"
+        generated = run(
+            [*prefix, *_engine_new_args(dest, archetype=_BATCH)], cwd, env=env
+        )
+        assert_success(generated, f"{mode} create-forge new --archetype batch")
+        _assert_generated_archetype(dest, _BATCH)
+
+
+def test_install_modes_engine_source_at_the_released_tag_generates_batch(
+    installed_client: InstalledClient, _forge_template_reachable: None
+) -> None:
+    """CF-29.02 AC-1: the isolated `--engine-source` route, pointed at the
+    immutable public `v0.7.0` tag, provisions that engine out of process and
+    generates `batch` -- the published artefact, not a sibling checkout. Such a
+    project records no provenance (`create-forge update` does not apply to it),
+    so the proof is the generated tree itself plus the explicit notice.
+    """
+    dest = installed_client.root / "engine-source" / "released-tag"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    result = run(
+        [
+            str(installed_client.console),
+            *_engine_new_args(dest, archetype=_BATCH),
+            "--engine-source",
+            "https://github.com/Sandsy09/forge-template",
+            "--engine-ref",
+            f"v{ENGINE_VERSION}",
+        ],
+        dest.parent,
+        env=installed_client.env,
+    )
+    assert_success(result, "new --engine-source @ the released tag")
+    assert (dest / "pyproject.toml").is_file()
+    assert (dest / "uv.lock").is_file()
+    assert (dest / "src").is_dir()
+    assert not (dest / ".forge").exists()
+    assert "create-forge update" in " ".join(result.stdout.split())
+
+
+def test_install_modes_engine_source_at_the_previous_tag_exits_3(
+    installed_client: InstalledClient, _forge_template_reachable: None
+) -> None:
+    """The previous line's tag lacks `batch` and is outside the supported range,
+    so the isolated route rejects it at exit `3` before generating anything --
+    the range check fires before the missing archetype could surface as an
+    "unknown archetype". Complements the pre-existing `v0.3.0` boundary case.
+    """
+    dest = installed_client.root / "engine-source" / "previous-tag"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    result = run(
+        [
+            str(installed_client.console),
+            *_engine_new_args(dest, archetype=_BATCH),
+            "--engine-source",
+            "https://github.com/Sandsy09/forge-template",
+            "--engine-ref",
+            "v0.6.0",
+        ],
+        dest.parent,
+        env=installed_client.env,
+    )
+    normalised = " ".join((result.stdout + result.stderr).split())
+    assert result.returncode == 3, normalised
+    assert "forge-template>=0.7,<0.8" in normalised
+    assert not dest.exists()
+    assert [
+        p for p in dest.parent.iterdir() if p.name.startswith(".create-forge-")
+    ] == []
 
 
 # --------------------------------------------------------------------------
