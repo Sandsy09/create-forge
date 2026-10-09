@@ -177,7 +177,7 @@ def test_candidate_wheel_installs_the_reviewed_pair(
     engine = _base_requirement(requirements, "forge-template")
     uv = _base_requirement(requirements, "uv")
     assert {str(specifier) for specifier in engine.specifier} == {">=0.7", "<0.8"}
-    assert {str(specifier) for specifier in uv.specifier} == {">=0.12", "<0.13"}
+    assert {str(specifier) for specifier in uv.specifier} == {">=0.12.18", "<0.13"}
     assert Version(payload["uv_version"]) in uv.specifier
 
     # ADR 0038 / ADR 0039: the reviewed Copier floor is carried through into
