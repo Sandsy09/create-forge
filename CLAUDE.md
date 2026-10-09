@@ -250,7 +250,11 @@ canonical [dependency audit contract](docs/dependency-audit.md).
 `create-forge 0.5.0` is the latest **tagged and published** release — the
 Streamlit client release (CF-21.03, ADR 0056): it pairs with the
 `forge-template 0.6.0` provider line (`forge-template>=0.6,<0.7`, line
-`v0.5.x-engine`), which adds the `streamlit` archetype. It follows
+`v0.5.x-engine`), which adds the `streamlit` archetype. `main` is ahead of it:
+CF-29.01 (ADR 0061) has moved the declared range to the `forge-template 0.7.0`
+batch provider line (`>=0.7,<0.8`), which adds the `batch` archetype, and made
+`doctor`'s `engine` check apply that range. That range is **unreleased** until
+CF-29.03; the user guide keeps naming the published one. `0.5.0` follows
 `create-forge 0.4.0`, the Engine-Default Cutover (CF-EPIC-18, ADR 0049), which
 made the `forge-template` engine the default, required `new` path and moved
 `copier` to the optional `legacy` extra; `0.4.x` keeps declaring

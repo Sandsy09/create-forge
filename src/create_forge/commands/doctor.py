@@ -1,9 +1,9 @@
 """`doctor` -- environment diagnostics, table and `--json` forms.
 
 Stays offline: reports the registry's bundled template source but never
-resolves a ref, and negotiates against the installed engine (if any) without
-running a compatibility check of its own -- a protocol mismatch is one failed
-check row here, never a crash.
+resolves a ref, and negotiates against the installed engine (if any). An
+installed engine outside the declared package range (ADR 0061) and a protocol
+mismatch are each one failed check row here, never a crash.
 """
 
 from __future__ import annotations
@@ -30,6 +30,8 @@ from create_forge.compat import (
     SUPPORTED_ENGINE_RANGE,
     SUPPORTED_GENERATION_METADATA_VERSIONS,
     SUPPORTED_PROJECTSPEC_PROTOCOLS,
+    EngineCompatibilityError,
+    require_supported_package,
 )
 from create_forge.config import config_path, load_config
 from create_forge.registry import load_registry
@@ -274,19 +276,51 @@ def _tooling_diagnostics(checks: list[Check]) -> tuple[CopierCache | None, UvSta
     )
 
 
+def _engine_check(engine_package: str | None, engine_range: str) -> Check:
+    """The `engine` row: installed *and* inside the declared package range.
+
+    Range membership goes through `compat.require_supported_package`, the one
+    check `new` applies, so `doctor` cannot report healthy for an engine `new`
+    refuses with exit `3` (ADR 0061, closing the gap the FT-28.03 hand-off
+    on CF-29.01 recorded).
+    """
+    if engine_package is None:
+        return Check(
+            "engine",
+            False,
+            f"not installed (supports {engine_range}) — reinstall create-forge",
+        )
+    try:
+        require_supported_package(engine_package)
+    except EngineCompatibilityError:
+        return Check(
+            "engine",
+            False,
+            f"{ENGINE_DISTRIBUTION} {engine_package} is outside the supported "
+            f"{engine_range} — `new` will refuse it; reinstall create-forge",
+        )
+    return Check(
+        "engine",
+        True,
+        f"{ENGINE_DISTRIBUTION} {engine_package} (supports {engine_range})",
+    )
+
+
 def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gathering every doctor fact and check, mirroring `_run_engine`'s own justification for a single unbroken flow rather than an arbitrary split
     """Run every doctor check and collect every reportable fact.
 
     `doctor` stays offline: it reports the registry's bundled template source
     but never resolves a ref, since that would mean a network call for what
     is meant to be a fast local health check. Since ADR 0040 decision 6,
-    engine presence is checked via `importlib.metadata` (informational,
-    matching every other tool row) *and* a real negotiation through
-    `engine.get_info()`, which performs no compatibility check of its own --
-    a protocol/`metadata_version` mismatch surfaces as one failed check row
-    here rather than raising `EngineCompatibilityError` and crashing `doctor`
-    outright. `*_detected` fields stay `None` only when the engine cannot be
-    imported at all.
+    engine presence is checked via `importlib.metadata`, and since ADR 0061
+    (CF-29.01) that row also fails when the installed version is outside
+    `SUPPORTED_ENGINE_RANGE` -- the same `require_supported_package` check
+    `new` applies, so `doctor` can no longer report healthy for an engine
+    `new` refuses. A real negotiation runs through `engine.get_info()`, which
+    performs no compatibility check of its own -- a protocol/`metadata_version`
+    mismatch surfaces as one failed check row here rather than raising
+    `EngineCompatibilityError` and crashing `doctor` outright. `*_detected`
+    fields stay `None` only when the engine cannot be imported at all.
     """
     checks: list[Check] = []
 
@@ -360,13 +394,7 @@ def _gather_diagnostics() -> Diagnostics:  # noqa: PLR0915 - one linear pass gat
     )
     info("template source", source_detail)
     info("integration line", INTEGRATION_LINE)
-    check(
-        engine_package is not None,
-        "engine",
-        f"{ENGINE_DISTRIBUTION} {engine_package} (supports {engine_range})"
-        if engine_package is not None
-        else f"not installed (supports {engine_range}) — reinstall create-forge",
-    )
+    checks.append(_engine_check(engine_package, engine_range))
 
     projectspec_detected: str | None = None
     manifest_detected: str | None = None

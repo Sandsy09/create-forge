@@ -30,7 +30,10 @@ release, moving it to `>=0.5,<0.6`; and CF-21.01
 ([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) adopted the
 reviewed `0.6.0` Streamlit provider release, moving it to `>=0.6,<0.7`
 (released as `create-forge 0.5.0` by CF-21.03, [ADR 0056](adr/0056-publish-create-forge-0-5-0.md);
-`create-forge 0.4.0` keeps declaring `>=0.5,<0.6`). `copier`
+`create-forge 0.4.0` keeps declaring `>=0.5,<0.6`); and CF-29.01
+([ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)) adopted the
+reviewed `0.7.0` batch provider release, moving it to `>=0.7,<0.8` (unreleased
+until CF-29.03; published `create-forge 0.5.0` keeps declaring `>=0.6,<0.7`). `copier`
 is now the compatibility-line dependency for the `--legacy` path instead,
 behind its own optional extra. **Two**
 compatibility-line dependencies exist simultaneously, each governing its
@@ -40,7 +43,7 @@ own path.
 
 | create-forge line | Compatibility-line dependency | Declared range | Status |
 | --- | --- | --- | --- |
-| v0.5.x default `new` (required) | `forge-template` | `>=0.6,<0.7` | Current architecture; the `0.6` Streamlit provider line (ADR 0050, CF-21.01), released as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
+| v0.5.x default `new` (required) | `forge-template` | `>=0.7,<0.8` | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), **unreleased** -- published `create-forge 0.5.0` (ADR 0056, CF-21.03) declares `>=0.6,<0.7` (ADR 0050, CF-21.01) |
 | v0.4.x default `new` (required) | `forge-template` | `>=0.5,<0.6` | Superseded by v0.5.x (ADR 0056); the engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
 | v0.3.x default `new` | `copier` | `>=9.16,<10` | Now the `--legacy` route's dependency, behind the optional `legacy` extra (floor raised to 9.15.2 by ADR 0038, then to 9.16 by ADR 0039 on required-behaviour evidence) |
 | v0.3.x `engine` extra (`--engine-preview`) | `forge-template` | `>=0.4.1,<0.5` | Superseded by v0.4.x (ADR 0042) |
@@ -61,7 +64,9 @@ fixes that release as **`create-forge 0.4.0`**, adopting
 governs, performed by
 [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158). CF-21.01
 ([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)) crossed the
-next line, to `>=0.6,<0.7`, the same way. `typer`, `questionary`,
+next line, to `>=0.6,<0.7`, the same way, and CF-29.01
+([ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)) crossed the one
+after, to `>=0.7,<0.8`. `typer`, `questionary`,
 `pydantic`, and `rich` remain ordinary dependencies: unbounded above, freely
 updated by Dependabot, out of scope for everything below. `platformdirs`
 ([ADR 0039](adr/0039-copier-cache-diagnostics.md)) is likewise ordinary —
@@ -124,6 +129,12 @@ it moved `forge-template` from `>=0.5,<0.6` to `>=0.6,<0.7` for the Streamlit
 provider release, again with no `engine.py` edit, because `0.6.0` changed
 neither protocol tuple nor the public facade -- its source diff over the
 facade is empty.
+[ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md) repeats it for
+`>=0.6,<0.7` to `>=0.7,<0.8` (the batch provider release): the facade diff is
+empty again and no protocol tuple moved, though the provider's `engine.py` was
+split into private modules behind that frozen facade. It also made `doctor`'s
+`engine` row apply this range -- a pre-existing gap (it checked presence
+only) that the provider's hand-off recorded.
 
 Breaking changes then follow the sequence the
 [integration contract](integration-contract.md#release-coordination) already

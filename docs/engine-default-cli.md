@@ -74,7 +74,10 @@ decide" section below names their owning issues.
    [CF-18.01](https://github.com/Sandsy09/create-forge/issues/158)'s, not this
    contract's (and the later `>=0.6,<0.7` Streamlit provider line is
    [CF-21.01](https://github.com/Sandsy09/create-forge/issues/165)'s, by
-   [ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)).
+   [ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md); the
+   `>=0.7,<0.8` batch provider line after it is
+   [CF-29.01](https://github.com/Sandsy09/create-forge/issues/204)'s, by
+   [ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)).
 
 3. **`copier` becomes the optional `legacy` extra.**
    `pip install 'create-forge[legacy]'` adds it back for the explicit legacy

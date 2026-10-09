@@ -91,8 +91,8 @@ uv run --no-project --isolated --with . --with ../forge-template --with pytest p
 This builds current local source, including uncommitted changes, overriding
 create-forge's normal PyPI resolution for that one run only. It exercises
 only the top-level public `forge_template` facade. The sibling must still
-satisfy the declared range (`>=0.6,<0.7` since
-[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md)); a
+satisfy the declared range (`>=0.7,<0.8` since
+[ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)); a
 version outside it fails until the range, contract, and tests are deliberately
 moved together. See the canonical
 [cross-repository engine contract tests](engine-contract-tests.md).
