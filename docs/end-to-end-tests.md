@@ -268,6 +268,30 @@ The canonical
 [installed Streamlit validation](installed-streamlit-validation.md) record maps
 every CF-21.02 acceptance criterion to a named test.
 
+## The installed batch path
+
+`tests/test_e2e_installed_batch.py` (CF-29.02,
+[ADR 0062](adr/0062-validate-batch-through-the-installed-candidate.md)) reuses
+`tests/installed_client.py` and the session `installed_client` fixture -- the
+candidate wheel with exactly the published `forge-template 0.7.0` -- and proves
+only what the client owns: the provider's four accepted batch compositions each
+generate twice with byte-identical output including the client-finalised lock,
+match the installed pipeline's own ownership plan, restore from the committed
+lock, and pass the generated project's `poe check` and its `tests/test_job.py`
+smoke under the provider's 600-second bound (the full composition again at
+Python 3.11 and 3.14); the example job then runs through both its console script
+and `python -m`; a real previous-line `forge-template 0.6.0` is rejected at exit
+`3` by `new` and at exit `1` by `doctor`; the provider's rejection matrix, a
+non-empty destination, a real lock failure and `--legacy --archetype batch` each
+leave nothing behind; and the recipes in `docs/user-guide/batch.md` run verbatim
+through the installed console, including the terminating `run` task. The job's
+transformation, idempotency and fail-fast contract, and the wheel and sdist
+contents, are provider-owned and deliberately not re-audited here.
+
+The canonical
+[installed batch validation](installed-batch-validation.md) record maps every
+CF-29.02 acceptance criterion to a named test.
+
 ## The installed update-safety path
 
 `tests/test_e2e_installed_update_safety.py` (CF-22.03,

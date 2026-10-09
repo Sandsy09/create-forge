@@ -46,6 +46,7 @@ INSTALLED_DATA_SCIENCE_VALIDATION = (
 INSTALLED_STREAMLIT_VALIDATION = (
     REPO_ROOT / "docs" / "installed-streamlit-validation.md"
 )
+INSTALLED_BATCH_VALIDATION = REPO_ROOT / "docs" / "installed-batch-validation.md"
 UPDATE_SAFETY_VALIDATION = REPO_ROOT / "docs" / "update-safety-validation.md"
 SUBPROCESS_OUTPUT = REPO_ROOT / "docs" / "subprocess-output.md"
 CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
@@ -439,6 +440,21 @@ def test_installed_streamlit_validation_doc_is_linked_from_entry_points() -> Non
         )
 
     assert INSTALLED_STREAMLIT_VALIDATION.is_file()
+
+
+def test_installed_batch_validation_doc_is_linked_from_entry_points() -> None:
+    """CF-29.02's installed batch evidence (ADR 0062) must stay discoverable,
+    mirroring the CF-21.02 guard above.
+    """
+    link_re = re.compile(r"\([^)]*installed-batch-validation\.md[^)]*\)")
+
+    for path in (DOCS_INDEX, END_TO_END_TESTS):
+        text = path.read_text(encoding="utf-8")
+        assert link_re.search(text), (
+            f"{path.name} does not link installed-batch-validation.md"
+        )
+
+    assert INSTALLED_BATCH_VALIDATION.is_file()
 
 
 def test_update_safety_validation_doc_is_linked_from_entry_points() -> None:

@@ -7,6 +7,13 @@ edit_uri: edit/main/docs/user-guide/
 docs_dir: docs/user-guide
 site_dir: site
 
+# The batch guide is written and drift-tested now (CF-29.02, ADR 0062) but must
+# not deploy until the release that makes it true: the site builds from `main`
+# on any guide change, and published `create-forge 0.5.0` cannot select `batch`.
+# CF-29.03 removes this entry together with adding the nav item.
+exclude_docs: |
+  batch.md
+
 theme:
   name: material
   custom_dir: docs/overrides
