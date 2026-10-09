@@ -1,7 +1,7 @@
 """Installed-client Streamlit end-to-end validation (CF-21.02).
 
 Builds the create-forge candidate wheel, installs it alongside the reviewed
-PyPI ``forge-template 0.6.0`` release into a clean virtual environment, then
+PyPI ``forge-template 0.7.0`` release into a clean virtual environment, then
 drives the real installed ``create-forge`` console script through its default
 (engine) `new` path -- the same installed boundary
 `tests/test_e2e_installed_data_science.py` (CF-14.02) established for Data
@@ -390,7 +390,7 @@ def previous_line_client(
 ) -> Iterator[InstalledClient]:
     """The candidate wheel with a real `forge-template` from the previous
     compatibility line forced in afterward -- passing it to the main install
-    would conflict with the wheel's own declared `>=0.6,<0.7` requirement and
+    would conflict with the wheel's own declared `>=0.7,<0.8` requirement and
     fail the resolver outright, so this is a second, targeted reinstall.
     """
     with build_client(

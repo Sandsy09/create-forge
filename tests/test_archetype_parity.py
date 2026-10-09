@@ -174,6 +174,26 @@ def test_streamlit_is_discovered_as_an_optionless_archetype() -> None:
     assert streamlit.options == ()
 
 
+def test_batch_is_discovered_as_an_optionless_archetype() -> None:
+    """CF-29.01 (ADR 0061): the reviewed `0.7.0` provider's one catalogue
+    addition reaches this client through discovery alone, exactly as
+    `streamlit` did. Named so the line silently losing it -- a pin drifting
+    back below `0.7` -- fails loudly rather than quietly shrinking the
+    parametrisation above.
+
+    `batch` declares no `requires`, `conflicts` or options, so it is pure
+    catalogue data behind the unchanged public facade.
+    """
+    descriptors = {d.id: d for d in engine.discover()}
+
+    assert "batch" in descriptors
+    batch = descriptors["batch"]
+    assert batch.kind == "archetype"
+    assert batch.requires == ()
+    assert batch.conflicts == ()
+    assert batch.options == ()
+
+
 def test_no_command_name_field_exists_anywhere() -> None:
     """Criterion 5: the CLI Application contract derives its console command
     solely from `ProjectSpec.project.repository_name`. `create-forge` must
@@ -252,6 +272,25 @@ def test_no_shipped_module_hardcodes_a_discovered_component_id() -> None:
         )
 
 
+def _assert_no_production_module_hardcodes(archetype: str) -> None:
+    """Walk every module under `src/create_forge` for the one literal,
+    case-insensitively so a display-name comparison (`"Streamlit"`) is caught
+    too. Equality on a string constant only: docstring and comment prose that
+    merely mentions the provider cannot trip it, exactly as in
+    `_string_literals`.
+    """
+    modules = production_modules()
+    assert modules, "expected to scan the shipped modules"
+
+    for path in modules:
+        hardcoded = {s for s in _string_literals(path) if s.lower() == archetype}
+        assert not hardcoded, (
+            f"{path.name} hardcodes {sorted(hardcoded)} -- {archetype} must be "
+            "selected through the generic archetype/component contract "
+            "(CF-ROADMAP-02-AC-03, ADR 0050, ADR 0061), never by name."
+        )
+
+
 def test_no_production_module_hardcodes_streamlit() -> None:
     """CF-21.01 / CF-ROADMAP-02-AC-03 (ADR 0050): *no* production module names
     `streamlit` to decide catalogue, validation, composition or generated
@@ -259,19 +298,14 @@ def test_no_production_module_hardcodes_streamlit() -> None:
 
     The guard above scans only the modules that see component ids and reads
     the ids from live discovery; the acceptance criterion is wider -- "no
-    production module" -- so this walks every module under `src/create_forge`
-    for the one literal, case-insensitively so a display-name comparison
-    (`"Streamlit"`) is caught too. Equality on a string constant only:
-    docstring and comment prose that merely mentions the provider cannot trip
-    it, exactly as in `_string_literals`.
+    production module" -- so this walks every module under `src/create_forge`.
     """
-    modules = production_modules()
-    assert modules, "expected to scan the shipped modules"
+    _assert_no_production_module_hardcodes("streamlit")
 
-    for path in modules:
-        hardcoded = {s for s in _string_literals(path) if s.lower() == "streamlit"}
-        assert not hardcoded, (
-            f"{path.name} hardcodes {sorted(hardcoded)} -- Streamlit must be "
-            "selected through the generic archetype/component contract "
-            "(CF-ROADMAP-02-AC-03, ADR 0050), never by name."
-        )
+
+def test_no_production_module_hardcodes_batch() -> None:
+    """CF-29.01 / CF-ROADMAP-02-AC-03 (ADR 0061): the same guard for the
+    `0.7.0` provider's `batch` archetype -- no production module names it, so
+    it is reached only through discovery and the generic selection contract.
+    """
+    _assert_no_production_module_hardcodes("batch")

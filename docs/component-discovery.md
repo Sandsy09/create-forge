@@ -26,14 +26,17 @@ Git/hook lifecycle, and engine-native `update` remain open, filed as
 The `forge-template` dependency -- required since CF-18.01, previously the
 optional `engine` extra ([#9](https://github.com/Sandsy09/create-forge/issues/9),
 [ADR 0018](adr/0018-pypi-distribution-and-the-first-engine-range.md)) -- is
-range-bound to `>=0.6,<0.7`
-([ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md), following
+range-bound to `>=0.7,<0.8`
+([ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md), following
+[ADR 0050](adr/0050-adopt-the-0-6-streamlit-provider-line.md) and
 [ADR 0042](adr/0042-engine-cutover-acceptance-and-support-policy.md)). That
-production catalogue ships fifteen descriptors, including `library`, the
-optionless `cli` and `streamlit` archetypes, and `data-science`, plus the
-`github` platform and eight tooling capabilities, which discovery returns
-unchanged. `streamlit` reaches the client through discovery alone: no shipped
-module names it, and it declares no requirements, conflicts or options.
+production catalogue ships sixteen descriptors, including `library`, the
+optionless `cli`, `streamlit` and `batch` archetypes, and `data-science`, plus
+the `github` platform and eight tooling capabilities, which discovery returns
+unchanged. `streamlit` and `batch` reach the client through discovery alone: no
+shipped module names either, and each declares no requirements, conflicts or
+options. Archetype order in the interactive prompt is the provider's discovery
+order, which the client does not reorder or default (`batch` sorts first).
 `pipeline.discover_catalogue()` wraps one `engine.discover()` call in a frozen
 `Catalogue` with kind-grouped access (`archetypes`, `of_kind`, `get`,
 `kind_of`, `required_ids`), so `cli.py` selects every component kind from a
@@ -57,13 +60,13 @@ itself, not that selection layer.
 
 1. call the public `forge_template.get_engine_info()` facade once;
 2. require the installed package version to fall within
-   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.6,<0.7`);
+   `create_forge.compat.SUPPORTED_ENGINE_RANGE` (`>=0.7,<0.8`);
 3. require an overlap between the installed engine's ProjectSpec protocols and
    `create_forge.compat.SUPPORTED_PROJECTSPEC_PROTOCOLS`;
 4. require an overlap between its component-manifest protocols and
    `create_forge.compat.SUPPORTED_COMPONENT_MANIFEST_PROTOCOLS` (`(1, 2, 3)`,
    widened from `(1, 2)` at the `0.5.0` cutover for protocol-3 rename and
-   regeneration records; the `streamlit` manifest is protocol-2); and
+   regeneration records; the `streamlit` and `batch` manifests are protocol-2); and
 5. call the public `forge_template.discover_components()` facade.
 
 A package outside the range, or either disjoint protocol set, raises

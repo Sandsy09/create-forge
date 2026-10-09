@@ -76,7 +76,7 @@ def test_doctor_fails_when_the_engine_is_not_installed(
     assert "create-forge" in result.output
     assert "copier" in result.output
     assert "not installed" in result.output
-    assert "forge-template>=0.6,<0.7" in result.output
+    assert "forge-template>=0.7,<0.8" in result.output
     assert "engine" in result.output
     assert "integration line" in result.output
     assert "v0.5.x-engine" in result.output
@@ -90,7 +90,7 @@ def test_doctor_reports_the_installed_engine_package_when_present(
     passes.
     """
     monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
-    _show_engine_extra(monkeypatch, "0.6.0")
+    _show_engine_extra(monkeypatch, "0.7.0")
 
     table_result = runner.invoke(app, ["doctor"])
     result = runner.invoke(app, ["doctor", "--json"])
@@ -99,8 +99,55 @@ def test_doctor_reports_the_installed_engine_package_when_present(
     assert "integration line" in table_result.output
     assert "v0.5.x-engine" in table_result.output
     payload = json.loads(result.output)
-    assert payload["integration"]["engine_package"] == "0.6.0"
+    assert payload["integration"]["engine_package"] == "0.7.0"
     assert payload["integration"]["line"] == "v0.5.x-engine"
+
+
+@pytest.mark.parametrize("installed", ["0.6.0", "0.8.0"])
+def test_doctor_fails_an_installed_engine_outside_the_supported_range(
+    monkeypatch: pytest.MonkeyPatch, installed: str
+) -> None:
+    """ADR 0061 (CF-29.01): `doctor` applies the same package-range check
+    `new` does. Before it, the `engine` row passed on presence alone, so
+    `doctor --json` reported `ok: true` for an engine `new` refuses with exit
+    `3`. Both neighbours of the range are exercised: the previous line and the
+    excluded upper bound.
+
+    Protocol negotiation still runs against the real engine, so it keeps
+    passing -- the failure is attributable to the package range alone.
+    """
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
+    _show_engine_extra(monkeypatch, installed)
+
+    table_result = runner.invoke(app, ["doctor"])
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert table_result.exit_code == 1, table_result.output
+    assert result.exit_code == 1, result.output
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    checks = {c["name"]: c for c in payload["checks"]}
+    assert checks["engine"]["ok"] is False
+    assert installed in checks["engine"]["detail"]
+    assert "forge-template>=0.7,<0.8" in checks["engine"]["detail"]
+    assert checks["engine negotiation"]["ok"] is True
+    assert payload["integration"]["engine_package"] == installed
+    assert payload["integration"]["projectspec_protocol"]["detected"] is not None
+
+
+@pytest.mark.parametrize("installed", ["0.7.0", "0.7.9"])
+def test_doctor_passes_an_installed_engine_inside_the_supported_range(
+    monkeypatch: pytest.MonkeyPatch, installed: str
+) -> None:
+    """The lower bound and a later patch of the line both pass the `engine` row."""
+    monkeypatch.setattr(doctor_module, "_git_config", lambda _key: "test")
+    _show_engine_extra(monkeypatch, installed)
+
+    result = runner.invoke(app, ["doctor", "--json"])
+
+    assert result.exit_code == 0, result.output
+    checks = {c["name"]: c for c in json.loads(result.output)["checks"]}
+    assert checks["engine"]["ok"] is True
 
 
 def test_doctor_json_emits_the_documented_shape(
@@ -122,7 +169,7 @@ def test_doctor_json_emits_the_documented_shape(
     integration = payload["integration"]
     assert integration["line"] == "v0.5.x-engine"
     assert integration["engine_package"] is not None
-    assert integration["engine_range"] == "forge-template>=0.6,<0.7"
+    assert integration["engine_range"] == "forge-template>=0.7,<0.8"
     assert integration["projectspec_protocol"]["supported"] == "1"
     assert integration["projectspec_protocol"]["detected"] is not None
     assert integration["component_manifest_protocol"]["supported"] == "1,2,3"

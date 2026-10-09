@@ -52,17 +52,20 @@ retained `--template-url` under `--legacy` — remains
 the `forge-template>=0.6,<0.7` Streamlit provider line, which
 [CF-21.03](https://github.com/Sandsy09/create-forge/issues/167)
 ([ADR 0056](adr/0056-publish-create-forge-0-5-0.md)) released as
-`create-forge 0.5.0`.
+`create-forge 0.5.0`. [CF-29.01](https://github.com/Sandsy09/create-forge/issues/204)
+([ADR 0061](adr/0061-adopt-the-0-7-batch-provider-line.md)) crossed to the
+`forge-template>=0.7,<0.8` batch provider line, not yet released.
 
-`forge-template 0.6.0` is the lower bound of the current line and its current
-compatible release — the first to discover the `streamlit` archetype, changing
-no protocol tuple or `metadata_version`. `0.5.0` was the first to publish
+`forge-template 0.7.0` is the lower bound of the current line and its current
+compatible release — the first to discover the `batch` archetype, changing
+no protocol tuple or `metadata_version`. `0.6.0` was the first to discover the
+`streamlit` archetype, likewise changing neither. `0.5.0` was the first to publish
 `metadata_version` and component-manifest protocol `3`. `create-forge 0.2.1` added
 `uv>=0.12,<0.13` to the same dependency set so the client can create the
 engine-generated project's lock before finalisation; it is now required
 alongside the engine rather than bundled in its extra.
 
-Adopting the 0.5 and 0.6 lines keeps the Data Science components discoverable through
+Adopting the 0.5, 0.6 and 0.7 lines keeps the Data Science components discoverable through
 `--archetype data-science`. CF-13.02
 ([ADR 0027](adr/0027-generic-component-selection-conventions.md)) fixed the
 conventions for selecting them — capabilities, platforms, component options —
@@ -73,8 +76,8 @@ it, and CF-13.05
 ([ADR 0030](adr/0030-data-science-preview-pipeline-validation.md)) proved the
 Data Science composition traverses the shared pipeline against the released
 engine. Normal
-resolution now rejects any engine below `0.6.0` or at/above `0.7.0`, and later
-`0.6.x` releases inside the range are adopted per the canonical
+resolution now rejects any engine below `0.7.0` or at/above `0.8.0`, and later
+`0.7.x` releases inside the range are adopted per the canonical
 [engine update policy](engine-updates.md).
 
 ## Normal installed resolution
@@ -95,7 +98,7 @@ or `uv sync --all-extras` — for `new --legacy` and `update`'s Copier route.
 | v0.2.x (`engine` extra) | `forge-template>=0.3.1,<0.4` | `1` (supported) | Superseded by v0.3.x (ADR 0018) |
 | v0.3.x (`engine` extra) | `forge-template>=0.4.1,<0.5` | `1` (supported) | Superseded by v0.4.x (ADR 0042) |
 | v0.4.x (required) | `forge-template>=0.5,<0.6` | `1` (supported) | Superseded by v0.5.x (ADR 0056). The engine-default cutover release, published as `create-forge 0.4.0` (ADR 0042, CF-18.01; ADR 0049, CF-18.07) |
-| v0.5.x (required) | `forge-template>=0.6,<0.7` | `1` (supported) | Current architecture; the `0.6` Streamlit provider line (ADR 0050, CF-21.01), released as `create-forge 0.5.0` (ADR 0056, CF-21.03) |
+| v0.5.x (required) | `forge-template>=0.7,<0.8` | `1` (supported) | Current architecture; the `0.7` batch provider line (ADR 0061, CF-29.01), **unreleased** -- published `create-forge 0.5.0` (ADR 0056, CF-21.03) declares `>=0.6,<0.7` (ADR 0050, CF-21.01) |
 
 The distribution channel is PyPI, via Trusted Publishing (OIDC) on both
 repositories' `release.yml` workflows —
@@ -191,8 +194,8 @@ major version.
 | `python`, `platform` | interpreter version and OS | always |
 | `integration.line` | `"v0.5.x-engine"` | always — the CLI release line and default generation architecture; a fast regression test compares its major/minor with `pyproject.toml`'s own version |
 | `integration.copier` | installed Copier version, `null` if the `legacy` extra isn't installed | `importlib.metadata`, never an import of Copier itself |
-| `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine fails closed at exit `1`, since it is a required dependency (ADR 0040 decision 1) |
-| `integration.engine_range` | `"forge-template>=0.6,<0.7"` | always -- this is what this CLI release declares, independent of what's installed |
+| `integration.engine_package` | installed `forge-template` version, `null` only in a broken install | `importlib.metadata`, and a real check: a missing engine, or one outside `integration.engine_range`, fails closed at exit `1` (ADR 0040 decision 1; the range half is ADR 0061, matching the exit `3` refusal `new` gives the same engine) |
+| `integration.engine_range` | `"forge-template>=0.7,<0.8"` | always -- this is what this CLI release declares, independent of what's installed |
 | `integration.projectspec_protocol.supported` | `"1"` | always, from `src/create_forge/compat.py` |
 | `integration.projectspec_protocol.detected` | the installed engine's advertised tuple, joined by commas | via a real `engine.get_info()` call whenever `engine_package` is not `null` -- see below |
 | `integration.component_manifest_protocol.supported` | `"1,2,3"` | always, from `src/create_forge/compat.py` |
@@ -218,7 +221,12 @@ ADR 0040 decision 6 (CF-18.01), `doctor` additionally calls
 destination write — whenever the engine package is installed, populating
 every `*.detected` field above and reporting a protocol/`metadata_version`
 mismatch as one failed check that fails `ok` (exit `1`), rather than raising
-`EngineCompatibilityError` and crashing `doctor` outright. `integration.copier`
+`EngineCompatibilityError` and crashing `doctor` outright. Since ADR 0061
+(CF-29.01) the `engine` check also applies the declared package range through
+the same `compat.require_supported_package` that `new` uses, so an installed
+engine outside `integration.engine_range` fails `ok` (exit `1`) instead of
+reporting healthy while `new` refuses it with exit `3`; negotiation still runs,
+so the protocol facts stay populated. `integration.copier`
 and the `copier_cache.*` fields become `null`/informational when the
 `legacy` extra is absent, since `copier` moved there at the same cutover.
 `integration.template_ref` stays `null` for the same "no network, no
