@@ -45,7 +45,7 @@ dependencies = [
     # 0.12.18, the release that fixes GHSA-2cv4-cqwr-gwf7 (Windows wheel
     # extraction path traversal). Now required alongside the engine itself
     # rather than bundled in its extra.
-    "uv>=0.12.18,<0.13",
+    "uv>=0.12.18,<0.14",
     # >=0.16: typer 0.15.0-0.15.3 declare an uncapped click and break against
     # click >=8.2 (TyperArgument.make_metavar), and 0.15.4 pins click <8.2.
     # 0.16.0 is the first release that works with current click. The CI
